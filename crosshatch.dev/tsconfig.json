@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "files": [],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", ".alchemy"],
+  "references": [{ "path": "../crosshatch" }],
+  "compilerOptions": {
+    "rootDir": ".",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "types": ["@cloudflare/workers-types"],
+    "noEmit": true
+  }
+}

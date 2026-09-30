@@ -1,0 +1,29 @@
+{
+  "name": "crosshatch.dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc -b tsconfig.json tsconfig.tools.json",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "dev": "alchemy dev",
+    "deploy": "alchemy deploy",
+    "destroy": "alchemy destroy",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check"
+  },
+  "dependencies": {
+    "alchemy": "catalog:",
+    "crosshatch": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "drizzle-kit": "catalog:",
+    "vitest": "catalog:"
+  }
+}

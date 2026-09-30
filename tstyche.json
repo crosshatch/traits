@@ -1,0 +1,3 @@
+{
+  "testFileMatch": ["crosshatch/typetest/**/*.test.ts"]
+}
