@@ -7,8 +7,8 @@
   "scripts": {
     "prepare": "effect-tsgo patch",
     "build": "tsc -b tsconfig.json",
-    "test": "pnpm build && pnpm test:library && pnpm test:types && pnpm test:integration",
-    "test:library": "vitest run --config crosshatch/vitest.config.ts",
+    "test": "pnpm build && pnpm test:lib && pnpm test:types && pnpm test:integration",
+    "test:lib": "vitest run --config crosshatch/vitest.config.ts",
     "test:types": "tstyche",
     "test:integration": "pnpm --filter crosshatch.dev test"
   },

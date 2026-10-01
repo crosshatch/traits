@@ -1,4 +1,9 @@
-# Verification
+---
+name: verify
+description: Verify this workspace with TypeScript builds, library tests, type assertions, package checks, and live Cloudflare integration tests. Use when choosing or running verification or adding test suites.
+---
+
+# Verify
 
 This guide covers both workspace packages. Paths are relative to the repository
 root unless otherwise noted.
@@ -15,15 +20,14 @@ Run these from the workspace root:
 | --- | --- |
 | `pnpm build` | Type-check all workspace projects and emit the library and its declarations |
 | `pnpm test` | Full verification, including live Cloudflare integration tests |
-| `pnpm test:library` | Library runtime tests only |
+| `pnpm test:lib` | Library runtime tests only |
 | `pnpm test:types` | TSTyche library assertions |
 | `pnpm test:integration` | Real Cloudflare providers, through the integration suite |
 
-Only configuration exists so far. The library suite permits empty discovery during
-scaffolding. TSTyche and integration suites intentionally fail when empty, so
-`pnpm test` cannot finish until library type tests exist. Deployment and migration
-commands also require the future `crosshatch.dev/alchemy.run.ts` and
-`crosshatch.dev/src/schema.ts` files.
+The library suite permits empty discovery during scaffolding. TSTyche and
+integration suites intentionally fail when empty, so `pnpm test` cannot finish
+until library type tests exist. The app has a deployed-stack health test;
+migration commands still require `crosshatch.dev/src/schema.ts`.
 
 ## Library tests (`crosshatch`)
 
@@ -38,7 +42,7 @@ test implementations for external services so the library suite runs without
 Cloudflare credentials or deployments. Verify the real Cloudflare integration
 through the app's integration suite.
 
-Run `pnpm test:library` for this suite.
+Run `pnpm test:lib` for this suite.
 
 ### Public API types
 
@@ -139,16 +143,16 @@ Cloudflare CI credentials come from `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN`; local runs can use an authenticated Alchemy profile.
 OpenCode's Cloudflare MCP authentication is separate from Alchemy authentication.
 
-## Lifecycle for future suites
+## Integration lifecycle
 
 1. Import the real app stack from `crosshatch.dev/alchemy.run.ts` and register teardown before
    any asynchronous deployment work starts.
 2. Destroy stale resources belonging to that exact test stack/stage, then deploy
    once in `beforeAll`. Share its resolved outputs across the suite.
 3. Poll a read-only readiness endpoint with a bounded schedule and deadline.
-   Validate the expected application JSON/deployment marker, not HTTP status
+   Validate the expected application response (currently plain-text `ok`), not HTTP status
    alone: newly deployed Workers can return placeholder HTML with status 200.
-4. Exercise HTTP -> Worker -> Durable Object -> Drizzle -> SQLite. Use distinct
+4. As persistence is added, exercise HTTP -> Worker -> Durable Object -> Drizzle -> SQLite. Use distinct
    object names per independent test. Do not retry non-idempotent mutations as
    readiness probes.
 5. Destroy in `afterAll`, including after assertion/setup failures. Surface
@@ -159,10 +163,10 @@ OpenCode's Cloudflare MCP authentication is separate from Alchemy authentication
    if the runner is terminated before hooks can finish.
 
 The runner configuration does not itself provision or destroy resources. Those
-hooks belong to the future test suite. Begin with one deployment-owning suite;
+hooks belong to the test suite. Keep one deployment-owning suite;
 multiple suites must use distinct stack identities or one shared lifecycle owner.
 
-For manual live cleanup once the application stack exists:
+For manual live cleanup:
 
 ```sh
 pnpm --filter crosshatch.dev exec alchemy destroy --stage test-my-worktree-live --profile testing
@@ -198,8 +202,8 @@ by Alchemy. Dependencies are installed from the registry, not `repos/`.
 Aliases reuse current Effect modules. pnpm applies the patch on installation;
 remove it once Alchemy and its dependencies migrate to the current APIs.
 Node imports, representative declaration resolution, encoding behavior, and a
-Worker-condition browser bundle have been checked; live deployment remains
-unverified.
+Worker-condition browser bundle have been checked. The live health integration
+test has also passed deployment, response verification, and teardown.
 
 Alchemy does not yet ship the checkout's `Cloudflare.SqlMigrations`. Its transitive
 `capnp-es` declares a TypeScript 5/6 peer range while this workspace uses TypeScript 7.

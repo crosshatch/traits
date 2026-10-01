@@ -7,7 +7,7 @@ All paths below are relative to the repository root.
 - `crosshatch/`: published library.
 - `crosshatch.dev/`: Cloudflare application using Alchemy, Workers, Durable Objects, and Drizzle.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
-- See `TESTING.md` for verification commands. App integration tests deploy and target live Cloudflare deployments.
+- Use `.agents/skills/verify/SKILL.md` for verification commands and test guidance. App integration tests deploy and target live Cloudflare deployments.
 
 ## Reference Repositories
 
