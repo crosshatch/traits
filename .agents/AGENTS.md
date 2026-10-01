@@ -17,6 +17,23 @@ All paths below are relative to the repository root.
 - For Effect patterns and API design, consult `repos/Effect-TS/effect/`.
 - For Alchemy application and deployment patterns, consult `repos/alchemy-run/alchemy-effect/examples/`.
 
+## Effect
+
+- Library code under `crosshatch/` must use `Effect.fnUntraced` instead of `Effect.fn`.
+- Aside from in library code (`crosshatch/`), always use `Effect.fn` with a concise span name: `Effect.fn("<name>")(function* () { ... })` rather than `Effect.fn(function* () { ... })`.
+- Prefer `Effect.fn` / `Effect.fnUntraced` over functions that only return `Effect.gen`, including callbacks such as `items.map(Effect.fn("processItem")(function* (item) { ... }))`.
+- Apply transformations through additional function arguments to the wrapper. These receive the effect and the original arguments, so argument-dependent services do not require an outer arrow function:
+
+  ```ts
+  const process = Effect.fn("process")(
+    function* (item: Item) { /* ... */ },
+    (effect, item) => Effect.provideService(effect, TheService, item)
+  )
+  ```
+
+  Use the same form with `Effect.fnUntraced` in library code, without a span name.
+- An outer callback returning `Effect.gen(...).pipe(...)` is appropriate when it needs to capture callback-local values for the pipeline, e.g. `(item) => Effect.gen(function* () { ... }).pipe(Effect.provide(outerThing))`. Merely referencing an outer value does not require this exception: prefer a wrapper transformation when it can capture that value directly.
+
 ## Configuration
 
 Keep configuration minimal and deliberate: verify defaults, remove duplication, and avoid speculative abstractions. Use `.agents/skills/prune-configuration/SKILL.md` when auditing configuration.

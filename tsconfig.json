@@ -1,8 +1,8 @@
 {
   "files": [],
   "references": [
+    { "path": "./tsconfig.node.json" },
     { "path": "./crosshatch" },
-    { "path": "./tsconfig.tests.json" },
     { "path": "./crosshatch.dev" }
   ]
 }

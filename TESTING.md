@@ -49,7 +49,7 @@ Put TSTyche assertions in `crosshatch/typetest/**/*.test.ts`, as configured by
 `tstyche.json`. Use them to verify inferred types, generic relationships, and
 rejected usage of the public API. Run them with `pnpm test:types`.
 
-`tsconfig.tests.json` also checks library test files, references the library
+`tsconfig.node.json` also checks library test files, references the library
 project, and supplies Node types. Ordinary `pnpm check` catches TypeScript
 errors; the TSTyche command evaluates the dedicated type assertions.
 
@@ -195,11 +195,17 @@ Alchemy is pinned to `2.0.0-beta.79`; Effect, its Node platform, and its Vitest
 adapter are aligned at `4.0.0-rc.118`. Drizzle ORM/Kit share the version expected
 by Alchemy. Dependencies are installed from the registry, not `repos/`.
 
-The pinned Alchemy release still imports removed `effect/unstable/*` paths and
-does not yet ship the checkout's `Cloudflare.SqlMigrations`. Runtime integration
-is pending the upstream compatibility fix. There are no compatibility aliases
-or patches to hide this. Its transitive `capnp-es` also declares a TypeScript
-5/6 peer range while this workspace uses TypeScript 7.
+`patches/effect@4.0.0-rc.118.patch` temporarily restores the old
+`effect/unstable/*` paths used by Alchemy and its dependencies, including the
+`httpapi` rename, and provides `effect/Encoding` compatibility exports and types.
+Aliases reuse current Effect modules. pnpm applies the patch on installation;
+remove it once Alchemy and its dependencies migrate to the current APIs.
+Node imports, representative declaration resolution, encoding behavior, and a
+Worker-condition browser bundle have been checked; live deployment remains
+unverified.
+
+Alchemy does not yet ship the checkout's `Cloudflare.SqlMigrations`. Its transitive
+`capnp-es` declares a TypeScript 5/6 peer range while this workspace uses TypeScript 7.
 
 The scoped `packageExtensions` entry supplies the missing test-adapter peer
 declarations in this Alchemy release. Reassess it when upgrading Alchemy.

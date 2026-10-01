@@ -6,6 +6,7 @@
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.ts",
+    "./api": "./src/api/index.ts",
     "./*": "./src/*.ts",
     "./internal/*": null,
     "./index": null,
@@ -23,6 +24,7 @@
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
+      "./api": "./dist/api/index.js",
       "./*": "./dist/*.js",
       "./internal/*": null,
       "./index": null,

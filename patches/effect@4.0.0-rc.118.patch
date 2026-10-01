@@ -1,0 +1,54 @@
+diff --git a/dist/Encoding.d.ts b/dist/Encoding.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..19ed321df2996cae1ac69bc55159cd43bb90dbde
+--- /dev/null
++++ b/dist/Encoding.d.ts
+@@ -0,0 +1,4 @@
++export { encode as encodeBase64, decode as decodeBase64, decodeString as decodeBase64String } from "./encoding/Base64.js";
++export { encode as encodeBase64Url, decode as decodeBase64Url, decodeString as decodeBase64UrlString } from "./encoding/Base64Url.js";
++export { encode as encodeHex, decode as decodeHex, decodeString as decodeHexString, random as randomHex } from "./encoding/Hex.js";
++export { EncodingError, EncodingErrorTypeId, isEncodingError } from "./encoding/EncodingError.js";
+diff --git a/dist/Encoding.js b/dist/Encoding.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..19ed321df2996cae1ac69bc55159cd43bb90dbde
+--- /dev/null
++++ b/dist/Encoding.js
+@@ -0,0 +1,4 @@
++export { encode as encodeBase64, decode as decodeBase64, decodeString as decodeBase64String } from "./encoding/Base64.js";
++export { encode as encodeBase64Url, decode as decodeBase64Url, decodeString as decodeBase64UrlString } from "./encoding/Base64Url.js";
++export { encode as encodeHex, decode as decodeHex, decodeString as decodeHexString, random as randomHex } from "./encoding/Hex.js";
++export { EncodingError, EncodingErrorTypeId, isEncodingError } from "./encoding/EncodingError.js";
+diff --git a/package.json b/package.json
+index 6ff391d2f3b97e3362ce6d9fda75f8b8a22ca7d8..27fec56b70e27a69438916ed8bdfc22606443a9b 100644
+--- a/package.json
++++ b/package.json
+@@ -52,6 +52,29 @@
+     "./sql": "./dist/sql/index.js",
+     "./workflow": "./dist/workflow/index.js",
+     "./workers": "./dist/workers/index.js",
++    "./unstable/ai": "./dist/ai/index.js",
++    "./unstable/ai/*": "./dist/ai/*.js",
++    "./unstable/cli": "./dist/cli/index.js",
++    "./unstable/cli/*": "./dist/cli/*.js",
++    "./unstable/encoding": "./dist/encoding/index.js",
++    "./unstable/encoding/*": "./dist/encoding/*.js",
++    "./unstable/http": "./dist/http/index.js",
++    "./unstable/http/*": "./dist/http/*.js",
++    "./unstable/httpapi": "./dist/http-api/index.js",
++    "./unstable/httpapi/*": "./dist/http-api/*.js",
++    "./unstable/observability": "./dist/observability/index.js",
++    "./unstable/observability/*": "./dist/observability/*.js",
++    "./unstable/persistence": "./dist/persistence/index.js",
++    "./unstable/persistence/*": "./dist/persistence/*.js",
++    "./unstable/process": "./dist/process/index.js",
++    "./unstable/process/*": "./dist/process/*.js",
++    "./unstable/rpc": "./dist/rpc/index.js",
++    "./unstable/rpc/*": "./dist/rpc/*.js",
++    "./unstable/socket": "./dist/socket/index.js",
++    "./unstable/socket/*": "./dist/socket/*.js",
++    "./unstable/sql": "./dist/sql/index.js",
++    "./unstable/sql/*": "./dist/sql/*.js",
++    "./unstable/cli/internal/*": null,
+     "./*": "./dist/*.js",
+     "./internal/*": null,
+     "./cli/internal/*": null,
