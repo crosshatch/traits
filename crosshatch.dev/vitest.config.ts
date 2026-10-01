@@ -1,9 +1,10 @@
 import { defineConfig } from "vitest/config"
+import PackageJson from "./package.json" with { type: "json" }
 
 export default defineConfig({
   root: import.meta.dirname,
   test: {
-    name: "crosshatch.dev",
+    name: PackageJson.name,
     include: ["test/**/*.test.{ts,tsx}"],
     passWithNoTests: false,
     fileParallelism: false,

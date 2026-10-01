@@ -30,8 +30,8 @@ commands also require the future `crosshatch.dev/alchemy.run.ts` and
 
 ### Runtime behavior
 
-Put Vitest tests in `crosshatch/test/**/*.test.ts`. The root `vitest.config.ts`
-discovers these files and aliases `crosshatch` imports to `crosshatch/src`, so
+Put Vitest tests in `crosshatch/test/**/*.test.ts`. `crosshatch/vitest.config.ts`
+discovers these files. The library's package exports resolve to source, so
 tests exercise current source without requiring a published package.
 
 Use these tests for library behavior, validation, and failure cases. Supply

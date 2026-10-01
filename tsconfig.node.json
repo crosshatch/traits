@@ -3,6 +3,7 @@
   "references": [{ "path": "./crosshatch" }],
   "include": [
     "*.ts",
+    "crosshatch/vitest.config.ts",
     "crosshatch/test/**/*.ts",
     "crosshatch/test/**/*.json",
     "crosshatch/typetest/**/*.ts"
