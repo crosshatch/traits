@@ -14,7 +14,6 @@ Run these from the workspace root:
 | Command | Scope |
 | --- | --- |
 | `pnpm build` | Type-check all workspace projects and emit the library and its declarations |
-| `pnpm check` | Same TypeScript project build as `pnpm build` |
 | `pnpm test` | Full verification, including live Cloudflare integration tests |
 | `pnpm test:library` | Library runtime tests only |
 | `pnpm test:types` | TSTyche library assertions |
@@ -48,7 +47,7 @@ Put TSTyche assertions in `crosshatch/typetest/**/*.test.ts`, as configured by
 rejected usage of the public API. Run them with `pnpm test:types`.
 
 `tsconfig.node.json` also checks library test files, references the library
-project, and supplies Node types. Ordinary `pnpm check` catches TypeScript
+project, and supplies Node types. Ordinary `pnpm build` catches TypeScript
 errors; the TSTyche command evaluates the dedicated type assertions.
 
 ### Build and publishing

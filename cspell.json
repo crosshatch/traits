@@ -11,5 +11,5 @@
   ],
   "dictionaries": ["networking-terms", "project-words"],
   "useGitignore": true,
-  "ignorePaths": ["LICENSE", "repos/**", "patches/**", "pnpm-lock.yaml", "**/.worktrees/**"]
+  "ignorePaths": ["LICENSE", "repos/**", "patches/**", "pnpm-lock.yaml", ".worktrees/**"]
 }
