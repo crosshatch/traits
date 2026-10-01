@@ -4,9 +4,8 @@ This guide covers both workspace packages. Paths are relative to the repository
 root unless otherwise noted.
 
 The app consumes `crosshatch` through `workspace:*`. Library tests stay in
-`crosshatch/test`, library type assertions in `crosshatch/typetest`, app unit tests
-in `crosshatch.dev/test/unit`, and Alchemy integration tests in
-`crosshatch.dev/test/integration`.
+`crosshatch/test`, library type assertions in `crosshatch/typetest`, and live
+Alchemy integration tests in `crosshatch.dev/test`.
 
 ## Commands
 
@@ -16,14 +15,14 @@ Run these from the workspace root:
 | --- | --- |
 | `pnpm build` | Compile the library and its declarations |
 | `pnpm check` | Check the library, library tests, Worker source, and app tooling/tests |
-| `pnpm test` | Library and app unit tests; no deployment |
+| `pnpm test` | Library runtime tests; no deployment |
 | `pnpm test:library` | Library runtime tests only |
 | `pnpm test:types` | TSTyche library assertions |
 | `pnpm test:integration` | Real Cloudflare providers, through the integration suite |
 | `pnpm verify` | Build, check, unit tests, and type assertions |
 | `pnpm verify:live` | Verification followed by the live integration suite |
 
-Only configuration exists so far. Unit suites permit empty discovery during
+Only configuration exists so far. The library suite permits empty discovery during
 scaffolding. TSTyche and integration suites intentionally fail when empty, so
 `verify` cannot finish until library type tests exist. Deployment and migration
 commands also require the future `crosshatch.dev/alchemy.run.ts` and
@@ -42,8 +41,7 @@ test implementations for external services so the library suite runs without
 Cloudflare credentials or deployments. Verify the real Cloudflare integration
 through the app's integration suite.
 
-Run `pnpm test:library` for this suite alone, or `pnpm test` to also run app unit
-tests from `crosshatch.dev/test/unit/**/*.test.{ts,tsx}`.
+Run `pnpm test:library` or `pnpm test` for this suite.
 
 ### Public API types
 
@@ -85,14 +83,19 @@ so deployed app tests additionally exercise its code inside the Worker bundle.
 
 ## App integration runner contract (`crosshatch.dev`)
 
+`crosshatch.dev/vitest.config.ts` defines one suite covering
+`test/**/*.test.{ts,tsx}`. The app's `test` script runs `vitest run`; the root
+`test:integration` script delegates to it. Empty discovery fails.
+
 Use `alchemy/Test/Vitest` and `@effect/vitest`, not Alchemy's private
 `alchemy-test` runner. Integration tests execute on Node and exercise a real
-Cloudflare deployment.
+Cloudflare deployment. Use Node-compatible APIs and `@effect/platform-node`;
+do not copy `bun:test`, `alchemy/Test/Bun`, or Bun APIs from upstream examples.
 
 The integration configuration sets `ALCHEMY_TEST_DEV` and `ALCHEMY_DEV` to
 `false` to select live providers. Use `Test.make`'s mode resolution.
-`ALCHEMY_PROFILE` defaults to `testing` and can be overridden
-in the invoking environment. These variables are provided to test workers via
+Select an Alchemy profile using `ALCHEMY_PROFILE` in the invoking environment;
+otherwise Alchemy uses its default profile. The live-mode flags reach workers via
 Vitest's `test.env`; they are not exported into the calling shell or global setup.
 
 The integration configuration fixes:
@@ -101,9 +104,7 @@ The integration configuration fixes:
 - One worker, sequential files/tests, and no whole-test retries.
 - `sequence.hooks: "list"` so Alchemy's fallback scope cleanup runs after
   the suite's registered destroy hook.
-- 120-second tests, 180-second hooks, and a 30-second runner teardown budget.
-- `NO_DESTROY` to an empty value so upstream-style conditional teardown remains
-  enabled.
+- 120-second tests and 180-second hooks.
 
 Alchemy's adapter supplies its own default hook timeout. Pass `{ timeout:
 180_000 }` to its deployment and destruction hooks to use the configured budget.
@@ -115,11 +116,10 @@ The root scripts delegate to the app package to establish this working directory
 
 ## Stage and state ownership
 
-An explicit `ALCHEMY_TEST_STAGE` takes precedence. Otherwise stages are:
-
-- Local shell: `test-<user>-<app-directory-hash>-live`.
-- GitHub Actions: `test-<run-id>-<attempt>-live`.
-- Other CI: an explicit `ALCHEMY_TEST_STAGE` is required.
+Alchemy uses `ALCHEMY_TEST_STAGE`, falling back to `test_$USER` (or
+`test_$USERNAME` / `test_unknown`). The Vitest configuration does not generate
+stage names or validate CI environment variables. Supply an explicit stage for
+concurrent worktrees and CI, including the run and attempt identifiers.
 
 For matrix jobs/shards, supply a stage including the matrix/shard identifier.
 Keep the same explicit stage available to deployment, tests, and cleanup:

@@ -31,7 +31,6 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.json",
-    "build:release": "tsc -b tsconfig.release.json --force",
     "check": "tsc -b tsconfig.json",
     "prepack": "tsc -b tsconfig.release.json --force"
   },

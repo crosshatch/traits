@@ -7,11 +7,11 @@
     "prepare": "effect-tsgo patch",
     "build": "pnpm --filter crosshatch build",
     "check": "tsc -b tsconfig.json",
-    "test": "pnpm test:library && pnpm --filter crosshatch.dev test",
+    "test": "pnpm test:library",
     "test:library": "vitest run",
     "test:types": "tstyche",
     "test-types": "pnpm test:types",
-    "test:integration": "pnpm --filter crosshatch.dev test:integration",
+    "test:integration": "pnpm --filter crosshatch.dev test",
     "verify": "pnpm build && pnpm check && pnpm test && pnpm test:types",
     "verify:live": "pnpm verify && pnpm test:integration"
   },
