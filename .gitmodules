@@ -64,3 +64,6 @@
 [submodule "repos/Effect-TS/janitor"]
 	path = repos/Effect-TS/janitor
 	url = git@github.com:Effect-TS/janitor.git
+[submodule "repos/foldkit/foldkit"]
+	path = repos/foldkit/foldkit
+	url = git@github.com:foldkit/foldkit.git

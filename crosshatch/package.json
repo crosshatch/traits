@@ -31,13 +31,13 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.json",
-    "check": "tsc -b tsconfig.json",
-    "prepack": "tsc -b tsconfig.release.json --force"
+    "prepack": "trash dist && tsc -b tsconfig.release.json --force"
   },
   "peerDependencies": {
     "effect": "catalog:"
   },
   "devDependencies": {
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "trash-cli": "catalog:"
   }
 }

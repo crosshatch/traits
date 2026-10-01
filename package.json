@@ -10,7 +10,6 @@
     "test": "pnpm test:library",
     "test:library": "vitest run",
     "test:types": "tstyche",
-    "test-types": "pnpm test:types",
     "test:integration": "pnpm --filter crosshatch.dev test",
     "verify": "pnpm build && pnpm check && pnpm test && pnpm test:types",
     "verify:live": "pnpm verify && pnpm test:integration"

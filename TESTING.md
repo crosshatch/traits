@@ -57,7 +57,9 @@ errors; the TSTyche command evaluates the dedicated type assertions.
 
 `pnpm build` emits the library's JavaScript, declarations, and maps into
 `crosshatch/dist`. The release configuration enables `stripInternal` when the
-package is packed. To inspect the publishable artifact without publishing:
+package is packed. `prepack` moves previous `dist` output to the trash with the
+catalog-pinned `trash-cli`, then forces a release rebuild so obsolete modules
+cannot enter the package. To inspect the artifact without publishing:
 
 ```sh
 pnpm --filter crosshatch pack --pack-destination /tmp/opencode/crosshatch-pack
