@@ -1,18 +1,17 @@
 {
   "name": "root",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "packageManager": "pnpm@12.8.1",
   "scripts": {
     "prepare": "effect-tsgo patch",
-    "build": "pnpm --filter crosshatch build",
+    "build": "tsc -b tsconfig.json",
     "check": "tsc -b tsconfig.json",
-    "test": "pnpm test:library",
+    "test": "pnpm build && pnpm test:library && pnpm test:types && pnpm test:integration",
     "test:library": "vitest run",
     "test:types": "tstyche",
-    "test:integration": "pnpm --filter crosshatch.dev test",
-    "verify": "pnpm build && pnpm check && pnpm test && pnpm test:types",
-    "verify:all": "pnpm verify && pnpm test:integration"
+    "test:integration": "pnpm --filter crosshatch.dev test"
   },
   "devDependencies": {
     "crosshatch": "workspace:*",

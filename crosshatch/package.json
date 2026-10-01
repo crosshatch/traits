@@ -2,6 +2,7 @@
   "name": "crosshatch",
   "type": "module",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "sideEffects": [],
   "exports": {
     "./package.json": "./package.json",
@@ -32,14 +33,12 @@
     }
   },
   "scripts": {
-    "build": "tsc -b tsconfig.json",
-    "prepack": "trash dist && tsc -b tsconfig.release.json --force"
+    "prepack": "tsc -b tsconfig.release.json --force"
   },
   "peerDependencies": {
     "effect": "catalog:"
   },
   "devDependencies": {
-    "effect": "catalog:",
-    "trash-cli": "catalog:"
+    "effect": "catalog:"
   }
 }

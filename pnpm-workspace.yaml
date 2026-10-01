@@ -7,7 +7,6 @@ allowBuilds:
   workerd: true
 
 catalog:
-  trash-cli: 7.2.0
   effect: 4.0.0-rc.118
   typescript: 7.0.2
   vite-plus: 1.0.0

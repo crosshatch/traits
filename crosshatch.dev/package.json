@@ -1,6 +1,7 @@
 {
   "name": "crosshatch.dev",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "test": "vitest run",

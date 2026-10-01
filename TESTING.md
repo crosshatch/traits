@@ -13,18 +13,16 @@ Run these from the workspace root:
 
 | Command | Scope |
 | --- | --- |
-| `pnpm build` | Compile the library and its declarations |
-| `pnpm check` | Check the library, library tests, Worker source, and app tooling/tests |
-| `pnpm test` | Library runtime tests; no deployment |
+| `pnpm build` | Type-check all workspace projects and emit the library and its declarations |
+| `pnpm check` | Same TypeScript project build as `pnpm build` |
+| `pnpm test` | Full verification, including live Cloudflare integration tests |
 | `pnpm test:library` | Library runtime tests only |
 | `pnpm test:types` | TSTyche library assertions |
 | `pnpm test:integration` | Real Cloudflare providers, through the integration suite |
-| `pnpm verify` | Build, check, unit tests, and type assertions |
-| `pnpm verify:all` | Verification followed by the live integration suite |
 
 Only configuration exists so far. The library suite permits empty discovery during
 scaffolding. TSTyche and integration suites intentionally fail when empty, so
-`verify` cannot finish until library type tests exist. Deployment and migration
+`pnpm test` cannot finish until library type tests exist. Deployment and migration
 commands also require the future `crosshatch.dev/alchemy.run.ts` and
 `crosshatch.dev/src/schema.ts` files.
 
@@ -41,7 +39,7 @@ test implementations for external services so the library suite runs without
 Cloudflare credentials or deployments. Verify the real Cloudflare integration
 through the app's integration suite.
 
-Run `pnpm test:library` or `pnpm test` for this suite.
+Run `pnpm test:library` for this suite.
 
 ### Public API types
 
@@ -55,11 +53,11 @@ errors; the TSTyche command evaluates the dedicated type assertions.
 
 ### Build and publishing
 
-`pnpm build` emits the library's JavaScript, declarations, and maps into
+`pnpm build` checks all workspace projects and emits the library's JavaScript, declarations, and maps into
 `crosshatch/dist`. The release configuration enables `stripInternal` when the
-package is packed. `prepack` moves previous `dist` output to the trash with the
-catalog-pinned `trash-cli`, then forces a release rebuild so obsolete modules
-cannot enter the package. To inspect the artifact without publishing:
+package is packed. `prepack` forces a release rebuild. Publishing assumes a fresh
+CI checkout so obsolete output cannot enter the package. To inspect the artifact
+without publishing:
 
 ```sh
 pnpm --filter crosshatch pack --pack-destination /tmp/opencode/crosshatch-pack
