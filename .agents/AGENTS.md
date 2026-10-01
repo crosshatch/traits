@@ -34,6 +34,37 @@ All paths below are relative to the repository root.
   Use the same form with `Effect.fnUntraced` in library code, without a span name.
 - An outer callback returning `Effect.gen(...).pipe(...)` is appropriate when it needs to capture callback-local values for the pipeline, e.g. `(item) => Effect.gen(function* () { ... }).pipe(Effect.provide(outerThing))`. Merely referencing an outer value does not require this exception: prefer a wrapper transformation when it can capture that value directly.
 
+## Layer Naming
+
+- When a module's primary layer represents its core service, export it as `layer`.
+- Include the service or role only when the module exports multiple layers and `layer` alone would not identify what each provides.
+- Add implementation or backend qualifiers after the service or role.
+- When a layer is constructed from a particular input source, append `From<InputSource>`.
+
+```ts
+// Module's core service
+layer
+layerFromConfig
+layerFromEnv
+
+// Multiple services or roles in one module
+layerFoo
+layerFooFromConfig
+layerFooFromEnv
+
+layerStoreRedis
+layerStoreRedisFromConfig
+```
+
+General forms:
+
+```text
+layer[FromInputSource]
+layer<ServiceOrRole>[Implementation][FromInputSource]
+```
+
+Avoid `XLive`, `XLayer`, `layerFooConfig`, and `layerFooEnv`.
+
 ## Configuration
 
 Keep configuration minimal and deliberate: verify defaults, remove duplication, and avoid speculative abstractions. Use `.agents/skills/prune-configuration/SKILL.md` when auditing configuration.
