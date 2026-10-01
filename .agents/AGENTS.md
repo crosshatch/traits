@@ -67,4 +67,4 @@ Avoid `XLive`, `XLayer`, `layerFooConfig`, and `layerFooEnv`.
 
 ## Configuration
 
-Keep configuration minimal and deliberate: verify defaults, remove duplication, and avoid speculative abstractions. Use `.agents/skills/prune-configuration/SKILL.md` when auditing configuration.
+Keep configuration minimal and deliberate: verify defaults, remove duplication, and avoid speculative abstractions. Use `.agents/skills/prune/SKILL.md` when auditing configuration.

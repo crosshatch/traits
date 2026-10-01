@@ -1,9 +1,9 @@
 ---
-name: prune-configuration
+name: prune
 description: Audit and simplify configuration, scripts, and supporting files by removing redundancy and unnecessary complexity.
 ---
 
-# Prune Configuration
+# Prune
 
 Remove unnecessary, duplicate, and dead configuration. Every setting, script,
 dependency, and config file should serve a current requirement.
