@@ -18,7 +18,6 @@ test(
   "GET /health returns ok",
   Effect.gen(function* () {
     const { url } = yield* stack
-    // @effect-diagnostics-next-line unstableApiUsage:off
     const response = yield* HttpClient.get(`${url}/health`)
     expect(response.status).toBe(200)
     expect(yield* response.text).toBe("ok")

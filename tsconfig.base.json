@@ -28,6 +28,7 @@
         "name": "@effect/language-service",
         "transform": "@effect/language-service/transform",
         "diagnosticSeverity": {
+          "unstableApiUsage": "off",
           "lazyEffect": "off",
           "returnEffectInGen": "off",
           "layerMergeAllWithDependencies": "off",

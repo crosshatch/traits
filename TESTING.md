@@ -20,7 +20,7 @@ Run these from the workspace root:
 | `pnpm test:types` | TSTyche library assertions |
 | `pnpm test:integration` | Real Cloudflare providers, through the integration suite |
 | `pnpm verify` | Build, check, unit tests, and type assertions |
-| `pnpm verify:live` | Verification followed by the live integration suite |
+| `pnpm verify:all` | Verification followed by the live integration suite |
 
 Only configuration exists so far. The library suite permits empty discovery during
 scaffolding. TSTyche and integration suites intentionally fail when empty, so

@@ -12,7 +12,7 @@
     "test:types": "tstyche",
     "test:integration": "pnpm --filter crosshatch.dev test",
     "verify": "pnpm build && pnpm check && pnpm test && pnpm test:types",
-    "verify:live": "pnpm verify && pnpm test:integration"
+    "verify:all": "pnpm verify && pnpm test:integration"
   },
   "devDependencies": {
     "crosshatch": "workspace:*",

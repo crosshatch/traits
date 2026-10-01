@@ -1,4 +1,3 @@
-// @effect-diagnostics unstableApiUsage:skip-file -- HttpApi is intentionally used here.
 import { HttpApi } from "effect/http-api"
 import { HealthApiGroup } from "./health.ts"
 

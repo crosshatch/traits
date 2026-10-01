@@ -1,4 +1,3 @@
-// @effect-diagnostics unstableApiUsage:skip-file
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiSchema } from "effect/http-api"
 
