@@ -1,0 +1,52 @@
+packages:
+  - crosshatch
+  - crosshatch.dev
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+catalog:
+  effect: 4.0.0-rc.118
+  typescript: 7.0.2
+  vite-plus: 1.0.0
+  '@effect/tsgo': 0.47.1
+  '@types/node': 26.6.3
+  vitest: 5.0.3
+  tstyche: 7.2.5
+  alchemy: 2.0.0-beta.79
+  '@cloudflare/workers-types': 5.20260930.2
+  '@effect/platform-node': 4.0.0-rc.118
+  '@effect/platform-browser': 4.0.0-rc.118
+  '@effect/vitest': 4.0.0-rc.118
+  drizzle-kit: 1.0.0-rc.5-ab785fc
+  drizzle-orm: 1.0.0-rc.5-ab785fc
+
+# This release ships Test/Vitest without declaring its test adapter peers.
+packageExtensions:
+  'alchemy@2.0.0-beta.79':
+    peerDependencies:
+      '@effect/vitest': ^4.0.0-rc.118
+      vitest: '>=5.0.0 <6.0.0'
+    peerDependenciesMeta:
+      '@effect/vitest':
+        optional: true
+      vitest:
+        optional: true
+
+minimumReleaseAgeExclude:
+  - '@effect/tsgo-darwin-arm64@0.47.1'
+  - '@effect/tsgo-darwin-x64@0.47.1'
+  - '@effect/tsgo-linux-arm64@0.47.1'
+  - '@effect/tsgo-linux-arm@0.47.1'
+  - '@effect/tsgo-linux-x64@0.47.1'
+  - '@effect/tsgo-win32-arm64@0.47.1'
+  - '@effect/tsgo-win32-x64@0.47.1'
+  - '@effect/tsgo@0.47.1'
+  - '@vitest/mocker@5.0.3'
+  - '@vitest/spy@5.0.3'
+  - vitest@5.0.3
+  - '@cloudflare/workers-types@5.20260930.2'
+
+patchedDependencies:
+  effect@4.0.0-rc.118: patches/effect@4.0.0-rc.118.patch
