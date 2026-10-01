@@ -1,16 +1,22 @@
 {
   "extends": "../tsconfig.base.json",
-  "files": [],
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "alchemy.run.ts",
+    "drizzle.config.ts",
+    "vitest*.ts",
+    "test/**/*.ts",
+    "test/**/*.tsx"
+  ],
   "exclude": ["node_modules", "dist", ".alchemy"],
   "references": [{ "path": "../crosshatch" }],
   "compilerOptions": {
-    "rootDir": ".",
     "module": "Preserve",
     "moduleResolution": "Bundler",
     "target": "ESNext",
     "lib": ["ESNext"],
-    "types": ["@cloudflare/workers-types"],
+    "types": ["node", "@cloudflare/workers-types"],
     "noEmit": true
   }
 }

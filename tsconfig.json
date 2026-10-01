@@ -3,7 +3,6 @@
   "references": [
     { "path": "./crosshatch" },
     { "path": "./tsconfig.tests.json" },
-    { "path": "./crosshatch.dev" },
-    { "path": "./crosshatch.dev/tsconfig.tools.json" }
+    { "path": "./crosshatch.dev" }
   ]
 }

@@ -1,5 +1,8 @@
 # Verification
 
+This guide covers both workspace packages. Paths are relative to the repository
+root unless otherwise noted.
+
 The app consumes `crosshatch` through `workspace:*`. Library tests stay in
 `crosshatch/test`, library type assertions in `crosshatch/typetest`, app unit tests
 in `crosshatch.dev/test/unit`, and Alchemy integration tests in
@@ -14,6 +17,7 @@ Run these from the workspace root:
 | `pnpm build` | Compile the library and its declarations |
 | `pnpm check` | Check the library, library tests, Worker source, and app tooling/tests |
 | `pnpm test` | Library and app unit tests; no deployment |
+| `pnpm test:library` | Library runtime tests only |
 | `pnpm test:types` | TSTyche library assertions |
 | `pnpm test:integration` | Real Cloudflare providers, through the integration suite |
 | `pnpm verify` | Build, check, unit tests, and type assertions |
@@ -22,23 +26,64 @@ Run these from the workspace root:
 Only configuration exists so far. Unit suites permit empty discovery during
 scaffolding. TSTyche and integration suites intentionally fail when empty, so
 `verify` cannot finish until library type tests exist. Deployment and migration
-commands also require the future `alchemy.run.ts` and `src/schema.ts` files.
+commands also require the future `crosshatch.dev/alchemy.run.ts` and
+`crosshatch.dev/src/schema.ts` files.
+
+## Library tests (`crosshatch`)
+
+### Runtime behavior
+
+Put Vitest tests in `crosshatch/test/**/*.test.ts`. The root `vitest.config.ts`
+discovers these files and aliases `crosshatch` imports to `crosshatch/src`, so
+tests exercise current source without requiring a published package.
+
+Use these tests for library behavior, validation, and failure cases. Supply
+test implementations for external services so the library suite runs without
+Cloudflare credentials or deployments. Verify the real Cloudflare integration
+through the app's integration suite.
+
+Run `pnpm test:library` for this suite alone, or `pnpm test` to also run app unit
+tests from `crosshatch.dev/test/unit/**/*.test.{ts,tsx}`.
+
+### Public API types
+
+Put TSTyche assertions in `crosshatch/typetest/**/*.test.ts`, as configured by
+`tstyche.json`. Use them to verify inferred types, generic relationships, and
+rejected usage of the public API. Run them with `pnpm test:types`.
+
+`tsconfig.tests.json` also checks library test files, references the library
+project, and supplies Node types. Ordinary `pnpm check` catches TypeScript
+errors; the TSTyche command evaluates the dedicated type assertions.
+
+### Build and publishing
+
+`pnpm build` emits the library's JavaScript, declarations, and maps into
+`crosshatch/dist`. The release configuration enables `stripInternal` when the
+package is packed. To inspect the publishable artifact without publishing:
+
+```sh
+pnpm --filter crosshatch pack --pack-destination /tmp/opencode/crosshatch-pack
+```
+
+Source-based tests do not validate the packed export map or declaration files.
+Include a packed-package consumer check when introducing public APIs or changing
+publishing configuration. The app consumes the library through `workspace:*`,
+so deployed app tests additionally exercise its code inside the Worker bundle.
 
 ## TypeScript environments
 
-- `../crosshatch/tsconfig.json` retains NodeNext/ES2022 and library emission.
-- `tsconfig.json` checks Worker source with Preserve/Bundler resolution,
-  Cloudflare types through `compilerOptions.types`, `lib: ["ESNext"]`, and no
-  emission. `files: []` allows the project to remain empty until source is added.
-- `tsconfig.tools.json` checks the Alchemy entry, Drizzle/Vitest configuration,
-  and tests. It also includes application source because deployment tests import
-  the actual stack. Node and Cloudflare types are both available in this host
-  project. For config paths, use `dirname(fileURLToPath(import.meta.url))` to
+- `crosshatch/tsconfig.json` retains NodeNext/ES2022 and library emission.
+- `crosshatch.dev/tsconfig.json` checks Worker source, the Alchemy entry,
+  Drizzle/Vitest configuration, and tests together with Preserve/Bundler
+  resolution, `lib: ["ESNext"]`, and no emission. Node and Cloudflare types are
+  both available through `compilerOptions.types`, matching the combined app
+  layout used by Alchemy's examples. For config paths, use
+  `dirname(fileURLToPath(import.meta.url))` to
   avoid the conflicting Node and Cloudflare `URL` types.
-- Both app projects reference the library. The root solution builds/checks them
+- The app project references the library. The root solution builds/checks both
   without pulling in vendored repositories.
 
-## Integration runner contract
+## App integration runner contract (`crosshatch.dev`)
 
 Use `alchemy/Test/Vitest` and `@effect/vitest`, not Alchemy's private
 `alchemy-test` runner. Integration tests execute on Node and exercise a real
@@ -97,7 +142,7 @@ OpenCode's Cloudflare MCP authentication is separate from Alchemy authentication
 
 ## Lifecycle for future suites
 
-1. Import the real app stack from `alchemy.run.ts` and register teardown before
+1. Import the real app stack from `crosshatch.dev/alchemy.run.ts` and register teardown before
    any asynchronous deployment work starts.
 2. Destroy stale resources belonging to that exact test stack/stage, then deploy
    once in `beforeAll`. Share its resolved outputs across the suite.
@@ -129,8 +174,9 @@ Avoid account-wide teardown as a normal test operation.
 
 ## SQLite migrations
 
-`drizzle.config.ts` targets `src/schema.ts` and writes SQLite migrations to
-`drizzle/`. Generate with `pnpm --filter crosshatch.dev db:generate`, review and
+`crosshatch.dev/drizzle.config.ts` targets `crosshatch.dev/src/schema.ts` and
+writes SQLite migrations to `crosshatch.dev/migrations/`.
+Generate with `pnpm --filter crosshatch.dev db:generate`, review and
 commit the SQL, and check its consistency with `db:check`. Do not regenerate
 migrations during CI deployment. There is no D1 database provisioning or remote
 `drizzle push` step for Durable Object SQLite.
@@ -156,5 +202,5 @@ or patches to hide this. Its transitive `capnp-es` also declares a TypeScript
 The scoped `packageExtensions` entry supplies the missing test-adapter peer
 declarations in this Alchemy release. Reassess it when upgrading Alchemy.
 
-Reference patterns live under `../repos/alchemy-run/alchemy-effect/`, especially
+Reference patterns live under `repos/alchemy-run/alchemy-effect/`, especially
 `examples/cloudflare-durable-object-sql` and `packages/alchemy/src/Test/Vitest.ts`.

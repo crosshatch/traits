@@ -7,7 +7,7 @@
     "crosshatch/test/**/*.json",
     "crosshatch/typetest/**/*.ts"
   ],
-  "exclude": ["node_modules", "repos", "crosshatch/dist"],
+  "exclude": ["node_modules"],
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
