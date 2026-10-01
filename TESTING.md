@@ -76,7 +76,7 @@ so deployed app tests additionally exercise its code inside the Worker bundle.
   resolution, `lib: ["ESNext"]`, and no emission. Node and Cloudflare types are
   both available through `compilerOptions.types`, matching the combined app
   layout used by Alchemy's examples. For config paths, use
-  `dirname(fileURLToPath(import.meta.url))` to
+  `import.meta.dirname` (Node 20.11+) to
   avoid the conflicting Node and Cloudflare `URL` types.
 - The app project references the library. The root solution builds/checks both
   without pulling in vendored repositories.
@@ -166,7 +166,7 @@ multiple suites must use distinct stack identities or one shared lifecycle owner
 For manual live cleanup once the application stack exists:
 
 ```sh
-pnpm --filter crosshatch.dev destroy --stage test-my-worktree-live --profile testing
+pnpm --filter crosshatch.dev exec alchemy destroy --stage test-my-worktree-live --profile testing
 ```
 
 Use that explicit CLI stage; the CLI does not infer `ALCHEMY_TEST_STAGE`.
@@ -176,8 +176,8 @@ Avoid account-wide teardown as a normal test operation.
 
 `crosshatch.dev/drizzle.config.ts` targets `crosshatch.dev/src/schema.ts` and
 writes SQLite migrations to `crosshatch.dev/migrations/`.
-Generate with `pnpm --filter crosshatch.dev db:generate`, review and
-commit the SQL, and check its consistency with `db:check`. Do not regenerate
+Generate with `pnpm --filter crosshatch.dev exec drizzle-kit generate`, review and
+commit the SQL, and check its consistency with `pnpm --filter crosshatch.dev exec drizzle-kit check`. Do not regenerate
 migrations during CI deployment. There is no D1 database provisioning or remote
 `drizzle push` step for Durable Object SQLite.
 

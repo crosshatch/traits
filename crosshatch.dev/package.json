@@ -3,13 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc -b tsconfig.json",
     "test": "vitest run",
-    "dev": "alchemy dev",
-    "deploy": "alchemy deploy",
-    "destroy": "alchemy destroy",
-    "db:generate": "drizzle-kit generate",
-    "db:check": "drizzle-kit check"
+    "dev": "alchemy dev"
   },
   "dependencies": {
     "alchemy": "catalog:",
