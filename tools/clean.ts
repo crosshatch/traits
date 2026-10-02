@@ -1,4 +1,3 @@
-// oxlint-disable-next-line effecttsgo/node-builtin-import -- Use Node's glob discovery with directory exclusions.
 import { glob } from "node:fs/promises"
 
 import { Console, Effect, FileSystem, Path } from "effect"

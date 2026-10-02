@@ -45,6 +45,7 @@ export default defineConfig({
       "effecttsgo/experimental-api-usage": "error",
       "effecttsgo/unstable-api-usage": "off",
       "effecttsgo/strict-effect-provide": "off",
+      "effecttsgo/node-builtin-import": "off",
       "effecttsgo/lazy-effect": "off",
       "effecttsgo/return-effect-in-gen": "off",
       "effecttsgo/layer-merge-all-with-dependencies": "off",

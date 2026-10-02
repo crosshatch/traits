@@ -1,6 +1,4 @@
-// oxlint-disable-next-line effecttsgo/node-builtin-import -- Oxlint visitors perform synchronous package lookup.
 import Fs from "node:fs"
-// oxlint-disable-next-line effecttsgo/node-builtin-import -- Oxlint visitors use synchronous path operations.
 import Path from "node:path"
 import { fileURLToPath } from "node:url"
 
