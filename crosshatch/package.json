@@ -1,8 +1,15 @@
 {
   "name": "crosshatch",
-  "type": "module",
   "version": "0.0.0",
   "license": "Apache-2.0",
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
+  "type": "module",
   "sideEffects": [],
   "exports": {
     "./package.json": "./package.json",
@@ -13,15 +20,7 @@
     "./index": null,
     "./*/index": null
   },
-  "files": [
-    "src/**/*.ts",
-    "dist/**/*.js",
-    "dist/**/*.js.map",
-    "dist/**/*.d.ts",
-    "dist/**/*.d.ts.map"
-  ],
   "publishConfig": {
-    "access": "public",
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
@@ -30,15 +29,16 @@
       "./internal/*": null,
       "./index": null,
       "./*/index": null
-    }
+    },
+    "access": "public"
   },
   "scripts": {
-    "prepack": "tsc -b tsconfig.release.json --force"
-  },
-  "peerDependencies": {
-    "effect": "catalog:"
+    "prepack": "tsc -b tsconfig.release.json --force && vp pack"
   },
   "devDependencies": {
+    "effect": "catalog:"
+  },
+  "peerDependencies": {
     "effect": "catalog:"
   }
 }

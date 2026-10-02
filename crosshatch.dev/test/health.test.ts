@@ -2,7 +2,8 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import * as Test from "alchemy/Test/Vitest"
 import { Effect } from "effect"
 import { HttpClient } from "effect/http"
-import { expect } from "vitest"
+import { expect } from "vite-plus/test"
+
 import Stack from "../alchemy.run.ts"
 
 const { test, beforeAll, afterAll, deploy, destroy } = Test.make({

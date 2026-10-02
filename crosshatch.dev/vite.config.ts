@@ -1,4 +1,5 @@
-import { defineConfig } from "vitest/config"
+import { defineConfig } from "vite-plus"
+
 import PackageJson from "./package.json" with { type: "json" }
 
 export default defineConfig({

@@ -1,0 +1,37 @@
+import { glob } from "node:fs/promises"
+
+import { Console, Effect, FileSystem, Path } from "effect"
+import { Command, Flag } from "effect/cli"
+
+/** Never descend into dependency trees, nested worktrees, Git metadata, or reference repos. */
+const alwaysIgnore = ["**/node_modules", "**/.worktrees", "**/.git", "**/repos"]
+
+export const clean = Command.make("clean", {
+  ignore: Flag.String("ignore").pipe(Flag.atLeast(0))
+}).pipe(
+  Command.withHandler(
+    Effect.fn("tools.clean")(function* ({ ignore }) {
+      const exclude = [...alwaysIgnore, ...ignore]
+
+      const packages = yield* Effect.promise(() => Array.fromAsync(glob("**/package.json", { exclude })))
+
+      const path = yield* Path.Path
+      const fs = yield* FileSystem.FileSystem
+
+      yield* Effect.forEach(
+        packages,
+        Effect.fn("tools.clean.package")(function* (packageJsonPath: string) {
+          const dir = path.dirname(packageJsonPath)
+
+          yield* Console.log(`Cleaning "${dir}"`)
+          yield* Effect.forEach(
+            ["tsconfig.tsbuildinfo", "dist", "node_modules"],
+            (entry) => fs.remove(path.join(dir, entry), { recursive: true, force: true }),
+            { concurrency: "unbounded" }
+          )
+        }),
+        { concurrency: "unbounded" }
+      )
+    })
+  )
+)

@@ -7,46 +7,63 @@ allowBuilds:
   workerd: true
 
 catalog:
-  effect: 4.0.0-rc.118
+  effect: 4.0.0
   typescript: 7.0.2
   vite-plus: 1.0.0
-  '@effect/tsgo': 0.47.1
-  '@types/node': 26.6.3
-  vitest: 5.0.3
+  "@effect/tsgo": 0.47.2
+  "@types/node": 26.6.3
+  vitest: 5.0.1
   tstyche: 7.2.5
-  alchemy: 2.0.0-beta.79
-  '@cloudflare/workers-types': 5.20260930.2
-  '@effect/platform-node': 4.0.0-rc.118
-  '@effect/platform-browser': 4.0.0-rc.118
-  '@effect/vitest': 4.0.0-rc.118
+  alchemy: 2.0.0-beta.80
+  "@cloudflare/workers-types": 5.20260930.2
+  "@effect/platform-node": 4.0.0
+  "@effect/platform-browser": 4.0.0
+  "@effect/vitest": 4.0.0
   drizzle-kit: 1.0.0-rc.5-ab785fc
   drizzle-orm: 1.0.0-rc.5-ab785fc
-
-# This release ships Test/Vitest without declaring its test adapter peers.
-packageExtensions:
-  'alchemy@2.0.0-beta.79':
-    peerDependencies:
-      '@effect/vitest': ^4.0.0-rc.118
-      vitest: '>=5.0.0 <6.0.0'
-    peerDependenciesMeta:
-      '@effect/vitest':
-        optional: true
-      vitest:
-        optional: true
+  vite: npm:@voidzero-dev/vite-plus-core@1.0.0
 
 minimumReleaseAgeExclude:
-  - '@effect/tsgo-darwin-arm64@0.47.1'
-  - '@effect/tsgo-darwin-x64@0.47.1'
-  - '@effect/tsgo-linux-arm64@0.47.1'
-  - '@effect/tsgo-linux-arm@0.47.1'
-  - '@effect/tsgo-linux-x64@0.47.1'
-  - '@effect/tsgo-win32-arm64@0.47.1'
-  - '@effect/tsgo-win32-x64@0.47.1'
-  - '@effect/tsgo@0.47.1'
-  - '@vitest/mocker@5.0.3'
-  - '@vitest/spy@5.0.3'
+  - "@effect/tsgo-darwin-arm64@0.47.2"
+  - "@effect/tsgo-darwin-x64@0.47.2"
+  - "@effect/tsgo-linux-arm64@0.47.2"
+  - "@effect/tsgo-linux-arm@0.47.2"
+  - "@effect/tsgo-linux-x64@0.47.2"
+  - "@effect/tsgo-win32-arm64@0.47.2"
+  - "@effect/tsgo-win32-x64@0.47.2"
+  - "@effect/tsgo@0.47.2"
+  - "@vitest/mocker@5.0.3"
+  - "@vitest/spy@5.0.3"
   - vitest@5.0.3
-  - '@cloudflare/workers-types@5.20260930.2'
+  - "@cloudflare/workers-types@5.20260930.2"
+  - "@alchemy.run/cloudflare-runtime@2.0.0-beta.80"
+  - "@alchemy.run/floci@2.0.0-beta.80"
+  - "@alchemy.run/node-utils@2.0.0-beta.80"
+  - "@distilled.cloud/acme@1.0.0-rc.13"
+  - "@distilled.cloud/aws@1.0.0-rc.13"
+  - "@distilled.cloud/axiom@1.0.0-rc.13"
+  - "@distilled.cloud/cloudflare@1.0.0-rc.13"
+  - "@distilled.cloud/core@1.0.0-rc.13"
+  - "@distilled.cloud/doppler@1.0.0-rc.13"
+  - "@distilled.cloud/fly-io@1.0.0-rc.13"
+  - "@distilled.cloud/gcp@1.0.0-rc.13"
+  - "@distilled.cloud/hetzner@1.0.0-rc.13"
+  - "@distilled.cloud/infisical@1.0.0-rc.13"
+  - "@distilled.cloud/neon@1.0.0-rc.13"
+  - "@distilled.cloud/planetscale@1.0.0-rc.13"
+  - "@distilled.cloud/prisma@1.0.0-rc.13"
+  - "@distilled.cloud/railway@1.0.0-rc.13"
+  - "@distilled.cloud/stripe@1.0.0-rc.13"
+  - "@distilled.cloud/zerossl@1.0.0-rc.13"
+  - alchemy@2.0.0-beta.80
 
-patchedDependencies:
-  effect@4.0.0-rc.118: patches/effect@4.0.0-rc.118.patch
+overrides:
+  vite@*: "catalog:"
+  vitest@*: "catalog:"
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: "*"
+    vitest: "*"
