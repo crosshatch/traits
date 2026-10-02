@@ -3,24 +3,25 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
-  "packageManager": "pnpm@12.8.1",
   "scripts": {
-    "prepare": "effect-tsgo patch",
+    "tools": "node tools/main.ts",
+    "prepare": "effect-tsgo patch --oxlint",
     "build": "tsc -b tsconfig.json",
-    "test": "pnpm build && pnpm test:lib && pnpm test:types && pnpm test:integration",
-    "test:lib": "vitest run --config crosshatch/vitest.config.ts",
+    "test": "vp check && pnpm build && pnpm test:lib && pnpm test:types && pnpm test:integration",
+    "test:lib": "vp test run --project crosshatch",
     "test:types": "tstyche",
-    "test:integration": "pnpm --filter crosshatch.dev test"
+    "test:integration": "vp test run --project crosshatch.dev"
   },
   "devDependencies": {
-    "crosshatch": "workspace:*",
     "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
     "alchemy": "catalog:",
+    "crosshatch": "workspace:*",
     "effect": "catalog:",
     "tstyche": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
-  }
+    "vite-plus": "catalog:"
+  },
+  "packageManager": "pnpm@12.8.1"
 }

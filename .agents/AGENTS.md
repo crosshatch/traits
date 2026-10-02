@@ -7,7 +7,20 @@ All paths below are relative to the repository root.
 - `crosshatch/`: published library.
 - `crosshatch.dev/`: Cloudflare application using Alchemy, Workers, Durable Objects, and Drizzle.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
-- Use `.agents/skills/verify/SKILL.md` for verification commands and test guidance. App integration tests deploy and target live Cloudflare deployments.
+
+## Verification
+
+- Run checks from the root: `pnpm exec vp check` for formatting/lint/types; `pnpm build` after TypeScript changes (`--force` after config changes).
+- Run affected suites: `pnpm test:lib` for library behavior, `pnpm test:types` for public API types, and `pnpm test:integration` for app behavior. `pnpm test` runs all checks, builds, and suites; docs-only edits need no build/tests.
+- After dependency changes, run `pnpm install`; after exports/publishing changes, run `pnpm --filter crosshatch pack` and verify the tarball's imports/types in a consumer.
+- Integration tests deploy real Cloudflare resources: require credentials/profile and initialized state, set a unique `ALCHEMY_TEST_STAGE`, and verify teardown. If interrupted, run `pnpm --filter crosshatch.dev exec alchemy destroy --stage <same-stage>` with the same profile.
+- Report failures, blocked checks, and empty/skipped suites accurately.
+
+## CI Credentials
+
+- Whenever deployment configuration changes or new environment variables are introduced, update `bootstrap.ts` to provision the required GitHub Actions secrets/variables, rerun bootstrap, and expose them in the workflow's deployment environment before deploying from CI.
+- Bootstrap with `CLOUDFLARE_ACCOUNT_ID=<account-id> pnpm exec alchemy deploy bootstrap.ts --stage bootstrap`, using an Alchemy profile authorized to create Cloudflare account tokens and manage GitHub Actions secrets/variables.
+- Deployment steps must expose `CLOUDFLARE_API_TOKEN` from `${{ secrets.CLOUDFLARE_API_TOKEN }}` and `CLOUDFLARE_ACCOUNT_ID` from `${{ vars.CLOUDFLARE_ACCOUNT_ID }}`.
 
 ## Reference Repositories
 
@@ -26,12 +39,15 @@ All paths below are relative to the repository root.
 
   ```ts
   const process = Effect.fn("process")(
-    function* (item: Item) { /* ... */ },
+    function* (item: Item) {
+      /* ... */
+    },
     (effect, item) => Effect.provideService(effect, TheService, item)
   )
   ```
 
   Use the same form with `Effect.fnUntraced` in library code, without a span name.
+
 - An outer callback returning `Effect.gen(...).pipe(...)` is appropriate when it needs to capture callback-local values for the pipeline, e.g. `(item) => Effect.gen(function* () { ... }).pipe(Effect.provide(outerThing))`. Merely referencing an outer value does not require this exception: prefer a wrapper transformation when it can capture that value directly.
 
 ## Layer Naming

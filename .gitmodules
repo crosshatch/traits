@@ -67,3 +67,6 @@
 [submodule "repos/foldkit/foldkit"]
 	path = repos/foldkit/foldkit
 	url = git@github.com:foldkit/foldkit.git
+[submodule "repos/MapleTechLabs/maple"]
+	path = repos/MapleTechLabs/maple
+	url = git@github.com:MapleTechLabs/maple.git

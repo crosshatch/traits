@@ -4,7 +4,6 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "test": "vitest run",
     "dev": "alchemy dev"
   },
   "dependencies": {
@@ -19,6 +18,7 @@
     "@effect/vitest": "catalog:",
     "@types/node": "catalog:",
     "drizzle-kit": "catalog:",
+    "vite-plus": "catalog:",
     "vitest": "catalog:"
   }
 }

@@ -6,6 +6,4 @@ const HealthLive = HttpApiBuilder.group(CrosshatchApi, "health", (handlers) =>
   handlers.handle("health", () => Effect.succeed("ok"))
 )
 
-export const layerApi = HttpApiBuilder.layer(CrosshatchApi).pipe(
-  Layer.provide(HealthLive)
-)
+export const layerApi = HttpApiBuilder.layer(CrosshatchApi).pipe(Layer.provide(HealthLive))
