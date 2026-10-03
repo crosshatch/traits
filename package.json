@@ -18,6 +18,7 @@
     "@types/node": "catalog:",
     "alchemy": "catalog:",
     "crosshatch": "workspace:*",
+    "drizzle-kit": "catalog:",
     "effect": "catalog:",
     "tstyche": "catalog:",
     "typescript": "catalog:",

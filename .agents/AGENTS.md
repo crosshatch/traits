@@ -8,6 +8,10 @@ All paths below are relative to the repository root.
 - `crosshatch.dev/`: Cloudflare application using Alchemy, Workers, Durable Objects, and Drizzle.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
 
+## Drizzle Migrations
+
+- Whenever Drizzle schemas change, run `pnpm tools generate-migrations` from the repository root.
+
 ## Verification
 
 - Run checks from the root: `pnpm exec vp check` for formatting/lint/types; `pnpm build` after TypeScript changes (`--force` after config changes).
