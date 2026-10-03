@@ -4,8 +4,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "db:generate": "pnpm --dir .. tools generate-migrations",
-    "dev": "pnpm db:generate && alchemy dev"
+    "dev": "alchemy dev"
   },
   "dependencies": {
     "alchemy": "catalog:",
