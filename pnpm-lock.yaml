@@ -229,6 +229,9 @@ importers:
       crosshatch:
         specifier: workspace:*
         version: link:crosshatch
+      drizzle-kit:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.5-ab785fc
       effect:
         specifier: 'catalog:'
         version: 4.0.0
@@ -275,9 +278,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.3
-      drizzle-kit:
-        specifier: 'catalog:'
-        version: 1.0.0-rc.5-ab785fc
       vite-plus:
         specifier: 'catalog:'
         version: 1.0.0(@types/node@26.6.3)(@vitest/ui@5.0.1)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)

@@ -23,17 +23,15 @@ export const generateMigrations = Command.make("generate-migrations").pipe(
             ChildProcess.make(
               "pnpm",
               [
-                "--dir",
-                "crosshatch.dev",
                 "exec",
                 "drizzle-kit",
                 "generate",
                 "--dialect",
                 "sqlite",
                 "--schema",
-                path.relative("crosshatch.dev", schema),
+                schema,
                 "--out",
-                path.relative("crosshatch.dev", path.join(path.dirname(schema), "migrations"))
+                path.join(path.dirname(schema), "migrations")
               ],
               { stdin: "inherit", stdout: "inherit", stderr: "inherit" }
             )
