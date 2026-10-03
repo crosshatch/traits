@@ -10,7 +10,7 @@ All paths below are relative to the repository root.
 
 ## Drizzle Migrations
 
-- Whenever Drizzle schemas change, run `pnpm tools generate-migrations` from the repository root. Review and commit the generated SQL and snapshots alongside the schema changes.
+- Whenever Drizzle schemas change, run `pnpm tools generate-migrations` from the repository root.
 
 ## Verification
 
