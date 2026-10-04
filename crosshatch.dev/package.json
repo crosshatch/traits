@@ -4,7 +4,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev": "alchemy dev"
+    "dev": "SSL_CERT_FILE=${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt} alchemy dev"
   },
   "dependencies": {
     "alchemy": "catalog:",

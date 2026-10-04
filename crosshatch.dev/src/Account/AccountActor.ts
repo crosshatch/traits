@@ -19,7 +19,7 @@ export class AccountActor extends Cloudflare.DurableObject<
 
 export default AccountActor.make(
   Effect.gen(function* () {
-    const migrations = yield* Cloudflare.SqlMigrations("./src/Account/migrations")
+    const migrations = yield* Cloudflare.SqlMigrations(`${import.meta.dirname}/migrations`)
 
     return Effect.gen(function* () {
       const db = yield* DrizzleCloudflare.DurableObject({ migrations, relations })

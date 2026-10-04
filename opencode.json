@@ -5,6 +5,10 @@
       "cloudflare": {
         "type": "remote",
         "url": "https://mcp.cloudflare.com/mcp"
+      },
+      "axiom": {
+        "type": "remote",
+        "url": "https://mcp.axiom.co/mcp"
       }
     }
   }
