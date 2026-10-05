@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Path, Result, Schema as S, String } from "effect"
+import { Effect, FileSystem, Path, Schema as S, String } from "effect"
 import { Decision, DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
@@ -18,10 +18,9 @@ export const Concern = S.Struct({
 
 export type Blocked = typeof Blocked.Type
 export const Blocked = S.Struct({
-  status: S.Literals(["reconciliation-required", "review-unavailable"]),
+  status: S.Literal("reconciliation-required"),
   proposed: Trait,
   concerns: S.Array(Concern),
-  errors: S.Array(S.String),
   guidance: S.String
 })
 
@@ -44,7 +43,6 @@ export const CreateTrait = Tool.make("create-trait", {
     | For reconciliation-required, propose reuse, clarified scopes, or a merge,
     | showing exact filenames/text/removals; ask approve/revise/cancel via an interactive question or text fallback.
     | Never overwrite/remove existing traits without approval.
-    | For review-unavailable, report that nothing was written.
     | For ConfigError, ask the user to add the missing setting to the repository root or worktree .env,
     | or the MCP process environment, then restart the server. Jev requires TYPESAFE_API_KEY.
     | Choose an explicit target for the new trait's automatic review based on the user's task and the trait's scope.
@@ -96,7 +94,6 @@ export const layer = toolkit.toLayer({
 const inspect = Effect.fn("traits.reconcile")(function* (proposed: Trait) {
   const loaded = yield* Traits.load()
   const concerns: Array<typeof Concern.Type> = []
-  const errors: Array<string> = []
   if (loaded.length > 0) {
     const {
       config: { passThreshold: threshold }
@@ -104,20 +101,13 @@ const inspect = Effect.fn("traits.reconcile")(function* (proposed: Trait) {
     const checks = yield* Effect.forEach(
       loaded,
       Effect.fn("traits.compare")(function* (existing) {
-        const result = yield* DecisionModel.decide(decision, { input: { proposed, existing } }).pipe(
-          Effect.timeout("90 seconds"),
-          Effect.result
-        )
+        const result = yield* DecisionModel.decide(decision, { input: { proposed, existing } })
         return { existing, result }
       }),
       { concurrency: "unbounded" }
     )
     for (const { existing, result } of checks) {
-      if (Result.isFailure(result)) {
-        errors.push(`${existing.path}: ${result.failure.toString()}`)
-        continue
-      }
-      const answer = result.success.answers.relationship
+      const answer = result.answers.relationship
       if (answer.label !== "distinct" || answer.probabilities.distinct < threshold) {
         concerns.push({
           existing,
@@ -129,21 +119,12 @@ const inspect = Effect.fn("traits.reconcile")(function* (proposed: Trait) {
       }
     }
   }
-  if (concerns.length === 0 && errors.length === 0) return undefined
+  if (concerns.length === 0) return undefined
   return {
-    status: errors.length > 0 ? "review-unavailable" : "reconciliation-required",
+    status: "reconciliation-required",
     proposed,
     concerns,
-    errors,
-    guidance:
-      errors.length > 0
-        ? String.stripMargin(`
-            | No file was written. Report the review errors to the user.
-            | For ConfigError, ask the user to add the missing configuration
-            | (TYPESAFE_API_KEY in the repository root or worktree .env, or MCP process environment), then retry.
-            | An unavailable comparison is not evidence of overlapping traits.
-          `)
-        : String.stripMargin(`
+    guidance: String.stripMargin(`
             | No file was written. Read the identified existing traits, explain the overlap/conflict or uncertainty,
             | and propose a concrete reconciliation: reuse the existing trait, clarify scopes, or merge into one trait.
             | Show the exact resulting filenames, full text, and any removals.

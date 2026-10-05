@@ -20,11 +20,11 @@ trait in parallel with Jev, classifying each pair as distinct, overlap,
 conflict, or inconclusive. Require distinct probability at least the configured
 `passThreshold`.
 
-Nonpassing comparisons return `reconciliation-required`; unavailable reviews
-return `review-unavailable`. Neither writes a file. The agent proposes reuse,
-clarified scopes, or a merge with exact text and removals, and requests approval
-through an interactive question or text fallback. Existing traits are never
-silently overwritten or deleted.
+Nonpassing comparisons return `reconciliation-required`; comparison failures
+propagate. Neither writes a file. The agent proposes reuse, clarified scopes, or
+a merge with exact text and removals, and requests approval through an
+interactive question or text fallback. Existing traits are never silently
+overwritten or deleted.
 
 ## Direct change collection
 

@@ -56,6 +56,7 @@ export default defineConfig({
       "effecttsgo/layer-merge-all-with-dependencies": "off",
       "effecttsgo/prefer-schema-over-json": "off",
       "effecttsgo/effect-succeed-with-void": "off",
+      "typescript/no-import-type-side-effects": "error",
       ...Record.mapEntries(custom.rules, (_, name) => [`custom/${name}`, "error"] as const),
       "vite-plus/prefer-vite-plus-imports": "error"
     },

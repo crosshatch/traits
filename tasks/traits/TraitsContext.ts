@@ -1,7 +1,6 @@
-import { ConfigProvider, Context, Effect, FileSystem, Layer, Path, Ref, Schema as S } from "effect"
+import { ConfigProvider, Context, Effect, FileSystem, Layer, Path, Schema as S } from "effect"
 
 import { git } from "./_util.ts"
-import { type Trait } from "./Domain.ts"
 import { TraitsConfig } from "./TraitsConfig.ts"
 
 export class TraitsContext extends Context.Service<TraitsContext>()("root/tasks/traits/TraitsContext", {
@@ -25,14 +24,7 @@ export class TraitsContext extends Context.Service<TraitsContext>()("root/tasks/
     }
     const traitsDir = path.join(root, ".agents", "traits")
     yield* fs.makeDirectory(traitsDir, { recursive: true })
-    const traitsCache = yield* Ref.make<
-      | {
-          readonly versions: ReadonlyArray<string>
-          readonly traits: Array<Trait>
-        }
-      | undefined
-    >(undefined)
-    return { root, traitsDir, commonDir, config, configProvider, traitsCache }
+    return { root, traitsDir, commonDir, config, configProvider }
   })
 }) {
   static readonly layer = Layer.effect(this, this.make)

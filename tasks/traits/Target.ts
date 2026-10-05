@@ -1,7 +1,7 @@
 import { Effect, FileSystem, Path, Schema as S } from "effect"
 
 import { git } from "./_util.ts"
-import { type Change } from "./Domain.ts"
+import type { Change } from "./Domain.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
 export type Target = typeof Target.Type

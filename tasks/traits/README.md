@@ -29,9 +29,9 @@ clarified scopes, or a merge, shows full text and any removals, and asks for
 approval using an interactive question when available. It never silently edits
 existing traits.
 
-Unavailable comparisons return `review-unavailable`. Native filesystem and
-configuration errors propagate; the agent should explain missing configuration
-and ask the user to supply it. Names and content are plain strings.
+Comparison failures, native filesystem errors, and configuration errors
+propagate; the agent should explain missing configuration and ask the user to
+supply it. Names and content are plain strings.
 
 Successful creation writes `.agents/traits/<name>.md` exclusively and
 automatically reviews the new trait against the agent-selected `target`. Both
