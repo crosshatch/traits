@@ -6,7 +6,7 @@ class RepoSyncError extends Data.TaggedError("RepoSyncError")<{ readonly message
 
 export const syncRepos = Command.make("sync-repos").pipe(
   Command.withHandler(
-    Effect.fn("tools.syncRepos")(function* () {
+    Effect.fn("tasks.syncRepos")(function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
@@ -34,7 +34,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
 
       const repos = yield* Effect.forEach(
         orgs,
-        Effect.fn("tools.syncRepos.organization")(function* (org) {
+        Effect.fn("tasks.syncRepos.organization")(function* (org) {
           const orgDir = path.join(reposDir, org)
           const entries = yield* fs.readDirectory(orgDir)
 
@@ -54,7 +54,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
 
       yield* Effect.forEach(
         repos,
-        Effect.fn("tools.syncRepos.repository")(function* ({ entry, repoDir }) {
+        Effect.fn("tasks.syncRepos.repository")(function* ({ entry, repoDir }) {
           yield* Console.log(`Syncing "${entry}" (main)`)
           yield* ChildProcess.make`git fetch origin main`.pipe(
             ChildProcess.setCwd(repoDir),

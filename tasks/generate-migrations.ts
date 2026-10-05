@@ -1,15 +1,15 @@
-import { Effect, FileSystem, Path, Schema } from "effect"
+import { Effect, FileSystem, Path, Schema as S } from "effect"
 import { Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-class MigrationGenerationError extends Schema.TaggedError<MigrationGenerationError>()("MigrationGenerationError", {
-  schema: Schema.String,
-  exitCode: Schema.Int
+class MigrationGenerationError extends S.TaggedError<MigrationGenerationError>()("MigrationGenerationError", {
+  schema: S.String,
+  exitCode: S.Int
 }) {}
 
 export const generateMigrations = Command.make("generate-migrations").pipe(
   Command.withHandler(
-    Effect.fn("tools.generateMigrations")(function* () {
+    Effect.fn("tasks.generateMigrations")(function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
@@ -17,7 +17,7 @@ export const generateMigrations = Command.make("generate-migrations").pipe(
 
       yield* Effect.forEach(
         schemas,
-        Effect.fn("tools.generateMigrations.schema")(function* (schema) {
+        Effect.fn("tasks.generateMigrations.schema")(function* (schema) {
           yield* Effect.log(`Generating migrations for ${schema}`)
           const exitCode = yield* spawner.exitCode(
             ChildProcess.make(

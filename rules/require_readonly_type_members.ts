@@ -1,4 +1,4 @@
-import type { Context, ESTree, Rule } from "vite-plus/lint/plugins"
+import { type Context, defineRule, type ESTree } from "vite-plus/lint/plugins"
 
 const reportMissingReadonly = (context: Context, node: ESTree.TSIndexSignature | ESTree.TSPropertySignature) => {
   if (node.readonly) return
@@ -36,7 +36,7 @@ const reportMissingMappedReadonly = (context: Context, node: ESTree.TSMappedType
   })
 }
 
-export const requireReadonlyTypeMembers: Rule = {
+export const requireReadonlyTypeMembers = defineRule({
   meta: {
     type: "suggestion",
     docs: {
@@ -53,4 +53,4 @@ export const requireReadonlyTypeMembers: Rule = {
     TSMappedType: (node) => reportMissingMappedReadonly(context, node),
     TSPropertySignature: (node) => reportMissingReadonly(context, node)
   })
-}
+})

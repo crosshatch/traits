@@ -11,10 +11,11 @@ All paths below are relative to the repository root.
 
 ## Drizzle Migrations
 
-- Whenever Drizzle schemas change, run `pnpm tools generate-migrations` from the repository root.
+- Whenever Drizzle schemas change, run `pnpm run tasks generate-migrations` from the repository root.
 
 ## Verification
 
+- Run `pnpm test:tasks` for changes to the traits MCP server.
 - Run checks from the root: `pnpm exec vp check` for formatting/lint/types; `pnpm build` after TypeScript changes (`--force` after config changes).
 - Run affected suites: `pnpm test:lib` for library behavior, `pnpm test:types` for public API types, and `pnpm test:integration` for app behavior. `pnpm test` runs all checks, builds, and suites; docs-only edits need no build/tests.
 - After dependency changes, run `pnpm install`; after exports/publishing changes, run `pnpm --filter crosshatch pack` and verify the tarball's imports/types in a consumer.
@@ -136,4 +137,4 @@ Avoid `XLive`, `XLayer`, `layerFooConfig`, and `layerFooEnv`.
 
 ## Configuration
 
-Keep configuration minimal and deliberate: verify defaults, remove duplication, and avoid speculative abstractions. Use `.agents/skills/prune/SKILL.md` when auditing configuration.
+Keep configuration minimal and deliberate: verify defaults, remove duplication, and avoid speculative abstractions.

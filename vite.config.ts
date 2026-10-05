@@ -23,7 +23,12 @@ export default defineConfig({
     ]
   },
   test: {
-    projects: ["crosshatch/vite.config.ts", "crosshatch.dev/vite.config.ts"]
+    projects: [
+      "crosshatch/vite.config.ts",
+      "crosshatch.dev/vite.config.ts",
+      "tasks/vite.config.ts",
+      "rules/vite.config.ts"
+    ]
   },
   lint: {
     extends: [recommended],
@@ -51,6 +56,7 @@ export default defineConfig({
       "effecttsgo/layer-merge-all-with-dependencies": "off",
       "effecttsgo/prefer-schema-over-json": "off",
       "effecttsgo/effect-succeed-with-void": "off",
+      "typescript/no-import-type-side-effects": "error",
       ...Record.mapEntries(custom.rules, (_, name) => [`custom/${name}`, "error"] as const),
       "vite-plus/prefer-vite-plus-imports": "error"
     },

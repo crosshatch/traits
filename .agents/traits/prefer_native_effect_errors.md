@@ -1,0 +1,1 @@
+Preserve Effect’s built-in error types and let errors propagate naturally. Avoid custom error types or error mapping unless needed for recovery or a meaningful external boundary.

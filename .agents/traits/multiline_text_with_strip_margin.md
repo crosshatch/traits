@@ -1,0 +1,1 @@
+Write large text strings as multiline template literals using Effect’s `String.stripMargin`, with a leading `|` on each text line. Indent text lines one level beyond the containing expression and align the closing backtick with that expression.
