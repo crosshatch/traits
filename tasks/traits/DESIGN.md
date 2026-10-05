@@ -3,8 +3,8 @@
 ## Purpose
 
 Store approved repository guidance as Markdown in `.agents/traits/`, compare new
-guidance with existing traits, and use TypeSafe Jev to classify code changes
-against those traits. The coding agent handles approval and fixes.
+guidance with existing traits, and use the configured decision model to classify
+code changes against those traits. The coding agent handles approval and fixes.
 
 ## Storage and approval
 
@@ -16,9 +16,9 @@ exclusively.
 The agent previews the filename and complete text and asks for approval. An
 explicit request with exact name and text counts as approval. Revisions need
 fresh approval. Before writing, compare the proposal against every existing
-trait in parallel with Jev, classifying each pair as distinct, overlap,
-conflict, or inconclusive. Require distinct probability at least the configured
-`passThreshold`.
+trait in parallel with the decision model, classifying each pair as distinct,
+overlap, conflict, or inconclusive. Require distinct probability at least the
+configured `passThreshold`.
 
 Nonpassing comparisons return `reconciliation-required`; comparison failures
 propagate. Neither writes a file. The agent proposes reuse, clarified scopes, or
@@ -84,10 +84,10 @@ errors in custom types.
 
 ## Runtime and configuration
 
-Use TypeSafeDecisionModel with `jev-latest`, configured in the root `traits.ts`.
-Read `TYPESAFE_API_KEY` at CLI startup when building the client layer. Validate
-the optional `passThreshold` in `traits.ts` with TraitsConfig and S.Finite
-bounded to `[0, 1]`, defaulting to `0.90` during decoding.
+Use the decision model layer configured in the root `traits.ts`. Load any
+model-specific credentials at CLI startup when building that layer. Validate the
+optional `passThreshold` in `traits.ts` with TraitsConfig and S.Finite bounded
+to `[0, 1]`, defaulting to `0.90` during decoding.
 
 Configuration precedence is inherited environment, worktree `.env`, then main
 repository `.env` located through Git's common directory. Load dotenv once at
@@ -98,8 +98,8 @@ propagate.
 Register the toolkit with its handlers and provide McpServer.layerStdio to the
 registration layer, following Effect's example. Launch the layer, direct logs to
 stderr, and reserve stdout for MCP. NodeServices supplies platform services at
-the entry point, alongside TypeSafeClient and FetchHttpClient layers. Determine
-cwd through the injected Path service's resolve().
+the entry point, alongside the decision model and FetchHttpClient layers.
+Determine cwd through the injected Path service's resolve().
 
 ## Modules
 

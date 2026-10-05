@@ -44,7 +44,7 @@ export const CreateTrait = Tool.make("create-trait", {
     | showing exact filenames/text/removals; ask approve/revise/cancel via an interactive question or text fallback.
     | Never overwrite/remove existing traits without approval.
     | For ConfigError, ask the user to add the missing setting to the repository root or worktree .env,
-    | or the MCP process environment, then restart the server. Jev requires TYPESAFE_API_KEY.
+    | or the MCP process environment, then restart the server. Required settings depend on the configured decision model.
     | Choose an explicit target for the new trait's automatic review based on the user's task and the trait's scope.
     | Targets use _tag: Staged, Unstaged (tracked changes only), Untracked, Changed (all changes), Dirs, or Files.
     | Use { _tag: "Dirs", dirs: ["."] } for the repository, selected directories for a focused audit, or { _tag: "Files", files: ["path"] }.

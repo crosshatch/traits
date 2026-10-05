@@ -5,15 +5,15 @@ with `node tasks/main.ts traits` through `opencode.json`.
 
 ## Configuration
 
-Set `TYPESAFE_API_KEY` in the repository root `.env`, worktree `.env`, or MCP
-process environment. Configuration is loaded at CLI startup, with precedence:
-process environment, worktree `.env`, main repository `.env`. Credentials are
-not copied into worktrees. Restart the MCP process after changing configuration,
-including dotenv settings.
+Set any credentials required by the configured decision model in the repository
+root `.env`, worktree `.env`, or MCP process environment. Configuration is
+loaded at CLI startup, with precedence: process environment, worktree `.env`,
+main repository `.env`. Credentials are not copied into worktrees. Restart the
+MCP process after changing configuration, including dotenv settings.
 
-The root `traits.ts` selects `jev-latest` directly. Its optional `passThreshold`
-defaults to `0.90` and must be finite and within `[0, 1]`. These settings
-configure local tooling, not deployment or CI.
+The root `traits.ts` supplies the decision model layer. Its optional
+`passThreshold` defaults to `0.90` and must be finite and within `[0, 1]`. These
+settings configure local tooling, not deployment or CI.
 
 ## Workflow
 
@@ -21,13 +21,13 @@ The agent previews the trait filename and full text and gets approval before
 calling `create-trait`. An explicit request supplying the exact name and text
 counts as approval. Revision feedback requires a new preview and approval.
 
-Before saving, Jev compares the proposal against every existing trait in
-parallel. Each comparison must select `distinct` with probability at least the
-configured threshold. Otherwise, `reconciliation-required` returns the relevant
-existing traits and probabilities without writing. The agent proposes reuse,
-clarified scopes, or a merge, shows full text and any removals, and asks for
-approval using an interactive question when available. It never silently edits
-existing traits.
+Before saving, the decision model compares the proposal against every existing
+trait in parallel. Each comparison must select `distinct` with probability at
+least the configured threshold. Otherwise, `reconciliation-required` returns the
+relevant existing traits and probabilities without writing. The agent proposes
+reuse, clarified scopes, or a merge, shows full text and any removals, and asks
+for approval using an interactive question when available. It never silently
+edits existing traits.
 
 Comparison failures, native filesystem errors, and configuration errors
 propagate; the agent should explain missing configuration and ask the user to
@@ -61,10 +61,10 @@ staged and unstaged entries for the same path. Each decision receives one change
 and one trait. Git runs through Effect's process services. No temporary indexes,
 tree objects, snapshot identities, or staleness checks are created.
 
-Each trait/change pair receives one Jev classification, with unbounded
-concurrency. Report counts refer to these pairs. There are no local byte budgets
-or size-based batches. Decision calls propagate errors naturally, without local
-retries, timeouts, or conversion into findings.
+Each trait/change pair receives one decision model classification, with
+unbounded concurrency. Report counts refer to these pairs. There are no local
+byte budgets or size-based batches. Decision calls propagate errors naturally,
+without local retries, timeouts, or conversion into findings.
 
 Reports contain the root, target, status, nonpassing findings, the number of
 trait/change pairs checked, and an optional explanatory message. A pass requires
@@ -81,4 +81,4 @@ is installed.
 ## Verification
 
 Run `pnpm exec vp check` and `pnpm build`. The traits test files were removed;
-live provider verification requires `TYPESAFE_API_KEY`.
+live provider verification requires the configured decision model's credentials.
