@@ -167,6 +167,9 @@ catalogs:
     '@cloudflare/workers-types':
       specifier: 5.20260930.2
       version: 5.20260930.2
+    '@effect/ai-typesafe':
+      specifier: 4.0.0
+      version: 4.0.0
     '@effect/platform-node':
       specifier: 4.0.0
       version: 4.0.0
@@ -214,6 +217,9 @@ importers:
 
   .:
     devDependencies:
+      '@effect/ai-typesafe':
+        specifier: 'catalog:'
+        version: 4.0.0(effect@4.0.0)
       '@effect/platform-node':
         specifier: 'catalog:'
         version: 4.0.0(effect@4.0.0)(redis@6.2.1)
@@ -474,6 +480,11 @@ packages:
 
   '@drizzle-team/brocli@0.12.1':
     resolution: {integrity: sha512-yHwomvolVafvUXhy5TdiJVkuNCxXn+bKOs2aWiWEQh/5YaV97Oa/abJz3dmx7lxgIUsUlS1Jl4mEfvJPo3YsVw==}
+
+  '@effect/ai-typesafe@4.0.0':
+    resolution: {integrity: sha512-TbInR017yf4KFAYD1jTSr9pkQrob1+9UNyW6KKRHHGfmD8j121f41fOf+60RJ7IIBl/XOUAURC8/Mj7aWkGZtg==}
+    peerDependencies:
+      effect: ^4.0.0
 
   '@effect/platform-node-shared@4.0.0':
     resolution: {integrity: sha512-VBXHJU9UXVZPdQGGDRjGXpo+TpOzRwZuMrdKAtIxi1qwcRftmacZ1zTgIrzBa0Z2RA2KVkoOecQUsTlt/nJZhw==}
@@ -2961,6 +2972,10 @@ snapshots:
       effect: 4.0.0
 
   '@drizzle-team/brocli@0.12.1': {}
+
+  '@effect/ai-typesafe@4.0.0(effect@4.0.0)':
+    dependencies:
+      effect: 4.0.0
 
   '@effect/platform-node-shared@4.0.0(effect@4.0.0)':
     dependencies:

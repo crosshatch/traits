@@ -1,0 +1,1 @@
+Write large text strings as multiline template literals using Effect’s `String.stripMargin`, with a leading `|` on each text line.

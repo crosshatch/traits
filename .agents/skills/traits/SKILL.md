@@ -1,0 +1,14 @@
+---
+name: traits
+description: Use when creating or revising repository traits, capturing reusable user feedback as traits, reconciling overlapping traits, or checking traits before committing.
+---
+
+# Traits
+
+- Draft traits concisely: preserve essential rules, scopes, and exceptions; omit headings, repetition, and unnecessary explanation or examples. Every word adds evaluation cost.
+- `create-trait` compares the proposal with every existing trait before writing. On `reconciliation-required`, inspect the returned traits and propose reuse, clarified scopes, or a merged replacement, showing exact filenames, full text, and any removals. Offer approve/revise/cancel using an interactive question when available, otherwise a text question. Apply reconciliation edits only after explicit approval. `review-unavailable` means nothing was written; report the blocker. After reconciling existing files, retry creation only if a new file is still needed.
+- After `create-trait`, inspect its automatic all-changes review of the new trait. Input includes separately labelled staged and unstaged diffs and untracked file contents. Findings are trait-level; inspect the diff to locate violations. Review errors do not undo the saved trait: report incomplete reviews rather than claiming success. Use the Staged target for pre-commit `check-traits`.
+- Also use `create-trait` when the user explicitly asks to add a trait or describes one they want saved; a prior feedback event is not required. Read existing traits first. An explicit request supplying the exact name and full text counts as approval. If drafting or expanding the description is needed, preview the proposed name and full text and obtain approval before writing.
+- When feedback contains a reusable insight, read `.agents/traits/*.md` to avoid duplicates. Show the proposed `<trait_name>.md` and full description and ask whether to approve, revise, or cancel. Use snake_case filenames. Accept additional free-text information, rewrite the proposal, and ask again until the user explicitly approves the exact name and description. Only then call the traits MCP `create-trait` tool. Never create a trait while revision or approval is pending.
+- Before committing, stage the intended changes and call the traits MCP `check-traits` tool. Current trait files apply immediately, even if unstaged. Investigate nonpassing traits using the reported probabilities and the Git diff. Fix, restage, and rerun. Inconclusive results are not passes. Changing staged code or traits requires another check. If there are no traits or no changes, report that explicitly.
+- Discover these tools under the `traits` server in Code Mode; their native names are `traits_create-trait` and `traits_check-traits`.

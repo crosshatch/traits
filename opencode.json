@@ -2,6 +2,10 @@
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "servers": {
+      "traits": {
+        "type": "local",
+        "command": ["node", "tasks/main.ts", "traits"]
+      },
       "cloudflare": {
         "type": "remote",
         "url": "https://mcp.cloudflare.com/mcp"

@@ -1,0 +1,1 @@
+Validate configuration through `Config.schema` with appropriate schemas and checks. For finite numbers, use `S.Finite` with any required bounds instead of `Config.Number` followed by manual conditions.

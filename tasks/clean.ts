@@ -10,7 +10,7 @@ export const clean = Command.make("clean", {
   ignore: Flag.String("ignore").pipe(Flag.atLeast(0))
 }).pipe(
   Command.withHandler(
-    Effect.fn("tools.clean")(function* ({ ignore }) {
+    Effect.fn("tasks.clean")(function* ({ ignore }) {
       const exclude = [...alwaysIgnore, ...ignore]
 
       const packages = yield* Effect.promise(() => Array.fromAsync(glob("**/package.json", { exclude })))
@@ -20,7 +20,7 @@ export const clean = Command.make("clean", {
 
       yield* Effect.forEach(
         packages,
-        Effect.fn("tools.clean.package")(function* (packageJsonPath: string) {
+        Effect.fn("tasks.clean.package")(function* (packageJsonPath: string) {
           const dir = path.dirname(packageJsonPath)
 
           yield* Console.log(`Cleaning "${dir}"`)

@@ -3,7 +3,7 @@
   "references": [{ "path": "./crosshatch" }],
   "include": [
     "*.ts",
-    "tools/**/*.ts",
+    "tasks/**/*.ts",
     "rules/**/*.ts",
     "crosshatch/vite.config.ts",
     "crosshatch/test/**/*.ts",

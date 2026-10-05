@@ -2,7 +2,7 @@ import Fs from "node:fs"
 import Path from "node:path"
 import { fileURLToPath } from "node:url"
 
-import { Option, Schema } from "effect"
+import { Option, Schema as S } from "effect"
 import type { Context, ESTree, Rule } from "vite-plus/lint/plugins"
 
 type PackageInfo = {
@@ -12,7 +12,7 @@ type PackageInfo = {
 
 const packageInfoByDirectory = new Map<string, PackageInfo | null>()
 
-const decodePackageName = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ name: Schema.String })))
+const decodePackageName = S.decodeUnknownOption(S.fromJsonString(S.Struct({ name: S.String })))
 
 const normalizePath = (value: string) => (value.startsWith("file://") ? fileURLToPath(value) : value)
 
