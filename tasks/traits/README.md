@@ -34,10 +34,13 @@ configuration errors propagate; the agent should explain missing configuration
 and ask the user to supply it. Names and content are plain strings.
 
 Successful creation writes `.agents/traits/<name>.md` exclusively and
-automatically reviews the new trait against **all changes**. The returned
-`reviews` array has one `scope: "all"` entry containing a report or error.
-Review failure does not undo creation. Traits apply immediately, including
-unstaged trait files.
+automatically reviews the new trait against the agent-selected `target`. Both
+tools require an explicit target: `Staged`, `Unstaged`, `Untracked`, `Changed`,
+`Dirs` (with `dirs: string[]`), or `Files` (with `files: string[]`), tagged with
+`_tag`. Use `{ _tag: "Dirs", dirs: ["."] }` to review the whole repository. The
+returned `reviews` array has one entry containing the target and a report or
+error. Review failure does not undo creation. Traits apply immediately,
+including unstaged trait files.
 
 Before committing, stage intended changes and call `check-traits`, which reviews
 **staged changes only**. Fix findings and rerun after changing the index.

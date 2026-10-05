@@ -1,6 +1,6 @@
-import type { Rule } from "vite-plus/lint/plugins"
+import { defineRule } from "vite-plus/lint/plugins"
 
-export const requireEffectAllExplicitConcurrency: Rule = {
+export const requireEffectAllExplicitConcurrency = defineRule({
   meta: {
     type: "problem",
     docs: {
@@ -29,4 +29,4 @@ export const requireEffectAllExplicitConcurrency: Rule = {
       context.report({ node, messageId: "missingExplicitConcurrency" })
     }
   })
-}
+})

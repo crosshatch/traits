@@ -14,41 +14,37 @@ export const Target = S.TaggedUnion({
   Untracked: {},
   /** Review staged, unstaged, and untracked changes. */
   Changed: {},
-  /** Recursively review a repository-relative or absolute directory, including unchanged and hidden files, excluding .git and node_modules. Use "." for the repository root. */
-  Dir: { dir: S.String },
-  /** Review a complete file using a repository-relative or absolute path. */
-  File: { file: S.String }
+  /** Recursively review repository-relative or absolute directories, including unchanged and hidden files, excluding .git and node_modules. Use ["."] for the repository root. */
+  Dirs: { dirs: S.Array(S.String) },
+  /** Review complete files using repository-relative or absolute paths. Duplicate paths are reviewed once. */
+  Files: { files: S.Array(S.String) }
 })
 
 export const normalize = Effect.fn("traits.target.normalize")(function* (target: Target) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
-  if (target._tag === "File") {
-    const { root } = yield* TraitsContext
-    const filename = path.resolve(root, target.file)
-    const content = yield* fs.readFileString(filename)
-    return [{ path: target.file, content: `Full file contents:\n${content}` }]
-  }
-  if (target._tag === "Dir") {
+  if (target._tag === "Files" || target._tag === "Dirs") {
     const { root: repository } = yield* TraitsContext
-    const directory = path.resolve(repository, target.dir)
-    const directories = [directory]
-    const files: Array<string> = []
+    const directories = target._tag === "Dirs" ? target.dirs.map((dir) => path.resolve(repository, dir)) : []
+    const files = new Set(target._tag === "Files" ? target.files.map((file) => path.resolve(repository, file)) : [])
+    const visited = new Set<string>()
     while (directories.length > 0) {
       const current = directories.pop()!
+      if (visited.has(current)) continue
+      visited.add(current)
       const entries = yield* fs.glob("{*,.*}", { root: current, exclude: [".git", "node_modules"] })
       for (const entry of entries) {
         const filename = path.resolve(current, entry)
         const info = yield* fs.stat(filename)
         if (info.type === "Directory") directories.push(filename)
-        else if (info.type === "File") files.push(path.relative(repository, filename))
+        else if (info.type === "File") files.add(filename)
       }
     }
     return yield* Effect.forEach(
       files,
-      Effect.fn("traits.target.readDirFile")(function* (filename) {
-        const content = yield* fs.readFileString(path.resolve(repository, filename))
-        return { path: filename, content: `Full file contents:\n${content}` }
+      Effect.fn("traits.target.readFile")(function* (filename) {
+        const content = yield* fs.readFileString(filename)
+        return { path: path.relative(repository, filename), content: `Full file contents:\n${content}` }
       }),
       { concurrency: "unbounded" }
     )

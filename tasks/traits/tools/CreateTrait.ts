@@ -1,11 +1,11 @@
-import { Effect, FileSystem, Path, Schema as S, String } from "effect"
+import { Effect, FileSystem, Path, Result, Schema as S, String } from "effect"
 import { Decision, DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
 import * as Check from "../Check.ts"
 import { Report, Trait } from "../Domain.ts"
-import * as Reconcile from "../Reconcile.ts"
 import { Target } from "../Target.ts"
+import * as Traits from "../Traits.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 
 export const Concern = S.Struct({
@@ -47,10 +47,14 @@ export const CreateTrait = Tool.make("create-trait", {
     | For review-unavailable, report that nothing was written.
     | For ConfigError, ask the user to add the missing setting to the repository root or worktree .env,
     | or the MCP process environment, then restart the server. Jev requires TYPESAFE_API_KEY.
-    | After creation, inspect the automatic all-changes review of the new trait against staged and unstaged diffs
-    | and untracked files. Findings are trait-level. Review failures after saving do not undo creation.
+    | Choose an explicit target for the new trait's automatic review based on the user's task and the trait's scope.
+    | Targets use _tag: Staged, Unstaged (tracked changes only), Untracked, Changed (all changes), Dirs, or Files.
+    | Use { _tag: "Dirs", dirs: ["."] } for the repository, selected directories for a focused audit, or { _tag: "Files", files: ["path"] }.
+    | Paths are repository-relative or absolute. Dirs excludes .git and node_modules. Duplicate paths are reviewed once.
+    | After creation, inspect the review of the selected target. Findings identify trait/file pairs.
+    | Review failures after saving do not undo creation.
   `),
-  parameters: S.Struct({ name: S.String, content: S.String }),
+  parameters: S.Struct({ name: S.String, content: S.String, target: Target }),
   success: S.Union([
     Blocked,
     S.Struct({
@@ -59,7 +63,7 @@ export const CreateTrait = Tool.make("create-trait", {
       path: S.String,
       reviews: S.Array(
         S.Struct({
-          target: Target.cases.Changed,
+          target: Target,
           report: S.NullOr(Report),
           error: S.NullOr(S.String)
         })
@@ -75,23 +79,84 @@ export const CreateTrait = Tool.make("create-trait", {
 export const toolkit = Toolkit.make(CreateTrait)
 
 export const layer = toolkit.toLayer({
-  "create-trait": Effect.fn("traits.createAndReview")(function* ({ name, content }) {
-    const blocked = yield* Reconcile.inspect({ name, path: `.agents/traits/${name}.md`, content })
+  "create-trait": Effect.fn("traits.createAndReview")(function* ({ name, content, target }) {
+    const blocked = yield* inspect({ name, path: `.agents/traits/${name}.md`, content })
     if (blocked !== undefined) return blocked
     const fs = yield* FileSystem.FileSystem
     const { traitsDir } = yield* TraitsContext
     yield* fs.writeFileString(`${traitsDir}/${name}.md`, content, { flag: "wx" })
-    const review = yield* Check.check({ traitName: name, target: { _tag: "Changed" } }).pipe(
-      Effect.map((report) => ({ target: { _tag: "Changed" as const }, report, error: null })),
-      Effect.catch((error) =>
-        Effect.succeed({ target: { _tag: "Changed" as const }, report: null, error: globalThis.String(error) })
-      )
+    const review = yield* Check.check({ traitName: name, target }).pipe(
+      Effect.map((report) => ({ target, report, error: null })),
+      Effect.catch((error) => Effect.succeed({ target, report: null, error: globalThis.String(error) }))
     )
     return { status: "created" as const, name, path: `.agents/traits/${name}.md`, reviews: [review] }
   })
 })
 
-export const decision = Decision.make({
+const inspect = Effect.fn("traits.reconcile")(function* (proposed: Trait) {
+  const loaded = yield* Traits.load()
+  const concerns: Array<typeof Concern.Type> = []
+  const errors: Array<string> = []
+  if (loaded.length > 0) {
+    const {
+      config: { passThreshold: threshold }
+    } = yield* TraitsContext
+    const checks = yield* Effect.forEach(
+      loaded,
+      Effect.fn("traits.compare")(function* (existing) {
+        const input = { proposed, existing }
+        const result = yield* DecisionModel.decide(decision, { input }).pipe(
+          Effect.timeout("90 seconds"),
+          Effect.result
+        )
+        return { existing, result }
+      }),
+      { concurrency: "unbounded" }
+    )
+    for (const { existing, result } of checks) {
+      if (Result.isFailure(result)) {
+        errors.push(`${existing.path}: ${result.failure.toString()}`)
+        continue
+      }
+      const answer = result.success.answers.relationship
+      if (answer.label !== "distinct" || answer.probabilities.distinct < threshold) {
+        concerns.push({
+          existing,
+          relationship: answer.label,
+          distinctProbability: answer.probabilities.distinct,
+          threshold,
+          probabilities: answer.probabilities
+        })
+      }
+    }
+  }
+  if (concerns.length === 0 && errors.length === 0) return undefined
+  return {
+    status: errors.length > 0 ? "review-unavailable" : "reconciliation-required",
+    proposed,
+    concerns,
+    errors,
+    guidance:
+      errors.length > 0
+        ? String.stripMargin(`
+            | No file was written. Report the review errors to the user.
+            | For ConfigError, ask the user to add the missing configuration
+            | (TYPESAFE_API_KEY in the repository root or worktree .env, or MCP process environment), then retry.
+            | An unavailable comparison is not evidence of overlapping traits.
+          `)
+        : String.stripMargin(`
+            | No file was written. Read the identified existing traits, explain the overlap/conflict or uncertainty,
+            | and propose a concrete reconciliation: reuse the existing trait, clarify scopes, or merge into one trait.
+            | Show the exact resulting filenames, full text, and any removals.
+            | Ask the user to approve, revise, or cancel using an interactive question if available,
+            | otherwise a text question. Never rewrite or remove existing traits without approval.
+            | After approval, apply the agreed edits with the coding agent's file tools and retry creation
+            | only if a separate new trait is still needed.
+          `)
+  } satisfies Blocked
+})
+
+const decision = Decision.make({
   input: S.Struct({ proposed: Trait, existing: Trait }),
   decisions: {
     relationship: Decision.classify({

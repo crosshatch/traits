@@ -30,7 +30,8 @@ export const traits = Command.make("traits").pipe(
               | showing full text and any removals.
               | Ask for approval/revision using an interactive question when available, otherwise text.
               | Do not silently rewrite existing traits.
-              | After saving, inspect the automatic all-changes review and report incomplete results.
+              | Choose an explicit review target for both tools: changes, a file, or a directory as appropriate to the task.
+              | After saving, inspect the automatic review of that target and report incomplete results.
               | Findings are trait-level; inspect the diff to locate violations.
               | Before committing, stage intended changes and call check-traits;
               | fix findings and rerun after staging changes.

@@ -69,10 +69,11 @@ budgets or silently truncate input.
 ## Tools
 
 - `create-trait`: accepts plain `name` and `content` strings. On creation,
-  returns the path and a `reviews` array with one all-changes report or error.
-  Failure of this automatic review does not undo the saved trait.
+  returns the path and a `reviews` array with one agent-selected target and
+  report or error. Failure of this automatic review does not undo the saved
+  trait.
 - `check-traits`: reviews the selected target against all current traits,
-  defaulting to staged changes. Returns the root, target, status, nonpassing
+  requiring an explicit target. Returns the root, target, status, nonpassing
   findings, checked pair count, and an optional explanatory message. No changes
   and no traits are explicit statuses, not completed reviews.
 
@@ -106,7 +107,7 @@ cwd through the injected Path service's resolve().
 - `_util.ts`: shared Git command execution.
 - `Target.ts`: target schema and normalization into file contents or diffs.
 - `Check.ts`: trait/change iteration and report aggregation.
-- `Reconcile.ts`: comparison against existing traits.
+- `tools/CreateTrait.ts`: trait creation and comparison against existing traits.
 - `Domain.ts`: public schemas and types.
 - `TraitsContext.ts`: repository paths, project config, and dotenv configuration
   loading.
