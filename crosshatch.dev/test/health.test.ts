@@ -1,13 +1,14 @@
+import * as Axiom from "alchemy/Axiom"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Test from "alchemy/Test/Vitest"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { HttpClient } from "effect/http"
 import { expect } from "vite-plus/test"
 
 import Stack from "../alchemy.run.ts"
 
 const { test, beforeAll, afterAll, deploy, destroy } = Test.make({
-  providers: Cloudflare.providers(),
+  providers: Layer.mergeAll(Cloudflare.providers(), Axiom.providers()),
   state: Cloudflare.state()
 })
 
