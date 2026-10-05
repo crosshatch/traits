@@ -125,14 +125,14 @@ const inspect = Effect.fn("traits.reconcile")(function* (proposed: Trait) {
     proposed,
     concerns,
     guidance: String.stripMargin(`
-            | No file was written. Read the identified existing traits, explain the overlap/conflict or uncertainty,
-            | and propose a concrete reconciliation: reuse the existing trait, clarify scopes, or merge into one trait.
-            | Show the exact resulting filenames, full text, and any removals.
-            | Ask the user to approve, revise, or cancel using an interactive question if available,
-            | otherwise a text question. Never rewrite or remove existing traits without approval.
-            | After approval, apply the agreed edits with the coding agent's file tools and retry creation
-            | only if a separate new trait is still needed.
-          `)
+      | No file was written. Read the identified existing traits, explain the overlap/conflict or uncertainty,
+      | and propose a concrete reconciliation: reuse the existing trait, clarify scopes, or merge into one trait.
+      | Show the exact resulting filenames, full text, and any removals.
+      | Ask the user to approve, revise, or cancel using an interactive question if available,
+      | otherwise a text question. Never rewrite or remove existing traits without approval.
+      | After approval, apply the agreed edits with the coding agent's file tools and retry creation
+      | only if a separate new trait is still needed.
+    `)
   } satisfies Blocked
 })
 
