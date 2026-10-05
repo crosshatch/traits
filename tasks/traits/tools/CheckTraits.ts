@@ -2,7 +2,7 @@ import { FileSystem, Path, Schema as S, String } from "effect"
 import { DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
-import * as Check from "../Check.ts"
+import * as Check from "../check.ts"
 import { Report } from "../Domain.ts"
 import { Target } from "../Target.ts"
 import { TraitsContext } from "../TraitsContext.ts"

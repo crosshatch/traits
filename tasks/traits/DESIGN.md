@@ -106,7 +106,7 @@ cwd through the injected Path service's resolve().
 - `Traits.ts`: directory creation, exclusive writes, and parallel loading.
 - `_util.ts`: shared Git command execution.
 - `Target.ts`: target schema and normalization into file contents or diffs.
-- `Check.ts`: trait/change iteration and report aggregation.
+- `check.ts`: trait/change iteration and report aggregation.
 - `tools/CreateTrait.ts`: trait creation and comparison against existing traits.
 - `Domain.ts`: public schemas and types.
 - `TraitsContext.ts`: repository paths, project config, and dotenv configuration

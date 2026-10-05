@@ -2,7 +2,7 @@ import { Effect, FileSystem, Path, Result, Schema as S, String } from "effect"
 import { Decision, DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
-import * as Check from "../Check.ts"
+import * as Check from "../check.ts"
 import { Report, Trait } from "../Domain.ts"
 import { Target } from "../Target.ts"
 import * as Traits from "../Traits.ts"
@@ -104,8 +104,7 @@ const inspect = Effect.fn("traits.reconcile")(function* (proposed: Trait) {
     const checks = yield* Effect.forEach(
       loaded,
       Effect.fn("traits.compare")(function* (existing) {
-        const input = { proposed, existing }
-        const result = yield* DecisionModel.decide(decision, { input }).pipe(
+        const result = yield* DecisionModel.decide(decision, { input: { proposed, existing } }).pipe(
           Effect.timeout("90 seconds"),
           Effect.result
         )
