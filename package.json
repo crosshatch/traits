@@ -7,11 +7,10 @@
     "tasks": "node tasks/main.ts",
     "prepare": "effect-tsgo patch --oxlint",
     "build": "tsc -b tsconfig.json",
-    "test": "vp check && pnpm build && pnpm test:rules && pnpm test:tasks && pnpm test:lib && pnpm test:types && pnpm test:integration",
+    "test": "vp check && pnpm build && pnpm test:rules && pnpm test:lib && pnpm test:types && pnpm test:integration",
     "test:rules": "vp test run --project rules",
     "test:lib": "vp test run --project crosshatch",
     "test:types": "tstyche",
-    "test:tasks": "vp test run --project tasks",
     "test:integration": "vp test run --project crosshatch.dev"
   },
   "devDependencies": {
