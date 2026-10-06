@@ -23,12 +23,7 @@ export default defineConfig({
     ]
   },
   test: {
-    projects: [
-      "crosshatch/vite.config.ts",
-      "crosshatch.dev/vite.config.ts",
-      "tasks/vite.config.ts",
-      "rules/vite.config.ts"
-    ]
+    projects: ["crosshatch/vite.config.ts", "crosshatch.dev/vite.config.ts", "rules/vite.config.ts"]
   },
   lint: {
     extends: [recommended],
