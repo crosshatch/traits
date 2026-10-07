@@ -4,7 +4,6 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev:traits": "node ../traits/traits/main.ts dev-opencode .",
     "tasks": "node tasks/main.ts",
     "prepare": "effect-tsgo patch --oxlint",
     "build": "tsc -b tsconfig.json",
