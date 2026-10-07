@@ -33,7 +33,7 @@
     "access": "public"
   },
   "scripts": {
-    "prepack": "tsc -b tsconfig.release.json --force && vp pack"
+    "prepack": "tsc -b tsconfig.release.json --force"
   },
   "devDependencies": {
     "effect": "catalog:"
