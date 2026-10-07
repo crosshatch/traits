@@ -9,6 +9,10 @@ All paths below are relative to the repository root.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
 - Use `pnpm --filter crosshatch.dev dev` (`alchemy dev`) for development and `pnpm --filter crosshatch.dev exec alchemy deploy` for cloud deployments. Dev mode uses local providers where supported and live resources otherwise; resources marked `Alchemy.remote()` also use live providers. Do not assume a dev run is entirely local or credential-free.
 
+## Learning from Feedback
+
+- When the user corrects your approach or expresses a reusable coding preference, load the traits skill and check existing traits across all configured groups. If the insight is durable and not already covered, proactively call `create-trait` with the destination group, proposed filename, full text, and review target; the server requests approval through MCP elicitation before saving. Do not ask separately first or wait for the user to mention traits. Follow the skill's group selection, revision, and unsupported-client approval fallback instructions. Skip one-off task requirements.
+
 ## Drizzle Migrations
 
 - Whenever Drizzle schemas change, run `pnpm run tasks generate-migrations` from the repository root.

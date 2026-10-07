@@ -4,7 +4,8 @@
     "servers": {
       "traits": {
         "type": "local",
-        "command": ["node", "/home/harry/traits/traits/main.ts"]
+        "command": ["node", "/home/harry/traits/traits/main.ts"],
+        "cwd": "."
       },
       "cloudflare": {
         "type": "remote",
