@@ -1,1 +1,0 @@
-Never manually implement retry or backoff logic. Use Effect’s built-in retry and scheduling APIs when retries are warranted. Apply retries conservatively, with bounded attempts and appropriate failure filtering.

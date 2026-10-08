@@ -1,0 +1,1 @@
+Validate configuration through `Config.schema` with appropriate schemas and checks: `Config.schema(S.Finite.check(S.isGreaterThan(0)), "TIMEOUT")`, not `Config.Number("TIMEOUT")` followed by manual conditions. Use `S.Finite` for finite numbers and add any required bounds.

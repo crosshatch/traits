@@ -10,8 +10,10 @@ description: >-
 # Traits
 
 Traits are concise, durable coding rules. This server stores each body in
-`.agents/traits/<uuid>.md`, relative to its working directory. The UUID filename
-is the trait ID. Read these files to discover existing rules and IDs.
+`.agents/traits/<three_words-uuid>.md`, relative to its working directory. The
+full filename stem is the trait ID, for example
+`rose_karate_frog-2535ceab-5702-4ab4-932a-f87362adf8c6`. Read these files to
+discover existing rules and IDs; pass the full ID, not just the words, to tools.
 
 ## Capture a reusable insight
 
@@ -40,7 +42,7 @@ creating duplicates at the drafting stage.
 
 Call `resolve_conflicting_traits({ conflictingTraitIds, proposedTrait })` when
 the selected existing rules should be replaced to incorporate the proposal. Use
-the UUIDs from the store or the preceding conflict results.
+the trait IDs from the store or the preceding conflict results.
 
 The tool evaluates each body and the proposal for decomposition, then generates
 standalone replacements. The proposal takes precedence in direct conflicts;
@@ -58,15 +60,15 @@ store before retrying; some changes may already be present.
 ## Check the implementation
 
 - After generating or editing TypeScript files, select those files and call
-  `check_trait_expression({ files, agentId })`.
+  `check_trait_expression({ files })`.
 - After creating or resolving traits, explicitly review relevant TypeScript
   files. Saving traits does not automatically check code.
 - Omit `traitIds` for the full trait set. Supply IDs for focused follow-ups,
   especially the replacements returned by resolution. An empty array selects no
   traits; unknown IDs fail the call.
 - Paths must identify files, either absolute or relative to the MCP working
-  directory. The tool does not expand directories or globs. `agentId` identifies
-  the requesting agent in source metadata, not the decision-model provider.
+  directory. The tool does not expand directories or globs. Source metadata uses
+  the server's configured `agentId`, currently `local`.
 - The tool checks current full files in 200-line chunks, including unstaged
   content. It does not inspect the Git index or compute a diff.
 - Each `Fail` contains the trait and source excerpt with a file path and 1-based

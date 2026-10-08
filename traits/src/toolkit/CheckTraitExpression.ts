@@ -1,4 +1,4 @@
-import { Array, Effect, FileSystem, Path, Schema as S, String } from "effect"
+import { Array, Effect, FileSystem, Path, pipe, Schema as S, String } from "effect"
 import { AiError, Decision, DecisionModel, Tool, Toolkit } from "effect/ai"
 
 import { Source } from "../Source.ts"
@@ -17,7 +17,7 @@ export const CheckTraitExpression = Tool.make("check_trait_expression", {
   | Use after generating or editing TypeScript files, after saving or resolving a relevant trait, and before committing or opening a PR.
   | Select concrete TypeScript files relevant to the work. Pass file paths, not directories, globs, patches, or Git revision selectors.
   | Reads current full file contents, including unstaged edits, and checks each 200-line chunk against the selected traits in parallel.
-  | Omit traitIds to check all stored traits; supply UUIDs for a focused check of one or more traits. Unknown IDs fail the call.
+  | Omit traitIds to check all stored traits; supply trait ids for a focused check of one or more traits. Unknown IDs fail the call.
   | Returns Fail entries for both violations and inconclusive assessments, with the trait, source text, absolute path, and 1-based chunk startLine.
   | The result does not distinguish these two outcomes or provide exact offending lines; inspect the source and trait before making changes.
   | Fix relevant violations and rerun affected files. For missing context, inspect the surrounding code and report unresolved ambiguity.
@@ -28,12 +28,8 @@ export const CheckTraitExpression = Tool.make("check_trait_expression", {
       description:
         "TypeScript files to review, absolute or relative to the MCP working directory. Duplicate resolved paths are checked once."
     }),
-    agentId: S.String.annotate({
-      description:
-        "Identifier of the agent requesting this review, recorded in source metadata; it does not select the evaluation model."
-    }),
     traitIds: S.optional(S.Array(TraitId)).annotate({
-      description: "Optional trait UUIDs for a focused review. Omit for all stored traits; an empty array selects none."
+      description: "Optional trait ids for a focused review. Omit for all stored traits; an empty array selects none."
     })
   }),
   success: S.Array(TraitExpression.cases.Fail),
@@ -47,24 +43,28 @@ export const CheckTraitExpression = Tool.make("check_trait_expression", {
 export const toolkit = Toolkit.make(CheckTraitExpression)
 
 export const layer = toolkit.toLayer({
-  check_trait_expression: Effect.fnUntraced(function* ({ files, agentId, traitIds }) {
+  check_trait_expression: Effect.fnUntraced(function* ({ files, traitIds }) {
     const store = yield* TraitStore
-    const context = yield* TraitsContext
+    const { agentId, semaphore } = yield* TraitsContext
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const traits = yield* traitIds === undefined
       ? store.ls
       : Effect.forEach(Array.dedupe(traitIds), store.get, { concurrency: "unbounded" })
-    const paths = Array.dedupe(files.map((file) => path.resolve(file)))
+    const paths = pipe(
+      files,
+      Array.map((file) => path.resolve(file)),
+      Array.dedupe
+    )
     const results = yield* Effect.forEach(
       paths,
       Effect.fnUntraced(function* (file) {
         const text = yield* fs.readFileString(file)
         const chunks = Array.chunksOf(String.split(text, "\n"), 200)
-        const sources = chunks.map((lines, index) =>
+        const sources = Array.map(chunks, (lines, index) =>
           Source.make({
             agentId,
-            text: lines.join("\n"),
+            text: Array.join(lines, "\n"),
             location: { _tag: "File", path: file, startLine: index * 200 + 1 }
           })
         )
@@ -75,7 +75,7 @@ export const layer = toolkit.toLayer({
               traits,
               Effect.fnUntraced(function* (trait) {
                 const result = yield* DecisionModel.decide(decision, { input: { trait, input: source.text } }).pipe(
-                  context.withPermits(1)
+                  semaphore.withPermits(1)
                 )
                 const { label } = result.answers.assessment
                 if (label === "violation" || label === "inconclusive") {
@@ -87,11 +87,15 @@ export const layer = toolkit.toLayer({
             ),
           { concurrency: "unbounded" }
         )
-        return results.flat().filter((result) => result._tag === "Fail")
+        return pipe(
+          results,
+          Array.flatten,
+          Array.filter((result) => result._tag === "Fail")
+        )
       }),
       { concurrency: "unbounded" }
     )
-    return results.flat()
+    return Array.flatten(results)
   })
 })
 

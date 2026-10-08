@@ -1,4 +1,4 @@
-import { Context, Effect, FileSystem, flow, Layer, Path, PlatformError, Schema as S } from "effect"
+import { Array, Context, Effect, FileSystem, flow, Layer, Path, pipe, PlatformError, Schema as S, String } from "effect"
 
 import { Trait, TraitId } from "./Trait.ts"
 
@@ -38,14 +38,14 @@ export const layerFileSystem = (dir: string) =>
         add: (trait) => fs.writeFileString(traitPath(trait.id), trait.body, { flag: "wx" }),
         ls: Effect.gen(function* () {
           const entries = yield* fs.readDirectory(root)
-          const traits: Array<Trait> = []
-          for (const entry of entries.sort()) {
-            if (!entry.endsWith(".md")) continue
+          let traits: Array<Trait> = []
+          for (const entry of Array.sort(entries, String.Order)) {
+            if (!pipe(entry, String.endsWith(".md"))) continue
             const file = path.join(root, entry)
             const info = yield* fs.stat(file)
             if (info.type !== "File") continue
             const body = yield* fs.readFileString(file)
-            traits.push(Trait.make({ id: TraitId.make(entry.slice(0, -3)), body }))
+            traits = Array.append(traits, Trait.make({ id: TraitId.make(pipe(entry, String.slice(0, -3))), body }))
           }
           return traits
         }),

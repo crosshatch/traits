@@ -1,0 +1,1 @@
+Prefer equivalent utilities from Effect’s modules over JavaScript built-in methods and functions, including Array, Record, BigInt, Boolean, Number, RegExp, String, and Struct: use `Array.map(items, f)` instead of `items.map(f)`. Use built-ins when no suitable Effect equivalent exists or when required to preserve behavior.

@@ -1,7 +1,7 @@
-import { Crypto, Effect, Schema as S, String } from "effect"
+import { Array, Crypto, Effect, Schema as S, String } from "effect"
 import { AiError, Decision, DecisionModel, LanguageModel, Tool, Toolkit } from "effect/ai"
 
-import { Trait, TraitId } from "../Trait.ts"
+import { makeId, Trait, TraitId } from "../Trait.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
@@ -11,7 +11,7 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
   | Inspect the existing bodies first. An inconclusive comparison alone does not establish a conflict; clarify the intended rule before resolving.
   | Supply the existing trait IDs and the complete proposed rule. The tool evaluates all selected bodies and the proposal for decomposition,
   | then generates concise, standalone replacements, with the proposal taking precedence only in direct conflicts.
-  | It preserves unrelated requirements, scopes, and exceptions, saves replacements under new UUIDs, and deletes the selected originals.
+  | It preserves unrelated requirements, scopes, and exceptions, saves replacements under new three-word-prefixed IDs, and deletes the selected originals.
   | Returns the saved replacement traits with their IDs and bodies. Review them and run check_trait_expression on relevant TypeScript files.
   | Do not call derive_trait again for the same proposal: its content is already incorporated into the saved replacements.
   | Only selected traits participate in reconciliation; use an all-trait expression check for the broader code review.
@@ -20,7 +20,7 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
   parameters: S.Struct({
     conflictingTraitIds: S.Array(TraitId).check(S.isMinLength(1)).annotate({
       description:
-        "Existing UUIDs selected for replacement, usually taken from derive_trait failures. All selected originals will be removed."
+        "Existing trait ids selected for replacement, usually taken from derive_trait failures. All selected originals will be removed."
     }),
     proposedTrait: S.String.annotate({
       description:
@@ -40,8 +40,7 @@ export const toolkit = Toolkit.make(ResolveConflictingTraits)
 export const layer = toolkit.toLayer({
   resolve_conflicting_traits: Effect.fnUntraced(function* ({ conflictingTraitIds, proposedTrait }) {
     const store = yield* TraitStore
-    const crypto = yield* Crypto.Crypto
-    const ids = [...new Set(conflictingTraitIds)]
+    const ids = Array.dedupe(conflictingTraitIds)
     const decomposed = yield* Effect.all(
       {
         existing: Effect.forEach(
@@ -85,7 +84,7 @@ export const layer = toolkit.toLayer({
     const replacements = yield* Effect.forEach(
       response.value.traits,
       Effect.fnUntraced(function* (trait) {
-        const id = TraitId.make(yield* crypto.randomUUIDv4)
+        const id = yield* makeId()
         return Trait.make({ id, ...trait })
       })
     )
@@ -97,7 +96,9 @@ export const layer = toolkit.toLayer({
 
 const checkDecomposability = Effect.fnUntraced(function* (proposedTrait: string) {
   const context = yield* TraitsContext
-  const result = yield* DecisionModel.decide(decision, { input: { proposedTrait } }).pipe(context.withPermits(1))
+  const result = yield* DecisionModel.decide(decision, { input: { proposedTrait } }).pipe(
+    context.semaphore.withPermits(1)
+  )
   if (result.answers.assessment.label === "atomic") {
     return [proposedTrait]
   }
