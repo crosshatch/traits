@@ -1,3 +1,4 @@
+import { Array } from "effect"
 import { RuleTester } from "vite-plus/lint/plugins-dev"
 import { describe, it } from "vite-plus/test"
 
@@ -21,14 +22,17 @@ tester.run("schema-as-s", schemaAsS, {
     'import { String } from "effect/Schema"',
     'import "effect"'
   ],
-  invalid: [
-    'import { Schema } from "effect"',
-    'import { Schema as schema } from "effect"',
-    'import { Effect, Schema as Other } from "effect"',
-    'import type { Schema } from "effect"',
-    'import { type Schema } from "effect"',
-    'import { "Schema" as Other } from "effect"',
-    'import * as Schema from "effect/Schema"',
-    'import type * as Schema from "effect/Schema"'
-  ].map((code) => ({ code, errors: [{ messageId: "alias" }] }))
+  invalid: Array.map(
+    [
+      'import { Schema } from "effect"',
+      'import { Schema as schema } from "effect"',
+      'import { Effect, Schema as Other } from "effect"',
+      'import type { Schema } from "effect"',
+      'import { type Schema } from "effect"',
+      'import { "Schema" as Other } from "effect"',
+      'import * as Schema from "effect/Schema"',
+      'import type * as Schema from "effect/Schema"'
+    ],
+    (code) => ({ code, errors: [{ messageId: "alias" }] })
+  )
 })

@@ -1,19 +1,22 @@
 import * as Alchemy from "alchemy"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as GitHub from "alchemy/GitHub"
-import { Config, Effect, Layer } from "effect"
+import { Array, Config, Effect, Layer, pipe } from "effect"
 
 const repository = { owner: "harrysolovay", repository: "crosshatch-next" }
 
 const permissionGroups = (scope: string) =>
-  Cloudflare.ApiToken.PERMISSION_GROUPS.filter((group) => group.scopes.some((value) => value === scope))
+  pipe(
+    Cloudflare.ApiToken.PERMISSION_GROUPS,
+    Array.filter((group) => Array.some(group.scopes, (value) => value === scope)),
     // Cloudflare forbids token-management permissions on sub-tokens.
-    .filter(
+    Array.filter(
       ({ id }) =>
         id !== "eb56a6953c034b9d97dd838155666f06" && // Account API Tokens Read
         id !== "5bc3f8b21c554832afc660159ab75fa4" // Account API Tokens Write
-    )
-    .map(({ id }) => ({ id }))
+    ),
+    Array.map((v) => ({ id: v.id }))
+  )
 
 export default Alchemy.Stack(
   "crosshatch-bootstrap",
