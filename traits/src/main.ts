@@ -1,7 +1,7 @@
 import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
 import { TypeSafeClient, TypeSafeDecisionModel } from "@effect/ai-typesafe"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { Config, ConfigProvider, Effect, FileSystem, Layer, Logger, Path } from "effect"
+import { Config, ConfigProvider, Effect, FileSystem, Layer, Logger, Path, String } from "effect"
 import { McpProtocol, McpServer } from "effect/ai"
 import { Command } from "effect/cli"
 import { FetchHttpClient } from "effect/http"
@@ -54,7 +54,25 @@ Command.make("traits").pipe(
           name: "traits",
           version: "0.0.0",
           protocols: [McpProtocol.v2025_11_25],
-          instructions: "Use the available tools to manage traits."
+          instructions: String.stripMargin(`
+          | Traits are durable, reusable coding preferences stored as .agents/traits/<uuid>.md in the working directory.
+          | When the user corrects your approach or expresses a reusable preference, consider saving a trait without waiting for the word "trait".
+          | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
+          | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
+          | Call derive_trait with the drafted body as proposedTrait. It checks conflicts and writes immediately when none are returned.
+          | Returned Fail entries mean nothing was saved; inspect their trait bodies and IDs before choosing a resolution.
+          | Fail can also mean an inconclusive comparison. Clarify ambiguity rather than treating every failure as a proven contradiction.
+          | To intentionally replace conflicting traits, call resolve_conflicting_traits with their IDs and the proposed body.
+          | Resolution gives the proposal precedence in direct conflicts, writes generated replacements, then removes the selected originals.
+          | Review the returned replacement bodies and IDs. Resolution already saves the proposal's content; do not derive it again.
+          | After generating or changing TypeScript files, call check_trait_expression on those files with your agentId.
+          | After saving or resolving a trait, check the relevant TypeScript files explicitly; creation does not run that review for you.
+          | Omit traitIds for all traits; use specific IDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
+          | Checks read current full files in 200-line chunks, not Git diffs. A finding's startLine locates a chunk, not an exact violation.
+          | Inspect findings against their trait and source; fix relevant violations and rerun affected files. Report unresolved ambiguity or tool errors.
+          | An empty result only means no failures for the selected files and traits; empty selections or an empty store perform no assessments.
+          | On mutation errors, inspect the store before retrying: writes and removals are not transactional, and retries may duplicate saved traits.
+          `)
         })
       ),
       Layer.launch,

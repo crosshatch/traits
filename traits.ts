@@ -3,14 +3,7 @@ import { Layer } from "effect"
 
 export default {
   groups: {
-    local: { _tag: "Local", description: "Project-specific conventions for crosshatch-next" },
-    crosshatch: {
-      _tag: "Git",
-      description: "Shared conventions for Crosshatch projects",
-      url: "git@github.com:crosshatch/traits-store.git",
-      auto: true,
-      pin: "main"
-    }
+    local: { _tag: "Local", description: "Project-specific conventions for crosshatch-next" }
   },
   layerDecisionModel: TypeSafeDecisionModel.layer({ model: "jev-latest" }).pipe(
     Layer.provide(TypeSafeClient.layerConfig())

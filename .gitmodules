@@ -70,6 +70,3 @@
 [submodule "repos/MapleTechLabs/maple"]
 	path = repos/MapleTechLabs/maple
 	url = git@github.com:MapleTechLabs/maple.git
-[submodule "traits-43f832ac998f72c51af3164a"]
-	path = .agents/traits/crosshatch
-	url = git@github.com:crosshatch/traits-store.git
