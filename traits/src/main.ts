@@ -23,13 +23,17 @@ Command.make("traits").pipe(
       | Treat multi-turn exchanges as a whole: asking about a better idiom and then approving it can establish a preference without saying "always" or "trait".
       | Err on the side of proposing a concise trait unless you have read an existing trait that clearly covers the exact rule and its scope.
       | If coverage is uncertain, propose the rule rather than silently assuming a broad trait covers it. If clearer wording is needed, propose a clarification.
-      | Show the proposed rule and ask whether to save it before calling derive_trait, which may write immediately. An explicit request to save that rule is approval.
+      | Call the mutation tool with the drafted proposal first, leaving approved unset. Do not ask separately beforehand: native clients get an approval form.
+      | Both mutation tools use native MCP forms when usable, or return ApprovalRequired with the complete proposal for that same interactive question flow.
+      | Only on ApprovalRequired, show the full message using the interactive question tool: Save, Revise, Skip, plus its automatic free-text option. Use plain text only if that UI is unavailable.
+      | Retry an identical approved proposal with approved: true; do not assert approval for changed wording or targets. Native forms still apply on supported clients.
+      | RevisionRequired contains feedback to incorporate before requesting approval again; Declined means stop without writing.
       | Approval to edit code alone is not approval to persist a trait. Make the requested edit, but also propose the reusable rule before your final response.
       | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
       | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
       | Call derive_trait with the drafted body as proposedTrait. It saves only distinct rules; Covered means reuse an existing trait.
-      | Clarification means no write: show the existing trait and complete replacement body and ask the user to approve the exact change.
-      | After approval, retry derive_trait with the same proposedTrait, clarificationTraitId, and approved: true; Updated preserves the ID.
+      | Clarification means no write: call derive_trait with the existing clarificationTraitId and complete replacement body, then follow its approval outcome.
+      | After fallback approval, retry with the same proposedTrait, clarificationTraitId, and approved: true; Updated preserves the ID.
       | Returned Fail, Covered, or Clarification lists mean nothing was saved; inspect the existing traits before proceeding.
       | Fail can also mean an inconclusive comparison. Clarify ambiguity rather than treating every failure as a proven contradiction.
       | To intentionally replace conflicting traits, call resolve_conflicting_traits with their IDs and the proposed body.

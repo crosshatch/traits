@@ -32,12 +32,38 @@ rule; if an existing rule needs clearer wording, propose a clarification. Skip
 only clearly one-off requests, transient facts, or rules you can identify as
 already covered.
 
-Show the drafted rule and ask whether to save it before calling `derive_trait`,
-which can write immediately. An explicit request to save that rule counts as
-approval. Approval to edit code alone does not approve persisting a trait: make
-the requested edit and propose the reusable rule before the final response. Do
+Call `derive_trait` with the drafted rule first, leaving `approved` unset. Do not
+ask for approval separately before invoking: capable clients receive a native
+MCP form. Only if `ApprovalRequired` is returned, show the complete message in
+the interactive question tool with **Save trait**, **Revise**, and **Skip** and
+its automatic free-text option. Do not add a duplicate "Other" option. Use plain
+text only if that UI is unavailable. Approval to edit code alone does not approve
+persisting a trait: make the requested edit and propose the reusable rule before
+the final response. Do
 not stop after implementing an idiom and running code checks; preference capture
 is a separate responsibility.
+
+### Shared approval protocol
+
+Both mutation tools use `_util/Approval.request`. Clients with usable MCP form
+elicitation receive approve/revise/skip choices and an optional feedback field.
+OpenCode currently routes native forms globally, so the helper returns
+`ApprovalRequired`; clients without form support use the same fallback.
+
+On `ApprovalRequired`, show its complete message in the interactive question UI
+with Save/Revise/Skip and free text. Save permits retrying the identical body and
+target IDs with `approved: true`. Revision or free-text input requires drafting
+the changed proposal and asking approval again, not silently setting approved.
+Skip means stop. Native `RevisionRequired` and `Declined` have the same meanings.
+Transport errors are failures, never declines or approvals.
+
+The fallback approval flag applies to creation, clarification, and resolution.
+It does not bypass relationship checks or suppress native forms on capable
+clients. Pending, revision, and decline outcomes never write files. Resolution
+approval covers the displayed originals, their deletion, the proposal, and
+model-generated reconciliation; inspect returned replacements after saving.
+The flag relies on the agent honoring exact user approval; it is not an
+authenticated consent token.
 
 1. Notice user corrections and recurring preferences without waiting for an
    explicit mention of traits. Also handle explicit requests to remember a rule.
@@ -47,7 +73,7 @@ is a separate responsibility.
 3. Draft the complete rule as `proposedTrait`. Preserve essential requirements,
    scopes, and exceptions. Keep independently applicable rules separate; omit
    headings, repetition, and unnecessary explanation or examples.
-4. After approval to save the rule, call `derive_trait({ proposedTrait })`. This
+4. Call `derive_trait({ proposedTrait })` first, without a separate approval prompt. This
    checks existing traits and writes only when the proposal is distinct from all
    of them. It does not independently decide whether the conversation contains a
    generalizable insight.
@@ -63,10 +89,11 @@ without creating a duplicate. `Clarification` entries mean an existing rule can
 be made clearer while preserving its intent, requirements, scope, and
 exceptions. Neither outcome writes files.
 
-For clarification, show the current trait body and the complete proposed
-replacement and ask the user to approve that exact body and trait ID. After
-approval, call
-`derive_trait({ proposedTrait, clarificationTraitId, approved: true })`. It
+For clarification, call `derive_trait({ proposedTrait, clarificationTraitId })`
+with the complete replacement body first. The shared approval flow displays the
+current body and replacement; use the interactive question UI only when it
+returns `ApprovalRequired`, then retry identical inputs with `approved: true`
+after Save. It
 rechecks all traits and updates only the selected trait when it qualifies as a
 clarification and no blocking relationships remain. `Updated` returns the saved
 trait with its original ID. Never claim approval not given by the user or use

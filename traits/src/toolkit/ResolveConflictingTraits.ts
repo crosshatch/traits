@@ -1,6 +1,7 @@
 import { Array, Effect, pipe, Schema as S, String } from "effect"
-import { AiError, DecisionModel, LanguageModel, Tool, Toolkit } from "effect/ai"
+import { AiError, DecisionModel, LanguageModel, McpSchema, Tool, Toolkit } from "effect/ai"
 
+import * as Approval from "../_util/Approval.ts"
 import { checkDecomposability, Trait, TraitId } from "../Trait.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
@@ -16,6 +17,9 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
   | Do not call derive_trait again for the same proposal: its content is already incorporated into the saved replacements.
   | Only selected traits participate in reconciliation; use an all-trait expression check for the broader code review.
   | This operation is not transactional. On error, inspect the files before retrying because some replacements or removals may have completed.
+  | Call with the selected IDs and proposal first, leaving approved unset; do not request a separate approval before invoking.
+  | Native clients receive a form, while ApprovalRequired asks the agent to use interactive Save/Revise/Skip choices plus free text.
+  | Retry identical IDs and proposal with approved: true only after approval. RevisionRequired asks for revised input; Declined means stop without writing.
   `),
   parameters: S.Struct({
     conflictingTraitIds: S.Array(TraitId).check(S.isMinLength(1)).annotate({
@@ -25,10 +29,24 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
     proposedTrait: S.String.annotate({
       description:
         "The complete intended rule, including scope and exceptions. It takes precedence in direct conflicts with the selected traits."
+    }),
+    approved: S.Boolean.pipe(S.optional).annotate({
+      description:
+        "Fallback approval of the exact selected trait ids, their removal, and proposedTrait. Set true only after user approval; native clients still receive an approval form."
     })
   }),
-  success: S.Array(Trait),
-  failure: S.Union([AiError.AiError, TraitStoreError, S.TaggedStruct("SchemaError", { message: S.String })]),
+  success: S.Union([
+    S.Array(Trait),
+    Approval.Approval.cases.ApprovalRequired,
+    Approval.Approval.cases.RevisionRequired,
+    Approval.Approval.cases.Declined
+  ]),
+  failure: S.Union([
+    AiError.AiError,
+    TraitStoreError,
+    McpSchema.ElicitationDeclined,
+    S.TaggedStruct("SchemaError", { message: S.String })
+  ]),
   dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
 })
   .annotate(Tool.Title, "Resolve Conflicting Traits")
@@ -41,13 +59,26 @@ export const layer = toolkit.toLayer({
   resolve_conflicting_traits: Effect.fnUntraced(function* (params) {
     const store = yield* TraitStore
     const ids = Array.dedupe(params.conflictingTraitIds)
+    const selected = yield* Effect.forEach(ids, store.get, { concurrency: "unbounded" })
+    const approval = yield* Approval.request({
+      message: String.stripMargin(`
+      | Replace these stored traits with generated reconciled traits?
+      | The selected originals will be removed; the proposal takes precedence in direct conflicts.
+      | Existing traits:
+      | ${pipe(
+        selected,
+        Array.map((trait) => `${trait.id}: ${trait.body}`),
+        Array.join("\n\n")
+      )}
+      | Proposed rule:
+      | ${params.proposedTrait}
+      `),
+      approved: params.approved
+    })
+    if (!Approval.Approval.guards.Approved(approval)) return approval
     const decomposed = yield* Effect.all(
       {
-        existing: Effect.forEach(
-          ids,
-          (id) => store.get(id).pipe(Effect.flatMap((trait) => checkDecomposability(trait.body))),
-          { concurrency: "unbounded" }
-        ),
+        existing: Effect.forEach(selected, (trait) => checkDecomposability(trait.body), { concurrency: "unbounded" }),
         proposed: checkDecomposability(params.proposedTrait)
       },
       { concurrency: "unbounded" }
