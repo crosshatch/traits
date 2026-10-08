@@ -73,11 +73,7 @@ export const layer = toolkit.toLayer({
           (source) => Effect.forEach(traits, (trait) => check(trait, source), { concurrency: "unbounded" }),
           { concurrency: "unbounded" }
         )
-        return pipe(
-          results,
-          Array.flatten,
-          Array.filter((result) => result._tag === "Fail")
-        )
+        return pipe(results, Array.flatten, Array.filter(TraitExpression.guards.Fail))
       }),
       { concurrency: "unbounded" }
     )

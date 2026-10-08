@@ -9,6 +9,9 @@ import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 export const DeriveTrait = Tool.make("derive_trait", {
   description: String.stripMargin(`
   | Use after a user correction, reusable coding preference, or explicit request to remember a convention.
+  | Recognize preferences across turns, including approval of a suggested alternative idiom; do not require the words "always" or "trait".
+  | Err on the side of proposing a rule unless an existing trait clearly covers its exact scope. Ask to save the drafted rule before invoking this write tool.
+  | An explicit request to save the rule counts as approval; approval to change code alone does not.
   | First decide whether the feedback generalizes beyond the current task and inspect existing trait files for coverage.
   | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings and unnecessary examples.
   | Compare against all stored traits. Only a distinct proposal is saved as a new trait.
@@ -52,11 +55,11 @@ export const layer = toolkit.toLayer({
     const target = params.clarificationTraitId === undefined ? undefined : yield* store.get(params.clarificationTraitId)
     const inspectTrait = (trait: Trait) => check(trait, params.proposedTrait)
     const results = yield* Effect.forEach(traits, inspectTrait, { concurrency: "unbounded" })
-    const failures = Array.filter(results, (result) => result._tag === "Fail")
+    const failures = Array.filter(results, TraitConflict.guards.Fail)
     if (failures.length > 0) return failures
 
-    const clarifications = Array.filter(results, (result) => result._tag === "Clarification")
-    const covered = Array.filter(results, (result) => result._tag === "Covered")
+    const clarifications = Array.filter(results, TraitConflict.guards.Clarification)
+    const covered = Array.filter(results, TraitConflict.guards.Covered)
     if (target !== undefined) {
       const targetClarification = Array.some(clarifications, (result) => result.trait.id === target.id)
       const otherClarifications = Array.filter(clarifications, (result) => result.trait.id !== target.id)

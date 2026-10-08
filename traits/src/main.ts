@@ -19,7 +19,12 @@ Command.make("traits").pipe(
       instructions: String.stripMargin(`
       | Traits are durable, reusable coding preferences stored as .agents/traits/<three_words-uuid>.md in the working directory.
       | The full filename stem is the trait ID; use it in tool calls, for example rose_karate_frog-<uuid>.
-      | When the user corrects your approach or expresses a reusable preference, consider saving a trait without waiting for the word "trait".
+      | Before completing a response to a user correction, coding preference, or approved alternative idiom, check whether it expresses a reusable rule.
+      | Treat multi-turn exchanges as a whole: asking about a better idiom and then approving it can establish a preference without saying "always" or "trait".
+      | Err on the side of proposing a concise trait unless you have read an existing trait that clearly covers the exact rule and its scope.
+      | If coverage is uncertain, propose the rule rather than silently assuming a broad trait covers it. If clearer wording is needed, propose a clarification.
+      | Show the proposed rule and ask whether to save it before calling derive_trait, which may write immediately. An explicit request to save that rule is approval.
+      | Approval to edit code alone is not approval to persist a trait. Make the requested edit, but also propose the reusable rule before your final response.
       | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
       | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
       | Call derive_trait with the drafted body as proposedTrait. It saves only distinct rules; Covered means reuse an existing trait.

@@ -2,9 +2,9 @@
 name: traits
 description: >-
   Use when the user corrects an approach, expresses a reusable coding
-  preference, or asks to remember a convention; when reconciling conflicting
-  traits; and after generating or editing TypeScript files or before committing
-  them.
+  preference, approves an alternative idiom, or asks to remember a convention;
+  when reconciling conflicting traits; and after generating or editing
+  TypeScript files or before committing them.
 ---
 
 # Traits
@@ -17,6 +17,28 @@ discover existing rules and IDs; pass the full ID, not just the words, to tools.
 
 ## Capture a reusable insight
 
+### Required pre-response preference check
+
+Before finishing a response to a correction, preference, or approved alternative
+idiom, evaluate the exchange for a reusable rule. Read the conversation across
+turns: "Can we use the case guard?" followed by "Excellent. Please do"
+establishes a candidate preference even without the words "always", "prefer", or
+"trait".
+
+Err on the side of proposing a concise trait unless you have read an existing
+trait that clearly covers the exact rule and scope. Do not silently assume a
+broad convention covers a specific idiom. If coverage is uncertain, propose the
+rule; if an existing rule needs clearer wording, propose a clarification. Skip
+only clearly one-off requests, transient facts, or rules you can identify as
+already covered.
+
+Show the drafted rule and ask whether to save it before calling `derive_trait`,
+which can write immediately. An explicit request to save that rule counts as
+approval. Approval to edit code alone does not approve persisting a trait: make
+the requested edit and propose the reusable rule before the final response. Do
+not stop after implementing an idiom and running code checks; preference capture
+is a separate responsibility.
+
 1. Notice user corrections and recurring preferences without waiting for an
    explicit mention of traits. Also handle explicit requests to remember a rule.
 2. Distinguish a durable convention from a one-off task, transient fact, or
@@ -25,10 +47,10 @@ discover existing rules and IDs; pass the full ID, not just the words, to tools.
 3. Draft the complete rule as `proposedTrait`. Preserve essential requirements,
    scopes, and exceptions. Keep independently applicable rules separate; omit
    headings, repetition, and unnecessary explanation or examples.
-4. Call `derive_trait({ proposedTrait })`. This checks existing traits and
-   writes only when the proposal is distinct from all of them. It does not
-   independently decide whether the conversation contains a generalizable
-   insight.
+4. After approval to save the rule, call `derive_trait({ proposedTrait })`. This
+   checks existing traits and writes only when the proposal is distinct from all
+   of them. It does not independently decide whether the conversation contains a
+   generalizable insight.
 5. A void success means the trait was saved. Do not repeat the call because its
    response is empty. Read the store if you need its newly generated ID.
 6. A list of `Fail` entries means nothing was saved. Inspect the existing bodies
