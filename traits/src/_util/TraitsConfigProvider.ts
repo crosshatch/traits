@@ -14,7 +14,9 @@ export const layer = ConfigProvider.layerAdd(
     let provider = ConfigProvider.fromUnknown({})
     for (const file of files) {
       if (yield* fs.exists(file)) {
-        provider = ConfigProvider.orElse(provider, yield* ConfigProvider.fromDotEnv({ path: file }))
+        provider = yield* ConfigProvider.fromDotEnv({ path: file }).pipe(
+          Effect.map((value) => ConfigProvider.orElse(provider, value))
+        )
       }
     }
     return provider
