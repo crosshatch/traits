@@ -54,25 +54,25 @@ export const syncRepos = Command.make("sync-repos").pipe(
 
       yield* Effect.forEach(
         repos,
-        Effect.fn("tasks.syncRepos.repository")(function* ({ entry, repoDir }) {
-          yield* Console.log(`Syncing "${entry}" (main)`)
+        Effect.fn("tasks.syncRepos.repository")(function* (repo) {
+          yield* Console.log(`Syncing "${repo.entry}" (main)`)
           yield* ChildProcess.make`git fetch origin main`.pipe(
-            ChildProcess.setCwd(repoDir),
+            ChildProcess.setCwd(repo.repoDir),
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => new RepoSyncError({ message: `Failed to fetch "${entry}"` })
+              () => new RepoSyncError({ message: `Failed to fetch "${repo.entry}"` })
             )
           )
           yield* ChildProcess.make`git switch -C main origin/main`.pipe(
-            ChildProcess.setCwd(repoDir),
+            ChildProcess.setCwd(repo.repoDir),
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => new RepoSyncError({ message: `Failed to switch "${entry}" to main` })
+              () => new RepoSyncError({ message: `Failed to switch "${repo.entry}" to main` })
             )
           )
-          yield* Console.log(`Synced "${entry}" (main)`)
+          yield* Console.log(`Synced "${repo.entry}" (main)`)
         }),
         { concurrency: "unbounded" }
       )

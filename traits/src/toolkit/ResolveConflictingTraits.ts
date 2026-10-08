@@ -1,4 +1,4 @@
-import { Array, Effect, Schema as S, String } from "effect"
+import { Array, Effect, pipe, Schema as S, String } from "effect"
 import { AiError, Decision, DecisionModel, LanguageModel, Tool, Toolkit } from "effect/ai"
 
 import { Trait, TraitId } from "../Trait.ts"
@@ -46,22 +46,23 @@ export const layer = toolkit.toLayer({
         existing: Effect.forEach(
           ids,
           (id) => store.get(id).pipe(Effect.flatMap((trait) => checkDecomposability(trait.body))),
-          {
-            concurrency: "unbounded"
-          }
+          { concurrency: "unbounded" }
         ),
         proposed: checkDecomposability(proposedTrait)
       },
       { concurrency: "unbounded" }
     )
-    const input = yield* S.encodeEffect(
-      S.fromJsonString(
-        S.Struct({
-          existing: S.Array(S.Array(S.String)),
-          proposed: S.Array(S.String)
-        })
+    const input = yield* pipe(
+      decomposed,
+      S.encodeEffect(
+        S.fromJsonString(
+          S.Struct({
+            existing: S.Array(S.Array(S.String)),
+            proposed: S.Array(S.String)
+          })
+        )
       )
-    )(decomposed)
+    )
     const response = yield* LanguageModel.generateObject({
       prompt: [
         {

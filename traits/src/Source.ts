@@ -1,13 +1,14 @@
 import { Schema as S } from "effect"
 
+export type SourceLocation = typeof SourceLocation.Type
+export const SourceLocation = S.TaggedUnion({
+  File: { path: S.String, startLine: S.Int },
+  Generated: {}
+})
+
 export type Source = typeof Source.Type
 export const Source = S.Struct({
   agentId: S.String,
   text: S.String,
-  location: S.optional(
-    S.TaggedUnion({
-      File: { path: S.String, startLine: S.Int },
-      Generated: {}
-    })
-  )
+  location: SourceLocation.pipe(S.optional)
 })

@@ -19,15 +19,15 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Use after a user correction, reusable coding preference, or explicit request to remember a convention.
   | First decide whether the feedback generalizes beyond the current task and inspect existing trait files for coverage.
   | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings and unnecessary examples.
-   | Compare against all stored traits. Only a distinct proposal is saved as a new trait.
+  | Compare against all stored traits. Only a distinct proposal is saved as a new trait.
   | Conflicts and inconclusive comparisons return Fail entries containing the existing trait and proposal; no trait is saved in that case.
   | Inspect those entries: clarify ambiguity, revise the proposal, or call resolve_conflicting_traits for an intentional replacement.
-   | Covered entries mean the proposal is already represented; reuse those traits without writing a duplicate.
-   | Clarification entries identify an existing trait whose wording should be made clearer; no files are changed.
-   | Show the existing body and complete replacement to the user and ask approval before updating.
-   | After approval of that exact body and trait ID, retry with clarificationTraitId and approved: true.
-   | The tool rechecks all traits before updating, preserving the selected ID. Updated returns the saved trait.
-   | Never use approved: true for an unapproved replacement, and never resolve a mere clarification by deleting traits.
+  | Covered entries mean the proposal is already represented; reuse those traits without writing a duplicate.
+  | Clarification entries identify an existing trait whose wording should be made clearer; no files are changed.
+  | Show the existing body and complete replacement to the user and ask approval before updating.
+  | After approval of that exact body and trait ID, retry with clarificationTraitId and approved: true.
+  | The tool rechecks all traits before updating, preserving the selected ID. Updated returns the saved trait.
+  | Never use approved: true for an unapproved replacement, and never resolve a mere clarification by deleting traits.
   | Successful creation returns no value and saves through the configured store. Do not repeat the call to obtain a result.
   | Then call check_trait_expression on relevant TypeScript files. Read the store to obtain the new ID if you need a targeted check.
   `),
@@ -36,8 +36,8 @@ export const DeriveTrait = Tool.make("derive_trait", {
       description:
         "The complete reusable rule to save, including scope and exceptions, rather than raw conversation text."
     }),
-    clarificationTraitId: S.optional(TraitId),
-    approved: S.optional(S.Boolean)
+    clarificationTraitId: TraitId.pipe(S.optional),
+    approved: S.Boolean.pipe(S.optional)
   }),
   success: S.Union([
     S.Array(S.Union([TraitConflict.cases.Fail, TraitConflict.cases.Covered, TraitConflict.cases.Clarification])),
@@ -67,11 +67,11 @@ export const layer = toolkit.toLayer({
         )
         const { label } = result.answers.assessment
         if (label === "conflict" || label === "inconclusive") {
-          return { _tag: "Fail" as const, trait, proposedTrait }
+          return TraitConflict.cases.Fail.make({ trait, proposedTrait })
         }
-        if (label === "covered") return { _tag: "Covered" as const, trait }
-        if (label === "clarification") return { _tag: "Clarification" as const, trait, proposedTrait }
-        return { _tag: "Pass" as const }
+        if (label === "covered") return TraitConflict.cases.Covered.make({ trait })
+        if (label === "clarification") return TraitConflict.cases.Clarification.make({ trait, proposedTrait })
+        return TraitConflict.cases.Pass.make({})
       }),
       { concurrency: "unbounded" }
     )
@@ -86,11 +86,11 @@ export const layer = toolkit.toLayer({
       if (approved === true && targetClarification && otherClarifications.length === 0) {
         const trait = Trait.make({ id: target.id, body: proposedTrait })
         yield* store.update(trait)
-        return { _tag: "Updated" as const, trait }
+        return TraitConflict.cases.Updated.make({ trait })
       }
       if (clarifications.length > 0) return clarifications
       if (covered.length > 0) return covered
-      return [{ _tag: "Fail" as const, trait: target, proposedTrait }]
+      return [TraitConflict.cases.Fail.make({ trait: target, proposedTrait })]
     }
     if (clarifications.length > 0) return clarifications
     if (covered.length > 0) return covered

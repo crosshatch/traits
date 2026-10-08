@@ -53,7 +53,13 @@ Command.make("traits").pipe(
           | After saving or resolving a trait, check the relevant TypeScript files explicitly; creation does not run that review for you.
           | Omit traitIds for all traits; use specific IDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
           | Checks read current full files in 200-line chunks, not Git diffs. A finding's startLine locates a chunk, not an exact violation.
-          | Inspect findings against their trait and source; fix relevant violations and rerun affected files. Report unresolved ambiguity or tool errors.
+          | Take responsibility for trait compliance whenever a violation is discovered, through tool findings or your own inspection.
+          | Inspect each finding against its trait, scope, exceptions, and surrounding source; confirmed violations must be fixed without waiting for another user request.
+          | Make minimal behavior-preserving edits to the implementation, not to the trait merely to silence a finding. Do not stop at a findings summary.
+          | Rerun check_trait_expression on every corrected file, then run relevant formatting, type, and behavior checks; repeat for remaining confirmed violations.
+          | A Fail may be inconclusive or inapplicable. Do not blindly change correct code; explain any retained false positives or justified exceptions.
+          | If a fix requires a behavior change, broader authorization, or an ambiguous interpretation, ask a focused question and report the blocker.
+          | Do not claim compliance while confirmed violations remain. Report model errors as incomplete reviews, not passes.
           | An empty result only means no failures for the selected files and traits; empty selections or an empty store perform no assessments.
           | On mutation errors, inspect the store before retrying: writes and removals are not transactional, and retries may duplicate saved traits.
           `)

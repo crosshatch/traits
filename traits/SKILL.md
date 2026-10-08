@@ -87,8 +87,20 @@ store before retrying; some changes may already be present.
   chunk starting line. That line is not an exact violation location. Violations
   and inconclusive assessments have the same result shape.
 - Inspect the code and trait before fixing a finding. Respect scope and
-  exceptions; missing context is not proof of a violation. Fix relevant issues
-  and rerun affected files, reporting unresolved findings or model errors.
+  exceptions; missing context is not proof of a violation.
+- Own the remediation loop whenever you discover an applicable violation,
+  whether from this tool or your own inspection. Automatically make minimal,
+  behavior-preserving fixes without waiting for another user request; a findings
+  summary alone is not completion. This tool diagnoses; the agent makes edits.
+- Recheck every corrected file and run relevant formatting, type, and behavior
+  checks. Repeat for remaining confirmed violations. Do not weaken or rewrite
+  traits merely to silence findings, and do not change correct code for false
+  positives or inapplicable rules.
+- Explain retained false positives or justified exceptions. If a fix requires
+  changed behavior, broader authorization, or resolving ambiguity, ask a focused
+  question and report the blocker rather than silently expanding scope. Do not
+  claim compliance while confirmed violations remain; model errors make the
+  review incomplete, not passing.
 - Before committing or opening a PR, review the changed TypeScript files against
   all traits. An empty result means no failures for the selection; empty
   selections or an empty trait store perform no assessments.

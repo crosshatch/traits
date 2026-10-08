@@ -1,0 +1,1 @@
+Construct instances of Effect Schema tagged unions with their case-specific factories, not manually tagged object literals: Union.cases.Fail.make({ reason }), not { _tag: "Fail", reason }.
