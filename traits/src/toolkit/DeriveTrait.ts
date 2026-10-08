@@ -54,23 +54,24 @@ export const DeriveTrait = Tool.make("derive_trait", {
 export const toolkit = Toolkit.make(DeriveTrait)
 
 export const layer = toolkit.toLayer({
-  derive_trait: Effect.fnUntraced(function* ({ proposedTrait, clarificationTraitId, approved }) {
+  derive_trait: Effect.fnUntraced(function* (params) {
     const store = yield* TraitStore
     const context = yield* TraitsContext
     const traits = yield* store.ls
-    const target = clarificationTraitId === undefined ? undefined : yield* store.get(clarificationTraitId)
+    const target = params.clarificationTraitId === undefined ? undefined : yield* store.get(params.clarificationTraitId)
     const results = yield* Effect.forEach(
       traits,
       Effect.fnUntraced(function* (trait) {
-        const result = yield* DecisionModel.decide(decision, { input: { trait, proposedTrait } }).pipe(
-          context.semaphore.withPermits(1)
-        )
+        const result = yield* DecisionModel.decide(decision, {
+          input: { trait, proposedTrait: params.proposedTrait }
+        }).pipe(context.semaphore.withPermits(1))
         const { label } = result.answers.assessment
         if (label === "conflict" || label === "inconclusive") {
-          return TraitConflict.cases.Fail.make({ trait, proposedTrait })
+          return TraitConflict.cases.Fail.make({ trait, proposedTrait: params.proposedTrait })
         }
         if (label === "covered") return TraitConflict.cases.Covered.make({ trait })
-        if (label === "clarification") return TraitConflict.cases.Clarification.make({ trait, proposedTrait })
+        if (label === "clarification")
+          return TraitConflict.cases.Clarification.make({ trait, proposedTrait: params.proposedTrait })
         return TraitConflict.cases.Pass.make({})
       }),
       { concurrency: "unbounded" }
@@ -83,20 +84,20 @@ export const layer = toolkit.toLayer({
     if (target !== undefined) {
       const targetClarification = Array.some(clarifications, (result) => result.trait.id === target.id)
       const otherClarifications = Array.filter(clarifications, (result) => result.trait.id !== target.id)
-      if (approved === true && targetClarification && otherClarifications.length === 0) {
-        const trait = Trait.make({ id: target.id, body: proposedTrait })
+      if (params.approved === true && targetClarification && otherClarifications.length === 0) {
+        const trait = Trait.make({ id: target.id, body: params.proposedTrait })
         yield* store.update(trait)
         return TraitConflict.cases.Updated.make({ trait })
       }
       if (clarifications.length > 0) return clarifications
       if (covered.length > 0) return covered
-      return [TraitConflict.cases.Fail.make({ trait: target, proposedTrait })]
+      return [TraitConflict.cases.Fail.make({ trait: target, proposedTrait: params.proposedTrait })]
     }
     if (clarifications.length > 0) return clarifications
     if (covered.length > 0) return covered
 
     const id = yield* store.makeId
-    return yield* store.add(Trait.make({ id, body: proposedTrait }))
+    return yield* store.add(Trait.make({ id, body: params.proposedTrait }))
   })
 })
 

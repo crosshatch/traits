@@ -48,16 +48,16 @@ export const CheckTraitExpression = Tool.make("check_trait_expression", {
 export const toolkit = Toolkit.make(CheckTraitExpression)
 
 export const layer = toolkit.toLayer({
-  check_trait_expression: Effect.fnUntraced(function* ({ files, traitIds }) {
+  check_trait_expression: Effect.fnUntraced(function* (params) {
     const store = yield* TraitStore
     const { agentId, semaphore } = yield* TraitsContext
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const traits = yield* traitIds === undefined
+    const traits = yield* params.traitIds === undefined
       ? store.ls
-      : Effect.forEach(Array.dedupe(traitIds), store.get, { concurrency: "unbounded" })
+      : Effect.forEach(Array.dedupe(params.traitIds), store.get, { concurrency: "unbounded" })
     const paths = pipe(
-      files,
+      params.files,
       Array.map((file) => path.resolve(file)),
       Array.dedupe
     )

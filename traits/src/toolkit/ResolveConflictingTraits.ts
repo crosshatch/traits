@@ -38,9 +38,9 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
 export const toolkit = Toolkit.make(ResolveConflictingTraits)
 
 export const layer = toolkit.toLayer({
-  resolve_conflicting_traits: Effect.fnUntraced(function* ({ conflictingTraitIds, proposedTrait }) {
+  resolve_conflicting_traits: Effect.fnUntraced(function* (params) {
     const store = yield* TraitStore
-    const ids = Array.dedupe(conflictingTraitIds)
+    const ids = Array.dedupe(params.conflictingTraitIds)
     const decomposed = yield* Effect.all(
       {
         existing: Effect.forEach(
@@ -48,7 +48,7 @@ export const layer = toolkit.toLayer({
           (id) => store.get(id).pipe(Effect.flatMap((trait) => checkDecomposability(trait.body))),
           { concurrency: "unbounded" }
         ),
-        proposed: checkDecomposability(proposedTrait)
+        proposed: checkDecomposability(params.proposedTrait)
       },
       { concurrency: "unbounded" }
     )
