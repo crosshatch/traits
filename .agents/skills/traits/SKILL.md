@@ -71,13 +71,15 @@ description: >-
   approval. For `revision-required`, rewrite using the returned feedback and
   call again for approval. For `declined` or cancellation, stop; no trait is
   saved.
-- For `approval-required`, the client lacks form elicitation. Show the
+- OpenCode uses in-chat fallback approval because its MCP forms are routed to
+  the global session. Other clients use native forms when supported.
+- For `approval-required`, the client lacks usable form elicitation. Show the
   destination group, exact path and full text and ask approve/revise/cancel
   using an interactive question when available, otherwise text. Retry with
   `approved: true` only after approval of that exact proposal. An explicit
   request supplying the exact group, path and text counts as approval for this
-  fallback. This flag never bypasses elicitation on supported clients. Never
-  retry while revision or approval is pending.
+  fallback. This flag never bypasses elicitation on clients with usable forms.
+  Never retry while revision or approval is pending.
 - Before committing, stage the intended changes and call the traits MCP
   `check-traits` tool. Current trait files apply immediately, even if unstaged.
   Investigate nonpassing traits using the reported probabilities and the Git

@@ -44,7 +44,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             { concurrency: "unbounded" }
           )
 
-          return repoNames.map((repo) => ({
+          return Array.map(repoNames, (repo) => ({
             entry: `${org}/${repo}`,
             repoDir: path.join(orgDir, repo)
           }))
