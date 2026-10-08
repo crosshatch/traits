@@ -10,7 +10,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const reposDir = path.join(process.cwd(), "repos")
+      const reposDir = path.resolve("repos")
 
       yield* ChildProcess.make`git submodule update --init -- repos`.pipe(
         (command) => spawner.exitCode(command),

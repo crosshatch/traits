@@ -1,5 +1,3 @@
-import { glob } from "node:fs/promises"
-
 import { Console, Effect, FileSystem, Path } from "effect"
 import { Command, Flag } from "effect/cli"
 
@@ -13,10 +11,9 @@ export const clean = Command.make("clean", {
     Effect.fn("tasks.clean")(function* ({ ignore }) {
       const exclude = [...alwaysIgnore, ...ignore]
 
-      const packages = yield* Effect.promise(() => Array.fromAsync(glob("**/package.json", { exclude })))
-
       const path = yield* Path.Path
       const fs = yield* FileSystem.FileSystem
+      const packages = yield* fs.glob("**/package.json", { exclude })
 
       yield* Effect.forEach(
         packages,

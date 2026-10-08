@@ -1,12 +1,14 @@
 packages:
   - crosshatch
   - crosshatch.dev
+  - traits
 
 allowBuilds:
   esbuild: true
   workerd: true
 
 catalog:
+  "@effect/ai-openai": 4.0.0
   "@effect/ai-typesafe": 4.0.0
   effect: 4.0.0
   typescript: 7.0.2
