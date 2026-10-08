@@ -1,7 +1,7 @@
-import { Array, Crypto, Effect, Schema as S, String } from "effect"
+import { Array, Effect, Schema as S, String } from "effect"
 import { AiError, Decision, DecisionModel, LanguageModel, Tool, Toolkit } from "effect/ai"
 
-import { makeId, Trait, TraitId } from "../Trait.ts"
+import { Trait, TraitId } from "../Trait.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
@@ -11,7 +11,7 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
   | Inspect the existing bodies first. An inconclusive comparison alone does not establish a conflict; clarify the intended rule before resolving.
   | Supply the existing trait IDs and the complete proposed rule. The tool evaluates all selected bodies and the proposal for decomposition,
   | then generates concise, standalone replacements, with the proposal taking precedence only in direct conflicts.
-  | It preserves unrelated requirements, scopes, and exceptions, saves replacements under new three-word-prefixed IDs, and deletes the selected originals.
+  | It preserves unrelated requirements, scopes, and exceptions, saves replacements under new store-generated IDs, and deletes the selected originals.
   | Returns the saved replacement traits with their IDs and bodies. Review them and run check_trait_expression on relevant TypeScript files.
   | Do not call derive_trait again for the same proposal: its content is already incorporated into the saved replacements.
   | Only selected traits participate in reconciliation; use an all-trait expression check for the broader code review.
@@ -29,7 +29,7 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
   }),
   success: S.Array(Trait),
   failure: S.Union([AiError.AiError, TraitStoreError, S.TaggedStruct("SchemaError", { message: S.String })]),
-  dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, Crypto.Crypto, TraitsContext]
+  dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
 })
   .annotate(Tool.Title, "Resolve Conflicting Traits")
   .annotate(Tool.Readonly, false)
@@ -84,7 +84,7 @@ export const layer = toolkit.toLayer({
     const replacements = yield* Effect.forEach(
       response.value.traits,
       Effect.fnUntraced(function* (trait) {
-        const id = yield* makeId()
+        const id = yield* store.makeId
         return Trait.make({ id, ...trait })
       })
     )

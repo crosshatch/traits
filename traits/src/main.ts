@@ -41,8 +41,10 @@ Command.make("traits").pipe(
           | When the user corrects your approach or expresses a reusable preference, consider saving a trait without waiting for the word "trait".
           | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
           | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
-          | Call derive_trait with the drafted body as proposedTrait. It checks conflicts and writes immediately when none are returned.
-          | Returned Fail entries mean nothing was saved; inspect their trait bodies and IDs before choosing a resolution.
+          | Call derive_trait with the drafted body as proposedTrait. It saves only distinct rules; Covered means reuse an existing trait.
+          | Clarification means no write: show the existing trait and complete replacement body and ask the user to approve the exact change.
+          | After approval, retry derive_trait with the same proposedTrait, clarificationTraitId, and approved: true; Updated preserves the ID.
+          | Returned Fail, Covered, or Clarification lists mean nothing was saved; inspect the existing traits before proceeding.
           | Fail can also mean an inconclusive comparison. Clarify ambiguity rather than treating every failure as a proven contradiction.
           | To intentionally replace conflicting traits, call resolve_conflicting_traits with their IDs and the proposed body.
           | Resolution gives the proposal precedence in direct conflicts, writes generated replacements, then removes the selected originals.

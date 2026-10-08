@@ -9,9 +9,9 @@ description: >-
 
 # Traits
 
-Traits are concise, durable coding rules. This server stores each body in
-`.agents/traits/<three_words-uuid>.md`, relative to its working directory. The
-full filename stem is the trait ID, for example
+Traits are concise, durable coding rules. The filesystem implementation stores
+each body in `.agents/traits/<three_words-uuid>.md`, relative to its working
+directory. The full filename stem is the trait ID, for example
 `rose_karate_frog-2535ceab-5702-4ab4-932a-f87362adf8c6`. Read these files to
 discover existing rules and IDs; pass the full ID, not just the words, to tools.
 
@@ -25,9 +25,10 @@ discover existing rules and IDs; pass the full ID, not just the words, to tools.
 3. Draft the complete rule as `proposedTrait`. Preserve essential requirements,
    scopes, and exceptions. Keep independently applicable rules separate; omit
    headings, repetition, and unnecessary explanation or examples.
-4. Call `derive_trait({ proposedTrait })`. This checks for conflicts and writes
-   immediately when no failures are returned. It does not independently decide
-   whether the conversation contains a generalizable insight.
+4. Call `derive_trait({ proposedTrait })`. This checks existing traits and
+   writes only when the proposal is distinct from all of them. It does not
+   independently decide whether the conversation contains a generalizable
+   insight.
 5. A void success means the trait was saved. Do not repeat the call because its
    response is empty. Read the store if you need its newly generated ID.
 6. A list of `Fail` entries means nothing was saved. Inspect the existing bodies
@@ -35,8 +36,19 @@ discover existing rules and IDs; pass the full ID, not just the words, to tools.
    contradiction. Clarify or revise the proposal, or intentionally reconcile the
    relevant existing traits.
 
-Overlap and duplicate wording alone are not blocked by the conflict check. Avoid
-creating duplicates at the drafting stage.
+`Covered` entries mean existing traits already express the proposal; reuse them
+without creating a duplicate. `Clarification` entries mean an existing rule can
+be made clearer while preserving its intent, requirements, scope, and
+exceptions. Neither outcome writes files.
+
+For clarification, show the current trait body and the complete proposed
+replacement and ask the user to approve that exact body and trait ID. After
+approval, call
+`derive_trait({ proposedTrait, clarificationTraitId, approved: true })`. It
+rechecks all traits and updates only the selected trait when it qualifies as a
+clarification and no blocking relationships remain. `Updated` returns the saved
+trait with its original ID. Never claim approval not given by the user or use
+conflict resolution to delete a trait merely needing clearer wording.
 
 ## Reconcile conflicting traits
 
