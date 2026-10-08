@@ -1,7 +1,5 @@
-import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
-import { TypeSafeClient, TypeSafeDecisionModel } from "@effect/ai-typesafe"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { Config, Effect, Layer, Logger, String } from "effect"
+import { Effect, Layer, Logger, String } from "effect"
 import { McpProtocol, McpServer } from "effect/ai"
 import { Command } from "effect/cli"
 import { FetchHttpClient } from "effect/http"
@@ -16,19 +14,14 @@ Command.make("traits").pipe(
   Command.withHandler(() =>
     toolkit.pipe(
       Layer.provide(layerFileSystem(".agents/traits")),
+      Layer.provide(
+        TraitsContext.pipe(
+          Effect.map((context) => Layer.mergeAll(context.config.layerDecisionModel, context.config.layerLanguageModel)),
+          Layer.unwrap,
+          Layer.provide(FetchHttpClient.layer)
+        )
+      ),
       Layer.provide(TraitsContext.layer),
-      Layer.provide(
-        OpenAiLanguageModel.layer({ model: "gpt-4.1" }).pipe(
-          Layer.provide(OpenAiClient.layerConfig({ apiKey: Config.Redacted("OPENAI_API_KEY") })),
-          Layer.provide(FetchHttpClient.layer)
-        )
-      ),
-      Layer.provide(
-        TypeSafeDecisionModel.layer({ model: "jev-latest" }).pipe(
-          Layer.provide(TypeSafeClient.layerConfig()),
-          Layer.provide(FetchHttpClient.layer)
-        )
-      ),
       Layer.provideMerge(McpServer.McpServer.layer),
       (registrations) =>
         McpServer.layerStdio({

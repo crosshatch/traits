@@ -71,6 +71,36 @@ store before retrying; some changes may already be present.
 
 ## Check the implementation
 
+### Required review procedure
+
+1. Before editing, read the stored trait bodies and identify which apply to the
+   planned work. Do not rely on filenames, remembered summaries, or examples
+   alone; preserve each rule's scope and exceptions.
+2. Track every TypeScript file you generate or modify, including files changed
+   while fixing findings. Review the final on-disk contents, not an earlier
+   version or only the initial set of files.
+3. Independently inspect each changed section against every applicable trait. An
+   empty tool result does not replace direct inspection against the trait text.
+   Formatting, lint, and type checks do not establish trait compliance.
+4. For recognizable patterns, search explicitly and inspect matches. For the
+   curried-call rule, look for nested calls such as `fn(args)(value)`, including
+   multiline forms and `yield* S.decodeUnknownEffect(schema)(input)`. Check the
+   actual signature before deciding whether a match is a violation. Also inspect
+   parameter destructuring, manually constructed tagged-union members, wrapped
+   schema modifiers, and misplaced imports when their traits apply. Searches
+   support review; a lack of matches is not proof that every trait is satisfied.
+5. Call `check_trait_expression` on all changed TypeScript files after the
+   latest edits. Before a commit or PR, omit `traitIds` so every stored trait is
+   checked; focused checks supplement rather than replace that final review.
+6. Inspect findings, fix confirmed violations, and repeat direct inspection,
+   tool checks, and relevant project verification after fixes. If any reviewed
+   file changes again, its earlier result is stale and it must be rechecked.
+7. Report tool results and manual verification separately. State the reviewed
+   scope, retained false positives or exceptions, and incomplete checks. Never
+   turn an empty tool result into an unconditional claim of compliance.
+
+### Tool behavior and remediation
+
 - After generating or editing TypeScript files, select those files and call
   `check_trait_expression({ files })`.
 - After creating or resolving traits, explicitly review relevant TypeScript
@@ -112,8 +142,11 @@ OpenCode MCP server is `traits`; discover its `derive_trait`,
 `resolve_conflicting_traits`, and `check_trait_expression` tools through the
 client's tool catalog.
 
-The CLI uses TypeSafe for decisions and OpenAI for generation. It needs
-`TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration precedence is process
-environment, worktree-root `.env`, then main-checkout `.env`. Reconnect the MCP
-server after changing credentials. A failed model request is an incomplete
-review, not a pass.
+The CLI loads the default export of repository-root `traits.ts`, validated by
+`TraitsConfig`. Specify `layerDecisionModel` and `layerLanguageModel`; the CLI
+provides the HTTP client. Storage remains local and has no source configuration.
+The current configuration uses TypeSafe for decisions and OpenAI for generation,
+requiring `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration precedence is
+process environment, worktree-root `.env`, then main-checkout `.env`. Reconnect
+the MCP server after changing credentials. A failed model request is an
+incomplete review, not a pass.

@@ -220,6 +220,9 @@ importers:
 
   .:
     devDependencies:
+      '@effect/ai-openai':
+        specifier: 'catalog:'
+        version: 4.0.0(effect@4.0.0)
       '@effect/ai-typesafe':
         specifier: 'catalog:'
         version: 4.0.0(effect@4.0.0)
