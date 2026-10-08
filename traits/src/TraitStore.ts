@@ -21,8 +21,7 @@ export const TraitStoreError = S.TaggedStruct("PlatformError", { message: S.Stri
 export class TraitStore extends Context.Service<
   TraitStore,
   {
-    readonly makeId: Effect.Effect<TraitId, PlatformError.PlatformError>
-    readonly add: (trait: Trait) => Effect.Effect<void, PlatformError.PlatformError>
+    readonly add: (body: string) => Effect.Effect<Trait, PlatformError.PlatformError>
     readonly update: (trait: Trait) => Effect.Effect<void, PlatformError.PlatformError>
     readonly get: (traitId: TraitId) => Effect.Effect<Trait, PlatformError.PlatformError>
     readonly ls: Effect.Effect<ReadonlyArray<Trait>, PlatformError.PlatformError>
@@ -43,7 +42,7 @@ export const layerFileSystem = (dir: string) =>
       const traitPath = (traitId: TraitId) => path.join(root, `${traitId}.md`)
 
       return TraitStore.of({
-        makeId: Effect.gen(function* () {
+        add: Effect.fn("TraitStore.add")(function* (body) {
           const indices: Array<number> = []
           while (indices.length < 3) {
             const index = yield* crypto.randomIntBetween(0, words.length, { halfOpen: true })
@@ -55,11 +54,12 @@ export const layerFileSystem = (dir: string) =>
             Array.join("_")
           )
           const uuid = yield* crypto.randomUUIDv4
-          return TraitId.make(`${prefix}-${uuid}`)
+          const trait = Trait.make({ id: TraitId.make(`${prefix}-${uuid}`), body })
+          yield* fs.writeFileString(traitPath(trait.id), trait.body, { flag: "wx" })
+          return trait
         }),
         get: (traitId) =>
           fs.readFileString(traitPath(traitId)).pipe(Effect.map((body) => Trait.make({ id: traitId, body }))),
-        add: (trait) => fs.writeFileString(traitPath(trait.id), trait.body, { flag: "wx" }),
         update: Effect.fn("TraitStore.update")(function* (trait) {
           const file = yield* fs.open(traitPath(trait.id), { flag: "r+" })
           yield* file.truncate(0)
