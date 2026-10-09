@@ -15,5 +15,9 @@ export class TraitsContext extends Context.Service<TraitsContext>()("traits/Trai
     return { agentId: "local", semaphore, config }
   })
 }) {
-  static readonly layer = Layer.effect(this, this.make)
+  static readonly layer = this.pipe(
+    Effect.map((context) => Layer.mergeAll(context.config.layerDecisionModel, context.config.layerLanguageModel)),
+    Layer.unwrap,
+    Layer.provideMerge(Layer.effect(this, this.make))
+  )
 }

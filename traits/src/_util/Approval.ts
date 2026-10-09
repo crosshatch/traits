@@ -44,7 +44,16 @@ export const request = Effect.fn("Approval.request")(function* (options: {
   )
   if (response === undefined || response.decision === "skip") return Approval.cases.Declined.make({})
   if (response.decision === "revise" || (response.feedback !== undefined && String.trim(response.feedback) !== "")) {
-    return Approval.cases.RevisionRequired.make({ feedback: response.feedback ?? "Ask the user what to revise." })
+    const feedback = response.feedback === undefined ? "" : String.trim(response.feedback)
+    return Approval.cases.RevisionRequired.make({
+      feedback:
+        feedback !== ""
+          ? feedback
+          : String.stripMargin(`
+      | Ask the user for revision details using an interactive question with free-text input.
+      | Keep this proposal pending; do not infer approval or cancel it because of a related follow-up task.
+      `)
+    })
   }
   return Approval.cases.Approved.make({})
 })

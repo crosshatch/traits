@@ -20,6 +20,8 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
   | Call with the selected IDs and proposal first, leaving approved unset; do not request a separate approval before invoking.
   | Native clients receive a form, while ApprovalRequired asks the agent to use interactive Save/Revise/Skip choices plus free text.
   | Retry identical IDs and proposal with approved: true only after approval. RevisionRequired asks for revised input; Declined means stop without writing.
+  | If Revise gives no concrete feedback, ask for revision details with an interactive free-text question. Keep the proposal pending across related tasks.
+  | After incorporating feedback, present the complete revised proposal and selected removals for fresh approval; do not infer approval from a revision request.
   `),
   parameters: S.Struct({
     conflictingTraitIds: S.Array(TraitId).check(S.isMinLength(1)).annotate({
@@ -41,12 +43,7 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
     Approval.Approval.cases.RevisionRequired,
     Approval.Approval.cases.Declined
   ]),
-  failure: S.Union([
-    AiError.AiError,
-    TraitStoreError,
-    McpSchema.ElicitationDeclined,
-    S.TaggedStruct("SchemaError", { message: S.String })
-  ]),
+  failure: S.Union([AiError.AiError, TraitStoreError, McpSchema.ElicitationDeclined]),
   dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
 })
   .annotate(Tool.Title, "Resolve Conflicting Traits")
@@ -92,7 +89,8 @@ export const layer = toolkit.toLayer({
             proposed: S.Array(S.String)
           })
         )
-      )
+      ),
+      Effect.orDie
     )
     const response = yield* LanguageModel.generateObject({
       prompt: [

@@ -28,12 +28,16 @@ Command.make("traits").pipe(
       | Only on ApprovalRequired, show the full message using the interactive question tool: Save, Revise, Skip, plus its automatic free-text option. Use plain text only if that UI is unavailable.
       | Retry an identical approved proposal with approved: true; do not assert approval for changed wording or targets. Native forms still apply on supported clients.
       | RevisionRequired contains feedback to incorporate before requesting approval again; Declined means stop without writing.
+      | Revise without actionable feedback requires an immediate interactive question asking what to change; never guess or treat it as Save.
+      | Keep a revision pending across related audits or follow-up tasks. Complete that work, then return to the proposal unless explicitly cancelled.
+      | Show the complete revised proposal and obtain fresh approval before saving; a findings summary does not resolve a pending revision.
       | Approval to edit code alone is not approval to persist a trait. Make the requested edit, but also propose the reusable rule before your final response.
       | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
       | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
       | Call derive_trait with the drafted body as proposedTrait. It saves only distinct rules; Covered means reuse an existing trait.
-      | Clarification means no write: call derive_trait with the existing clarificationTraitId and complete replacement body, then follow its approval outcome.
-      | After fallback approval, retry with the same proposedTrait, clarificationTraitId, and approved: true; Updated preserves the ID.
+      | A single clarification candidate is selected automatically and shown for approval; supply a complete replacement preserving the existing rule.
+      | Multiple candidates return Clarification entries without writing: refine the proposal or clarify intent. Do not supply a target ID.
+      | After fallback approval, retry with the same proposedTrait and approved: true; Updated preserves the selected existing ID.
       | Returned Fail, Covered, or Clarification lists mean nothing was saved; inspect the existing traits before proceeding.
       | Fail can also mean an inconclusive comparison. Clarify ambiguity rather than treating every failure as a proven contradiction.
       | To intentionally replace conflicting traits, call resolve_conflicting_traits with their IDs and the proposed body.
@@ -57,16 +61,8 @@ Command.make("traits").pipe(
       Layer.provide(
         toolkit.pipe(
           Layer.provide(layerFileSystem(".agents/traits")),
-          Layer.provide(
-            TraitsContext.pipe(
-              Effect.map((context) =>
-                Layer.mergeAll(context.config.layerDecisionModel, context.config.layerLanguageModel)
-              ),
-              Layer.unwrap,
-              Layer.provide(FetchHttpClient.layer)
-            )
-          ),
           Layer.provide(TraitsContext.layer),
+          Layer.provide(FetchHttpClient.layer),
           Layer.provideMerge(McpServer.McpServer.layer)
         )
       ),

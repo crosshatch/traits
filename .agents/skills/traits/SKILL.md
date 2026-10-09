@@ -57,6 +57,21 @@ the changed proposal and asking approval again, not silently setting approved.
 Skip means stop. Native `RevisionRequired` and `Declined` have the same meanings.
 Transport errors are failures, never declines or approvals.
 
+Selecting **Revise** is not approval and does not cancel the proposal. If no
+specific revision feedback was supplied, immediately ask what wording, scope,
+or exception the user wants changed using the interactive question tool with
+free-text input. Do not guess a revision or retry the mutation with
+`approved: true`. Native `RevisionRequired` without actionable feedback follows
+the same procedure.
+
+Keep the original proposal and its pending revision in the conversation until
+the user approves a replacement or explicitly skips/cancels it. A related audit,
+code change, or follow-up question does not silently resolve the pending choice:
+complete that work and then return to the revision request. If that request
+already supplies the desired change, incorporate it, present the complete revised
+proposal through the approval flow, and obtain fresh approval. Do not finish by
+only reporting an audit while forgetting the pending proposal.
+
 The fallback approval flag applies to creation, clarification, and resolution.
 It does not bypass relationship checks or suppress native forms on capable
 clients. Pending, revision, and decline outcomes never write files. Resolution
@@ -85,19 +100,22 @@ authenticated consent token.
    relevant existing traits.
 
 `Covered` entries mean existing traits already express the proposal; reuse them
-without creating a duplicate. `Clarification` entries mean an existing rule can
-be made clearer while preserving its intent, requirements, scope, and
-exceptions. Neither outcome writes files.
+without creating a duplicate. When there is exactly one clarification candidate
+and no covered or blocking result, the tool selects it automatically and requests
+approval of its current body and complete replacement. The proposal must preserve
+the existing rule's intent, requirements, scope, and exceptions; the tool does not
+generate a merged replacement from an incremental hint.
 
-For clarification, call `derive_trait({ proposedTrait, clarificationTraitId })`
-with the complete replacement body first. The shared approval flow displays the
-current body and replacement; use the interactive question UI only when it
-returns `ApprovalRequired`, then retry identical inputs with `approved: true`
-after Save. It
-rechecks all traits and updates only the selected trait when it qualifies as a
-clarification and no blocking relationships remain. `Updated` returns the saved
-trait with its original ID. Never claim approval not given by the user or use
-conflict resolution to delete a trait merely needing clearer wording.
+Multiple candidates return `Clarification` entries without writing. Refine the
+proposal or clarify intent rather than choosing an ID arbitrarily. Do not supply
+a clarification target parameter.
+
+Use the interactive question UI only on `ApprovalRequired`, then retry the same
+`proposedTrait` with `approved: true` after Save. The tool rechecks every existing
+trait and preserves the selected ID on update. If the store or selected action
+changes between approval and retry, obtain fresh approval rather than reusing
+the flag. `Updated` returns the saved trait. Never claim approval not given by
+the user or delete a trait merely needing clearer wording.
 
 ## Reconcile conflicting traits
 
