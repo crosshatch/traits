@@ -3,6 +3,7 @@ import { useState, type KeyboardEvent } from "react"
 
 import { CodeSample } from "./CodeSample.tsx"
 import { Emblem, Flourish } from "./Illustrations.tsx"
+import { InstallCommand } from "./InstallCommand.tsx"
 import { steps } from "./LifecycleStep.ts"
 import { ThemeToggle } from "./ThemeToggle.tsx"
 
@@ -65,6 +66,7 @@ export const App = () => {
             that make software beautiful
           </p>
           <h1 id="hero-title">Traits</h1>
+          <InstallCommand />
           <p className="hero-description">
             From a conversation, a small insight takes root.
             <br className="desktop-break" />
