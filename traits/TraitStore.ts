@@ -58,8 +58,10 @@ export const layerFileSystem = (dir: string) =>
           yield* fs.writeFileString(traitPath(trait.id), trait.body, { flag: "wx" })
           return trait
         }),
-        get: (traitId) =>
-          fs.readFileString(traitPath(traitId)).pipe(Effect.map((body) => Trait.make({ id: traitId, body }))),
+        get: Effect.fn("TraitStore.get")(function* (traitId: TraitId) {
+          const body = yield* fs.readFileString(traitPath(traitId))
+          return Trait.make({ id: traitId, body })
+        }),
         update: Effect.fn("TraitStore.update")(function* (trait) {
           const file = yield* fs.open(traitPath(trait.id), { flag: "r+" })
           yield* file.truncate(0)
@@ -77,8 +79,10 @@ export const layerFileSystem = (dir: string) =>
             traits.push(Trait.make({ id: TraitId.make(pipe(entry, String.slice(0, -3))), body }))
           }
           return traits
-        }),
-        rm: (traitIds) => Effect.forEach(traitIds, flow(traitPath, fs.remove), { discard: true })
+        }).pipe(Effect.withSpan("TraitStore.ls")),
+        rm: Effect.fn("TraitStore.rm")(function* (traitIds: ReadonlyArray<TraitId>) {
+          yield* Effect.forEach(traitIds, flow(traitPath, fs.remove), { discard: true })
+        })
       })
-    })
+    }).pipe(Effect.withSpan("TraitStore.open"))
   )

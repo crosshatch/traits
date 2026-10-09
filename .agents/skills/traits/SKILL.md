@@ -156,7 +156,7 @@ store before retrying; some changes may already be present.
    parameter destructuring, manually constructed tagged-union members, wrapped
    schema modifiers, and misplaced imports when their traits apply. Searches
    support review; a lack of matches is not proof that every trait is satisfied.
-5. Call `check_trait_expression` on all changed TypeScript files after the
+5. Call `check_traits` on all changed TypeScript files after the
    latest edits. Before a commit or PR, omit `traitIds` so every stored trait is
    checked; focused checks supplement rather than replace that final review.
 6. Inspect findings, fix confirmed violations, and repeat direct inspection,
@@ -169,7 +169,7 @@ store before retrying; some changes may already be present.
 ### Tool behavior and remediation
 
 - After generating or editing TypeScript files, select those files and call
-  `check_trait_expression({ files })`.
+  `check_traits({ files })`.
 - After creating or resolving traits, explicitly review relevant TypeScript
   files. Saving traits does not automatically check code.
 - Omit `traitIds` for the full trait set. Supply IDs for focused follow-ups,
@@ -206,9 +206,11 @@ store before retrying; some changes may already be present.
 
 ## Operation
 
-Launch from the project root with `node traits/src/main.ts`. The configured
+Launch from the project root with `node traits/main.ts` during development or
+`node traits/dist/main.js` after building. The package version is read from the
+adjacent `package.json`, copied into `dist` by TypeScript. The configured
 OpenCode MCP server is `traits`; discover its `derive_trait`,
-`resolve_conflicting_traits`, and `check_trait_expression` tools through the
+`resolve_conflicting_traits`, and `check_traits` tools through the
 client's tool catalog.
 
 The CLI loads the default export of repository-root `traits.ts`, validated by
@@ -219,3 +221,21 @@ requiring `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration precedence is
 process environment, worktree-root `.env`, then main-checkout `.env`. Reconnect
 the MCP server after changing credentials. A failed model request is an
 incomplete review, not a pass.
+
+For opt-in telemetry, launch with
+`node traits/main.ts --otlp-endpoint http://127.0.0.1:4318` (or the compiled entry
+point). The flag is an OTLP/HTTP collector base URL; traces and logs go to
+`/v1/traces` and `/v1/logs` beneath it using JSON, with service name `traits` and
+the package version. Metrics are not exported. Omit the flag to disable exports.
+URLs must use HTTP(S). Base paths and query parameters are preserved; fragments
+are ignored. Avoid credentials in command-line URLs. Stderr logging remains
+enabled; stdout stays reserved for MCP.
+
+The CLI does not start a collector or persist telemetry locally. Configure the
+collector's storage, rotation, retention, and access controls separately. Use a
+loopback collector for local debugging and read its configured output files;
+do not assume an output directory exists. Treat telemetry as potentially
+sensitive: spans and logs can include file paths and error text. No full trait
+bodies, source bodies, or authorization headers are intentionally attached by
+this integration, but that is not a blanket redaction guarantee. Do not publish
+collector output without inspection and redaction.

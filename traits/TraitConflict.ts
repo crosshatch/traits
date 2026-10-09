@@ -14,6 +14,7 @@ export const TraitConflict = S.TaggedUnion({
 })
 
 export const check = Effect.fn("TraitConflict.check")(function* (trait: Trait, proposedTrait: string) {
+  yield* Effect.annotateCurrentSpan("trait.id", trait.id)
   const context = yield* TraitsContext
   const result = yield* DecisionModel.decide(
     Decision.make({
@@ -43,6 +44,7 @@ export const check = Effect.fn("TraitConflict.check")(function* (trait: Trait, p
     { input: { trait, proposedTrait } }
   ).pipe(context.semaphore.withPermits(1))
   const { label } = result.answers.assessment
+  yield* Effect.annotateCurrentSpan("trait.relationship", label)
   if (label === "conflict" || label === "inconclusive") return TraitConflict.cases.Fail.make({ trait, proposedTrait })
   if (label === "covered") return TraitConflict.cases.Covered.make({ trait })
   if (label === "clarification") return TraitConflict.cases.Clarification.make({ trait, proposedTrait })

@@ -30,7 +30,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | The tool rechecks all traits before updating, preserving the selected ID. Updated returns the saved trait.
   | Never use approved: true for an unapproved replacement, and never resolve a mere clarification by deleting traits.
   | Successful creation returns no value and saves through the configured store. Do not repeat the call to obtain a result.
-  | Then call check_trait_expression on relevant TypeScript files. Read the store to obtain the new ID if you need a targeted check.
+  | Then call check_traits on relevant TypeScript files. Read the store to obtain the new ID if you need a targeted check.
   `),
   parameters: S.Struct({
     proposedTrait: S.String.annotate({
@@ -60,7 +60,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
 export const toolkit = Toolkit.make(DeriveTrait)
 
 export const layer = toolkit.toLayer({
-  derive_trait: Effect.fnUntraced(function* (params) {
+  derive_trait: Effect.fn("DeriveTrait.derive")(function* (params) {
     const store = yield* TraitStore
     const traits = yield* store.ls
     const proposal = params.proposedTrait

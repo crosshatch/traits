@@ -20,5 +20,5 @@ export const layer = ConfigProvider.layerAdd(
       }
     }
     return provider
-  })
+  }).pipe(Effect.withSpan("TraitsConfigProvider.load"))
 )

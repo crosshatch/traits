@@ -13,7 +13,7 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
   | Supply the existing trait IDs and the complete proposed rule. The tool evaluates all selected bodies and the proposal for decomposition,
   | then generates concise, standalone replacements, with the proposal taking precedence only in direct conflicts.
   | It preserves unrelated requirements, scopes, and exceptions, saves replacements under new store-generated IDs, and deletes the selected originals.
-  | Returns the saved replacement traits with their IDs and bodies. Review them and run check_trait_expression on relevant TypeScript files.
+  | Returns the saved replacement traits with their IDs and bodies. Review them and run check_traits on relevant TypeScript files.
   | Do not call derive_trait again for the same proposal: its content is already incorporated into the saved replacements.
   | Only selected traits participate in reconciliation; use an all-trait expression check for the broader code review.
   | This operation is not transactional. On error, inspect the files before retrying because some replacements or removals may have completed.
@@ -53,7 +53,7 @@ export const ResolveConflictingTraits = Tool.make("resolve_conflicting_traits", 
 export const toolkit = Toolkit.make(ResolveConflictingTraits)
 
 export const layer = toolkit.toLayer({
-  resolve_conflicting_traits: Effect.fnUntraced(function* (params) {
+  resolve_conflicting_traits: Effect.fn("ResolveConflictingTraits.resolve")(function* (params) {
     const store = yield* TraitStore
     const ids = Array.dedupe(params.conflictingTraitIds)
     const selected = yield* Effect.forEach(ids, store.get, { concurrency: "unbounded" })

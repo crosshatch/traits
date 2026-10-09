@@ -7,7 +7,7 @@ import { evaluate, requiresReview, TraitEvaluation } from "../TraitEvaluation.ts
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
-export const CheckTraitExpression = Tool.make("check_trait_expression", {
+export const CheckTraits = Tool.make("check_traits", {
   description: String.stripMargin(`
   | Use after generating or editing TypeScript files, after saving or resolving a relevant trait, and before committing or opening a PR.
   | Select concrete TypeScript files relevant to the work. Pass file paths, not directories, globs, patches, or Git revision selectors.
@@ -37,14 +37,14 @@ export const CheckTraitExpression = Tool.make("check_trait_expression", {
   failure: S.Union([AiError.AiError, TraitStoreError]),
   dependencies: [DecisionModel.DecisionModel, TraitStore, FileSystem.FileSystem, Path.Path, TraitsContext]
 })
-  .annotate(Tool.Title, "Check Trait Expression")
+  .annotate(Tool.Title, "Check Traits")
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false)
 
-export const toolkit = Toolkit.make(CheckTraitExpression)
+export const toolkit = Toolkit.make(CheckTraits)
 
 export const layer = toolkit.toLayer({
-  check_trait_expression: Effect.fnUntraced(function* (params) {
+  check_traits: Effect.fn("CheckTraits.check")(function* (params) {
     const store = yield* TraitStore
     const { agentId } = yield* TraitsContext
     const fs = yield* FileSystem.FileSystem
@@ -59,7 +59,7 @@ export const layer = toolkit.toLayer({
     )
     const results = yield* Effect.forEach(
       paths,
-      Effect.fnUntraced(function* (file) {
+      Effect.fn("CheckTraits.file")(function* (file) {
         const text = yield* fs.readFileString(file)
         const chunks = Array.chunksOf(String.split(text, "\n"), 200)
         const sources = Array.map(chunks, (lines, index) =>

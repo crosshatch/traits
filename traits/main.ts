@@ -1,20 +1,36 @@
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { Effect, Layer, Logger, String } from "effect"
+import { Effect, Layer, Logger, Option, Schema as S, String } from "effect"
 import { McpProtocol, McpServer } from "effect/ai"
-import { Command } from "effect/cli"
+import { Command, Flag } from "effect/cli"
 import { FetchHttpClient } from "effect/http"
 
 import * as TraitsConfigProvider from "./_util/TraitsConfigProvider.ts"
+import * as TraitsTelemetry from "./_util/TraitsTelemetry.ts"
+import PackageJson from "./package.json" with { type: "json" }
 import { toolkit } from "./toolkit/toolkit.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 import { layerFileSystem } from "./TraitStore.ts"
 
-Command.make("traits").pipe(
+Command.make("traits", {
+  otlpEndpoint: Flag.String("otlp-endpoint").pipe(
+    Flag.withSchema(
+      S.URLFromString.check(
+        S.makeFilter(
+          (url) => url.protocol === "http:" || url.protocol === "https:" || "Use an HTTP(S) collector base URL."
+        )
+      )
+    ),
+    Flag.withDescription(
+      "Export traces and logs as OTLP/HTTP JSON to this collector base URL (for example, http://127.0.0.1:4318). Disabled when omitted."
+    ),
+    Flag.optional
+  )
+}).pipe(
   Command.withDescription("Run the traits MCP server over stdio"),
-  Command.withHandler(() =>
+  Command.withHandler((params) =>
     McpServer.layerStdio({
       name: "traits",
-      version: "0.0.0",
+      version: PackageJson.version,
       protocols: [McpProtocol.v2025_11_25],
       instructions: String.stripMargin(`
       | Traits are durable, reusable coding preferences stored as .agents/traits/<three_words-uuid>.md in the working directory.
@@ -43,7 +59,7 @@ Command.make("traits").pipe(
       | To intentionally replace conflicting traits, call resolve_conflicting_traits with their IDs and the proposed body.
       | Resolution gives the proposal precedence in direct conflicts, writes generated replacements, then removes the selected originals.
       | Review the returned replacement bodies and IDs. Resolution already saves the proposal's content; do not derive it again.
-      | After generating or changing TypeScript files, call check_trait_expression on those files.
+      | After generating or changing TypeScript files, call check_traits on those files.
       | After saving or resolving a trait, check the relevant TypeScript files explicitly; creation does not run that review for you.
       | Omit traitIds for all traits; use specific IDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
       | Checks read current full files in 200-line chunks, not Git diffs. A finding's startLine locates a chunk, not an exact violation.
@@ -51,7 +67,7 @@ Command.make("traits").pipe(
       | Take responsibility for trait compliance whenever a violation is discovered, through tool findings or your own inspection.
       | Inspect each finding against its trait, scope, exceptions, and surrounding source; confirmed violations must be fixed without waiting for another user request.
       | Make minimal behavior-preserving edits to the implementation, not to the trait merely to silence a finding. Do not stop at a findings summary.
-      | Rerun check_trait_expression on every corrected file, then run relevant formatting, type, and behavior checks; repeat for remaining confirmed violations.
+      | Rerun check_traits on every corrected file, then run relevant formatting, type, and behavior checks; repeat for remaining confirmed violations.
       | A Fail may be inconclusive or inapplicable. Do not blindly change correct code; explain any retained false positives or justified exceptions.
       | If a fix requires a behavior change, broader authorization, or an ambiguous interpretation, ask a focused question and report the blocker.
       | Do not claim compliance while confirmed violations remain. Report model errors as incomplete reviews, not passes.
@@ -63,15 +79,21 @@ Command.make("traits").pipe(
         toolkit.pipe(
           Layer.provide(layerFileSystem(".agents/traits")),
           Layer.provide(TraitsContext.layer),
-          Layer.provide(FetchHttpClient.layer),
           Layer.provideMerge(McpServer.McpServer.layer)
         )
       ),
       Layer.launch,
-      Effect.provideService(Logger.LogToStderr, true)
+      Effect.withSpan("traits.server"),
+      Effect.provideService(Logger.LogToStderr, true),
+      Effect.provide(
+        TraitsConfigProvider.layer.pipe(
+          Layer.provideMerge(TraitsTelemetry.layer(Option.getOrUndefined(params.otlpEndpoint))),
+          Layer.provideMerge(FetchHttpClient.layer)
+        )
+      )
     )
   ),
-  Command.run({ version: "0.0.0" }),
-  Effect.provide(TraitsConfigProvider.layer.pipe(Layer.provideMerge(NodeServices.layer))),
+  Command.run({ version: PackageJson.version }),
+  Effect.provide(NodeServices.layer),
   NodeRuntime.runMain
 )

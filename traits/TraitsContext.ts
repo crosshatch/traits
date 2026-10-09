@@ -13,7 +13,7 @@ export class TraitsContext extends Context.Service<TraitsContext>()("traits/Trai
     const config = yield* pipe(module.default, S.decodeUnknownEffect(TraitsConfig))
     const semaphore = yield* Semaphore.make(4)
     return { agentId: "local", semaphore, config }
-  })
+  }).pipe(Effect.withSpan("TraitsContext.make"))
 }) {
   static readonly layer = this.pipe(
     Effect.map((context) => Layer.mergeAll(context.config.layerDecisionModel, context.config.layerLanguageModel)),

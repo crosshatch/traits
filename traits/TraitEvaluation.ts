@@ -2,7 +2,7 @@ import { Effect, Schema as S, String } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 
 import { Assessment } from "./Assessment.ts"
-import { Source } from "./Source.ts"
+import { Source, SourceLocation } from "./Source.ts"
 import { Trait } from "./Trait.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
@@ -17,6 +17,15 @@ export const requiresReview = (evaluation: TraitEvaluation) =>
   evaluation.assessment.classification === "violation" || evaluation.assessment.classification === "inconclusive"
 
 export const evaluate = Effect.fn("TraitEvaluation.evaluate")(function* (trait: Trait, source: Source) {
+  yield* Effect.annotateCurrentSpan({
+    "trait.id": trait.id,
+    ...(SourceLocation.guards.File(source.location)
+      ? {
+          "source.path": source.location.path,
+          "source.start_line": source.location.startLine
+        }
+      : {})
+  })
   const context = yield* TraitsContext
   const result = yield* DecisionModel.decide(
     Decision.make({
@@ -45,6 +54,13 @@ export const evaluate = Effect.fn("TraitEvaluation.evaluate")(function* (trait: 
     { input: { trait, source } }
   ).pipe(context.semaphore.withPermits(1))
   const answer = result.answers.assessment
+  yield* Effect.annotateCurrentSpan({
+    "trait.classification": answer.label,
+    "trait.probability.compliant": answer.probabilities.compliant,
+    "trait.probability.violation": answer.probabilities.violation,
+    "trait.probability.not_applicable": answer.probabilities["not-applicable"],
+    "trait.probability.inconclusive": answer.probabilities.inconclusive
+  })
   const assessment = Assessment.make({
     classification: answer.label,
     probabilities: answer.probabilities
