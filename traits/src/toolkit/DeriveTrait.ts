@@ -65,7 +65,7 @@ export const layer = toolkit.toLayer({
   derive_trait: Effect.fnUntraced(function* (params) {
     const store = yield* TraitStore
     const traits = yield* store.ls
-    const target = params.clarificationTraitId === undefined ? undefined : yield* store.get(params.clarificationTraitId)
+    const target = params.clarificationTraitId !== undefined ? yield* store.get(params.clarificationTraitId) : undefined
     const proposal = params.proposedTrait
     const results = yield* Effect.forEach(traits, (trait) => check(trait, proposal), { concurrency: "unbounded" })
     const failures = Array.filter(results, TraitConflict.guards.Fail)
