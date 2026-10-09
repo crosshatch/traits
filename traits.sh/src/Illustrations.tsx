@@ -1,11 +1,3 @@
-export const Emblem = () => (
-  <svg viewBox="0 0 48 48" aria-hidden="true" className="emblem">
-    <path d="M24 3 44 14 24 25 4 14Z" fill="#c9795f" />
-    <path d="M4 20 24 31 44 20M4 27 24 38 44 27M4 34 24 45 44 34" fill="none" stroke="#506d75" strokeWidth="3" />
-    <path d="M14 14h20M24 9v14" stroke="#faf4e3" strokeWidth="2" />
-  </svg>
-)
-
 export const Flourish = () => (
   <svg className="flourish" viewBox="0 0 240 32" aria-hidden="true">
     <path

@@ -4,6 +4,7 @@ import { useState } from "react"
 export interface CodeSampleProps {
   readonly title: string
   readonly code: string
+  readonly copyable?: boolean
 }
 
 export const CodeSample = (props: CodeSampleProps) => {
@@ -25,9 +26,11 @@ export const CodeSample = (props: CodeSampleProps) => {
     <div className="code-sample">
       <div className="code-heading">
         <span>{props.title}</span>
-        <button type="button" onClick={copy} aria-label={`Copy ${props.title}`}>
-          {status}
-        </button>
+        {props.copyable !== false && (
+          <button type="button" onClick={copy} aria-label={`Copy ${props.title}`}>
+            {status}
+          </button>
+        )}
       </div>
       <pre>
         <code>

@@ -2,7 +2,7 @@ import { Array, String } from "effect"
 import { useState, type KeyboardEvent } from "react"
 
 import { CodeSample } from "./CodeSample.tsx"
-import { Emblem, Flourish } from "./Illustrations.tsx"
+import { Flourish } from "./Illustrations.tsx"
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps } from "./LifecycleStep.ts"
 import { ThemeToggle } from "./ThemeToggle.tsx"
@@ -44,8 +44,8 @@ export const App = () => {
       </a>
       <header className="masthead">
         <a className="brand" href="#top" aria-label="Traits, back to top">
-          <Emblem />
-          <span>Traits</span>
+          <img className="emblem" src="/traits-mark.svg" width="48" height="48" alt="" />
+          <span>TRAITS</span>
         </a>
         <nav aria-label="Main navigation">
           <a href="#lifecycle">The lifecycle</a>
@@ -60,33 +60,29 @@ export const App = () => {
 
       <main id="guide">
         <section className="hero margin-coral" id="top" aria-labelledby="hero-title">
+          <img
+            className="hero-emblem"
+            src="/traits-emblem.svg"
+            width="360"
+            height="420"
+            alt="An ornamental T surrounded by an ivy flourish and a returning feedback loop."
+          />
           <p className="eyebrow">
-            Your agent's field guide to the rules
+            Your agent's field guide to the nuances
             <br />
-            that make software beautiful
+            that make software marvelous
           </p>
           <h1 id="hero-title">Traits</h1>
           <InstallCommand />
           <p className="hero-description">
             From a conversation, a small insight takes root.
             <br className="desktop-break" />
-            Your coding agent carries it forward
-            <em className="hero-coda">a little wiser with every generation.</em>
+            Your coding agent carries it forward.
+            <em className="hero-coda">A little wiser with every generation.</em>
           </p>
           <p className="hero-byline">
             BY <a href={repository}>CROSSHATCH LABS</a>
           </p>
-          <img
-            className="hero-emblem"
-            src="/traits-emblem.svg"
-            width="360"
-            height="420"
-            alt="An ornamental letter T encircled by orbiting paths and celestial dots."
-          />
-          <p className="figure-caption">Fig. 1 — Small insights, carried forward.</p>
-          <a className="read-link" href="#lifecycle">
-            Open the field guide <span aria-hidden="true">↓</span>
-          </a>
         </section>
 
         <div className="contents-band">
@@ -170,7 +166,7 @@ export const App = () => {
                   )}
                 </div>
               </div>
-              <CodeSample key={active} title={step.filename} code={step.code} />
+              <CodeSample key={active} title={step.filename} code={step.code} copyable={false} />
             </div>
           </div>
           <p className="figure-caption">
@@ -330,8 +326,8 @@ export const App = () => {
               <br />
               <em>Give the useful ones a place to grow.</em>
             </p>
-            <a className="read-link" href="#lifecycle">
-              Revisit the lifecycle ↑
+            <a className="read-link" href="#top">
+              Back to top ↑
             </a>
           </div>
         </section>
@@ -339,13 +335,12 @@ export const App = () => {
 
       <footer className="footer">
         <a className="brand" href="#top">
-          <Emblem />
-          <span>Traits</span>
+          <img className="emblem" src="/traits-mark.svg" width="48" height="48" alt="" />
+          <span>TRAITS</span>
         </a>
-        <p>A field guide by Crosshatch Labs Inc.</p>
+        <p>BY CROSSHATCH LABS</p>
         <div>
           <a href={repository}>Source ↗</a>
-          <a href="https://shikijs.github.io/twoslash/">Design inspiration ↗</a>
         </div>
       </footer>
     </>
