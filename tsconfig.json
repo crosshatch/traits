@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./crosshatch" }, { "path": "./crosshatch.dev" }]
+  "references": [{ "path": "./traits" }, { "path": "./traits.sh" }, { "path": "./tsconfig.node.json" }]
 }

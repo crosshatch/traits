@@ -4,16 +4,7 @@
     "servers": {
       "traits": {
         "type": "local",
-        "command": ["node", "/home/harry/traits/traits/main.ts"],
-        "cwd": "."
-      },
-      "cloudflare": {
-        "type": "remote",
-        "url": "https://mcp.cloudflare.com/mcp"
-      },
-      "axiom": {
-        "type": "remote",
-        "url": "https://mcp.axiom.co/mcp"
+        "command": ["node", "traits/main.ts"]
       }
     }
   }

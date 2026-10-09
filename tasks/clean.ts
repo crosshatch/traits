@@ -1,22 +1,19 @@
-import { glob } from "node:fs/promises"
-
-import { Console, Effect, FileSystem, Path } from "effect"
+import { Array, Console, Effect, FileSystem, Path } from "effect"
 import { Command, Flag } from "effect/cli"
 
-/** Never descend into dependency trees, nested worktrees, Git metadata, or reference repos. */
-const alwaysIgnore = ["**/node_modules", "**/.worktrees", "**/.git", "**/repos"]
+/** Never descend into nested worktrees or Git metadata. */
+const alwaysIgnore = ["**/.git", "**/.worktrees"]
 
 export const clean = Command.make("clean", {
   ignore: Flag.String("ignore").pipe(Flag.atLeast(0))
 }).pipe(
   Command.withHandler(
-    Effect.fn("tasks.clean")(function* ({ ignore }) {
-      const exclude = [...alwaysIgnore, ...ignore]
-
-      const packages = yield* Effect.promise(() => Array.fromAsync(glob("**/package.json", { exclude })))
+    Effect.fn("tasks.clean")(function* (params) {
+      const exclude = Array.appendAll(alwaysIgnore, params.ignore)
 
       const path = yield* Path.Path
       const fs = yield* FileSystem.FileSystem
+      const packages = yield* fs.glob("**/package.json", { exclude })
 
       yield* Effect.forEach(
         packages,

@@ -7,22 +7,20 @@
     "tasks": "node tasks/main.ts",
     "prepare": "effect-tsgo patch --oxlint",
     "build": "tsc -b tsconfig.json",
-    "test": "vp check && pnpm build && pnpm test:rules && pnpm test:lib && pnpm test:types && pnpm test:integration",
+    "test": "vp check && pnpm build && pnpm test:rules && pnpm test:traits",
     "test:rules": "vp test run --project rules",
-    "test:lib": "vp test run --project crosshatch",
-    "test:types": "tstyche",
-    "test:integration": "vp test run --project crosshatch.dev"
+    "test:traits": "vp test run --project traits --passWithNoTests"
+  },
+  "dependencies": {
+    "alchemy": "catalog:",
+    "effect": "catalog:"
   },
   "devDependencies": {
+    "@effect/ai-openai": "catalog:",
     "@effect/ai-typesafe": "catalog:",
     "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
-    "alchemy": "catalog:",
-    "crosshatch": "workspace:*",
-    "drizzle-kit": "catalog:",
-    "effect": "catalog:",
-    "tstyche": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   },

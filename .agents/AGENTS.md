@@ -4,70 +4,19 @@ All paths below are relative to the repository root.
 
 ## Workspace
 
-- `crosshatch/`: published library.
-- `crosshatch.dev/`: Cloudflare application using Alchemy, Workers, Durable Objects, and Drizzle.
+- `traits/`: Effect-based MCP server and trait SDK.
+- `traits.sh/`: static Vite + React site; deployment is defined by root `alchemy.run.ts`.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
-- Use `pnpm --filter crosshatch.dev dev` (`alchemy dev`) for development and `pnpm --filter crosshatch.dev exec alchemy deploy` for cloud deployments. Dev mode uses local providers where supported and live resources otherwise; resources marked `Alchemy.remote()` also use live providers. Do not assume a dev run is entirely local or credential-free.
-
-## Drizzle Migrations
-
-- Whenever Drizzle schemas change, run `pnpm run tasks generate-migrations` from the repository root.
+- Use `pnpm --filter traits.sh dev` for the local Vite server and `pnpm --filter traits.sh build` to build static assets.
+- Deployment runs from the root with `pnpm exec alchemy deploy alchemy.run.ts --stage <stage>`. Do not deploy, destroy, or provision resources without authorization; credentials/profile and stage must be explicit.
 
 ## Verification
 
 - Run checks from the root: `pnpm exec vp check` for formatting/lint/types; `pnpm build` after TypeScript changes (`--force` after config changes).
-- Run affected suites: `pnpm test:lib` for library behavior, `pnpm test:types` for public API types, and `pnpm test:integration` for app behavior. `pnpm test` runs all checks, builds, and suites; docs-only edits need no build/tests.
-- After dependency changes, run `pnpm install`; after exports/publishing changes, run `pnpm --filter crosshatch pack` and verify the tarball's imports/types in a consumer.
-- The current integration suite deploys real Cloudflare resources. Require credentials/profile and initialized state, set a unique `ALCHEMY_TEST_STAGE`, and verify teardown. Tests configured with `Test.make({ dev: true })` use dev-mode providers and can still provision live resources. If interrupted, run `pnpm --filter crosshatch.dev exec alchemy destroy --stage <same-stage>` with the same profile.
+- Run affected suites: `pnpm test:rules` and `pnpm test:traits`. The traits suite may be empty; do not call an empty suite a behavior-test pass. The static site has no test project. `pnpm test` runs checks, builds, and suites; docs-only edits need no build/tests.
+- After dependency changes, run `pnpm install`; after traits exports/publishing changes, run `pnpm --filter traits pack` and verify the tarball's imports/types in a consumer.
+- After frontend changes, run `pnpm --filter traits.sh build` and verify the rendered page locally. No deployment is required for this verification.
 - Report failures, blocked checks, and empty/skipped suites accurately.
-
-## Debugging with Axiom
-
-Use the Axiom MCP to query:
-
-- Logs: `crosshatch-<stage>-logs`
-- Traces: `crosshatch-<stage>-traces`
-
-If authentication is required, ask the user to sign in via `/mcps` → **axiom**.
-
-### Find the stage
-
-Use the stage from the command/environment that ran the application or test:
-
-- Development (`alchemy dev`): `--stage` → `ALCHEMY_STAGE` → `dev_<user>`.
-- Cloud deployment (`alchemy deploy`): `--stage` → `ALCHEMY_STAGE` → `live_<user>`.
-- Tests: explicit test stage override → `ALCHEMY_TEST_STAGE` → `test_<user>`;
-  independently of `ALCHEMY_STAGE`.
-- Production: explicitly `--stage prod`.
-
-Stage names identify isolated stack instances; their prefixes do not select
-execution mode. `live_` does not mean production, and `dev_` can contain both
-local and live resources, including real Axiom datasets. Test stage selection
-is independent of whether the test uses live or dev-mode providers. Keep dev
-and deployed stages distinct: switching provider modes within one stage can
-replace resources.
-
-Dataset names are defined in `crosshatch.dev/src/Ingest.ts` using the stack name and stage.
-
-### Query
-
-Select the stage-specific dataset and a time range covering the reproduction.
-For example:
-
-```kusto
-['crosshatch-dev_harry-logs']
-| where _time > ago(15m)
-| order by _time desc
-| take 100
-```
-
-Use the matching `-traces` dataset for request spans. Inspect dataset schemas
-through MCP before filtering attributes or correlating logs and spans by trace
-ID; Axiom normalizes OTel fields. Alchemy exports `alchemy.stack` and
-`alchemy.stage` as resource attributes.
-
-Integration test teardown deletes the stage's datasets and their contents.
-Query/export evidence before teardown, or reproduce in a development stage.
 
 ## CI Credentials
 
@@ -85,8 +34,7 @@ Query/export evidence before teardown, or reproduce in a development stage.
 
 ## Effect
 
-- Library code under `crosshatch/` must use `Effect.fnUntraced` instead of `Effect.fn`.
-- Aside from in library code (`crosshatch/`), always use `Effect.fn` with a concise span name: `Effect.fn("<name>")(function* () { ... })` rather than `Effect.fn(function* () { ... })`.
+- Use `Effect.fn` with a concise span name for reusable Effect operations: `Effect.fn("<name>")(function* () { ... })` rather than `Effect.fn(function* () { ... })`. Retain `Effect.gen` for inline effect values and initialization.
 - Prefer `Effect.fn` / `Effect.fnUntraced` over functions that only return `Effect.gen`, including callbacks such as `items.map(Effect.fn("processItem")(function* (item) { ... }))`.
 - Apply transformations through additional function arguments to the wrapper. These receive the effect and the original arguments, so argument-dependent services do not require an outer arrow function:
 
