@@ -170,6 +170,9 @@ catalogs:
     '@effect/ai-typesafe':
       specifier: 4.0.0
       version: 4.0.0
+    '@effect/atom-react':
+      specifier: 4.0.0
+      version: 4.0.0
     '@effect/platform-node':
       specifier: 4.0.0
       version: 4.0.0
@@ -267,6 +270,9 @@ importers:
 
   traits.sh:
     dependencies:
+      '@effect/atom-react':
+        specifier: 'catalog:'
+        version: 4.0.0(effect@4.0.0)(react@19.3.0)(scheduler@0.27.0)
       '@fontsource/libre-baskerville':
         specifier: 'catalog:'
         version: 5.3.0
@@ -495,6 +501,13 @@ packages:
     resolution: {integrity: sha512-TbInR017yf4KFAYD1jTSr9pkQrob1+9UNyW6KKRHHGfmD8j121f41fOf+60RJ7IIBl/XOUAURC8/Mj7aWkGZtg==}
     peerDependencies:
       effect: ^4.0.0
+
+  '@effect/atom-react@4.0.0':
+    resolution: {integrity: sha512-VPP2oOjj56iwOpL5aIGbu7Qhb4+1sFNdU16aI5of3JqToqWWX9eJPBfeiPyQ1eTYof1hnNX1auyRiTORSfLT6g==}
+    peerDependencies:
+      effect: ^4.0.0
+      react: '>=19.0.0 <20.0.0'
+      scheduler: '>=0.25.0 <0.28.0'
 
   '@effect/atom-react@4.0.0-beta.90':
     resolution: {integrity: sha512-E1GFtNT+ZeIA3//g+IcbaAfjVAn5VZ08q4/MTEEV/862AlCfia8nRETJqpvVcTEK4X6EnebjTXdWu7tTV9wggg==}
@@ -3632,6 +3645,12 @@ snapshots:
   '@effect/ai-typesafe@4.0.0(effect@4.0.0)':
     dependencies:
       effect: 4.0.0
+
+  '@effect/atom-react@4.0.0(effect@4.0.0)(react@19.3.0)(scheduler@0.27.0)':
+    dependencies:
+      effect: 4.0.0
+      react: 19.3.0
+      scheduler: 0.27.0
 
   '@effect/atom-react@4.0.0-beta.90(effect@4.0.0-beta.90)(react@19.3.0)(scheduler@0.27.0)':
     dependencies:

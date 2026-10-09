@@ -1,0 +1,1 @@
+In a React client entry point, when the application-owned HTML guarantees the root element exists, inline its lookup into createRoot and use a non-null assertion: createRoot(document.getElementById("root")!).render(...). Keep the matching root element in the HTML; retain null handling for DOM elements whose presence is not guaranteed.

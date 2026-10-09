@@ -9,6 +9,7 @@ allowBuilds:
   workerd: true
 
 catalog:
+  "@effect/atom-react": 4.0.0
   "@fontsource/libre-baskerville": 5.3.0
   "@kitlangton/motel": 0.2.8
   "@effect/ai-openai": 4.0.0

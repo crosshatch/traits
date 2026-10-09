@@ -1,26 +1,43 @@
-import { Array, Effect, pipe, String } from "effect"
-import { useState } from "react"
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { Array, Data, Effect, pipe, String } from "effect"
+import { Atom } from "effect/reactivity"
+import { useId } from "react"
+
+const statusAtom = Atom.family((_id: string) => Atom.make("Copy"))
+class CopyInput extends Data.Class<{ readonly id: string; readonly code: string }> {}
+const copyAtom = Atom.family((params: CopyInput) =>
+  Atom.fn(
+    Effect.fn("CodeSample.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
+      const status = yield* Effect.promise(() => navigator.clipboard.writeText(params.code)).pipe(
+        Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
+      )
+      ctx.set(statusAtom(params.id), status)
+      yield* Effect.sleep("2 seconds")
+      ctx.set(statusAtom(params.id), "Copy")
+    })
+  )
+)
 
 export interface CodeSampleProps {
   readonly title: string
   readonly code: string
-  readonly copyable?: boolean
+  readonly copyable?: boolean | undefined
 }
 
+const renderLine = (line: string, index: number) => (
+  <span className="code-line" key={index}>
+    <span className="line-number" aria-hidden="true">
+      {index + 1}
+    </span>
+    <span className={pipe(line, String.trim, String.startsWith("//")) ? "code-comment" : undefined}>{line}</span>
+  </span>
+)
+
 export const CodeSample = (props: CodeSampleProps) => {
-  const [status, setStatus] = useState("Copy")
+  const id = useId()
+  const status = useAtomValue(statusAtom(id))
   const code = String.trim(props.code)
-  const copy = () => {
-    Effect.promise(() => navigator.clipboard.writeText(code)).pipe(
-      Effect.matchCause({
-        onSuccess: () => setStatus("Copied"),
-        onFailure: () => setStatus("Copy unavailable")
-      }),
-      Effect.andThen(Effect.sleep("2 seconds")),
-      Effect.andThen(Effect.sync(() => setStatus("Copy"))),
-      Effect.runFork
-    )
-  }
+  const copy = useAtomSet(copyAtom(new CopyInput({ id, code })))
 
   return (
     <div className="code-sample">
@@ -33,21 +50,10 @@ export const CodeSample = (props: CodeSampleProps) => {
         )}
       </div>
       <pre>
-        <code>
-          {Array.map(String.split(code, "\n"), (line, index) => (
-            <span className="code-line" key={index}>
-              <span className="line-number" aria-hidden="true">
-                {index + 1}
-              </span>
-              <span className={pipe(line, String.trim, String.startsWith("//")) ? "code-comment" : undefined}>
-                {line !== "" ? line : " "}
-              </span>
-            </span>
-          ))}
-        </code>
+        <code>{Array.map(String.split(code, "\n"), renderLine)}</code>
       </pre>
       <span className="sr-only" role="status">
-        {status === "Copy" ? "" : status}
+        {status !== "Copy" && status}
       </span>
     </div>
   )

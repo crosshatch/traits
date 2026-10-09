@@ -13,8 +13,8 @@ export const steps: ReadonlyArray<LifecycleStep> = [
   {
     title: "Notice",
     heading: "A useful correction is a seed.",
-    description: "A user points out a better way to work. Look for a rule that will matter beyond this one change.",
-    note: "A passing thought need not become a permanent rule. Keep the durable insight; leave the conversation behind.",
+    description: "A user points out a better way to work. Look for a trait that will matter beyond this one change.",
+    note: "A passing thought need not become a permanent trait. Keep the durable insight; leave the conversation behind.",
     filename: "a conversation",
     code: String.stripMargin(`
     | “Use the tagged union’s case guard here,
@@ -28,9 +28,9 @@ export const steps: ReadonlyArray<LifecycleStep> = [
     title: "Draft",
     heading: "Give the insight a precise shape.",
     description:
-      "Read existing traits first, then draft a concise, standalone rule. Preserve its scope and exceptions.",
-    note: "One independently useful rule per trait. A small example often says more than another paragraph.",
-    filename: "the proposed rule",
+      "Read existing traits first, then draft a concise, standalone trait. Preserve its scope and exceptions.",
+    note: "One independently useful convention per trait. A small example often says more than another paragraph.",
+    filename: "the proposed trait",
     code: String.stripMargin(`
     | Use tagged unions’ built-in case guards
     | when filtering cases:
@@ -42,7 +42,7 @@ export const steps: ReadonlyArray<LifecycleStep> = [
   },
   {
     title: "Compare",
-    heading: "A new rule meets the old ones.",
+    heading: "A new trait meets the old ones.",
     description: "derive_trait compares the proposal with every stored trait before choosing what should happen next.",
     note: "Already covered? Reuse it. A clarification keeps the existing ID. Inconclusive comparisons block writes.",
     filename: "MCP · derive_trait",
@@ -77,7 +77,7 @@ export const steps: ReadonlyArray<LifecycleStep> = [
     title: "Remember",
     heading: "A plain file, not a hidden memory.",
     description:
-      "An approved rule becomes a Markdown file in .agents/traits. The file body is the rule; its name is its ID.",
+      "An approved trait becomes a Markdown file in .agents/traits. The file body describes the trait; its name is its ID.",
     note: "Three friendly words make it recognizable. A UUID keeps it unique. Created returns the saved trait and its ID.",
     filename: ".agents/traits/aurora_adventure_sunbeam-<uuid>.md",
     code: String.stripMargin(`
@@ -90,7 +90,7 @@ export const steps: ReadonlyArray<LifecycleStep> = [
   },
   {
     title: "Review",
-    heading: "Let the rule change the work.",
+    heading: "Let the trait change the work.",
     description:
       "After changing TypeScript, check the relevant files. Inspect findings, fix real violations, and check again.",
     note: "A model judgment is a starting point, not proof. Distinguish violation from missing context and respect exceptions.",

@@ -8,12 +8,9 @@ import "@fontsource/libre-baskerville/latin-700.css"
 import { App } from "./App.tsx"
 
 import "./style.css"
-const root = document.getElementById("root")
 
-if (root !== null) {
-  createRoot(root).render(
-    <StrictMode>
-      <App />
-    </StrictMode>
-  )
-}
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+)

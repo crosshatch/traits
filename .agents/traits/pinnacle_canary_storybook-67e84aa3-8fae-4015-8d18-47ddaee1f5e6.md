@@ -1,0 +1,1 @@
+Prefer DOM placement, appropriate containing blocks, and CSS positioning for scroll-dependent UI layout such as sticky bars. Do not add JavaScript scroll listeners, visibility atoms, or reveal/hide logic when CSS can reliably express the intended behavior. Use scripted behavior only when the requirement cannot be achieved reliably through layout and styling.

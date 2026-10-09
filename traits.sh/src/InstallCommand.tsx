@@ -1,19 +1,22 @@
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Effect } from "effect"
-import { useState } from "react"
+import { Atom } from "effect/reactivity"
+
+const statusAtom = Atom.make("Click to copy")
+const copyAtom = Atom.fn(
+  Effect.fn("InstallCommand.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
+    const status = yield* Effect.promise(() => navigator.clipboard.writeText("npx traits init")).pipe(
+      Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
+    )
+    ctx.set(statusAtom, status)
+    yield* Effect.sleep("2 seconds")
+    ctx.set(statusAtom, "Click to copy")
+  })
+)
 
 export const InstallCommand = () => {
-  const [status, setStatus] = useState("Click to copy")
-  const copy = () => {
-    Effect.promise(() => navigator.clipboard.writeText("npx traits init")).pipe(
-      Effect.matchCause({
-        onSuccess: () => setStatus("Copied"),
-        onFailure: () => setStatus("Copy unavailable")
-      }),
-      Effect.andThen(Effect.sleep("2 seconds")),
-      Effect.andThen(Effect.sync(() => setStatus("Click to copy"))),
-      Effect.runFork
-    )
-  }
+  const status = useAtomValue(statusAtom)
+  const copy = useAtomSet(copyAtom)
 
   return (
     <button type="button" className="install-command" onClick={copy} aria-label="Copy npx traits init">

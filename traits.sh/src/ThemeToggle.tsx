@@ -1,30 +1,39 @@
-import { useEffect, useState } from "react"
+import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { Effect } from "effect"
+import { Atom } from "effect/reactivity"
 
-export const ThemeToggle = () => {
-  const [dark, setDark] = useState(() => {
-    try {
-      const saved = localStorage.getItem("traits-theme")
-      if (saved === "dark" || saved === "light") return saved === "dark"
-    } catch {
-      // Storage may be unavailable in private or restricted contexts.
-    }
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-  })
-
-  useEffect(() => {
+const readInitialTheme = () => {
+  try {
+    const saved = localStorage.getItem("traits-theme")
+    if (saved === "dark" || saved === "light") return saved === "dark"
+  } catch {
+    // Storage may be unavailable in private or restricted contexts.
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+}
+const darkAtom = Atom.writable(readInitialTheme, (ctx, value: boolean) => ctx.setSelf(value))
+const themeEffectAtom = Atom.make((ctx) => {
+  const dark = ctx(darkAtom)
+  return Effect.sync(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light"
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#241d28" : "#faf4e3")
-  }, [dark])
+  })
+})
 
-  const toggle = () => {
-    const next = !dark
-    setDark(next)
-    try {
-      localStorage.setItem("traits-theme", next ? "dark" : "light")
-    } catch {
-      // The toggle still works when persistence is unavailable.
-    }
+const toggleAtom = Atom.fnSync((_event: unknown, ctx) => {
+  const next = !ctx(darkAtom)
+  ctx.set(darkAtom, next)
+  try {
+    localStorage.setItem("traits-theme", next ? "dark" : "light")
+  } catch {
+    // The toggle still works when persistence is unavailable.
   }
+})
+
+export const ThemeToggle = () => {
+  const dark = useAtomValue(darkAtom)
+  const toggle = useAtomSet(toggleAtom)
+  useAtomMount(themeEffectAtom)
 
   return (
     <button

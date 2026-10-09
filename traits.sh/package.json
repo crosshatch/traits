@@ -9,6 +9,7 @@
     "preview": "vp preview"
   },
   "dependencies": {
+    "@effect/atom-react": "catalog:",
     "@fontsource/libre-baskerville": "catalog:",
     "effect": "catalog:",
     "react": "catalog:",
