@@ -263,7 +263,8 @@ process environment, worktree-root `.env`, then main-checkout `.env`. Reconnect
 the MCP server after changing credentials. A failed model request is an
 incomplete review, not a pass.
 
-For opt-in telemetry, launch with
+The project MCP command leaves telemetry disabled. For optional OTLP telemetry,
+launch with
 `node traits/main.ts --otlp-endpoint http://127.0.0.1:4318` (or the compiled entry
 point). The flag is an OTLP/HTTP collector base URL; traces and logs go to
 `/v1/traces` and `/v1/logs` beneath it using JSON, with service name `traits` and

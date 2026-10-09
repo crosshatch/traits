@@ -92,13 +92,13 @@ Command.make("traits", {
       ),
       Layer.launch,
       Effect.withSpan("traits.server"),
-      Effect.provideService(Logger.LogToStderr, true),
       Effect.provide(
-        TraitsConfigProvider.layer.pipe(
-          Layer.provideMerge(TraitsTelemetry.layer(Option.getOrUndefined(params.otlpEndpoint))),
+        TraitsTelemetry.layer(Option.getOrUndefined(params.otlpEndpoint)).pipe(
+          Layer.provideMerge(TraitsConfigProvider.layer),
           Layer.provideMerge(FetchHttpClient.layer)
         )
-      )
+      ),
+      Effect.provideService(Logger.LogToStderr, true)
     )
   ),
   Command.run({ version: PackageJson.version }),

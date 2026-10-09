@@ -40,7 +40,9 @@ export const request = Effect.fn("Approval.request")(function* (options: {
     })
   }).pipe(
     Effect.provideService(McpSchema.McpServerClient, client),
-    Effect.catchTag("ElicitationDeclined", (error) => (error.cause === undefined ? Effect.undefined : error))
+    Effect.catchTags({
+      ElicitationDeclined: (error) => (error.cause === undefined ? Effect.undefined : error)
+    })
   )
   if (response === undefined || response.decision === "skip") return Approval.cases.Declined.make({})
   if (response.decision === "revise" || (response.feedback !== undefined && String.trim(response.feedback) !== "")) {

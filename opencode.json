@@ -12,7 +12,7 @@
       },
       "traits": {
         "type": "local",
-        "command": ["node", "traits/main.ts", "--otlp-endpoint", "http://127.0.0.1:27686"]
+        "command": ["node", "traits/main.ts"]
       }
     }
   }
