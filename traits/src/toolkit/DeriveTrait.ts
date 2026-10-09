@@ -75,13 +75,10 @@ export const layer = toolkit.toLayer({
     if (clarifications.length === 1) {
       const target = Array.getUnsafe(clarifications, 0).trait
       const approval = yield* Approval.request({
-        message: String.stripMargin(`
-        | Clarify trait ${target.id}?
-        | Current body:
-        | ${target.body}
-        | Replacement body:
-        | ${params.proposedTrait}
-        `),
+        message: Array.join(
+          [`Clarify trait ${target.id}?`, "Current body:", target.body, "Replacement body:", params.proposedTrait],
+          "\n\n"
+        ),
         approved: params.approved
       })
       if (!Approval.Approval.guards.Approved(approval)) return approval

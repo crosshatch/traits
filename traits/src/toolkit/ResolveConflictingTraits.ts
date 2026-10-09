@@ -58,18 +58,21 @@ export const layer = toolkit.toLayer({
     const ids = Array.dedupe(params.conflictingTraitIds)
     const selected = yield* Effect.forEach(ids, store.get, { concurrency: "unbounded" })
     const approval = yield* Approval.request({
-      message: String.stripMargin(`
-      | Replace these stored traits with generated reconciled traits?
-      | The selected originals will be removed; the proposal takes precedence in direct conflicts.
-      | Existing traits:
-      | ${pipe(
-        selected,
-        Array.map((trait) => `${trait.id}: ${trait.body}`),
-        Array.join("\n\n")
-      )}
-      | Proposed rule:
-      | ${params.proposedTrait}
-      `),
+      message: Array.join(
+        [
+          "Replace these stored traits with generated reconciled traits?",
+          "The selected originals will be removed; the proposal takes precedence in direct conflicts.",
+          "Existing traits:",
+          pipe(
+            selected,
+            Array.map((trait) => `${trait.id}: ${trait.body}`),
+            Array.join("\n\n")
+          ),
+          "Proposed rule:",
+          params.proposedTrait
+        ],
+        "\n\n"
+      ),
       approved: params.approved
     })
     if (!Approval.Approval.guards.Approved(approval)) return approval

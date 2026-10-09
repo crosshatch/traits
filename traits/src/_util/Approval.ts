@@ -45,14 +45,12 @@ export const request = Effect.fn("Approval.request")(function* (options: {
   if (response === undefined || response.decision === "skip") return Approval.cases.Declined.make({})
   if (response.decision === "revise" || (response.feedback !== undefined && String.trim(response.feedback) !== "")) {
     const feedback = response.feedback === undefined ? "" : String.trim(response.feedback)
+    const guidance = String.stripMargin(`
+    | Ask the user for revision details using an interactive question with free-text input.
+    | Keep this proposal pending; do not infer approval or cancel it because of a related follow-up task.
+    `)
     return Approval.cases.RevisionRequired.make({
-      feedback:
-        feedback !== ""
-          ? feedback
-          : String.stripMargin(`
-      | Ask the user for revision details using an interactive question with free-text input.
-      | Keep this proposal pending; do not infer approval or cancel it because of a related follow-up task.
-      `)
+      feedback: feedback !== "" ? feedback : guidance
     })
   }
   return Approval.cases.Approved.make({})
