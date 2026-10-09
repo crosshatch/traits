@@ -10,7 +10,9 @@ import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 export const CheckTraits = Tool.make("check_traits", {
   description: String.stripMargin(`
   | Use after generating or editing TypeScript files, after saving or resolving a relevant trait, and before committing or opening a PR.
-  | Select concrete TypeScript files relevant to the work. Pass file paths, not directories, globs, patches, or Git revision selectors.
+  | Supply include as TypeScript file paths or glob patterns relevant to the work, relative to the MCP working directory or absolute.
+  | Globs are expanded and overlapping matches are checked once. Directories are not reviewed as files; use patterns such as traits/**/*.ts.
+  | Dependency trees, dist output, Git metadata, nested worktrees, and reference repos are excluded from glob traversal.
   | Reads current full file contents, including unstaged edits, and checks each 200-line chunk against the selected traits in parallel.
   | Omit traitIds to check all stored traits; supply trait ids for a focused check of one or more traits. Unknown IDs fail the call.
   | Returns findings with the trait, source text, absolute path, 1-based chunk startLine, and assessment classification and probabilities.
@@ -20,14 +22,18 @@ export const CheckTraits = Tool.make("check_traits", {
   | Make minimal behavior-preserving code changes, then rerun this tool on the corrected files and run relevant project checks.
   | Repeat for remaining confirmed violations; returning a findings summary alone does not complete the review.
   | Do not weaken a trait to make code pass or change correct code for an inapplicable or inconclusive finding.
-  | Explain retained false positives and justified exceptions. Ask for clarification when a fix changes behavior or exceeds authorized scope.
+  | Triage each finding before reporting it. Routine summaries should surface confirmed issues, meaningful unresolved uncertainty, errors, and decision blockers.
+  | Do not distract the user with rejected, irrelevant false positives; retain raw results in tool output for audit and explain them when requested or materially significant.
+  | Do not hide actionable findings based only on probability/confidence or claim the automated check was clean when raw findings remain.
+  | Ask for clarification when a fix changes behavior or exceeds authorized scope.
   | The tool diagnoses only; the calling agent is responsible for edits, verification, and reporting unresolved blockers.
-  | An empty result means no failures for this selection, not a repository-wide guarantee. Empty files/traitIds lists or an empty store check no pairs.
+  | Unmatched patterns select no files. An empty result means no failures for this selection, not a repository-wide guarantee.
+  | Empty include/traitIds lists, no matched files, or an empty store check no pairs.
   `),
   parameters: S.Struct({
-    files: S.Array(S.String).annotate({
+    include: S.Array(S.String).annotate({
       description:
-        "TypeScript files to review, absolute or relative to the MCP working directory. Duplicate resolved paths are checked once."
+        "File paths or glob patterns to review, absolute or relative to the MCP working directory. Overlapping matches are deduplicated; unmatched patterns select no files."
     }),
     traitIds: S.Array(TraitId).pipe(S.optional).annotate({
       description: "Optional trait ids for a focused review. Omit for all stored traits; an empty array selects none."
@@ -52,10 +58,29 @@ export const layer = toolkit.toLayer({
     const traits = yield* params.traitIds === undefined
       ? store.ls
       : Effect.forEach(Array.dedupe(params.traitIds), store.get, { concurrency: "unbounded" })
-    const paths = pipe(
-      params.files,
+    const matches = yield* Effect.forEach(
+      params.include,
+      (pattern) => {
+        const absolute = path.resolve(pattern)
+        const root = path.parse(absolute).root
+        return fs.glob(absolute, {
+          exclude: Array.map(["node_modules", "dist", ".git", ".worktrees", "repos"], (directory) =>
+            path.join(root, "**", directory)
+          )
+        })
+      },
+      { concurrency: "unbounded" }
+    )
+    const resolved = pipe(
+      matches,
+      Array.flatten,
       Array.map((file) => path.resolve(file)),
       Array.dedupe
+    )
+    const paths = yield* Effect.filter(
+      resolved,
+      (file) => fs.stat(file).pipe(Effect.map((info) => info.type === "File")),
+      { concurrency: "unbounded" }
     )
     const results = yield* Effect.forEach(
       paths,

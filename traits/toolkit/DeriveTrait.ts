@@ -1,9 +1,7 @@
-import { Array, Effect, Schema as S, String } from "effect"
-import { AiError, DecisionModel, McpSchema, Tool, Toolkit } from "effect/ai"
+import { Schema as S, String } from "effect"
+import { AiError, DecisionModel, LanguageModel, McpSchema, Tool, Toolkit } from "effect/ai"
 
-import * as Approval from "../_util/Approval.ts"
-import { Trait } from "../Trait.ts"
-import { check, TraitConflict } from "../TraitConflict.ts"
+import { derive, TraitDerivation } from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
@@ -21,16 +19,20 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | First decide whether the feedback generalizes beyond the current task and inspect existing trait files for coverage.
   | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings and unnecessary examples.
   | Compare against all stored traits. Only a distinct proposal is saved as a new trait.
-  | Conflicts and inconclusive comparisons return Fail entries containing the existing trait and proposal; no trait is saved in that case.
-  | Inspect those entries: clarify ambiguity, revise the proposal, or call resolve_conflicting_traits for an intentional replacement.
-  | Covered entries mean the proposal is already represented; reuse those traits without writing a duplicate.
+  | Inconclusive returns relationship findings and blocks all writes; clarify ambiguity or revise the proposal before retrying.
+  | Confirmed conflicts enter reconciliation within this tool. Approval shows affected trait IDs/bodies, removals, the proposal, and replacement policy.
+  | Nothing is replaced before approval. After approval, generate compatible standalone replacements, save them, then delete only the conflicting originals.
+  | The proposal takes precedence only in direct conflicts; preserve unrelated requirements, scopes, and exceptions. Resolved returns saved replacements.
+  | Do not submit the same proposal again after Resolved: it is already incorporated. Inspect replacements and check relevant TypeScript files.
+  | Reconciliation is not transactional; on an error, inspect the store before retrying because some writes or removals may have completed.
+  | Covered returns the existing traits representing the proposal; reuse them without writing a duplicate.
   | A single clarification candidate is selected automatically for approval; provide a complete replacement body preserving existing requirements and exceptions.
-  | Multiple clarification candidates return Clarification entries without writing. Refine the proposal or clarify intent rather than choosing an ID arbitrarily.
+  | Multiple clarification candidates return Clarification with those traits and the proposal without writing. Refine the proposal or clarify intent.
   | The shared approval flow shows the existing and proposed bodies; ask in the client UI only if ApprovalRequired is returned.
   | The tool rechecks all traits before updating, preserving the selected ID. Updated returns the saved trait.
   | Never use approved: true for an unapproved replacement, and never resolve a mere clarification by deleting traits.
-  | Successful creation returns no value and saves through the configured store. Do not repeat the call to obtain a result.
-  | Then call check_traits on relevant TypeScript files. Read the store to obtain the new ID if you need a targeted check.
+  | Created returns the saved trait including its generated ID. Every response is one tagged TraitDerivation outcome, never a bare array or void.
+  | Then call check_traits on relevant TypeScript files, using returned trait IDs for focused reviews when appropriate.
   `),
   parameters: S.Struct({
     proposedTrait: S.String.annotate({
@@ -42,57 +44,16 @@ export const DeriveTrait = Tool.make("derive_trait", {
         "Fallback approval for the exact proposal and automatically selected action shown to the user, including any existing trait being updated. Set true only after approval; native clients still receive a form. Does not bypass relationship checks."
     })
   }),
-  success: S.Union([
-    S.Array(S.Union([TraitConflict.cases.Fail, TraitConflict.cases.Covered, TraitConflict.cases.Clarification])),
-    TraitConflict.cases.Updated,
-    Approval.Approval.cases.ApprovalRequired,
-    Approval.Approval.cases.RevisionRequired,
-    Approval.Approval.cases.Declined,
-    S.Void
-  ]),
+  success: TraitDerivation,
   failure: S.Union([AiError.AiError, TraitStoreError, McpSchema.ElicitationDeclined]),
-  dependencies: [DecisionModel.DecisionModel, TraitStore, TraitsContext]
+  dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
 })
   .annotate(Tool.Title, "Derive Trait")
   .annotate(Tool.Readonly, false)
-  .annotate(Tool.Destructive, false)
+  .annotate(Tool.Destructive, true)
 
 export const toolkit = Toolkit.make(DeriveTrait)
 
 export const layer = toolkit.toLayer({
-  derive_trait: Effect.fn("DeriveTrait.derive")(function* (params) {
-    const store = yield* TraitStore
-    const traits = yield* store.ls
-    const proposal = params.proposedTrait
-    const results = yield* Effect.forEach(traits, (trait) => check(trait, proposal), { concurrency: "unbounded" })
-    const failures = Array.filter(results, TraitConflict.guards.Fail)
-    if (failures.length > 0) return failures
-
-    const clarifications = Array.filter(results, TraitConflict.guards.Clarification)
-    const covered = Array.filter(results, TraitConflict.guards.Covered)
-    if (covered.length > 0) return covered
-    if (clarifications.length > 1) return clarifications
-    if (clarifications.length === 1) {
-      const target = Array.getUnsafe(clarifications, 0).trait
-      const approval = yield* Approval.request({
-        message: Array.join(
-          [`Clarify trait ${target.id}?`, "Current body:", target.body, "Replacement body:", params.proposedTrait],
-          "\n\n"
-        ),
-        approved: params.approved
-      })
-      if (!Approval.Approval.guards.Approved(approval)) return approval
-      const trait = Trait.make({ id: target.id, body: params.proposedTrait })
-      yield* store.update(trait)
-      return TraitConflict.cases.Updated.make({ trait })
-    }
-
-    const approval = yield* Approval.request({
-      message: `Save this reusable trait?\n\n${params.proposedTrait}`,
-      approved: params.approved
-    })
-    if (!Approval.Approval.guards.Approved(approval)) return approval
-    yield* store.add(params.proposedTrait)
-    return
-  })
+  derive_trait: derive
 })

@@ -17,13 +17,13 @@ export default defineConfig({
     proseWrap: "always",
     overrides: [
       {
-        files: ["**/*.md", "**/*.mdx"],
+        files: ["**/*.md"],
         options: { printWidth: 80 }
       }
     ]
   },
   test: {
-    projects: ["crosshatch/vite.config.ts", "crosshatch.dev/vite.config.ts", "rules/vite.config.ts"]
+    projects: ["rules/vite.config.ts", "traits.sh/vite.config.ts", "traits/vite.config.ts"]
   },
   lint: {
     extends: [recommended],

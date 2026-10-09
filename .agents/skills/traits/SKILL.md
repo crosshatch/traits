@@ -45,7 +45,8 @@ is a separate responsibility.
 
 ### Shared approval protocol
 
-Both mutation tools use `_util/Approval.request`. Clients with usable MCP form
+`derive_trait` uses `_util/Approval.request` for creation, clarification, and
+reconciliation. Clients with usable MCP form
 elicitation receive approve/revise/skip choices and an optional feedback field.
 OpenCode currently routes native forms globally, so the helper returns
 `ApprovalRequired`; clients without form support use the same fallback.
@@ -92,21 +93,22 @@ authenticated consent token.
    checks existing traits and writes only when the proposal is distinct from all
    of them. It does not independently decide whether the conversation contains a
    generalizable insight.
-5. A void success means the trait was saved. Do not repeat the call because its
-   response is empty. Read the store if you need its newly generated ID.
-6. A list of `Fail` entries means nothing was saved. Inspect the existing bodies
-   and IDs. A failure may be an inconclusive comparison rather than a confirmed
-   contradiction. Clarify or revise the proposal, or intentionally reconcile the
-   relevant existing traits.
+5. `Created` means the trait was saved and includes its body and generated ID.
+   Do not submit it again. Use that ID for focused checks when needed.
+6. `Inconclusive` means nothing was saved and contains relationship findings;
+   each finding's `reason` distinguishes conflict from inconclusive. Any
+   inconclusive comparison blocks all writes. Inspect the existing bodies and
+   IDs, clarify ambiguity, or revise the proposal. Confirmed conflicts otherwise
+   enter approval-gated reconciliation within this same tool.
 
-`Covered` entries mean existing traits already express the proposal; reuse them
+`Covered.traits` means existing traits already express the proposal; reuse them
 without creating a duplicate. When there is exactly one clarification candidate
 and no covered or blocking result, the tool selects it automatically and requests
 approval of its current body and complete replacement. The proposal must preserve
 the existing rule's intent, requirements, scope, and exceptions; the tool does not
 generate a merged replacement from an incremental hint.
 
-Multiple candidates return `Clarification` entries without writing. Refine the
+Multiple candidates return `Clarification` with `traits` and `proposedTrait` without writing. Refine the
 proposal or clarify intent rather than choosing an ID arbitrarily. Do not supply
 a clarification target parameter.
 
@@ -119,19 +121,28 @@ the user or delete a trait merely needing clearer wording.
 
 ## Reconcile conflicting traits
 
-Call `resolve_conflicting_traits({ conflictingTraitIds, proposedTrait })` when
-the selected existing rules should be replaced to incorporate the proposal. Use
-the trait IDs from the store or the preceding conflict results.
+`derive_trait` checks the proposal against every stored trait and automatically
+selects confirmed conflicts for reconciliation. There is no separate resolution
+tool and no ID-selection parameter. Inconclusive comparisons block reconciliation
+rather than authorizing deletion.
 
-The tool evaluates each body and the proposal for decomposition, then generates
+Before writing, the shared approval flow shows the selected originals with their
+IDs and bodies, the proposal, the removal plan, and the replacement policy.
+Approval authorizes model-generated reconciliation, not silent deletion. On
+`ApprovalRequired`, ask through the interactive UI and retry the same proposal
+with `approved: true` only after Save. If relationships or originals change,
+obtain fresh approval.
+
+After approval, the tool evaluates each body and the proposal for decomposition, then generates
 standalone replacements. The proposal takes precedence in direct conflicts;
 unrelated requirements, scopes, and exceptions should be preserved. It saves the
-replacements before deleting the selected originals and returns the new traits
-with their IDs and bodies.
+replacements before deleting the selected originals and returns `Resolved` with
+the saved traits and their new IDs.
 
 Inspect those replacements. Do not call `derive_trait` again for the same
-proposal: resolution has already saved its content. Traits outside the selected
-IDs are not compared during resolution.
+proposal: resolution has already saved its content. The initial comparison covers
+all stored traits, but generated replacements are not automatically revalidated
+against unaffected traits; review the replacements and check the relevant code.
 
 Writes and removals are not transactional. If resolution fails, inspect the
 store before retrying; some changes may already be present.
@@ -162,21 +173,27 @@ store before retrying; some changes may already be present.
 6. Inspect findings, fix confirmed violations, and repeat direct inspection,
    tool checks, and relevant project verification after fixes. If any reviewed
    file changes again, its earlier result is stale and it must be rechecked.
-7. Report tool results and manual verification separately. State the reviewed
-   scope, retained false positives or exceptions, and incomplete checks. Never
-   turn an empty tool result into an unconditional claim of compliance.
+7. Keep automated results and manual triage distinct. Routine summaries should
+   report confirmed issues, meaningful unresolved uncertainty, operational
+   failures, and blockers requiring a user decision—not every raw finding.
+   Preserve the reviewed scope and raw results for audit without repeating
+   rejected false positives as caveats. Never claim an automated clean pass when
+   raw findings remain, or turn an empty result into unconditional compliance.
 
 ### Tool behavior and remediation
 
 - After generating or editing TypeScript files, select those files and call
-  `check_traits({ files })`.
+  `check_traits({ include: files })`.
 - After creating or resolving traits, explicitly review relevant TypeScript
   files. Saving traits does not automatically check code.
 - Omit `traitIds` for the full trait set. Supply IDs for focused follow-ups,
   especially the replacements returned by resolution. An empty array selects no
   traits; unknown IDs fail the call.
-- Paths must identify files, either absolute or relative to the MCP working
-  directory. The tool does not expand directories or globs. Source metadata uses
+- `include` accepts file paths or glob patterns, absolute or relative to the MCP
+  working directory. Overlapping matches are deduplicated; unmatched patterns
+  select no files. Use `traits/**/*.ts` rather than a bare directory. Glob
+  traversal excludes dependencies, `dist`, Git metadata, nested worktrees, and
+  reference repos. Source metadata uses
   the server's configured `agentId`, currently `local`.
 - The tool checks current full files in 200-line chunks, including unstaged
   content. It does not inspect the Git index or compute a diff.
@@ -195,22 +212,46 @@ store before retrying; some changes may already be present.
   checks. Repeat for remaining confirmed violations. Do not weaken or rewrite
   traits merely to silence findings, and do not change correct code for false
   positives or inapplicable rules.
-- Explain retained false positives or justified exceptions. If a fix requires
+- Do not repeat rejected, irrelevant false positives or already-justified
+  exceptions in routine user summaries. Explain them when the user requests an
+  audit, needs a decision, or a new material reliability problem is discovered.
+  If a fix requires
   changed behavior, broader authorization, or resolving ambiguity, ask a focused
   question and report the blocker rather than silently expanding scope. Do not
   claim compliance while confirmed violations remain; model errors make the
   review incomplete, not passing.
+
+### Reporting triage
+
+Before presenting a finding, establish that the rule applies and identify the
+actual offending code. A helper parameter is not a model-visible tool parameter;
+local destructuring is not parameter destructuring. Check the exact scope and
+exceptions rather than treating a matching topic as a violation.
+
+Fix confirmed applicable violations within scope and verify the fix. Surface
+remaining actionable issues, material uncertainty, failed/incomplete checks, and
+decisions the user must make. Routine completion messages can state which build,
+lint, and type checks passed without adding distracting checker false positives.
+Do not imply that a rejected finding requires work or that the automated trait
+review returned no findings when it did.
+
+Keep unmodified raw assessments available in tool output or configured telemetry;
+do not change tool filtering or introduce probability cutoffs to hide inconvenient
+results. Low confidence alone is not grounds for dismissal, and earlier false
+positives do not justify rejecting a new finding without inspecting it. A newly
+discovered systemic reliability issue remains worth reporting. When asked for
+audit details, distinguish confirmed, unresolved, and rejected findings and give
+the rejection rationale. Quiet reporting is not skipped remediation or lost signal.
 - Before committing or opening a PR, review the changed TypeScript files against
   all traits. An empty result means no failures for the selection; empty
-  selections or an empty trait store perform no assessments.
+  selections, unmatched patterns, or an empty trait store perform no assessments.
 
 ## Operation
 
 Launch from the project root with `node traits/main.ts` during development or
 `node traits/dist/main.js` after building. The package version is read from the
 adjacent `package.json`, copied into `dist` by TypeScript. The configured
-OpenCode MCP server is `traits`; discover its `derive_trait`,
-`resolve_conflicting_traits`, and `check_traits` tools through the
+OpenCode MCP server is `traits`; discover its `derive_trait` and `check_traits` tools through the
 client's tool catalog.
 
 The CLI loads the default export of repository-root `traits.ts`, validated by

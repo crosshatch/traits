@@ -2,8 +2,45 @@
   "name": "traits",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
+  "files": [
+    "*.ts",
+    "!vite.config.ts",
+    "_util/**/*.ts",
+    "toolkit/**/*.ts",
+    "dist/package.json",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "!dist/vite.config.*"
+  ],
   "type": "module",
-  "dependencies": {
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./index.ts",
+    "./*": "./*.ts",
+    "./_util/*": null,
+    "./index": null
+  },
+  "publishConfig": {
+    "exports": {
+      "./package.json": "./package.json",
+      ".": "./dist/index.js",
+      "./*": "./dist/*.js",
+      "./_util/*": null,
+      "./index": null
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "tsc -b tsconfig.release.json --force"
+  },
+  "devDependencies": {
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:"
+  },
+  "peerDependencies": {
     "@effect/platform-node": "catalog:",
     "effect": "catalog:"
   }

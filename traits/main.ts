@@ -40,7 +40,7 @@ Command.make("traits", {
       | Err on the side of proposing a concise trait unless you have read an existing trait that clearly covers the exact rule and its scope.
       | If coverage is uncertain, propose the rule rather than silently assuming a broad trait covers it. If clearer wording is needed, propose a clarification.
       | Call the mutation tool with the drafted proposal first, leaving approved unset. Do not ask separately beforehand: native clients get an approval form.
-      | Both mutation tools use native MCP forms when usable, or return ApprovalRequired with the complete proposal for that same interactive question flow.
+      | derive_trait uses native MCP forms when usable, or returns ApprovalRequired with the complete proposal for that same interactive question flow.
       | Only on ApprovalRequired, show the full message using the interactive question tool: Save, Revise, Skip, plus its automatic free-text option. Use plain text only if that UI is unavailable.
       | Retry an identical approved proposal with approved: true; do not assert approval for changed wording or targets. Native forms still apply on supported clients.
       | RevisionRequired contains feedback to incorporate before requesting approval again; Declined means stop without writing.
@@ -54,12 +54,16 @@ Command.make("traits", {
       | A single clarification candidate is selected automatically and shown for approval; supply a complete replacement preserving the existing rule.
       | Multiple candidates return Clarification entries without writing: refine the proposal or clarify intent. Do not supply a target ID.
       | After fallback approval, retry with the same proposedTrait and approved: true; Updated preserves the selected existing ID.
-      | Returned Fail, Covered, or Clarification lists mean nothing was saved; inspect the existing traits before proceeding.
-      | Fail can also mean an inconclusive comparison. Clarify ambiguity rather than treating every failure as a proven contradiction.
-      | To intentionally replace conflicting traits, call resolve_conflicting_traits with their IDs and the proposed body.
-      | Resolution gives the proposal precedence in direct conflicts, writes generated replacements, then removes the selected originals.
-      | Review the returned replacement bodies and IDs. Resolution already saves the proposal's content; do not derive it again.
+      | Every derive_trait response is one tagged TraitDerivation outcome. Created returns the saved trait and ID; Updated and Resolved return saved replacements.
+      | Covered and Clarification return existing traits without writing. Inconclusive returns relationship findings and blocks all writes.
+      | Each inconclusive outcome's findings distinguish conflict from inconclusive via reason; clarify ambiguity before retrying.
+      | Confirmed conflicts enter reconciliation inside derive_trait, selecting only the conflicting originals for an explicit replacement approval.
+      | Approval must cover affected IDs/bodies, removals, the proposal, and generated reconciliation. Nothing is replaced silently.
+      | After approval, reconciliation gives the proposal precedence in direct conflicts, saves generated replacements, then removes the conflicting originals.
+      | Resolved returns saved replacement bodies and IDs. Review them and check relevant code; do not derive the same proposal again.
       | After generating or changing TypeScript files, call check_traits on those files.
+      | check_traits accepts include as file paths or glob strings, for example include: ["traits/**/*.ts"]. Overlapping matches are deduplicated.
+      | Unmatched patterns select nothing; broad globs exclude dependencies, dist, Git metadata, nested worktrees, and reference repos.
       | After saving or resolving a trait, check the relevant TypeScript files explicitly; creation does not run that review for you.
       | Omit traitIds for all traits; use specific IDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
       | Checks read current full files in 200-line chunks, not Git diffs. A finding's startLine locates a chunk, not an exact violation.
@@ -68,7 +72,11 @@ Command.make("traits", {
       | Inspect each finding against its trait, scope, exceptions, and surrounding source; confirmed violations must be fixed without waiting for another user request.
       | Make minimal behavior-preserving edits to the implementation, not to the trait merely to silence a finding. Do not stop at a findings summary.
       | Rerun check_traits on every corrected file, then run relevant formatting, type, and behavior checks; repeat for remaining confirmed violations.
-      | A Fail may be inconclusive or inapplicable. Do not blindly change correct code; explain any retained false positives or justified exceptions.
+      | Triage raw findings against the exact rule, scope, exceptions, and source before reporting or editing. Do not blindly change correct code.
+      | Routine user summaries should report confirmed issues, meaningful unresolved uncertainty, operational failures, and blockers requiring a decision.
+      | Do not repeat rejected, irrelevant false positives as caveats or make them sound actionable. Keep raw results available in tool output and telemetry.
+      | Discuss a rejected finding when the user requests audit details or it reveals a new material reliability problem; explain why it was rejected.
+      | Never suppress actionable findings based only on confidence, assume a finding is false because similar ones were wrong, or claim an automated clean pass when raw findings remain.
       | If a fix requires a behavior change, broader authorization, or an ambiguous interpretation, ask a focused question and report the blocker.
       | Do not claim compliance while confirmed violations remain. Report model errors as incomplete reviews, not passes.
       | An empty result only means no failures for the selected files and traits; empty selections or an empty store perform no assessments.

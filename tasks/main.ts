@@ -3,11 +3,10 @@ import { Effect } from "effect"
 import { Command } from "effect/cli"
 
 import { clean } from "./clean.ts"
-import { generateMigrations } from "./generate-migrations.ts"
 import { syncRepos } from "./sync-repos.ts"
 
 Command.make("tasks").pipe(
-  Command.withSubcommands([clean, generateMigrations, syncRepos]),
+  Command.withSubcommands([clean, syncRepos]),
   Command.run({ version: "~" }),
   Effect.provide(NodeServices.layer),
   NodeRuntime.runMain

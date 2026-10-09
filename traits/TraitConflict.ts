@@ -7,10 +7,9 @@ import { TraitsContext } from "./TraitsContext.ts"
 export type TraitConflict = typeof TraitConflict.Type
 export const TraitConflict = S.TaggedUnion({
   Pass: {},
-  Fail: { trait: Trait, proposedTrait: S.String },
+  Fail: { existing: Trait, proposed: S.String, reason: S.Literals(["conflict", "inconclusive"]) },
   Covered: { trait: Trait },
-  Clarification: { trait: Trait, proposedTrait: S.String },
-  Updated: { trait: Trait }
+  Clarification: { trait: Trait, proposedTrait: S.String }
 })
 
 export const check = Effect.fn("TraitConflict.check")(function* (trait: Trait, proposedTrait: string) {
@@ -45,7 +44,8 @@ export const check = Effect.fn("TraitConflict.check")(function* (trait: Trait, p
   ).pipe(context.semaphore.withPermits(1))
   const { label } = result.answers.assessment
   yield* Effect.annotateCurrentSpan("trait.relationship", label)
-  if (label === "conflict" || label === "inconclusive") return TraitConflict.cases.Fail.make({ trait, proposedTrait })
+  if (label === "conflict" || label === "inconclusive")
+    return TraitConflict.cases.Fail.make({ existing: trait, proposed: proposedTrait, reason: label })
   if (label === "covered") return TraitConflict.cases.Covered.make({ trait })
   if (label === "clarification") return TraitConflict.cases.Clarification.make({ trait, proposedTrait })
   return TraitConflict.cases.Pass.make({})

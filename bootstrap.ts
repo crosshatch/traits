@@ -26,8 +26,6 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const accountId = yield* Config.NonEmptyString("CLOUDFLARE_ACCOUNT_ID")
-    const axiomToken = yield* Config.Redacted("AXIOM_TOKEN")
-    const axiomOrgId = yield* Config.String("AXIOM_ORG_ID").pipe(Config.withDefault(""))
     const account = `com.cloudflare.api.account.${accountId}`
 
     const token = yield* Cloudflare.ApiToken.AccountApiToken("GitHubDeployToken", {
@@ -49,15 +47,13 @@ export default Alchemy.Stack(
     yield* GitHub.Variables({
       ...repository,
       variables: {
-        CLOUDFLARE_ACCOUNT_ID: accountId,
-        AXIOM_ORG_ID: axiomOrgId
+        CLOUDFLARE_ACCOUNT_ID: accountId
       }
     })
     yield* GitHub.Secrets({
       ...repository,
       secrets: {
-        CLOUDFLARE_API_TOKEN: token.value,
-        AXIOM_TOKEN: axiomToken
+        CLOUDFLARE_API_TOKEN: token.value
       }
     })
   })
