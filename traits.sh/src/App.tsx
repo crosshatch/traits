@@ -2,12 +2,13 @@ import { Array, String } from "effect"
 import { useState, type KeyboardEvent } from "react"
 
 import { CodeSample } from "./CodeSample.tsx"
-import { Flourish } from "./Illustrations.tsx"
+import { BrokenQuill, DriftingLeaf, Flourish, LaurelSeal, MistLantern } from "./Illustrations.tsx"
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps } from "./LifecycleStep.ts"
 import { ThemeToggle } from "./ThemeToggle.tsx"
 
 const repository = "https://github.com/harrysolovay/crosshatch-next"
+const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi"] as const
 
 const connectionExample = String.stripMargin(`
 | {
@@ -55,6 +56,18 @@ export const App = () => {
             Source <span aria-hidden="true">↗</span>
           </a>
           <ThemeToggle />
+          <a
+            className="social-link"
+            href="https://x.com/harrysolovay"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Harry Solovay on X (opens in a new tab)"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.5 22H2.4l7.2-8.3L1.8 2h6.5l4.5 6.8Zm-1.1 18h1.7L7.4 3.9H5.6Z" />
+            </svg>
+            <span aria-hidden="true">↗</span>
+          </a>
         </nav>
       </header>
 
@@ -81,7 +94,10 @@ export const App = () => {
             <em className="hero-coda">A little wiser with every generation.</em>
           </p>
           <p className="hero-byline">
-            BY <a href={repository}>CROSSHATCH LABS</a>
+            BY{" "}
+            <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
+              CROSSHATCH LABS <span aria-hidden="true">↗</span>
+            </a>
           </p>
         </section>
 
@@ -117,10 +133,6 @@ export const App = () => {
           </div>
 
           <div className="walkthrough">
-            <div className="walkthrough-header">
-              <p className="eyebrow">Follow one correction through the lifecycle</p>
-              <span className="small-note">An illustrated example, not a live tool call</span>
-            </div>
             <div className="step-tabs" role="tablist" aria-label="Trait lifecycle" onKeyDown={navigateSteps}>
               {Array.map(steps, (item, index) => (
                 <button
@@ -134,7 +146,7 @@ export const App = () => {
                   onClick={() => setActive(index)}
                 >
                   <span className="step-number" aria-hidden="true">
-                    {index + 1}
+                    {Array.getUnsafe(stepNumerals, index)}.
                   </span>
                   <span>{item.title}</span>
                 </button>
@@ -169,9 +181,6 @@ export const App = () => {
               <CodeSample key={active} title={step.filename} code={step.code} copyable={false} />
             </div>
           </div>
-          <p className="figure-caption">
-            Fig. 2 — Notice, draft, compare, approve, remember, review. Then begin again.
-          </p>
           <aside className="book-note">
             <span className="eyebrow">A note in the margin</span>
             <p>
@@ -230,30 +239,22 @@ export const App = () => {
             <h3>A finding is an invitation to inspect.</h3>
             <div className="verdict-grid">
               <div>
-                <span className="verdict-mark good" aria-hidden="true">
-                  ✓
-                </span>
+                <LaurelSeal />
                 <h4>Compliant</h4>
                 <p>The rule applies and the supplied code follows it.</p>
               </div>
               <div>
-                <span className="verdict-mark neutral" aria-hidden="true">
-                  —
-                </span>
+                <DriftingLeaf />
                 <h4>Not applicable</h4>
                 <p>This excerpt does not contain behavior governed by the rule.</p>
               </div>
               <div>
-                <span className="verdict-mark warning" aria-hidden="true">
-                  !
-                </span>
+                <BrokenQuill />
                 <h4>Violation</h4>
                 <p>Inspect the evidence. Fix confirmed issues and review the changed file again.</p>
               </div>
               <div>
-                <span className="verdict-mark neutral" aria-hidden="true">
-                  ?
-                </span>
+                <MistLantern />
                 <h4>Inconclusive</h4>
                 <p>Something is missing or ambiguous. This is not a confirmed violation.</p>
               </div>
@@ -338,7 +339,12 @@ export const App = () => {
           <img className="emblem" src="/traits-mark.svg" width="48" height="48" alt="" />
           <span>TRAITS</span>
         </a>
-        <p>BY CROSSHATCH LABS</p>
+        <p>
+          BY{" "}
+          <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
+            CROSSHATCH LABS <span aria-hidden="true">↗</span>
+          </a>
+        </p>
         <div>
           <a href={repository}>Source ↗</a>
         </div>
