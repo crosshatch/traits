@@ -8,7 +8,6 @@ export const SourceLocation = S.TaggedUnion({
 
 export type Source = typeof Source.Type
 export const Source = S.Struct({
-  agentId: S.String,
   text: S.String,
   location: SourceLocation.pipe(S.optional)
 })

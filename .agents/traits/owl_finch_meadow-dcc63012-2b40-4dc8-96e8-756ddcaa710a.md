@@ -1,10 +1,1 @@
-Use the Effect alternative for each Node API:
-
-| Node API | Effect alternative |
-| --- | --- |
-| `node:fs`, `node:fs/promises` | `FileSystem` service |
-| `node:path` | `Path` service |
-| `process.cwd()` | `path.resolve()` using the injected `Path` service |
-| `node:child_process` | `effect/process`: define processes with `ChildProcess` and run them through `ChildProcessSpawner` |
-
-Access these services through Effect’s dependency injection so filesystem, path, and process behavior remain testable and platform-independent: `const fs = yield* FileSystem.FileSystem; yield* fs.readFileString(file)`, not `yield* Effect.promise(() => readFile(file, "utf8"))` using `node:fs/promises`.
+Use the Effect alternative for Node APIs in ordinary application code: node:fs and node:fs/promises use the FileSystem service; node:path uses the Path service; process.cwd() uses path.resolve() on the injected Path service; node:child_process uses effect/process with ChildProcess and ChildProcessSpawner. Access these services through Effect dependency injection so behavior remains testable and platform-independent. At synchronous tooling boundaries, such as Oxlint rule callbacks, native synchronous Node APIs may remain when needed to preserve the framework’s synchronous execution contract. Keep this exception confined to the tooling boundary rather than using it to bypass Effect in application code.

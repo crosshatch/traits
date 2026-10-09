@@ -192,9 +192,18 @@ store before retrying; some changes may already be present.
 - `include` accepts file paths or glob patterns, absolute or relative to the MCP
   working directory. Overlapping matches are deduplicated; unmatched patterns
   select no files. Use `traits/**/*.ts` rather than a bare directory. Glob
-  traversal excludes dependencies, `dist`, Git metadata, nested worktrees, and
-  reference repos. Source metadata uses
-  the server's configured `agentId`, currently `local`.
+  traversal always excludes dependencies, Git metadata, and nested worktrees.
+  `TraitsConfig.excludes` adds filenames or native filesystem glob patterns,
+  relative to the directory containing `traits.ts` or absolute. Use `directory/**`
+  to exclude a subtree; bare directories are not expanded automatically. Escape
+  glob characters in literal filenames using native glob syntax. This repository
+  configures `repos/**` and `**/dist/**` in `traits.ts`. No custom path classification
+  or glob expansion semantics are imposed.
+- Assess only project-owned source and relevant authored configuration or
+  documentation. For whole-project audits, prefer an explicit project-file
+  manifest. Never submit third-party/reference code, generated output or
+  lockfiles, secrets, `.env` files, credentials, or binary assets. Reading a
+  dependency's source to verify an API does not make it part of the audit scope.
 - The tool checks current full files in 200-line chunks, including unstaged
   content. It does not inspect the Git index or compute a diff.
 - Each expression finding contains the trait and source excerpt with a file path and 1-based

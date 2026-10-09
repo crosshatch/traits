@@ -10,9 +10,14 @@ import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 export const CheckTraits = Tool.make("check_traits", {
   description: String.stripMargin(`
   | Use after generating or editing TypeScript files, after saving or resolving a relevant trait, and before committing or opening a PR.
+  | Assess only project-owned source files and relevant authored configuration or documentation. Do not audit third-party or generated code.
+  | For a whole-project review, prefer an explicit project-file manifest rather than a filesystem-wide glob.
+  | Never submit secrets, .env files, credentials, binary assets, generated lockfiles, dependency trees, or reference repositories for assessment.
   | Supply include as TypeScript file paths or glob patterns relevant to the work, relative to the MCP working directory or absolute.
   | Globs are expanded and overlapping matches are checked once. Directories are not reviewed as files; use patterns such as traits/**/*.ts.
-  | Dependency trees, dist output, Git metadata, nested worktrees, and reference repos are excluded from glob traversal.
+  | Built-in exclusions cover dependency trees, Git metadata, and nested worktrees. Configure project-specific exclusions through TraitsConfig.excludes.
+  | Configured exclusions are filenames or native filesystem glob patterns, resolved beside traits.ts. Use directory/** to exclude a subtree; bare directories are not expanded.
+  | All entries follow native glob syntax, including escaping filenames with glob characters. No custom directory expansion or literal-path classification is applied.
   | Reads current full file contents, including unstaged edits, and checks each 200-line chunk against the selected traits in parallel.
   | Omit traitIds to check all stored traits; supply trait ids for a focused check of one or more traits. Unknown IDs fail the call.
   | Returns findings with the trait, source text, absolute path, 1-based chunk startLine, and assessment classification and probabilities.
@@ -33,7 +38,7 @@ export const CheckTraits = Tool.make("check_traits", {
   parameters: S.Struct({
     include: S.Array(S.String).annotate({
       description:
-        "File paths or glob patterns to review, absolute or relative to the MCP working directory. Overlapping matches are deduplicated; unmatched patterns select no files."
+        "Project-owned source, configuration, or documentation paths/globs, absolute or relative to the MCP working directory. Exclude third-party/generated files, secrets, and binaries. Overlapping matches are deduplicated; unmatched patterns select no files."
     }),
     traitIds: S.Array(TraitId).pipe(S.optional).annotate({
       description: "Optional trait ids for a focused review. Omit for all stored traits; an empty array selects none."
@@ -52,21 +57,20 @@ export const toolkit = Toolkit.make(CheckTraits)
 export const layer = toolkit.toLayer({
   check_traits: Effect.fn("CheckTraits.check")(function* (params) {
     const store = yield* TraitStore
-    const { agentId } = yield* TraitsContext
+    const context = yield* TraitsContext
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
+    const cwd = path.resolve()
     const traits = yield* params.traitIds === undefined
       ? store.ls
       : Effect.forEach(Array.dedupe(params.traitIds), store.get, { concurrency: "unbounded" })
     const matches = yield* Effect.forEach(
       params.include,
       (pattern) => {
-        const absolute = path.resolve(pattern)
-        const root = path.parse(absolute).root
+        const absolute = path.isAbsolute(pattern) ? pattern : `${cwd}${path.sep}${pattern}`
         return fs.glob(absolute, {
-          exclude: Array.map(["node_modules", "dist", ".git", ".worktrees", "repos"], (directory) =>
-            path.join(root, "**", directory)
-          )
+          root: context.configRoot,
+          exclude: context.excludes
         })
       },
       { concurrency: "unbounded" }
@@ -74,7 +78,7 @@ export const layer = toolkit.toLayer({
     const resolved = pipe(
       matches,
       Array.flatten,
-      Array.map((file) => path.resolve(file)),
+      Array.map((file) => path.resolve(context.configRoot, file)),
       Array.dedupe
     )
     const paths = yield* Effect.filter(
@@ -89,7 +93,6 @@ export const layer = toolkit.toLayer({
         const chunks = Array.chunksOf(String.split(text, "\n"), 200)
         const sources = Array.map(chunks, (lines, index) =>
           Source.make({
-            agentId,
             text: Array.join(lines, "\n"),
             location: SourceLocation.cases.File.make({ path: file, startLine: index * 200 + 1 })
           })

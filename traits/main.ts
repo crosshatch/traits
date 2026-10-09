@@ -63,7 +63,9 @@ Command.make("traits", {
       | Resolved returns saved replacement bodies and IDs. Review them and check relevant code; do not derive the same proposal again.
       | After generating or changing TypeScript files, call check_traits on those files.
       | check_traits accepts include as file paths or glob strings, for example include: ["traits/**/*.ts"]. Overlapping matches are deduplicated.
-      | Unmatched patterns select nothing; broad globs exclude dependencies, dist, Git metadata, nested worktrees, and reference repos.
+      | Restrict assessments to project-owned source and relevant authored configuration/docs. Prefer an explicit project-file manifest for whole-project audits.
+      | Never submit dependency/reference code, generated build output or lockfiles, Git metadata, secrets, .env files, credentials, or binary assets for assessment.
+      | Unmatched patterns select nothing. Built-in exclusions cover dependencies, Git metadata, and nested worktrees; configure project-specific filenames or native glob patterns through TraitsConfig.excludes.
       | After saving or resolving a trait, check the relevant TypeScript files explicitly; creation does not run that review for you.
       | Omit traitIds for all traits; use specific IDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
       | Checks read current full files in 200-line chunks, not Git diffs. A finding's startLine locates a chunk, not an exact violation.
