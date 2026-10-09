@@ -299,12 +299,6 @@ importers:
 
   traits:
     dependencies:
-      '@effect/ai-openai':
-        specifier: 'catalog:'
-        version: 4.0.0(effect@4.0.0)
-      '@effect/ai-typesafe':
-        specifier: 'catalog:'
-        version: 4.0.0(effect@4.0.0)
       '@effect/platform-node':
         specifier: 'catalog:'
         version: 4.0.0(effect@4.0.0)(redis@6.2.1)
