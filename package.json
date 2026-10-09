@@ -7,6 +7,7 @@
     "tasks": "node tasks/main.ts",
     "prepare": "effect-tsgo patch --oxlint",
     "build": "tsc -b tsconfig.json",
+    "motel": "motel server",
     "test": "vp check && pnpm build && pnpm test:rules && pnpm test:traits && pnpm test:site",
     "test:rules": "vp test run --project rules",
     "test:traits": "vp test run --project traits --passWithNoTests",
@@ -21,6 +22,7 @@
     "@effect/ai-typesafe": "catalog:",
     "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
+    "@kitlangton/motel": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
