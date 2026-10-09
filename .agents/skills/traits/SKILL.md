@@ -180,9 +180,11 @@ store before retrying; some changes may already be present.
   the server's configured `agentId`, currently `local`.
 - The tool checks current full files in 200-line chunks, including unstaged
   content. It does not inspect the Git index or compute a diff.
-- Each `Fail` contains the trait and source excerpt with a file path and 1-based
-  chunk starting line. That line is not an exact violation location. Violations
-  and inconclusive assessments have the same result shape.
+- Each expression finding contains the trait and source excerpt with a file path and 1-based
+  chunk starting line. That line is not an exact violation location. Its
+  `assessment` includes classification and probabilities. `inconclusive` is not
+  a confirmed violation. Inspect the full distribution; probabilities are not
+  calibrated guarantees.
 - Inspect the code and trait before fixing a finding. Respect scope and
   exceptions; missing context is not proof of a violation.
 - Own the remediation loop whenever you discover an applicable violation,

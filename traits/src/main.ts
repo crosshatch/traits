@@ -47,6 +47,7 @@ Command.make("traits").pipe(
       | After saving or resolving a trait, check the relevant TypeScript files explicitly; creation does not run that review for you.
       | Omit traitIds for all traits; use specific IDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
       | Checks read current full files in 200-line chunks, not Git diffs. A finding's startLine locates a chunk, not an exact violation.
+      | Each finding includes assessment.classification and probabilities: inconclusive is unresolved context, not a confirmed violation. Probabilities are not calibrated guarantees.
       | Take responsibility for trait compliance whenever a violation is discovered, through tool findings or your own inspection.
       | Inspect each finding against its trait, scope, exceptions, and surrounding source; confirmed violations must be fixed without waiting for another user request.
       | Make minimal behavior-preserving edits to the implementation, not to the trait merely to silence a finding. Do not stop at a findings summary.

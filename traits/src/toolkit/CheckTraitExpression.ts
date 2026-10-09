@@ -3,7 +3,7 @@ import { AiError, DecisionModel, Tool, Toolkit } from "effect/ai"
 
 import { Source, SourceLocation } from "../Source.ts"
 import { TraitId } from "../Trait.ts"
-import { check, TraitExpression } from "../TraitExpression.ts"
+import { evaluate, requiresReview, TraitEvaluation } from "../TraitEvaluation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
@@ -13,8 +13,9 @@ export const CheckTraitExpression = Tool.make("check_trait_expression", {
   | Select concrete TypeScript files relevant to the work. Pass file paths, not directories, globs, patches, or Git revision selectors.
   | Reads current full file contents, including unstaged edits, and checks each 200-line chunk against the selected traits in parallel.
   | Omit traitIds to check all stored traits; supply trait ids for a focused check of one or more traits. Unknown IDs fail the call.
-  | Returns Fail entries for both violations and inconclusive assessments, with the trait, source text, absolute path, and 1-based chunk startLine.
-  | The result does not distinguish these two outcomes or provide exact offending lines; inspect the source and trait before making changes.
+  | Returns findings with the trait, source text, absolute path, 1-based chunk startLine, and assessment classification and probabilities.
+  | Classification distinguishes violation from inconclusive; probabilities are not calibrated guarantees. No exact offending lines are provided.
+  | Diagnose uncertainty using the full distribution, not the selected label alone; inspect source and trait before changing code.
   | Act on the results: inspect every finding and automatically fix confirmed, applicable violations without waiting for a separate request.
   | Make minimal behavior-preserving code changes, then rerun this tool on the corrected files and run relevant project checks.
   | Repeat for remaining confirmed violations; returning a findings summary alone does not complete the review.
@@ -32,7 +33,7 @@ export const CheckTraitExpression = Tool.make("check_trait_expression", {
       description: "Optional trait ids for a focused review. Omit for all stored traits; an empty array selects none."
     })
   }),
-  success: S.Array(TraitExpression.cases.Fail),
+  success: S.Array(TraitEvaluation),
   failure: S.Union([AiError.AiError, TraitStoreError]),
   dependencies: [DecisionModel.DecisionModel, TraitStore, FileSystem.FileSystem, Path.Path, TraitsContext]
 })
@@ -70,10 +71,10 @@ export const layer = toolkit.toLayer({
         )
         const results = yield* Effect.forEach(
           sources,
-          (source) => Effect.forEach(traits, (trait) => check(trait, source), { concurrency: "unbounded" }),
+          (source) => Effect.forEach(traits, (trait) => evaluate(trait, source), { concurrency: "unbounded" }),
           { concurrency: "unbounded" }
         )
-        return pipe(results, Array.flatten, Array.filter(TraitExpression.guards.Fail))
+        return pipe(results, Array.flatten, Array.filter(requiresReview))
       }),
       { concurrency: "unbounded" }
     )
