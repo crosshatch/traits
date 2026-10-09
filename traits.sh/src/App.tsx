@@ -237,6 +237,13 @@ export const App = () => {
           <div className="judgment">
             <span className="eyebrow">Reading an assessment</span>
             <h3>A finding is an invitation to inspect.</h3>
+            <p className="assessment-intro">
+              Keep the review moving in both directions: ask decision models to check newly generated code against all
+              existing traits, and check the existing codebase against each newly saved trait. The agent selects the
+              files and traits for each review. By revisiting the new code or the new rule—not every unchanged
+              code-and-trait pairing—we keep decision-model token costs down while maintaining coverage as the work
+              grows.
+            </p>
             <div className="verdict-grid">
               <div>
                 <LaurelSeal />

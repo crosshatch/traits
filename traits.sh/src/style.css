@@ -588,6 +588,10 @@ h3 {
   gap: 1.6rem;
   margin: 2rem 0 1.5rem;
 }
+.assessment-intro {
+  max-width: 850px;
+  font-size: 0.87rem;
+}
 .verdict-illustration {
   display: block;
   width: 64px;
