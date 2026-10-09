@@ -3,7 +3,7 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import * as GitHub from "alchemy/GitHub"
 import { Array, Config, Effect, Layer, pipe } from "effect"
 
-const repository = { owner: "harrysolovay", repository: "crosshatch-next" }
+const repository = { owner: "crosshatch", repository: "traits" }
 
 const permissionGroups = (scope: string) =>
   pipe(
@@ -19,7 +19,7 @@ const permissionGroups = (scope: string) =>
   )
 
 export default Alchemy.Stack(
-  "crosshatch-bootstrap",
+  "traits-bootstrap",
   {
     state: Cloudflare.state(),
     providers: Layer.mergeAll(Cloudflare.providers(), GitHub.providers())

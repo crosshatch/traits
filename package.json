@@ -8,10 +8,9 @@
     "prepare": "effect-tsgo patch --oxlint",
     "build": "tsc -b tsconfig.json",
     "motel": "motel server",
-    "test": "vp check && pnpm build && pnpm test:rules && pnpm test:traits && pnpm test:site",
+    "test": "vp check && pnpm build && pnpm test:rules && pnpm test:traits",
     "test:rules": "vp test run --project rules",
-    "test:traits": "vp test run --project traits --passWithNoTests",
-    "test:site": "vp test run --project traits.sh --passWithNoTests"
+    "test:traits": "vp test run --project traits --passWithNoTests"
   },
   "dependencies": {
     "alchemy": "catalog:",

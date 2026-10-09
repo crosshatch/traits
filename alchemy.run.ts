@@ -3,7 +3,7 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import { Effect } from "effect"
 
 export default Alchemy.Stack(
-  "crosshatch",
+  "traits.sh",
   {
     providers: Cloudflare.providers(),
     state: Cloudflare.state()

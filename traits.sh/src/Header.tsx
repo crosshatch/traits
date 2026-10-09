@@ -9,7 +9,7 @@ export const Header = (props: { readonly docked?: boolean | undefined }) => {
         <span>TRAITS</span>
       </a>
       <nav aria-label={props.docked === true ? "Bottom navigation" : "Main navigation"}>
-        <a className="source-link" href="https://github.com/harrysolovay/crosshatch-next">
+        <a className="source-link" href="https://github.com/crosshatch/traits">
           Source <span aria-hidden="true">↗</span>
         </a>
         <ThemeToggle />

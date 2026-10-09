@@ -9,7 +9,7 @@ import { BrokenQuill, DriftingLeaf, Flourish, LaurelSeal, MistLantern } from "./
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps, type LifecycleStep } from "./LifecycleStep.ts"
 
-const repository = "https://github.com/harrysolovay/crosshatch-next"
+const repository = "https://github.com/crosshatch/traits"
 const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi"] as const
 const activeAtom = Atom.make(0)
 const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, index)))

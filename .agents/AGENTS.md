@@ -13,7 +13,7 @@ All paths below are relative to the repository root.
 ## Verification
 
 - Run checks from the root: `pnpm exec vp check` for formatting/lint/types; `pnpm build` after TypeScript changes (`--force` after config changes).
-- Run affected suites: `pnpm test:rules`, `pnpm test:traits`, and `pnpm test:site`. The traits and site suites may be empty; do not call an empty suite a behavior-test pass. `pnpm test` runs checks, builds, and suites; docs-only edits need no build/tests.
+- Run affected suites: `pnpm test:rules` and `pnpm test:traits`. The traits suite may be empty; do not call an empty suite a behavior-test pass. The static site has no test project. `pnpm test` runs checks, builds, and suites; docs-only edits need no build/tests.
 - After dependency changes, run `pnpm install`; after traits exports/publishing changes, run `pnpm --filter traits pack` and verify the tarball's imports/types in a consumer.
 - After frontend changes, run `pnpm --filter traits.sh build` and verify the rendered page locally. No deployment is required for this verification.
 - Report failures, blocked checks, and empty/skipped suites accurately.

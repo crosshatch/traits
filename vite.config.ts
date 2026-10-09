@@ -23,7 +23,7 @@ export default defineConfig({
     ]
   },
   test: {
-    projects: ["rules/vite.config.ts", "traits.sh/vite.config.ts", "traits/vite.config.ts"]
+    projects: ["rules/vite.config.ts", "traits/vite.config.ts"]
   },
   lint: {
     extends: [recommended],

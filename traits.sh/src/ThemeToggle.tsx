@@ -2,16 +2,19 @@ import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
 
-const readInitialTheme = () => {
-  try {
-    const saved = localStorage.getItem("traits-theme")
-    if (saved === "dark" || saved === "light") return saved === "dark"
-  } catch {
-    // Storage may be unavailable in private or restricted contexts.
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-}
-const darkAtom = Atom.writable(readInitialTheme, (ctx, value: boolean) => ctx.setSelf(value))
+const darkAtom = Atom.make(false)
+const initialThemeAtom = Atom.make(
+  Effect.fn("ThemeToggle.initialize")(function* (ctx: Atom.AtomContext) {
+    const saved = yield* Effect.try(() => localStorage.getItem("traits-theme")).pipe(
+      Effect.catchTags({ UnknownError: () => Effect.succeed(null) })
+    )
+    const dark =
+      saved === "dark" || saved === "light"
+        ? saved === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches
+    ctx.set(darkAtom, dark)
+  })
+)
 const themeEffectAtom = Atom.make((ctx) => {
   const dark = ctx(darkAtom)
   return Effect.sync(() => {
@@ -20,17 +23,18 @@ const themeEffectAtom = Atom.make((ctx) => {
   })
 })
 
-const toggleAtom = Atom.fnSync((_event: unknown, ctx) => {
-  const next = !ctx(darkAtom)
-  ctx.set(darkAtom, next)
-  try {
-    localStorage.setItem("traits-theme", next ? "dark" : "light")
-  } catch {
-    // The toggle still works when persistence is unavailable.
-  }
-})
+const toggleAtom = Atom.fn(
+  Effect.fn("ThemeToggle.toggle")(function* (_event: unknown, ctx: Atom.FnContext) {
+    const next = !ctx(darkAtom)
+    ctx.set(darkAtom, next)
+    yield* Effect.try(() => localStorage.setItem("traits-theme", next ? "dark" : "light")).pipe(
+      Effect.catchTags({ UnknownError: () => Effect.void })
+    )
+  })
+)
 
 export const ThemeToggle = () => {
+  useAtomMount(initialThemeAtom)
   const dark = useAtomValue(darkAtom)
   const toggle = useAtomSet(toggleAtom)
   useAtomMount(themeEffectAtom)
