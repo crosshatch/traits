@@ -13,8 +13,9 @@ const repository = "https://github.com/crosshatch/traits"
 const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi"] as const
 const activeAtom = Atom.make(0)
 const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, index)))
-const previousStepAtom = Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) - 1))
-const nextStepAtom = Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) + 1))
+const stepAtom = Atom.family((count: 1 | -1) =>
+  Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) + count))
+)
 const navigateStepsAtom = Atom.fnSync((event: KeyboardEvent<HTMLDivElement>, ctx) => {
   const active = ctx(activeAtom)
   let next = active
@@ -67,8 +68,8 @@ export const App = () => {
   const active = useAtomValue(activeAtom)
   const step = Array.getUnsafe(steps, active)
   const navigateSteps = useAtomSet(navigateStepsAtom)
-  const previousStep = useAtomSet(previousStepAtom)
-  const nextStep = useAtomSet(nextStepAtom)
+  const previousStep = useAtomSet(stepAtom(-1))
+  const nextStep = useAtomSet(stepAtom(1))
 
   return (
     <>

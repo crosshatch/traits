@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "tasks": "node tasks/main.ts",
+    "changeset": "changeset",
+    "format": "vp fmt .",
     "prepare": "effect-tsgo patch --oxlint",
     "build": "tsc -b tsconfig.json",
     "test": "vp check && pnpm build && pnpm test:rules && pnpm test:traits",
@@ -16,6 +18,8 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "catalog:",
+    "@changesets/cli": "catalog:",
     "@effect/ai-openai": "catalog:",
     "@effect/ai-typesafe": "catalog:",
     "@effect/platform-node": "catalog:",

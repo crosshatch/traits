@@ -1,15 +1,12 @@
-import { Array, Context, Effect, Layer, Path, pipe, Schema as S, Semaphore, String } from "effect"
-import { ChildProcess, ChildProcessSpawner } from "effect/process"
+import { Array, Context, Effect, Layer, Path, pipe, Schema as S, Semaphore } from "effect"
 
+import { getWorktreeRoot } from "./_util/Git.ts"
 import { TraitsConfig } from "./TraitsConfig.ts"
 
 export class TraitsContext extends Context.Service<TraitsContext>()("traits/TraitsContext", {
   make: Effect.gen(function* () {
     const path = yield* Path.Path
-    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-    const configRoot = yield* spawner
-      .string(ChildProcess.make`git rev-parse --show-toplevel`)
-      .pipe(Effect.map(String.trim))
+    const configRoot = yield* getWorktreeRoot
     const url = yield* path.toFileUrl(path.join(configRoot, "traits.ts"))
     const module = yield* Effect.promise(() => import(url.href))
     const config = yield* pipe(module.default, S.decodeUnknownEffect(TraitsConfig))
