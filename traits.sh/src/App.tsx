@@ -50,7 +50,7 @@ const StepTab = (props: { readonly step: LifecycleStep; readonly index: number }
     </button>
   )
 }
-const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.title} step={step} index={index} />
+const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.title} {...{ step, index }} />
 
 const connectionExample = String.stripMargin(`
 | {
@@ -192,7 +192,7 @@ export const App = () => {
                     )}
                   </div>
                 </div>
-                <LifecycleVisual step={step} />
+                <LifecycleVisual {...{ step }} />
               </div>
             </div>
             <aside className="book-note">
