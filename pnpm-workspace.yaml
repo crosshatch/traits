@@ -7,6 +7,8 @@ allowBuilds:
   workerd: true
 
 catalog:
+  "@changesets/changelog-github": 1.0.1
+  "@changesets/cli": 3.0.3
   "@effect/ai-openai": 4.0.0
   "@effect/ai-typesafe": 4.0.0
   "@effect/atom-react": 4.0.0

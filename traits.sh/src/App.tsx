@@ -3,18 +3,20 @@ import { Array, String } from "effect"
 import { Atom } from "effect/reactivity"
 import type { KeyboardEvent } from "react"
 
+import { ActionBar } from "./ActionBar.tsx"
 import { CodeSample } from "./CodeSample.tsx"
-import { Header } from "./Header.tsx"
 import { BrokenQuill, DriftingLeaf, Flourish, LaurelSeal, MistLantern } from "./Illustrations.tsx"
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps, type LifecycleStep } from "./LifecycleStep.ts"
+import { LifecycleVisual } from "./LifecycleVisual.tsx"
 
 const repository = "https://github.com/crosshatch/traits"
-const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi"] as const
+const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii"] as const
 const activeAtom = Atom.make(0)
 const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, index)))
-const previousStepAtom = Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) - 1))
-const nextStepAtom = Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) + 1))
+const stepAtom = Atom.family((count: 1 | -1) =>
+  Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) + count))
+)
 const navigateStepsAtom = Atom.fnSync((event: KeyboardEvent<HTMLDivElement>, ctx) => {
   const active = ctx(activeAtom)
   let next = active
@@ -48,7 +50,7 @@ const StepTab = (props: { readonly step: LifecycleStep; readonly index: number }
     </button>
   )
 }
-const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.title} step={step} index={index} />
+const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.title} {...{ step, index }} />
 
 const connectionExample = String.stripMargin(`
 | {
@@ -56,51 +58,76 @@ const connectionExample = String.stripMargin(`
 |     "servers": {
 |       "traits": {
 |         "type": "local",
-|         "command": ["npx", "traits"]
+|         "command": ["npx", "-y", "traits"]
 |       }
 |     }
 |   }
 | }
 `)
 
+const initializeExample = String.stripMargin(`
+|npx traits init
+|
+|# Creates these files at the checkout root:
+|# traits.ts
+|# .agents/skills/traits/SKILL.md
+`)
+
+const providersExample = String.stripMargin(`
+|pnpm add effect @effect/ai-openai @effect/ai-typesafe
+|
+|# Review the generated traits.ts:
+|# layerDecisionModel · TypeSafe
+|# layerLanguageModel · OpenAI
+|# excludes · files to omit from review
+`)
+
+const credentialsExample = String.stripMargin(`
+|TYPESAFE_API_KEY=your_typesafe_api_key
+|OPENAI_API_KEY=your_openai_api_key
+`)
+
 export const App = () => {
   const active = useAtomValue(activeAtom)
   const step = Array.getUnsafe(steps, active)
   const navigateSteps = useAtomSet(navigateStepsAtom)
-  const previousStep = useAtomSet(previousStepAtom)
-  const nextStep = useAtomSet(nextStepAtom)
+  const previousStep = useAtomSet(stepAtom(-1))
+  const nextStep = useAtomSet(stepAtom(1))
 
   return (
     <>
       <a className="skip-link" href="#guide">
         Skip to the field guide
       </a>
-      <Header />
+      <div className="opening">
+        <ActionBar />
+        <section className="hero margin-coral" id="top" aria-labelledby="hero-title">
+          <div className="hero-content">
+            <img
+              className="hero-emblem"
+              src="/traits-emblem.svg"
+              width="360"
+              height="420"
+              alt="An ornamental T surrounded by an ivy flourish and a returning feedback loop."
+            />
+            <p className="eyebrow">Categorically eliminate slop forever</p>
+            <h1 id="hero-title">Traits</h1>
+            <InstallCommand />
+            <p className="hero-description">
+              Your agent learns from your feedback—and remembers.
+              <em className="hero-coda">A little wiser with every generation.</em>
+            </p>
+            <p className="hero-byline">
+              BY{" "}
+              <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
+                CROSSHATCH LABS <span aria-hidden="true">↗</span>
+              </a>
+            </p>
+          </div>
+        </section>
+      </div>
 
       <main id="guide">
-        <section className="hero margin-coral" id="top" aria-labelledby="hero-title">
-          <img
-            className="hero-emblem"
-            src="/traits-emblem.svg"
-            width="360"
-            height="420"
-            alt="An ornamental T surrounded by an ivy flourish and a returning feedback loop."
-          />
-          <p className="eyebrow">Categorically eliminate slop forever</p>
-          <h1 id="hero-title">Traits</h1>
-          <InstallCommand />
-          <p className="hero-description">
-            Your agent learns from your feedback—and remembers.
-            <em className="hero-coda">A little wiser with every generation.</em>
-          </p>
-          <p className="hero-byline">
-            BY{" "}
-            <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
-              CROSSHATCH LABS <span aria-hidden="true">↗</span>
-            </a>
-          </p>
-        </section>
-
         <div className="contents-band">
           <span className="eyebrow">Contents of this little volume</span>
           <a href="#lifecycle">
@@ -165,7 +192,7 @@ export const App = () => {
                     )}
                   </div>
                 </div>
-                <CodeSample key={active} title={step.filename} code={step.code} copyable={false} />
+                <LifecycleVisual {...{ step }} />
               </div>
             </div>
             <aside className="book-note">
@@ -275,15 +302,64 @@ export const App = () => {
             </div>
             <div className="setup-grid">
               <div>
-                <span className="eyebrow">From this repository</span>
-                <h3>Connect the local server.</h3>
+                <span className="eyebrow">01 / Initialize</span>
+                <h3>Create the config and install the skill.</h3>
                 <p>
-                  Run the Effect-based CLI from the repository root. Configure the decision and language model layers in{" "}
-                  <code>traits.ts</code>, and provide the credentials those providers require.
+                  Run <code>npx traits init</code> anywhere inside your Git checkout. It writes <code>traits.ts</code>{" "}
+                  and <code>.agents/skills/traits/SKILL.md</code> at the current checkout root—not in the directory you
+                  happen to be in. In a linked worktree, both files stay in that worktree.
                 </p>
                 <p>
-                  The current configuration uses TypeSafe and OpenAI. Credentials can come from the process environment
-                  or a discovered <code>.env</code> file. Keep them out of source control.
+                  Existing files are left untouched; missing files and directories are created. The skill teaches your
+                  agent when to propose traits and check code. Trait files are saved later, after your approval.
+                </p>
+              </div>
+              <CodeSample title="terminal · initialize the checkout" code={initializeExample} />
+            </div>
+            <div className="setup-grid">
+              <div>
+                <span className="eyebrow">02 / Configure providers</span>
+                <h3>Choose the models that do the work.</h3>
+                <p>
+                  Install the packages imported by the generated <code>traits.ts</code> in your project. Initialization
+                  creates the config; it does not install these dependencies.
+                </p>
+                <p>
+                  The default config uses TypeSafe for decisions and OpenAI for language generation. Review the model
+                  choices and file exclusions, or replace the provider layers with your own.
+                </p>
+              </div>
+              <CodeSample title="terminal · provider dependencies" code={providersExample} />
+            </div>
+            <div className="setup-grid">
+              <div>
+                <span className="eyebrow">03 / Credentials</span>
+                <h3>Give the providers their keys.</h3>
+                <p>
+                  For the default providers, set <code>TYPESAFE_API_KEY</code> and <code>OPENAI_API_KEY</code> in the
+                  MCP process environment or a root <code>.env</code> file. Replace the example values with your own
+                  keys.
+                </p>
+                <p>
+                  Process environment values take precedence, followed by the worktree’s <code>.env</code>, then the
+                  main checkout’s <code>.env</code>. Keep credentials out of source control and reconnect the server
+                  after changing them.
+                </p>
+              </div>
+              <CodeSample title=".env · keep private" code={credentialsExample} copyable={false} />
+            </div>
+            <div className="setup-grid">
+              <div>
+                <span className="eyebrow">04 / Connect your agent</span>
+                <h3>Start the local MCP server.</h3>
+                <p>
+                  Configure your coding agent to run <code>npx -y traits</code> with the checkout root as its working
+                  directory. It loads <code>traits.ts</code> from that checkout. The example shows OpenCode’s local MCP
+                  configuration; merge it into your existing settings.
+                </p>
+                <p>
+                  Connect the server and confirm that <code>derive_trait</code> and <code>check_traits</code> are
+                  available. Make sure your agent discovers the installed skill, then start with a useful correction.
                 </p>
                 <a className="text-link" href={repository}>
                   Explore the implementation ↗
@@ -326,7 +402,7 @@ export const App = () => {
               </a>
             </div>
           </section>
-          <Header docked />
+          <ActionBar docked />
         </div>
       </main>
     </>

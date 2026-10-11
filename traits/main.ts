@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Effect, Layer, Logger, Option, Schema as S, String } from "effect"
 import { McpProtocol, McpServer } from "effect/ai"
@@ -6,6 +7,7 @@ import { FetchHttpClient } from "effect/http"
 
 import * as TraitsConfigProvider from "./_util/TraitsConfigProvider.ts"
 import * as TraitsTelemetry from "./_util/TraitsTelemetry.ts"
+import { init } from "./commands/init.ts"
 import PackageJson from "./package.json" with { type: "json" }
 import { toolkit } from "./toolkit/toolkit.ts"
 import { TraitsContext } from "./TraitsContext.ts"
@@ -103,6 +105,7 @@ Command.make("traits", {
       Effect.provideService(Logger.LogToStderr, true)
     )
   ),
+  Command.withSubcommands([init]),
   Command.run({ version: PackageJson.version }),
   Effect.provide(NodeServices.layer),
   NodeRuntime.runMain

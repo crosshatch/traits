@@ -1,12 +1,16 @@
 {
   "name": "traits",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.4.0",
   "license": "Apache-2.0",
+  "bin": {
+    "traits": "./dist/main.js"
+  },
   "files": [
     "*.ts",
     "!vite.config.ts",
     "_util/**/*.ts",
+    "commands/**/*.ts",
+    "skills/**/*.md",
     "toolkit/**/*.ts",
     "dist/package.json",
     "dist/**/*.js",
@@ -32,9 +36,6 @@
       "./index": null
     },
     "access": "public"
-  },
-  "scripts": {
-    "prepack": "tsc -b tsconfig.release.json --force"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
