@@ -1,107 +1,66 @@
-import { String } from "effect"
-
 export interface LifecycleStep {
   readonly title: string
   readonly heading: string
   readonly description: string
   readonly note: string
-  readonly filename: string
-  readonly code: string
+  readonly visual: "feedback" | "draft" | "compare" | "approve" | "save" | "review" | "correct"
 }
 
 export const steps: ReadonlyArray<LifecycleStep> = [
   {
-    title: "Notice",
-    heading: "A useful correction is a seed.",
-    description: "A user points out a better way to work. Look for a trait that will matter beyond this one change.",
-    note: "A passing thought need not become a permanent trait. Keep the durable insight; leave the conversation behind.",
-    filename: "a conversation",
-    code: String.stripMargin(`
-    | “Use the tagged union’s case guard here,
-    | rather than comparing the tag yourself.”
-    |
-    | A local correction.
-    | A potentially reusable preference.
-    `)
+    title: "Feedback",
+    heading: "You correct how the agent filters a union.",
+    description:
+      "You ask the agent to use the union’s case guard instead of comparing _tag. That correction can guide future code, not just this one filter.",
+    note: "Keep reusable preferences. A one-off request, such as renaming a particular variable, need not become a trait.",
+    visual: "feedback"
   },
   {
     title: "Draft",
-    heading: "Give the insight a precise shape.",
+    heading: "The agent drafts a rule it can reuse.",
     description:
-      "Read existing traits first, then draft a concise, standalone trait. Preserve its scope and exceptions.",
-    note: "One independently useful convention per trait. A small example often says more than another paragraph.",
-    filename: "the proposed trait",
-    code: String.stripMargin(`
-    | Use tagged unions’ built-in case guards
-    | when filtering cases:
-    |
-    | Array.filter(Outcome.guards.Fail)
-    |
-    | not a manual comparison of _tag.
-    `)
+      "The agent reads your saved traits, then turns the correction into a standalone rule: use built-in case guards when testing or filtering tagged unions.",
+    note: "Name the behavior and its scope. Keep separate preferences in separate traits.",
+    visual: "draft"
   },
   {
     title: "Compare",
-    heading: "A new trait meets the old ones.",
-    description: "derive_trait compares the proposal with every stored trait before choosing what should happen next.",
-    note: "Already covered? Reuse it. A clarification keeps the existing ID. Inconclusive comparisons block writes.",
-    filename: "MCP · derive_trait",
-    code: String.stripMargin(`
-    | derive_trait({
-    |   proposedTrait:
-    |     "Use the provided case guards…"
-    | })
-    |
-    | // Distinct, covered, clarification,
-    | // conflict, or inconclusive?
-    `)
+    heading: "Check whether you already have this rule.",
+    description:
+      "The agent submits the draft to derive_trait. The tool compares it with every saved trait to find existing coverage, possible clarifications, and conflicts.",
+    note: "Covered rules are reused. Changes require approval; inconclusive comparisons block writes.",
+    visual: "compare"
   },
   {
     title: "Approve",
-    heading: "The human stays in the loop.",
-    description: "Review the exact proposal in an approval form. Save it, revise the wording, or skip it altogether.",
-    note: "OpenCode uses an interactive question fallback. Approval to edit code is not approval to save a new trait.",
-    filename: "an explicit choice",
-    code: String.stripMargin(`
-    | Save this reusable trait?
-    |
-    | ○ Save trait
-    | ○ Revise
-    | ○ Skip
-    | ✎ Your own feedback
-    |
-    | No approval. No write.
-    `)
+    heading: "You decide what the agent should remember.",
+    description:
+      "Review the full case-guard rule before it is saved. Approve it, revise its wording or scope, or skip it. Proposed replacements also show the existing traits they affect.",
+    note: "Approving a code fix does not approve a new trait. Saving or replacing a trait needs its own explicit approval.",
+    visual: "approve"
   },
   {
-    title: "Remember",
-    heading: "A plain file, not a hidden memory.",
+    title: "Save",
+    heading: "Save the approved rule as Markdown.",
     description:
-      "An approved trait becomes a Markdown file in .agents/traits. The file body describes the trait; its name is its ID.",
-    note: "Three friendly words make it recognizable. A UUID keeps it unique. Created returns the saved trait and its ID.",
-    filename: ".agents/traits/aurora_adventure_sunbeam-<uuid>.md",
-    code: String.stripMargin(`
-    | Use tagged unions’ built-in case guards
-    | when testing or filtering cases:
-    |
-    | Array.filter(Outcome.guards.Fail),
-    | not a manual comparison of _tag.
-    `)
+      "After approval, derive_trait writes the rule to .agents/traits and returns its ID. Future agent sessions can read the same file instead of relying on this conversation.",
+    note: "You can inspect and version the files. Clarifications preserve an existing trait’s ID rather than adding a duplicate.",
+    visual: "save"
   },
   {
     title: "Review",
-    heading: "Let the trait change the work.",
+    heading: "Check new code against your saved rules.",
     description:
-      "After changing TypeScript, check the relevant files. Inspect findings, fix real violations, and check again.",
-    note: "A model judgment is a starting point, not proof. Distinguish violation from missing context and respect exceptions.",
-    filename: "MCP · check_traits",
-    code: String.stripMargin(`
-    | check_traits({
-    |   include: ["traits/**/*.ts"]
-    | })
-    |
-    | // Or supply traitIds for a focused review.
-    | // Fix confirmed violations, then recheck.
-    `)
+      "After editing src/Outcome.ts, the agent calls check_traits on that file. The model reviews its current contents against your traits and flags code that may still compare _tag manually.",
+    note: "Check changed files, not dependencies or secrets. Read each finding in context; a model judgment is not proof.",
+    visual: "review"
+  },
+  {
+    title: "Correct",
+    heading: "Replace the comparison, then check again.",
+    description:
+      "The agent confirms that the finding applies, replaces the manual filter with Outcome.guards.Fail, and reruns check_traits plus the relevant project checks.",
+    note: "Fix confirmed violations. Reject irrelevant findings, respect exceptions, and investigate missing context rather than changing correct code.",
+    visual: "correct"
   }
 ]

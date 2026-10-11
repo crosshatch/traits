@@ -20,6 +20,24 @@ const configuration = String.stripMargin(`
 |}
 `)
 
+const nextSteps = String.stripMargin(`
+|
+|Next steps:
+|
+|1. Edit traits.ts to choose your decision and language models. Install the
+|   provider packages imported by that file in your project.
+|
+|2. Configure your chosen providers' API keys in the MCP process environment
+|   or an untracked .env at the checkout root. The default providers use
+|   TYPESAFE_API_KEY and OPENAI_API_KEY. Never commit your secrets.
+|
+|3. Add Traits as a local MCP server in your coding agent of choice:
+|   command: npx -y traits
+|   working directory: the current checkout root
+|   Connect the server, confirm derive_trait and check_traits are available,
+|   and make sure your agent discovers .agents/skills/traits/SKILL.md.
+`)
+
 export const init = Command.make("init").pipe(
   Command.withHandler(
     Effect.fn("traits.init")(function* () {
@@ -48,6 +66,7 @@ export const init = Command.make("init").pipe(
           yield* Console.log(`Created "${file.destination}"`)
         })
       )
+      yield* Console.log(nextSteps)
     })
   )
 )
