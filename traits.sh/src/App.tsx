@@ -1,5 +1,5 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Array, String } from "effect"
+import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { Array, Option, String } from "effect"
 import { Atom } from "effect/reactivity"
 import type { KeyboardEvent } from "react"
 
@@ -13,6 +13,27 @@ import { LifecycleVisual } from "./LifecycleVisual.tsx"
 const repository = "https://github.com/crosshatch/traits"
 const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii"] as const
 const activeAtom = Atom.make(0)
+const chapterAtom = Atom.make<string | undefined>(undefined)
+const observeChaptersAtom = Atom.make((ctx) => {
+  const readingLine = window.innerHeight * 0.3
+  const observer = new IntersectionObserver(
+    () => {
+      const chapter = Array.findLast(document.querySelectorAll<HTMLElement>(".chapter"), (element) => {
+        const bounds = element.getBoundingClientRect()
+        return bounds.top <= readingLine && bounds.bottom > readingLine
+      }).pipe(Option.getOrUndefined)
+      ctx.set(chapterAtom, chapter?.id)
+    },
+    { rootMargin: `-${readingLine}px 0px -${window.innerHeight * 0.69}px 0px` }
+  )
+  const frame = requestAnimationFrame(() => {
+    Array.forEach(document.querySelectorAll<HTMLElement>(".chapter"), (chapter) => observer.observe(chapter))
+  })
+  ctx.addFinalizer(() => {
+    cancelAnimationFrame(frame)
+    observer.disconnect()
+  })
+})
 const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, index)))
 const stepAtom = Atom.family((count: 1 | -1) =>
   Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) + count))
@@ -88,6 +109,8 @@ const credentialsExample = String.stripMargin(`
 `)
 
 export const App = () => {
+  useAtomMount(observeChaptersAtom)
+  const chapter = useAtomValue(chapterAtom)
   const active = useAtomValue(activeAtom)
   const step = Array.getUnsafe(steps, active)
   const navigateSteps = useAtomSet(navigateStepsAtom)
@@ -130,13 +153,13 @@ export const App = () => {
       <main id="guide">
         <div className="contents-band">
           <span className="eyebrow">Contents of this little volume</span>
-          <a href="#lifecycle">
+          <a href="#lifecycle" aria-current={chapter === "lifecycle" ? "location" : undefined}>
             <span>I.</span> From feedback to habit
           </a>
-          <a href="#tools">
+          <a href="#tools" aria-current={chapter === "tools" ? "location" : undefined}>
             <span>II.</span> Two tools. That's it.
           </a>
-          <a href="#begin">
+          <a href="#begin" aria-current={chapter === "begin" ? "location" : undefined}>
             <span>III.</span> Manual Setup
           </a>
         </div>
@@ -168,12 +191,14 @@ export const App = () => {
               </div>
               <div className="step-panel" id="step-panel" role="tabpanel" aria-labelledby={`step-${active}`}>
                 <div className="step-copy">
-                  <span className="eyebrow">
-                    Observation {active + 1} of {steps.length}
-                  </span>
-                  <h3>{step.heading}</h3>
-                  <p>{step.description}</p>
-                  <p className="margin-note">{step.note}</p>
+                  <div className="step-details" key={`copy-${active}`}>
+                    <span className="eyebrow">
+                      Observation {active + 1} of {steps.length}
+                    </span>
+                    <h3>{step.heading}</h3>
+                    <p>{step.description}</p>
+                    <p className="margin-note">{step.note}</p>
+                  </div>
                   <div className="step-controls">
                     <button
                       type="button"
@@ -192,7 +217,7 @@ export const App = () => {
                     )}
                   </div>
                 </div>
-                <LifecycleVisual {...{ step }} />
+                <LifecycleVisual key={`visual-${active}`} {...{ step }} />
               </div>
             </div>
             <aside className="book-note">

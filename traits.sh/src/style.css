@@ -361,7 +361,23 @@ p {
   font-size: 0.57rem;
 }
 .contents-band a {
+  position: relative;
   text-decoration: none;
+}
+.contents-band a::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.7rem;
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
+  opacity: 0;
+  transform: translateX(-50%) rotate(45deg);
+  transition: opacity 180ms ease;
+}
+.contents-band a[aria-current="location"]::after {
+  opacity: 1;
 }
 .contents-band a:hover {
   text-decoration: underline;
@@ -495,15 +511,27 @@ h3 {
   min-height: 360px;
   align-items: start;
 }
-.step-copy > .eyebrow {
+.step-details > .eyebrow {
   color: var(--coral);
   font-size: 0.7rem;
+}
+@keyframes observation-arrives {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.step-details,
+.step-panel > .lifecycle-visual {
+  animation: observation-arrives 180ms ease-out;
 }
 .step-copy h3 {
   margin: 0.85rem 0;
   font-size: 1.65rem;
 }
-.step-copy > p {
+.step-details > p {
   font-size: 1rem;
 }
 .margin-note {
@@ -1332,7 +1360,7 @@ h3 {
   .step-copy h3 {
     font-size: 1.4rem;
   }
-  .step-copy > p {
+  .step-details > p {
     font-size: 0.9rem;
   }
   .step-controls {
@@ -1375,6 +1403,7 @@ h3 {
   *,
   *::before,
   *::after {
+    animation: none !important;
     transition: none !important;
   }
 }
