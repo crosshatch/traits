@@ -2,6 +2,7 @@ import * as Alchemy from "alchemy"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as GitHub from "alchemy/GitHub"
 import * as Output from "alchemy/Output"
+import { Stage } from "alchemy/Stage"
 import { Effect, Layer, String } from "effect"
 
 export default Alchemy.Stack(
@@ -11,7 +12,11 @@ export default Alchemy.Stack(
     state: Cloudflare.state()
   },
   Effect.gen(function* () {
-    const site = yield* Cloudflare.Website.Vite("Website", { rootDir: "traits.sh" })
+    const stage = yield* Stage
+    const site = yield* Cloudflare.Website.Vite("Website", {
+      ...(stage === "prod" ? { domain: "traits.sh" } : {}),
+      rootDir: "traits.sh"
+    })
     const env = yield* GitHub.GitHubEnv
     if (env !== undefined && env.pr !== undefined) {
       yield* GitHub.Comment("PreviewComment", {

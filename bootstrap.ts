@@ -38,6 +38,7 @@ export default Alchemy.Stack(
         },
         {
           effect: "allow",
+          // Website custom domains require zone lookup and management permissions.
           permissionGroups: permissionGroups("com.cloudflare.api.account.zone"),
           resources: { [account]: { "com.cloudflare.api.account.zone.*": "*" } }
         }
