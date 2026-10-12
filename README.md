@@ -24,12 +24,20 @@ Import the `TraitsConfig` type from `traits` and export your configuration with
 imports and validates the object, then provides the Traits context and both
 models.
 
-Checks refresh Git's tracked and non-ignored untracked file list on every call
-and only evaluate matching files in that set. Tracked files remain eligible even
-if an ignore pattern matches them. Set `excludeGitignored: false` in `traits.ts`
-to disable this filter, including for files outside the checkout. Explicit
-`excludes` still apply. Git failures fail the check rather than bypass
-filtering.
+Git-ignored files are excluded by default, with ignore rules refreshed on every
+check. Untracked files do not need to be added to Git to be evaluated. Tracked
+files remain eligible even if an ignore pattern matches them. Set
+`excludeGitignored: false` in `traits.ts` to disable this filter, including for
+files outside the checkout. Explicit `excludes` still apply. Git failures fail
+the check rather than bypass filtering.
+
+Configuration and providers initialize when the MCP server starts. Startup
+failures are logged to stderr and the process exits unsuccessfully. MCP clients
+can capture these diagnostics, but forwarding them to the model is
+client-specific; startup failures are not tool responses. Fix setup and
+reconnect to retry. Once started, expected tool failures use MCP error results;
+unexpected defects receive a generic internal error response rather than
+exposing implementation details.
 
 ### Install the agent skill
 

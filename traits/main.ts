@@ -101,13 +101,13 @@ Command.make("traits", {
           Layer.provideMerge(TraitsConfigProvider.layer),
           Layer.provideMerge(FetchHttpClient.layer)
         )
-      ),
-      Effect.tapError(Effect.logError),
-      Effect.provideService(Logger.LogToStderr, true)
+      )
     )
   ),
   Command.withSubcommands([init]),
   Command.run({ version: PackageJson.version }),
   Effect.provide(NodeServices.layer),
-  NodeRuntime.runMain
+  Effect.tapCause(Effect.logError),
+  Effect.provideService(Logger.LogToStderr, true),
+  NodeRuntime.runMain({ disableErrorReporting: true })
 )

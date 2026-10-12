@@ -257,8 +257,8 @@ the rejection rationale. Quiet reporting is not skipped remediation or lost sign
 
 ## Operation
 
-Checks refresh Git's tracked/non-ignored untracked file set on every call and
-only evaluate matching files in that set by default. Tracked files stay eligible
+Git-ignored files are excluded by default, with ignore rules refreshed on every
+check. Untracked files do not need to be added to Git to be evaluated. Tracked files stay eligible
 even if ignore rules match them. Set `excludeGitignored: false` in `traits.ts`
 to disable this filter; explicit excludes still apply. Git failures fail checks.
 
