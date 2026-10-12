@@ -10,8 +10,8 @@ import * as TraitsTelemetry from "./_util/TraitsTelemetry.ts"
 import { init } from "./commands/init.ts"
 import PackageJson from "./package.json" with { type: "json" }
 import { toolkit } from "./toolkit/toolkit.ts"
-import { TraitsContext } from "./TraitsContext.ts"
-import { layerFileSystem } from "./TraitStore.ts"
+import * as TraitsConfig from "./TraitsConfig.ts"
+import * as TraitStore from "./TraitStore.ts"
 
 Command.make("traits", {
   otlpEndpoint: Flag.String("otlp-endpoint").pipe(
@@ -89,8 +89,8 @@ Command.make("traits", {
     }).pipe(
       Layer.provide(
         toolkit.pipe(
-          Layer.provide(layerFileSystem(".agents/traits")),
-          Layer.provide(TraitsContext.layer),
+          Layer.provide(TraitStore.layerFileSystem(".agents/traits")),
+          Layer.provide(TraitsConfig.layer),
           Layer.provideMerge(McpServer.McpServer.layer)
         )
       ),
@@ -101,12 +101,13 @@ Command.make("traits", {
           Layer.provideMerge(TraitsConfigProvider.layer),
           Layer.provideMerge(FetchHttpClient.layer)
         )
-      ),
-      Effect.provideService(Logger.LogToStderr, true)
+      )
     )
   ),
   Command.withSubcommands([init]),
   Command.run({ version: PackageJson.version }),
   Effect.provide(NodeServices.layer),
-  NodeRuntime.runMain
+  Effect.tapCause(Effect.logError),
+  Effect.provideService(Logger.LogToStderr, true),
+  NodeRuntime.runMain({ disableErrorReporting: true })
 )
