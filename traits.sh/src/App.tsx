@@ -167,7 +167,7 @@ export const App = () => {
             <span>II.</span> Two tools. That's it.
           </a>
           <a href="#begin" aria-current={chapter === "begin" ? "location" : undefined}>
-            <span>III.</span> Manual Setup
+            <span>III.</span> Setup (Expanded)
           </a>
         </div>
 
@@ -322,7 +322,7 @@ export const App = () => {
           <section className="chapter margin-green" id="begin" aria-labelledby="begin-title">
             <div className="chapter-heading">
               <p className="eyebrow">Chapter III</p>
-              <h2 id="begin-title">Manual Setup</h2>
+              <h2 id="begin-title">Setup (Expanded)</h2>
               <Flourish />
             </div>
             <div className="prose lead">
