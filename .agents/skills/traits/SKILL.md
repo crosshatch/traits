@@ -257,15 +257,22 @@ the rejection rationale. Quiet reporting is not skipped remediation or lost sign
 
 ## Operation
 
+Checks refresh Git's tracked/non-ignored untracked file set on every call and
+only evaluate matching files in that set by default. Tracked files stay eligible
+even if ignore rules match them. Set `excludeGitignored: false` in `traits.ts`
+to disable this filter; explicit excludes still apply. Git failures fail checks.
+
 Launch from the project root with `node traits/main.ts` during development or
 `node traits/dist/main.js` after building. The package version is read from the
 adjacent `package.json`, copied into `dist` by TypeScript. The configured
 OpenCode MCP server is `traits`; discover its `derive_trait` and `check_traits` tools through the
 client's tool catalog.
 
-The CLI loads the default export of repository-root `traits.ts`, validated by
-`TraitsConfig`. Specify `layerDecisionModel` and `layerLanguageModel`; the CLI
-provides the HTTP client. Storage remains local and has no source configuration.
+The CLI's configuration layer loads and validates the default-exported object
+from repository-root `traits.ts`. Import the TraitsConfig type from traits and
+use `export default { ... } satisfies TraitsConfig`. Specify layerDecisionModel
+and layerLanguageModel; excludes is optional. The CLI supplies platform/HTTP services.
+Storage remains local and has no source configuration.
 The current configuration uses TypeSafe for decisions and OpenAI for generation,
 requiring `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration precedence is
 process environment, worktree-root `.env`, then main-checkout `.env`. Reconnect

@@ -259,20 +259,33 @@ skipped remediation or lost signal.
 
 ## Operation
 
-Run `npx traits init` from inside the Git checkout to create `traits.ts` and
-this skill at the current checkout root. Existing files are preserved. Launch
-the MCP server with `npx traits` from the project root. Configure the server in
-your coding agent and discover its `derive_trait` and `check_traits` tools
-through the client's tool catalog.
+Checks refresh Git's tracked/non-ignored untracked file set on every call and
+only evaluate matching files in that set by default. Tracked files stay eligible
+even if ignore rules match them. Set `excludeGitignored: false` in `traits.ts`
+to disable this filter; explicit excludes still apply. Git failures fail checks.
 
-The CLI loads the default export of repository-root `traits.ts`, validated by
-`TraitsConfig`. Specify `layerDecisionModel` and `layerLanguageModel`; the CLI
-provides the HTTP client. Storage remains local and has no source configuration.
-The current configuration uses TypeSafe for decisions and OpenAI for generation,
-requiring `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration precedence is
-process environment, worktree-root `.env`, then main-checkout `.env`. Reconnect
-the MCP server after changing credentials. A failed model request is an
-incomplete review, not a pass.
+Run `npx traits init` from inside the Git checkout to create `traits.ts` at the
+current checkout root. Existing files are preserved; init does not install
+skills. Install this bundled skill with pnpm 12.11+ (`pnpm add -D traits`, then
+approve skills with `pnpm approve`) or, after installing Traits locally, run
+`npx skills add ./node_modules/traits --skill traits` to choose your agents.
+pnpm may need explicit `skills.dirs`; dlx and global installs do not link
+skills. The skills CLI installs a snapshot; rerun after updating Traits.
+Preserve any customizations in older copies and avoid loading duplicate Traits
+skills. Launch the MCP server with `npx traits` from the project root. Configure
+the server in your coding agent and discover its `derive_trait` and
+`check_traits` tools through the client's tool catalog.
+
+The CLI's configuration layer loads and validates the default-exported object
+from repository-root `traits.ts`. Import the `TraitsConfig` type from `traits`
+and use `export default { ... } satisfies TraitsConfig`. Specify
+`layerDecisionModel` and `layerLanguageModel`; `excludes` is optional. The CLI
+supplies platform/HTTP services. Storage remains local and has no source
+configuration. The current configuration uses TypeSafe for decisions and OpenAI
+for generation, requiring `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration
+precedence is process environment, worktree-root `.env`, then main-checkout
+`.env`. Reconnect the MCP server after changing credentials. A failed model
+request is an incomplete review, not a pass.
 
 The project MCP command leaves telemetry disabled. For optional OTLP telemetry,
 launch with `npx traits --otlp-endpoint http://127.0.0.1:4318`. The flag is an

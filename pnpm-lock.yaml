@@ -232,6 +232,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0
+      traits:
+        specifier: workspace:*
+        version: link:traits
     devDependencies:
       '@changesets/changelog-github':
         specifier: 'catalog:'

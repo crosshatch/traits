@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "alchemy": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "traits": "workspace:*"
   },
   "devDependencies": {
     "@changesets/changelog-github": "catalog:",
