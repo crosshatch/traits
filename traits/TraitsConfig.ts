@@ -36,7 +36,6 @@ export const layer = Effect.gen(function* () {
   const module = yield* Effect.promise(() => import(url.href))
   const config = yield* pipe(module.default, S.decodeUnknownEffect(TraitsConfig))
   return Layer.mergeAll(
-    // Unrestricted provider failures become defects and are logged by the CLI boundary.
     // oxlint-disable-next-line effecttsgo/any-unknown-in-error-context
     config.layerDecisionModel.pipe(Layer.orDie),
     // oxlint-disable-next-line effecttsgo/any-unknown-in-error-context
