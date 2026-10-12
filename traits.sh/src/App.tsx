@@ -68,15 +68,22 @@ const connectionExample = String.stripMargin(`
 const initializeExample = String.stripMargin(`
 |npx traits init
 |
-|# Creates these files at the checkout root:
+|# Creates config at the checkout root:
 |# traits.ts
-|# .agents/skills/traits/SKILL.md
+|
+|# Install the skill with pnpm 12.11+:
+|pnpm add -D traits
+|pnpm approve
+|
+|# Other package managers: install traits locally, then:
+|npx skills add ./node_modules/traits --skill traits
 `)
 
 const providersExample = String.stripMargin(`
 |pnpm add effect @effect/ai-openai @effect/ai-typesafe
 |
 |# Review the generated traits.ts:
+|# export default { ... } satisfies TraitsConfig · import type from "traits"
 |# layerDecisionModel · TypeSafe
 |# layerLanguageModel · OpenAI
 |# excludes · files to omit from review
@@ -306,12 +313,19 @@ export const App = () => {
                 <h3>Create the config and install the skill.</h3>
                 <p>
                   Run <code>npx traits init</code> anywhere inside your Git checkout. It writes <code>traits.ts</code>{" "}
-                  and <code>.agents/skills/traits/SKILL.md</code> at the current checkout root—not in the directory you
-                  happen to be in. In a linked worktree, both files stay in that worktree.
+                  at the current checkout root—not in the directory you happen to be in. In a linked worktree, the
+                  config stays in that worktree. Existing files are left untouched.
                 </p>
                 <p>
-                  Existing files are left untouched; missing files and directories are created. The skill teaches your
-                  agent when to propose traits and check code. Trait files are saved later, after your approval.
+                  Install the bundled skill separately: pnpm 12.11+ links approved skills from your Traits dependency;
+                  other package managers can use the skills CLI to choose their agents. Initialization does not install
+                  dependencies or skills. Trait files are saved later, after your approval.
+                </p>
+                <p>
+                  pnpm needs an existing agent skill directory or an explicit <code>skills.dirs</code> setting. Global
+                  installs and <code>pnpm dlx</code> do not link skills. The skills CLI installs a snapshot; rerun it
+                  after updating Traits. Back up customizations before replacing older skill copies, and avoid loading
+                  both.
                 </p>
               </div>
               <CodeSample title="terminal · initialize the checkout" code={initializeExample} />

@@ -7,6 +7,7 @@ const configuration = String.stripMargin(`
 |import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
 |import { TypeSafeClient, TypeSafeDecisionModel } from "@effect/ai-typesafe"
 |import { Config, Layer } from "effect"
+|import type { TraitsConfig } from "traits"
 |
 |export default {
 |  excludes: ["**/dist/**", "node_modules/**"],
@@ -17,7 +18,7 @@ const configuration = String.stripMargin(`
 |    model: "gpt-6.1-sol",
 |    config: { reasoning: { effort: "low" } }
 |  }).pipe(Layer.provide(OpenAiClient.layerConfig({ apiKey: Config.Redacted("OPENAI_API_KEY") })))
-|}
+|} satisfies TraitsConfig
 `)
 
 const nextSteps = String.stripMargin(`
@@ -26,6 +27,8 @@ const nextSteps = String.stripMargin(`
 |
 |1. Edit traits.ts to choose your decision and language models. Install the
 |   provider packages imported by that file in your project.
+|   Git-ignored files are excluded by default; set excludeGitignored: false
+|   in traits.ts to disable the fresh Git file-set filter on each check.
 |
 |2. Configure your chosen providers' API keys in the MCP process environment
 |   or an untracked .env at the checkout root. The default providers use
@@ -34,8 +37,21 @@ const nextSteps = String.stripMargin(`
 |3. Add Traits as a local MCP server in your coding agent of choice:
 |   command: npx -y traits
 |   working directory: the current checkout root
-|   Connect the server, confirm derive_trait and check_traits are available,
-|   and make sure your agent discovers .agents/skills/traits/SKILL.md.
+|   Connect the server and confirm derive_trait and check_traits are available.
+|
+|4. Install the bundled Traits skill from the checkout root:
+|   pnpm 12.11+: pnpm add -D traits, then pnpm approve to approve its skills.
+|   pnpm links into existing agent skill directories or the running agent's
+|   directory. Set skills.dirs in pnpm-workspace.yaml if needed.
+|   Other package managers or older pnpm: install traits locally, then run
+|   npx skills add ./node_modules/traits --skill traits to choose your agents.
+|   Without a local Traits dependency, run:
+|   npx skills add https://github.com/crosshatch/traits/tree/main/traits/skills/traits
+|   This uses the repository version; local installation uses your package's skill.
+|   The skills CLI installs a snapshot; rerun after updating Traits.
+|   pnpm dlx and global installs do not link skills.
+|   Existing skill copies are left untouched. Back up any customizations before
+|   replacing an old copy, and avoid loading both it and a package-managed skill.
 `)
 
 export const init = Command.make("init").pipe(
@@ -44,28 +60,13 @@ export const init = Command.make("init").pipe(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const root = yield* getWorktreeRoot
-      const packageUrl = import.meta.resolve("traits/package.json")
-      const sourceSkillPath = yield* path.fromFileUrl(new URL("./skills/traits/SKILL.md", packageUrl))
-      const compiledSkillPath = yield* path.fromFileUrl(new URL("../skills/traits/SKILL.md", packageUrl))
-      const skillPath = (yield* fs.exists(sourceSkillPath)) ? sourceSkillPath : compiledSkillPath
-      const skill = yield* fs.readFileString(skillPath)
-
-      yield* Effect.forEach(
-        [
-          { destination: path.join(root, "traits.ts"), content: configuration },
-          { destination: path.join(root, ".agents/skills/traits/SKILL.md"), content: skill }
-        ],
-        Effect.fn("traits.init.write")(function* (file) {
-          if (yield* fs.exists(file.destination)) {
-            yield* Console.log(`Leaving existing "${file.destination}" unchanged`)
-            return
-          }
-
-          yield* fs.makeDirectory(path.dirname(file.destination), { recursive: true })
-          yield* fs.writeFileString(file.destination, file.content, { flag: "wx" })
-          yield* Console.log(`Created "${file.destination}"`)
-        })
-      )
+      const destination = path.join(root, "traits.ts")
+      if (yield* fs.exists(destination)) {
+        yield* Console.log(`Leaving existing "${destination}" unchanged`)
+      } else {
+        yield* fs.writeFileString(destination, configuration, { flag: "wx" })
+        yield* Console.log(`Created "${destination}"`)
+      }
       yield* Console.log(nextSteps)
     })
   )
