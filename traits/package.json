@@ -8,7 +8,7 @@
     "directory": "traits"
   },
   "bin": {
-    "traits": "./dist/main.js"
+    "traits": "./dist/bin.js"
   },
   "files": [
     "*.ts",

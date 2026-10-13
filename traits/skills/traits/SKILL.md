@@ -180,6 +180,25 @@ store before retrying; some changes may already be present.
    rejected false positives as caveats. Never claim an automated clean pass when
    raw findings remain, or turn an empty result into unconditional compliance.
 
+### Targeted trait exceptions
+
+For a justified file-scoped exception, add a line comment in the leading header,
+before any code:
+
+```ts
+// traits-ignore-file <full-trait-id>: Explain why this trait cannot apply here.
+```
+
+Each directive requires a nonempty reason and exactly one full trait ID. Repeat
+the comment for additional exceptions. Only the referenced traits are skipped;
+other traits remain checked. Exceptions apply to all file chunks and focused
+checks. Comments after code are ignored.
+
+Read the referenced trait and verify the reason before adding or retaining an
+exception. Do not add directives merely to silence findings: fix applicable
+violations, and ask the user before introducing an exception that overrides
+their preference. Respect existing justified exceptions during manual review.
+
 ### Tool behavior and remediation
 
 - After generating or editing TypeScript files, select those files and call
@@ -258,6 +277,22 @@ skipped remediation or lost signal.
   assessments.
 
 ## Operation
+
+The CLI launcher installs project dependencies in its current directory before
+importing the MCP server. Run it from the checkout/workspace root. It selects
+the package manager from `package.json#packageManager` or an unambiguous
+lockfile; the selected executable must be on PATH. Installation preserves
+lockfiles but can execute lifecycle scripts, so only launch in trusted
+checkouts. Allow enough MCP startup time for a cold install and avoid
+simultaneous installations in the same worktree. During development, use
+`node traits/bin.ts` with a Node version supporting native TypeScript execution;
+pass server flags after the filename.
+
+Configuration and providers currently initialize at server startup. Startup
+failures go to stderr and require fixing setup and reconnecting; whether the
+agent can see these diagnostics depends on its MCP client. Expected tool
+failures use MCP error results; unexpected defects receive a generic internal
+error rather than implementation details.
 
 Git-ignored files are excluded by default, with ignore rules refreshed on every
 check. Untracked files do not need to be added to Git to be evaluated. Tracked
