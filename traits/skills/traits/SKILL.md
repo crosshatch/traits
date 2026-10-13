@@ -265,16 +265,13 @@ files stay eligible even if ignore rules match them. Set
 `excludeGitignored: false` in `traits.ts` to disable this filter; explicit
 excludes still apply. Git failures fail checks.
 
-Run `npx traits init` from inside the Git checkout to create `traits.ts` at the
-current checkout root. Existing files are preserved; init does not install
-skills. Install this bundled skill with pnpm 12.11+ (`pnpm add -D traits`, then
-approve skills with `pnpm approve`) or, after installing Traits locally, run
-`npx skills add ./node_modules/traits --skill traits` to choose your agents.
-pnpm may need explicit `skills.dirs`; dlx and global installs do not link
-skills. The skills CLI installs a snapshot; rerun after updating Traits.
-Preserve any customizations in older copies and avoid loading duplicate Traits
-skills. Launch the MCP server with `npx traits` from the project root. Configure
-the server in your coding agent and discover its `derive_trait` and
+For setup, follow the canonical guide at
+https://github.com/crosshatch/traits/blob/main/SETUP.md. Respect the consumer's
+package manager and workspace dependency conventions, ask about providers and
+models before writing configuration, and preserve existing settings. The guide
+covers dependencies, credentials, skill installation, MCP connection, and
+troubleshooting. The agent creates traits.ts using the selected providers; there
+is no init command. Discover the connected server's `derive_trait` and
 `check_traits` tools through the client's tool catalog.
 
 The CLI's configuration layer loads and validates the default-exported object

@@ -1,0 +1,1 @@
+Prefer patch changesets by default. Use a minor changeset only when there is a compelling reason for a minor release.

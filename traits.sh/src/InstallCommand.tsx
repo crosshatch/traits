@@ -2,16 +2,18 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
 
+import { setupPrompt } from "./SetupPrompt.ts"
+
 const commandAtoms = Atom.family((_compact: boolean) => {
-  const statusAtom = Atom.make("Click to copy")
+  const statusAtom = Atom.make("Paste into your coding agent")
   const copyAtom = Atom.fn(
     Effect.fn("InstallCommand.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
-      const status = yield* Effect.promise(() => navigator.clipboard.writeText("npx traits init")).pipe(
+      const status = yield* Effect.promise(() => navigator.clipboard.writeText(setupPrompt)).pipe(
         Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
       )
       ctx.set(statusAtom, status)
       yield* Effect.sleep("2 seconds")
-      ctx.set(statusAtom, "Click to copy")
+      ctx.set(statusAtom, "Paste into your coding agent")
     })
   )
   return { statusAtom, copyAtom }
@@ -27,7 +29,7 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
       type="button"
       className={props.compact === true ? "install-command compact-install-command" : "install-command"}
       onClick={copy}
-      aria-label="Copy npx traits init"
+      aria-label="Copy Traits setup prompt for your coding agent"
     >
       {props.compact !== true && (
         <svg className="ivy-frame" viewBox="0 0 340 110" aria-hidden="true" fill="none">
@@ -79,7 +81,7 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
           <use className="ivy-stem" href="#command-ivy-outline" />
         </svg>
       )}
-      <code>npx traits init</code>
+      <code>Copy setup prompt</code>
       <span className="install-status" role="status">
         {status}
       </span>

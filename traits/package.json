@@ -14,7 +14,6 @@
     "*.ts",
     "!vite.config.ts",
     "_util/**/*.ts",
-    "commands/**/*.ts",
     "skills/**/*.md",
     "toolkit/**/*.ts",
     "dist/package.json",

@@ -1,5 +1,5 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Array, Option, String } from "effect"
+import { Array, Option } from "effect"
 import { Atom } from "effect/reactivity"
 import type { KeyboardEvent } from "react"
 
@@ -9,6 +9,7 @@ import { BrokenQuill, DriftingLeaf, Flourish, LaurelSeal, MistLantern } from "./
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps, type LifecycleStep } from "./LifecycleStep.ts"
 import { LifecycleVisual } from "./LifecycleVisual.tsx"
+import { setupPrompt } from "./SetupPrompt.ts"
 
 const repository = "https://github.com/crosshatch/traits"
 const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii"] as const
@@ -72,48 +73,6 @@ const StepTab = (props: { readonly step: LifecycleStep; readonly index: number }
   )
 }
 const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.title} {...{ step, index }} />
-
-const connectionExample = String.stripMargin(`
-| {
-|   "mcp": {
-|     "servers": {
-|       "traits": {
-|         "type": "local",
-|         "command": ["npx", "-y", "traits"]
-|       }
-|     }
-|   }
-| }
-`)
-
-const initializeExample = String.stripMargin(`
-|npx traits init
-|
-|# Creates config at the checkout root:
-|# traits.ts
-|
-|# Install the skill with pnpm 12.11+:
-|pnpm add -D traits
-|pnpm approve
-|
-|# Other package managers: install traits locally, then:
-|npx skills add ./node_modules/traits --skill traits
-`)
-
-const providersExample = String.stripMargin(`
-|pnpm add effect @effect/ai-openai @effect/ai-typesafe
-|
-|# Review the generated traits.ts:
-|# export default { ... } satisfies TraitsConfig · import type from "traits"
-|# layerDecisionModel · TypeSafe
-|# layerLanguageModel · OpenAI
-|# excludes · files to omit from review
-`)
-
-const credentialsExample = String.stripMargin(`
-|TYPESAFE_API_KEY=your_typesafe_api_key
-|OPENAI_API_KEY=your_openai_api_key
-`)
 
 export const App = () => {
   useAtomMount(observeChaptersAtom)
@@ -328,105 +287,47 @@ export const App = () => {
             </div>
             <div className="prose lead">
               <p>
-                <span className="drop-cap">B</span>egin with a local collection and a coding agent. The traits remain
-                readable Markdown, the choices remain yours, and the next review starts with something better than a
-                half-remembered chat.
+                <span className="drop-cap">Y</span>our agent sets it up; you make the choices. Start inside your Git
+                checkout. No new package-manager conventions, no configuration to copy by hand.
               </p>
             </div>
             <div className="setup-grid">
               <div>
-                <span className="eyebrow">01 / Initialize</span>
-                <h3>Create the config and install the skill.</h3>
+                <span className="eyebrow">01 / Paste the prompt</span>
+                <h3>Let your agent handle the details.</h3>
                 <p>
-                  Run <code>npx traits init</code> anywhere inside your Git checkout. It writes <code>traits.ts</code>{" "}
-                  at the current checkout root—not in the directory you happen to be in. In a linked worktree, the
-                  config stays in that worktree. Existing files are left untouched.
+                  Copy this prompt into your coding agent. The setup guide covers dependencies, configuration, the
+                  Traits skill, and the MCP connection while respecting your workspace and existing settings.
                 </p>
                 <p>
-                  Install the bundled skill separately: pnpm 12.11+ links approved skills from your Traits dependency;
-                  other package managers can use the skills CLI to choose their agents. Initialization does not install
-                  dependencies or skills. Trait files are saved later, after your approval.
+                  Choose your providers and models when asked, then supply their credentials privately. Your agent
+                  verifies the connection and tells you if anything still needs your attention.
                 </p>
-                <p>
-                  pnpm needs an existing agent skill directory or an explicit <code>skills.dirs</code> setting. Global
-                  installs and <code>pnpm dlx</code> do not link skills. The skills CLI installs a snapshot; rerun it
-                  after updating Traits. Back up customizations before replacing older skill copies, and avoid loading
-                  both.
-                </p>
-              </div>
-              <CodeSample title="terminal · initialize the checkout" code={initializeExample} />
-            </div>
-            <div className="setup-grid">
-              <div>
-                <span className="eyebrow">02 / Configure providers</span>
-                <h3>Choose the models that do the work.</h3>
-                <p>
-                  Install the packages imported by the generated <code>traits.ts</code> in your project. Initialization
-                  creates the config; it does not install these dependencies.
-                </p>
-                <p>
-                  The default config uses TypeSafe for decisions and OpenAI for language generation. Review the model
-                  choices and file exclusions, or replace the provider layers with your own.
-                </p>
-              </div>
-              <CodeSample title="terminal · provider dependencies" code={providersExample} />
-            </div>
-            <div className="setup-grid">
-              <div>
-                <span className="eyebrow">03 / Credentials</span>
-                <h3>Give the providers their keys.</h3>
-                <p>
-                  For the default providers, set <code>TYPESAFE_API_KEY</code> and <code>OPENAI_API_KEY</code> in the
-                  MCP process environment or a root <code>.env</code> file. Replace the example values with your own
-                  keys.
-                </p>
-                <p>
-                  Process environment values take precedence, followed by the worktree’s <code>.env</code>, then the
-                  main checkout’s <code>.env</code>. Keep credentials out of source control and reconnect the server
-                  after changing them.
-                </p>
-              </div>
-              <CodeSample title=".env · keep private" code={credentialsExample} copyable={false} />
-            </div>
-            <div className="setup-grid">
-              <div>
-                <span className="eyebrow">04 / Connect your agent</span>
-                <h3>Start the local MCP server.</h3>
-                <p>
-                  Configure your coding agent to run <code>npx -y traits</code> with the checkout root as its working
-                  directory. It loads <code>traits.ts</code> from that checkout. The example shows OpenCode’s local MCP
-                  configuration; merge it into your existing settings.
-                </p>
-                <p>
-                  Connect the server and confirm that <code>derive_trait</code> and <code>check_traits</code> are
-                  available. Make sure your agent discovers the installed skill, then start with a useful correction.
-                </p>
-                <a className="text-link" href={repository}>
-                  Explore the implementation ↗
+                <a className="text-link" href={`${repository}/blob/main/SETUP.md`}>
+                  Setup guide &amp; troubleshooting ↗
                 </a>
               </div>
-              <CodeSample title="opencode.json · local MCP server" code={connectionExample} />
+              <CodeSample title="agent prompt · set up Traits" code={setupPrompt} />
             </div>
             <div className="practice-list">
               <div>
                 <span>i.</span>
                 <p>
-                  <strong>Notice preferences as they happen.</strong> A correction or approved alternative idiom can be
-                  worth keeping. Skip transient instructions.
+                  <strong>Paste the prompt.</strong> Your agent reads the guide and follows your project’s conventions.
                 </p>
               </div>
               <div>
                 <span>ii.</span>
                 <p>
-                  <strong>Make the choice explicit.</strong> Review the proposal, revise it if needed, and approve the
-                  exact trait or replacement plan.
+                  <strong>Choose your models.</strong> Tell your agent which providers to use for decisions and language
+                  generation.
                 </p>
               </div>
               <div>
                 <span>iii.</span>
                 <p>
-                  <strong>Close the loop.</strong> Check changed TypeScript, fix genuine violations, and rerun the
-                  relevant checks before committing.
+                  <strong>Supply credentials privately.</strong> Keep keys out of chat and source control; your agent
+                  explains where to put them and verifies what it can.
                 </p>
               </div>
             </div>
