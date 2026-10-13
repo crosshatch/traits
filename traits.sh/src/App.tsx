@@ -129,9 +129,9 @@ export const App = () => {
       <a className="skip-link" href="#guide">
         Skip to the field guide
       </a>
-      <div className="opening">
+      <div className="opening" id="top">
         <ActionBar />
-        <section className="hero margin-coral" id="top" aria-labelledby="hero-title">
+        <section className="hero margin-coral" aria-labelledby="hero-title">
           <div className="hero-content">
             <img
               className="hero-emblem"
@@ -140,7 +140,7 @@ export const App = () => {
               height="420"
               alt="An ornamental T surrounded by an ivy flourish and a returning feedback loop."
             />
-            <p className="eyebrow">Categorically eliminate slop forever</p>
+            <p className="eyebrow">Global desloppification</p>
             <h1 id="hero-title">Traits</h1>
             <InstallCommand />
             <p className="hero-description">
@@ -161,13 +161,13 @@ export const App = () => {
         <div className="contents-band">
           <span className="eyebrow">Contents of this little volume</span>
           <a href="#lifecycle" aria-current={chapter === "lifecycle" ? "location" : undefined}>
-            <span>I.</span> From feedback to habit
+            <span>I.</span> The loop
           </a>
           <a href="#tools" aria-current={chapter === "tools" ? "location" : undefined}>
             <span>II.</span> Two tools. That's it.
           </a>
           <a href="#begin" aria-current={chapter === "begin" ? "location" : undefined}>
-            <span>III.</span> Setup (Expanded)
+            <span>III.</span> Manual
           </a>
         </div>
 
@@ -175,20 +175,21 @@ export const App = () => {
           <section className="chapter margin-blue" id="lifecycle" aria-labelledby="lifecycle-title">
             <div className="chapter-heading">
               <p className="eyebrow">Chapter I</p>
-              <h2 id="lifecycle-title">From feedback to habit.</h2>
+              <h2 id="lifecycle-title">The loop</h2>
               <Flourish />
             </div>
             <div className="prose lead">
               <p>
-                <span className="drop-cap">G</span>ood work is full of small corrections. Each of those corrections
-                bears a generalizable insight. Left in a conversation, those insights are forgotten. Traits ensure your
-                agent can access those insights moving forward.
+                <span className="drop-cap">W</span>ork with your agent. Context emerges from your conversations and
+                corrections—not a separate exercise in trying to distill it all upfront.
               </p>
               <p>
-                Not a transcript. Not a giant system prompt. A concise trait, a clear scope, and just enough of an
-                example to show what “better” looks like. With each generation, a decision model of your choosing
-                validates chunks against your trait catalog and reports likely mistakes back to your agent for
-                correction.
+                As you work, the agent asks which insights to keep as traits. You approve what matters; those traits
+                become context and guards for future work, without you having to repeat yourself.
+              </p>
+              <p>
+                Decision models check subsequent code generation against all your traits, flagging ignored traits and
+                nuances for the agent to fix.
               </p>
             </div>
 
@@ -224,7 +225,7 @@ export const App = () => {
                     )}
                   </div>
                 </div>
-                <LifecycleVisual key={`visual-${active}`} {...{ step }} />
+                <LifecycleVisual key={`visual-${active}`} {...{ step }} index={active} />
               </div>
             </div>
             <aside className="book-note">
@@ -322,7 +323,7 @@ export const App = () => {
           <section className="chapter margin-green" id="begin" aria-labelledby="begin-title">
             <div className="chapter-heading">
               <p className="eyebrow">Chapter III</p>
-              <h2 id="begin-title">Setup (Expanded)</h2>
+              <h2 id="begin-title">Manual</h2>
               <Flourish />
             </div>
             <div className="prose lead">

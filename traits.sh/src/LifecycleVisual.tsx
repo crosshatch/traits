@@ -1,4 +1,8 @@
-import type { LifecycleStep } from "./LifecycleStep.ts"
+import { Array } from "effect"
+
+import { steps, type LifecycleStep } from "./LifecycleStep.ts"
+
+const caseGuardTrait = "Use built-in case guards when testing or filtering tagged unions."
 
 const visuals = {
   feedback: (
@@ -26,11 +30,8 @@ const visuals = {
   draft: (
     <div className="visual-chat visual-chat-agent">
       <span className="visual-label">Agent · chat output</span>
-      <p>I’ll use the case guard. Here’s a rule we could keep for future work:</p>
-      <blockquote>
-        Use tagged unions’ built-in case guards when testing or filtering cases, rather than comparing <code>_tag</code>
-        .
-      </blockquote>
+      <p>I’ll use the case guard. Shall we keep this preference?</p>
+      <blockquote>{caseGuardTrait}</blockquote>
       <div className="visual-tag-row">
         <span>Specific behavior</span>
         <span>Reusable scope</span>
@@ -39,36 +40,19 @@ const visuals = {
     </div>
   ),
   compare: (
-    <div className="visual-flow">
-      <div className="visual-flow-node">
-        <span className="visual-label">Proposed trait</span>
-        <strong>Use the case guard</strong>
+    <div className="visual-stack">
+      <div className="visual-card visual-chat">
+        <span className="visual-label">Existing preference</span>
+        <p>Compare _tag when filtering tagged unions. Keep filters concise.</p>
       </div>
-      <div className="visual-connector">↓</div>
-      <div className="visual-flow-node visual-flow-check">
-        <strong>Compare saved traits</strong>
-        <span>Coverage · scope · conflicts</span>
+      <div className="visual-improvement-arrow">
+        ↓ <span>Update the approach. Keep the useful part.</span>
       </div>
-      <div className="visual-flow-branches">
-        <div className="visual-flow-branch">
-          <span className="visual-branch-label">New preference</span>
-          <span className="visual-connector">↓</span>
-          <div className="visual-flow-node">
-            <strong>Suggest saving</strong>
-            <span>Review the draft</span>
-          </div>
-        </div>
-        <div className="visual-flow-branch">
-          <span className="visual-branch-label">Conflicting rule</span>
-          <span className="visual-connector">↓</span>
-          <div className="visual-flow-node">
-            <strong>Reconcile</strong>
-            <span>Review affected rules</span>
-          </div>
-        </div>
+      <div className="visual-chat visual-chat-agent">
+        <span className="visual-label">Proposed reconciliation</span>
+        <blockquote>{caseGuardTrait} Keep filters concise.</blockquote>
+        <span className="visual-footnote">A proposal for your review · nothing replaced yet</span>
       </div>
-      <div className="visual-flow-gate">Both need your approval</div>
-      <span className="visual-footnote">Already covered? Reuse it. Uncertain? Don’t write.</span>
     </div>
   ),
   approve: (
@@ -78,12 +62,12 @@ const visuals = {
       </div>
       <div className="visual-dialog-body">
         <strong>Remember this preference?</strong>
-        <p>Use built-in case guards when testing or filtering tagged unions.</p>
+        <p>{caseGuardTrait} Keep filters concise.</p>
         <div className="visual-choice visual-choice-selected">
           <span className="visual-radio">●</span>
           <div>
             <strong>Approve</strong>
-            <span>Save this exact rule</span>
+            <span>Save this exact trait</span>
           </div>
           <span>↵</span>
         </div>
@@ -141,7 +125,7 @@ const visuals = {
       </div>
       <div className="visual-file-preview">
         <span className="visual-label">Saved file body</span>
-        <p>Use tagged unions’ built-in case guards when testing or filtering cases…</p>
+        <p>{caseGuardTrait} Keep filters concise.</p>
       </div>
     </div>
   ),
@@ -229,20 +213,29 @@ const visuals = {
 
 const descriptions = {
   feedback: "A user’s chat correction replaces a manual _tag comparison with Outcome.guards.Fail in a code diff.",
-  draft: "The agent replies with a proposed reusable case-guard rule. It is a draft, not a saved trait.",
+  draft: "The agent replies with a proposed reusable case-guard trait. It is a draft, not a saved trait.",
   compare:
-    "A proposed trait is compared with saved traits. New preferences lead to a save suggestion; conflicts lead to reconciliation. Both require approval. Covered rules are reused and uncertain comparisons block writes.",
+    "An existing preference to compare tags conflicts with the new case-guard trait. A proposed reconciliation uses case guards while preserving the preference for concise filters. Nothing is replaced without approval.",
   approve:
     "An illustrative approval dialog offers Approve, Edit, and Skip. Approve is highlighted; no real trait is being saved.",
-  save: "A directory of Markdown traits shows a newly saved case-guard rule alongside existing rules, with a preview of its file body.",
+  save: "A directory of Markdown traits shows a newly saved case-guard trait alongside existing traits, with a preview of its file body.",
   review:
-    "New code is cross-referenced with three traits: the manual tag comparison needs review, Array.filter follows the Effect-utilities rule, and the React-state rule does not apply.",
+    "New code is cross-referenced with three traits: the manual tag comparison needs review, Array.filter follows the Effect-utilities trait, and the React-state trait does not apply.",
   correct:
     "Before and after: a manual tag-filter predicate is replaced with Outcome.guards.Fail, followed by another trait review and project checks."
 }
 
-export const LifecycleVisual = (props: { readonly step: LifecycleStep }) => (
+export const LifecycleVisual = (props: { readonly step: LifecycleStep; readonly index: number }) => (
   <figure className={`lifecycle-visual lifecycle-visual-${props.step.visual}`}>
+    <div className="visual-story-heading" aria-hidden="true">
+      <span className="visual-label">One correction, carried forward</span>
+      <strong>Use the case guard</strong>
+      <div className="visual-story-progress">
+        {Array.map(steps, (step, index) => (
+          <span key={step.visual} className={index <= props.index ? "is-reached" : undefined} />
+        ))}
+      </div>
+    </div>
     <div className="visual-stage" role="img" aria-label={descriptions[props.step.visual]}>
       <div aria-hidden="true">{visuals[props.step.visual]}</div>
     </div>

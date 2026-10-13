@@ -492,10 +492,20 @@ h3 {
   content: "";
   position: absolute;
   bottom: 0.45rem;
-  width: 5px;
-  height: 5px;
+  width: 24px;
+  height: 2px;
   background: var(--gold);
-  transform: rotate(45deg);
+  animation: tab-underline-arrives 220ms ease-out;
+}
+@keyframes tab-underline-arrives {
+  from {
+    transform: scaleX(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }
 .step-number {
   font-size: 1rem;
@@ -567,6 +577,70 @@ h3 {
   border: 1px solid var(--rule);
   background: color-mix(in srgb, var(--paper), var(--blue) 5%);
 }
+.visual-story-heading {
+  padding: 1rem 1.4rem 0.85rem;
+  border-bottom: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--paper), var(--gold) 5%);
+}
+.visual-story-heading > strong {
+  display: block;
+  margin: 0.25rem 0 0.8rem;
+  font-size: 1rem;
+  font-weight: 400;
+  font-style: italic;
+}
+.visual-story-progress {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+.visual-story-progress > span {
+  height: 2px;
+  background: var(--rule);
+}
+.visual-story-progress > .is-reached {
+  background: var(--gold);
+}
+.visual-story-progress > .is-reached:last-of-type {
+  background: var(--blue);
+}
+@keyframes story-piece-arrives {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.visual-stage > div > *,
+.visual-stack > * {
+  animation: story-piece-arrives 320ms ease-out both;
+}
+.visual-stack > :nth-child(2) {
+  animation-delay: 90ms;
+}
+.visual-stack > :nth-child(3) {
+  animation-delay: 180ms;
+}
+.visual-stack > :nth-child(4) {
+  animation-delay: 270ms;
+}
+@keyframes correction-settles {
+  from {
+    box-shadow: inset 3px 0 var(--gold);
+    background-color: color-mix(in srgb, var(--paper), var(--gold) 22%);
+  }
+  to {
+    box-shadow: inset 3px 0 transparent;
+  }
+}
+.lifecycle-visual-correct .visual-after {
+  animation:
+    story-piece-arrives 320ms 180ms ease-out both,
+    correction-settles 1200ms 400ms ease-out;
+}
 .visual-stage {
   display: grid;
   align-items: center;
@@ -630,7 +704,6 @@ h3 {
 }
 .visual-chat-user {
   position: relative;
-  margin-left: 1rem;
   border-bottom-right-radius: 0;
   padding-right: 2.2rem;
 }

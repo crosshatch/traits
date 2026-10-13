@@ -9,58 +9,56 @@ export interface LifecycleStep {
 export const steps: ReadonlyArray<LifecycleStep> = [
   {
     title: "Feedback",
-    heading: "You correct how the agent filters a union.",
-    description:
-      "You ask the agent to use the union’s case guard instead of comparing _tag. That correction can guide future code, not just this one filter.",
-    note: "Keep reusable preferences. A one-off request, such as renaming a particular variable, need not become a trait.",
+    heading: "Tell the agent what you prefer.",
+    description: "Give a correction once so the agent can learn from it next time.",
+    note: "Keep lasting preferences, not one-off requests.",
     visual: "feedback"
   },
   {
     title: "Draft",
-    heading: "The agent drafts a rule it can reuse.",
-    description:
-      "The agent reads your saved traits, then turns the correction into a standalone rule: use built-in case guards when testing or filtering tagged unions.",
-    note: "Name the behavior and its scope. Keep separate preferences in separate traits.",
+    heading: "The agent turns your feedback into a clearly-articulated insight.",
+    description: "This insight is presented to you as a prompt or elicitation",
+    note: "A trait says what you prefer and when it applies.",
     visual: "draft"
   },
   {
-    title: "Compare",
-    heading: "Check whether you already have this rule.",
+    title: "Reconcile",
+    heading: "Resolve any inconsistencies",
     description:
-      "The agent submits the draft to derive_trait. The tool compares it with every saved trait to find existing coverage, possible clarifications, and conflicts.",
-    note: "Covered rules are reused. Changes require approval; inconclusive comparisons block writes.",
+      "If the new trait conflicts with any existing traits, the agent decomposes the two and proposes a path for reconciliation.",
+    note: "No duplicate traits. No changes without your approval.",
     visual: "compare"
   },
   {
     title: "Approve",
     heading: "You decide what the agent should remember.",
     description:
-      "Review the full case-guard rule before it is saved. Approve it, revise its wording or scope, or skip it. Proposed replacements also show the existing traits they affect.",
-    note: "Approving a code fix does not approve a new trait. Saving or replacing a trait needs its own explicit approval.",
+      "Read the proposed trait. Approve it, ask for different wording, or skip it. If it replaces an existing trait, you see what will change.",
+    note: "You can accept a code fix without saving a preference.",
     visual: "approve"
   },
   {
     title: "Save",
-    heading: "Save the approved rule as Markdown.",
+    heading: "Carry the lesson into your next session.",
     description:
-      "After approval, derive_trait writes the rule to .agents/traits and returns its ID. Future agent sessions can read the same file instead of relying on this conversation.",
-    note: "You can inspect and version the files. Clarifications preserve an existing trait’s ID rather than adding a duplicate.",
+      "Your approved trait stays with the project, so future agent sessions can follow it without you repeating the correction.",
+    note: "Traits are readable Markdown files you can review and version.",
     visual: "save"
   },
   {
     title: "Review",
-    heading: "Check new code against your saved rules.",
+    heading: "Catch the same mistake in new code.",
     description:
-      "After editing src/Outcome.ts, the agent calls check_traits on that file. The model reviews its current contents against your traits and flags code that may still compare _tag manually.",
-    note: "Check changed files, not dependencies or secrets. Read each finding in context; a model judgment is not proof.",
+      "As the agent writes code, it checks for missed preferences—like another manual _tag comparison where you wanted a case guard.",
+    note: "Findings need a closer look; not every flag is a mistake.",
     visual: "review"
   },
   {
     title: "Correct",
-    heading: "Replace the comparison, then check again.",
+    heading: "Get the fix, not just a warning.",
     description:
-      "The agent confirms that the finding applies, replaces the manual filter with Outcome.guards.Fail, and reruns check_traits plus the relevant project checks.",
-    note: "Fix confirmed violations. Reject irrelevant findings, respect exceptions, and investigate missing context rather than changing correct code.",
+      "The agent confirms the mistake, switches the filter to Outcome.guards.Fail, and checks the fix before finishing.",
+    note: "Your feedback becomes a habit, not a recurring correction.",
     visual: "correct"
   }
 ]
