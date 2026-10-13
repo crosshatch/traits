@@ -1,5 +1,5 @@
 ---
-"traits": minor
+"traits": patch
 ---
 
 Install checkout dependencies before starting the CLI and support targeted
