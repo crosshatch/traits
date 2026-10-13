@@ -1,5 +1,21 @@
 # traits
 
+## 0.5.1
+
+### Patch Changes
+
+- [#22](https://github.com/crosshatch/traits/pull/22)
+  [`efd68c2`](https://github.com/crosshatch/traits/commit/efd68c29c9b67a5a7f331980f5fcc66f5c54f1d7) -
+  Install checkout dependencies before starting the CLI and support targeted
+  `traits-ignore-file` exceptions during file reviews.
+
+- [#17](https://github.com/crosshatch/traits/pull/17)
+  [`e331b3a`](https://github.com/crosshatch/traits/commit/e331b3abe41eb3bf6077f6f3d0b7cace2dc34290) -
+  Remove the init command in favor of agent-guided setup. The setup prompt
+  points to a canonical guide covering consumer-specific package-manager
+  configuration, provider selection, agent-specific skill placement, and MCP
+  connection.
+
 ## 0.5.0
 
 ### Minor Changes
