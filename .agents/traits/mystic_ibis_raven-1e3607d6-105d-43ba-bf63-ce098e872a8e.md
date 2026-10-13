@@ -1,0 +1,1 @@
+Keep test files minimally structured: write tests at the top level and omit outer describe blocks that merely repeat the filename or subject. Add named describe blocks only when they organize meaningful behavior groups.

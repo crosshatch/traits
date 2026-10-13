@@ -5,6 +5,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Source, SourceLocation } from "../Source.ts"
 import { TraitId } from "../Trait.ts"
 import { evaluate, requiresReview, TraitEvaluation } from "../TraitEvaluation.ts"
+import { traitIgnores } from "../traitIgnores.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
@@ -21,7 +22,8 @@ export const CheckTraits = Tool.make("check_traits", {
   | Git-ignored files are excluded by default, with ignore rules refreshed on every call. Untracked files do not need to be added to Git to be evaluated. Tracked files remain eligible even if ignore rules match them. Set excludeGitignored: false in traits.ts to disable this filter; explicit excludes still apply. Git failures fail the check.
   | All entries follow native glob syntax, including escaping filenames with glob characters. No custom directory expansion or literal-path classification is applied.
   | Reads current full file contents, including unstaged edits, and checks each 200-line chunk against the selected traits in parallel.
-  | Omit traitIds to check all stored traits; supply trait ids for a focused check of one or more traits. Unknown IDs fail the call.
+   | Omit traitIds to check all stored traits; supply trait ids for a focused check of one or more traits. Unknown IDs fail the call.
+   | A leading // traits-ignore-file <trait-id>: <reason> comment skips only that trait for the entire file, including focused checks. Directives require a reason and must precede code.
   | Returns findings with the trait, source text, absolute path, 1-based chunk startLine, and assessment classification and probabilities.
   | Classification distinguishes violation from inconclusive; probabilities are not calibrated guarantees. No exact offending lines are provided.
   | Diagnose uncertainty using the full distribution, not the selected label alone; inspect source and trait before changing code.
@@ -129,6 +131,8 @@ export const layer = toolkit.toLayer({
       paths,
       Effect.fn("CheckTraits.file")(function* (file) {
         const text = yield* fs.readFileString(file)
+        const ignored = traitIgnores(text)
+        const activeTraits = Array.filter(traits, (trait) => !ignored.has(trait.id))
         const chunks = Array.chunksOf(String.split(text, "\n"), 200)
         const sources = Array.map(chunks, (lines, index) =>
           Source.make({
@@ -138,7 +142,7 @@ export const layer = toolkit.toLayer({
         )
         const results = yield* Effect.forEach(
           sources,
-          (source) => Effect.forEach(traits, (trait) => evaluate(trait, source), { concurrency: "unbounded" }),
+          (source) => Effect.forEach(activeTraits, (trait) => evaluate(trait, source), { concurrency: "unbounded" }),
           { concurrency: "unbounded" }
         )
         return pipe(results, Array.flatten, Array.filter(requiresReview))
