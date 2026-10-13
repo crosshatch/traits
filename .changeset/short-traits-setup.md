@@ -1,5 +1,5 @@
 ---
-"traits": minor
+"traits": patch
 ---
 
 Remove the init command in favor of agent-guided setup. The setup prompt points
