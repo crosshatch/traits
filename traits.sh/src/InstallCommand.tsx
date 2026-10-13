@@ -29,7 +29,7 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
       type="button"
       className={props.compact === true ? "install-command compact-install-command" : "install-command"}
       onClick={copy}
-      aria-label="Copy Traits setup prompt for your coding agent"
+      aria-label={status === "Paste into your coding agent" ? "Copy Traits setup prompt for your coding agent" : status}
     >
       {props.compact !== true && (
         <svg className="ivy-frame" viewBox="0 0 340 110" aria-hidden="true" fill="none">
@@ -81,7 +81,7 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
           <use className="ivy-stem" href="#command-ivy-outline" />
         </svg>
       )}
-      <code>Copy setup prompt</code>
+      <code>{status === "Paste into your coding agent" ? "Copy setup prompt" : status}</code>
       <span className="install-status" role="status">
         {status}
       </span>
