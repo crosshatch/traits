@@ -7,7 +7,6 @@ import { FetchHttpClient } from "effect/http"
 
 import * as TraitsConfigProvider from "./_util/TraitsConfigProvider.ts"
 import * as TraitsTelemetry from "./_util/TraitsTelemetry.ts"
-import { init } from "./commands/init.ts"
 import PackageJson from "./package.json" with { type: "json" }
 import { toolkit } from "./toolkit/toolkit.ts"
 import * as TraitsConfig from "./TraitsConfig.ts"
@@ -104,7 +103,6 @@ Command.make("traits", {
       )
     )
   ),
-  Command.withSubcommands([init]),
   Command.run({ version: PackageJson.version }),
   Effect.provide(NodeServices.layer),
   Effect.tapCause(Effect.logError),
