@@ -16,23 +16,25 @@ const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii"] as const
 const activeAtom = Atom.make(0)
 const chapterAtom = Atom.make<string | undefined>(undefined)
 const observeChaptersAtom = Atom.make((ctx) => {
-  const readingLine = window.innerHeight * 0.3
-  const observer = new IntersectionObserver(
-    () => {
-      const chapter = Array.findLast(document.querySelectorAll<HTMLElement>(".chapter"), (element) => {
-        const bounds = element.getBoundingClientRect()
-        return bounds.top <= readingLine && bounds.bottom > readingLine
-      }).pipe(Option.getOrUndefined)
-      ctx.set(chapterAtom, chapter?.id)
-    },
-    { rootMargin: `-${readingLine}px 0px -${window.innerHeight * 0.69}px 0px` }
-  )
-  const frame = requestAnimationFrame(() => {
-    Array.forEach(document.querySelectorAll<HTMLElement>(".chapter"), (chapter) => observer.observe(chapter))
-  })
+  const updateChapter = () => {
+    const readingLine = window.innerHeight * 0.3
+    const chapter = Array.findLast(document.querySelectorAll<HTMLElement>(".chapter"), (element) => {
+      const bounds = element.getBoundingClientRect()
+      return bounds.top <= readingLine && bounds.bottom > readingLine
+    }).pipe(Option.getOrUndefined)
+    ctx.set(chapterAtom, chapter?.id)
+  }
+  let frame = requestAnimationFrame(updateChapter)
+  const scheduleUpdate = () => {
+    cancelAnimationFrame(frame)
+    frame = requestAnimationFrame(updateChapter)
+  }
+  window.addEventListener("scroll", scheduleUpdate, { passive: true })
+  window.addEventListener("resize", scheduleUpdate)
   ctx.addFinalizer(() => {
     cancelAnimationFrame(frame)
-    observer.disconnect()
+    window.removeEventListener("scroll", scheduleUpdate)
+    window.removeEventListener("resize", scheduleUpdate)
   })
 })
 const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, index)))
