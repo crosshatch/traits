@@ -99,13 +99,9 @@ export const App = () => {
               height="420"
               alt="An ornamental T surrounded by an ivy flourish and a returning feedback loop."
             />
-            <p className="eyebrow">Global desloppification</p>
             <h1 id="hero-title">Traits</h1>
+            <p className="hero-tagline">Global desloppification.</p>
             <InstallCommand />
-            <p className="hero-description">
-              Your agent learns from your feedback—and remembers.
-              <em className="hero-coda">A little wiser with every generation.</em>
-            </p>
             <p className="hero-byline">
               BY{" "}
               <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
@@ -139,12 +135,12 @@ export const App = () => {
             </div>
             <div className="prose lead">
               <p>
-                <span className="drop-cap">W</span>ork with your agent. Context emerges from your conversations and
-                corrections—not a separate exercise in trying to distill it all upfront.
+                <span className="drop-cap">W</span>ork with your agent. Context emerges from each conversation and
+                correction.
               </p>
               <p>
-                As you work, the agent asks which insights to keep as traits. You approve what matters; those traits
-                become context and guards for future work, without you having to repeat yourself.
+                As you work, your agent asks which insights to keep as traits. The traits that you approve become the
+                context that guards the quality of your future work.
               </p>
               <p>
                 Decision models check subsequent code generation against all your traits, flagging ignored traits and
@@ -188,11 +184,10 @@ export const App = () => {
               </div>
             </div>
             <aside className="book-note">
-              <span className="eyebrow">A note in the margin</span>
+              <span className="eyebrow">A footnote from the fairy folk</span>
               <p>
-                Traits are not immutable laws. Clarify a trait when the wording is too broad. Reconcile it when a new
-                preference conflicts. Keep the useful parts, ask before replacing anything, and let the next lesson
-                improve the last.
+                Traits are not immutable laws. You can clarify a trait when the wording is too broad and reconcile it
+                when a new preference conflicts.
               </p>
             </aside>
           </section>
@@ -200,13 +195,13 @@ export const App = () => {
           <section className="chapter margin-gold" id="tools" aria-labelledby="tools-title">
             <div className="chapter-heading">
               <p className="eyebrow">Chapter II</p>
-              <h2 id="tools-title">Two tools. That's it.</h2>
+              <h2 id="tools-title">Two tools</h2>
               <Flourish />
             </div>
             <div className="prose lead">
               <p>
-                <span className="drop-cap">T</span>wo MCP tools do the practical work. One tends the collection of
-                traits. The other asks whether the code lives up to them.
+                <span className="drop-cap">T</span>wo MCP tools do the practical work. One curates the collection of
+                traits while the other checks the code against the traits.
               </p>
             </div>
             <div className="instruments">
@@ -216,8 +211,8 @@ export const App = () => {
                   <code>derive_trait</code>
                 </h3>
                 <p>
-                  Compare a proposed trait with the collection. A distinct trait can be saved; an existing trait can be
-                  reused or clarified. Confirmed conflicts lead to an explicit reconciliation approval.
+                  Compare a proposed trait with the collection. A distinct trait can be saved and an existing trait can
+                  be reused or clarified. Confirmed conflicts lead to an explicit reconciliation approval.
                 </p>
                 <p className="small-note">
                   Creation and changes require approval. Created, Updated, and Resolved include saved traits and their
@@ -234,21 +229,20 @@ export const App = () => {
                   with the selected traits, and returns assessments that need attention.
                 </p>
                 <p className="small-note">
-                  Use traitIds for a focused review. Overlapping matches are deduplicated; unmatched patterns review
-                  nothing.
+                  Use traitIds for a focused review. Overlapping matches are deduplicated, while unmatched patterns
+                  review nothing.
                 </p>
               </article>
             </div>
 
             <div className="judgment">
               <span className="eyebrow">Reading an assessment</span>
-              <h3>The LLM proposes traits. Decision models use traits to keep the LLM honest.</h3>
+              <h3>The LLM proposes traits. Decision models ensure the traits are followed.</h3>
               <p className="assessment-intro">
                 Keep the review moving in both directions: decision models check newly generated code against all
                 existing traits, and check the existing codebase against each newly saved trait. The agent selects the
-                files and traits for each review. By revisiting the new code or the new trait—not every unchanged
-                code-and-trait pairing—we keep decision-model token costs down while maintaining coverage as the work
-                grows.
+                files and traits for each review. By revisiting the new code or the new trait, we keep decision-model
+                token costs down while maintaining coverage as the work grows.
               </p>
               <div className="verdict-grid">
                 <div>
@@ -273,8 +267,7 @@ export const App = () => {
                 </div>
               </div>
               <p className="small-note">
-                Probabilities expose uncertainty; they are not guarantees. Model judgments can be wrong. Quietly reject
-                irrelevant findings, but never quietly ignore an actual problem.
+                Probabilities from decision models expose uncertainty, but judgments can still be wrong.
               </p>
             </div>
           </section>
@@ -287,8 +280,8 @@ export const App = () => {
             </div>
             <div className="prose lead">
               <p>
-                <span className="drop-cap">Y</span>our agent sets it up; you make the choices. Start inside your Git
-                checkout. No new package-manager conventions, no configuration to copy by hand.
+                <span className="drop-cap">Y</span>our agent handles the setup. Just start from your existing Git
+                checkout. There aren’t any new package manager habits to learn or config files to copy over by hand.
               </p>
             </div>
             <div className="setup-grid">
@@ -326,18 +319,15 @@ export const App = () => {
               <div>
                 <span>iii.</span>
                 <p>
-                  <strong>Supply credentials privately.</strong> Keep keys out of chat and source control; your agent
+                  <strong>Supply credentials privately.</strong> Keep keys out of chat and source control. Your agent
                   explains where to put them and verifies what it can.
                 </p>
               </div>
             </div>
             <div className="closing">
               <Flourish />
-              <p>
-                Every conversation leaves a little wisdom.
-                <br />
-                <em>Let the next generation inherit it.</em>
-              </p>
+              <img className="hero-emblem" src="/traits-emblem.svg" width="360" height="420" alt="" />
+              <p>Global desloppification.</p>
               <a className="read-link" href="#top">
                 Back to top ↑
               </a>
