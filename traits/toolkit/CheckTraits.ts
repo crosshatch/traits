@@ -1,7 +1,8 @@
-import { Array, Effect, FileSystem, Path, pipe, PlatformError, Schema as S, Stream, String } from "effect"
+import { Array, Effect, Equal, FileSystem, Path, pipe, Schema as S, String } from "effect"
 import { AiError, DecisionModel, Tool, Toolkit } from "effect/ai"
-import { ChildProcess, ChildProcessSpawner } from "effect/process"
+import { ChildProcessSpawner } from "effect/process"
 
+import { includedFiles as getIncludedFiles } from "../includedFiles.ts"
 import { Source, SourceLocation } from "../Source.ts"
 import { TraitId } from "../Trait.ts"
 import { evaluate, requiresReview, TraitEvaluation } from "../TraitEvaluation.ts"
@@ -72,36 +73,7 @@ export const layer = toolkit.toLayer({
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const cwd = path.resolve()
-    const includedFiles = context.excludeGitignored
-      ? yield* Effect.scoped(
-          Effect.gen(function* () {
-            const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-            const process = yield* spawner.spawn(
-              ChildProcess.make`git ls-files --cached --others --exclude-standard --full-name -z`.pipe(
-                ChildProcess.setCwd(context.configRoot)
-              )
-            )
-            const output = yield* process.stdout.pipe(Stream.decodeText(), Stream.mkString)
-            const exitCode = yield* process.exitCode
-            if (exitCode !== 0) {
-              return yield* PlatformError.systemError({
-                _tag: "Unknown",
-                module: "ChildProcess",
-                method: "git ls-files",
-                description: `Process exited with code ${exitCode}`
-              })
-            }
-            return new Set(
-              pipe(
-                output,
-                String.split("\0"),
-                Array.filter(String.isNonEmpty),
-                Array.map((file) => path.resolve(context.configRoot, file))
-              )
-            )
-          })
-        )
-      : undefined
+    const includedFiles = yield* getIncludedFiles
     const traits = yield* params.traitIds === undefined
       ? store.ls
       : Effect.forEach(Array.dedupe(params.traitIds), store.get, { concurrency: "unbounded" })
@@ -124,7 +96,7 @@ export const layer = toolkit.toLayer({
     )
     const paths = yield* Effect.filter(
       includedFiles === undefined ? resolved : Array.filter(resolved, (file) => includedFiles.has(file)),
-      (file) => fs.stat(file).pipe(Effect.map((info) => info.type === "File")),
+      (file) => fs.stat(file).pipe(Effect.map((info) => Equal.equals(info.type, "File"))),
       { concurrency: "unbounded" }
     )
     const results = yield* Effect.forEach(

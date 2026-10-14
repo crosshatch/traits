@@ -57,7 +57,7 @@ export const layer = Effect.gen(function* () {
           )
         )
         const semaphore = yield* Semaphore.make(config.decisionConcurrency)
-        return { configRoot, excludeGitignored: config.excludeGitignored, excludes, semaphore }
+        return { config, configRoot, excludes, semaphore }
       })
     )
   )
