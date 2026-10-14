@@ -11,7 +11,13 @@ export const ActionBar = (props: { readonly docked?: boolean | undefined }) => {
       </a>
       {props.docked === true && <InstallCommand compact />}
       <nav aria-label={props.docked === true ? "Bottom navigation" : "Main navigation"}>
-        <a className="source-link" href="https://github.com/crosshatch/traits">
+        <a
+          className="source-link"
+          href="https://github.com/crosshatch/traits"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Source on GitHub (opens in a new tab)"
+        >
           Source <span aria-hidden="true">↗</span>
         </a>
         <ThemeToggle />
