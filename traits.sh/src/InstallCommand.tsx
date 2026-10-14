@@ -4,25 +4,24 @@ import { Atom } from "effect/reactivity"
 
 import { setupPrompt } from "./SetupPrompt.ts"
 
-const commandAtoms = Atom.family((_compact: boolean) => {
-  const statusAtom = Atom.make("Paste into your coding agent")
-  const copyAtom = Atom.fn(
+const statusAtom = Atom.family((_compact: boolean) => Atom.make("Paste into your coding agent"))
+const copyAtom = Atom.family((compact: boolean) =>
+  Atom.fn(
     Effect.fn("InstallCommand.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
       const status = yield* Effect.promise(() => navigator.clipboard.writeText(setupPrompt)).pipe(
         Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
       )
-      ctx.set(statusAtom, status)
+      ctx.set(statusAtom(compact), status)
       yield* Effect.sleep("2 seconds")
-      ctx.set(statusAtom, "Paste into your coding agent")
+      ctx.set(statusAtom(compact), "Paste into your coding agent")
     })
   )
-  return { statusAtom, copyAtom }
-})
+)
 
 export const InstallCommand = (props: { readonly compact?: boolean | undefined }) => {
-  const atoms = commandAtoms(props.compact === true)
-  const status = useAtomValue(atoms.statusAtom)
-  const copy = useAtomSet(atoms.copyAtom)
+  const compact = props.compact === true
+  const status = useAtomValue(statusAtom(compact))
+  const copy = useAtomSet(copyAtom(compact))
 
   return (
     <button
@@ -82,8 +81,9 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
         </svg>
       )}
       <code>{status === "Paste into your coding agent" ? "Copy setup prompt" : status}</code>
-      <span className="install-status" role="status">
-        {status}
+      <span className="install-status">Paste into your coding agent</span>
+      <span className="sr-only" role="status">
+        {status !== "Paste into your coding agent" && status}
       </span>
     </button>
   )
