@@ -123,7 +123,7 @@ export const App = () => {
             <span>I.</span> The loop
           </a>
           <a href="#tools" aria-current={chapter === "tools" ? "location" : undefined}>
-            <span>II.</span> Two tools. That's it.
+            <span>II.</span> Two tools
           </a>
           <a href="#begin" aria-current={chapter === "begin" ? "location" : undefined}>
             <span>III.</span> Manual

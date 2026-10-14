@@ -1,0 +1,1 @@
+In React code using Effect reactivity atoms, prefer atom-first ownership and identity rather than React useMemo to keep atom state stable. Have Atom.family factories return atoms directly instead of ephemeral wrapper objects containing atoms, so atom hooks retain the cached values without React memoization.
