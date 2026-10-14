@@ -1,0 +1,1 @@
+When an Effect context exposes decoded configuration, keep the configuration object on the context and read unchanged settings through it rather than copying individual settings into separate context fields. Keep derived runtime values, such as normalized paths and semaphores, as separate context fields.
