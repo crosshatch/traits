@@ -45,28 +45,30 @@ it.effect(
   "parses YAML metadata separately from the body and preserves additional fields",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\nid: ${id}\nname: ${name}\nactivation: When editing schemas.\nmime:\n  - text/typescript\npriority: 2\n---\nBody.\n`
+      `---\nid: ${id}\nname: ${name}\nwhen: editing schemas.\nmime:\n  - text/typescript\npriority: 2\n---\nBody.\n`
     )
     expect(trait).toEqual({
       name,
       id,
       body: "Body.\n",
-      activation: "When editing schemas.",
+      when: "editing schemas.",
       mime: ["text/typescript"],
       priority: 2
     })
     const roundtrip = yield* Trait.parse(Trait.serialize(trait))
     expect(roundtrip).toEqual(trait)
+    expect(Trait.serialize(trait)).toContain("when: editing schemas.")
+    expect(Trait.serialize(trait)).not.toContain("activation:")
   })
 )
 
 it.effect(
-  "supports scalar MIME values, multiline activation, and CRLF headers",
+  "supports scalar MIME values, multiline when, and CRLF headers",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\r\nid: ${id}\r\nname: ${name}\r\nactivation: |\r\n  When editing\r\n  React components.\r\nmime: text/tsx\r\n---\r\nBody.\r\n`
+      `---\r\nid: ${id}\r\nname: ${name}\r\nwhen: |\r\n  editing\r\n  React components.\r\nmime: text/tsx\r\n---\r\nBody.\r\n`
     )
-    expect(trait.activation).toBe("When editing\nReact components.\n")
+    expect(trait.when).toBe("editing\nReact components.\n")
     expect(trait.mime).toBe("text/tsx")
     expect(trait.body).toBe("Body.\r\n")
   })
@@ -94,12 +96,12 @@ it.effect(
       "---\nmime: [\n---\nBody",
       "---\nmime: text/typescript\nBody",
       "---\n- not an object\n---\nBody",
-      `---\nid: ${id}\nname: ${name}\nactivation: false\n---\nBody`,
+      `---\nid: ${id}\nname: ${name}\nwhen: false\n---\nBody`,
       `---\nid: ${id}\nname: ${name}\nmime: 123\n---\nBody`,
       `---\nid: invalid\nname: ${name}\n---\nBody`,
       `---\nname: ${name}\n---\nBody`,
       "---\nname: invalid-name\n---\nBody",
-      "---\nactivation: Missing name\n---\nBody",
+      "---\nwhen: Missing name\n---\nBody",
       "Body without frontmatter",
       `Body before frontmatter\n---\nname: ${name}\n---\nBody`
     ]) {
@@ -116,7 +118,7 @@ it.effect(
       id,
       name,
       body: "Replacement\n",
-      activation: "When editing.",
+      when: "editing.",
       mime: "text/tsx"
     })
     const roundtrip = yield* Trait.parse(Trait.serialize(trait))
@@ -125,13 +127,13 @@ it.effect(
 )
 
 it.effect(
-  "preserves skip conditions alongside activation without changing the body",
+  "preserves skip conditions alongside when without changing the body",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\nid: ${id}\nname: ${name}\nactivation: When editing React state.\nskip: When a custom registry is required.\n---\nBody`
+      `---\nid: ${id}\nname: ${name}\nwhen: editing React state.\nskip: When a custom registry is required.\n---\nBody`
     )
     expect(trait.skip).toBe("When a custom registry is required.")
-    expect(trait.activation).toBe("When editing React state.")
+    expect(trait.when).toBe("editing React state.")
     expect(trait.body).toBe("Body")
     const roundtrip = yield* Trait.parse(Trait.serialize(trait))
     expect(roundtrip).toEqual(trait)
@@ -217,7 +219,7 @@ it.effect(
 it.effect(
   "creates crypto UUIDs outside storage while preserving all draft fields",
   Effect.fn("test.Trait.make")(function* () {
-    const draft = { name, body: "Body", activation: "When testing.", mime: ["text/typescript"], priority: 2 }
+    const draft = { name, body: "Body", when: "testing.", mime: ["text/typescript"], priority: 2 }
     const first = yield* Trait.make(draft)
     const second = yield* Trait.make(draft)
     expect(first).toMatchObject(draft)

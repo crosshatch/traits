@@ -15,7 +15,7 @@ it.effect(
     const initial = yield* Trait.make({
       name,
       body: "Original",
-      activation: "When testing.",
+      when: "testing.",
       mime: "text/typescript"
     })
     const id = initial.id
@@ -26,7 +26,7 @@ it.effect(
       const trait = yield* store.get(id)
       expect(trait.body).toBe("Original")
       expect(trait.name).toBe(name)
-      expect(trait.activation).toBe("When testing.")
+      expect(trait.when).toBe("testing.")
       expect(trait.mime).toBe("text/typescript")
       const listed = yield* store.ls
       expect(listed).toContainEqual(trait)
@@ -49,7 +49,7 @@ it.effect(
       const completeTrait = yield* Trait.make({
         name: Trait.TraitName.make("new_trait"),
         body: "New body",
-        activation: "When testing asynchronous operations.",
+        when: "testing asynchronous operations.",
         mime: ["text/typescript", "text/tsx"],
         skip: "When a synchronous framework contract must be preserved.",
         priority: 2

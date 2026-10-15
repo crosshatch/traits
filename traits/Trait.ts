@@ -18,21 +18,20 @@ export const TraitId = S.String.check(S.isUUID()).pipe(S.brand("traits/TraitId")
 
 export type TraitFrontmatter = typeof TraitFrontmatter.Type
 export const TraitFrontmatter = S.Struct({
-  activation: S.String.pipe(S.optional).annotate({
-    description:
-      "Positive semantic conditions for applying the trait. Do not repeat file types already specified by mime."
-  }),
   id: TraitId,
   mime: S.Union([S.String, S.Array(S.String)])
     .pipe(S.optional)
     .annotate({
-      description:
-        "Applicable MIME types, file types, or languages; do not repeat these restrictions in activation or skip."
+      description: "Applicable MIME types, file types, or languages; do not repeat these restrictions in when or skip."
     }),
   name: TraitName,
   skip: S.String.pipe(S.optional).annotate({
     description:
-      "An additional exception within activation's scope that overrides applicability. Omit when no independent exception exists; never restate or negate activation or mime."
+      "An additional exception within when's scope that overrides applicability. Omit when no independent exception exists; never restate or negate when or mime."
+  }),
+  when: S.String.pipe(S.optional).annotate({
+    description:
+      "Positive semantic conditions for applying the trait, written without a leading 'When' (for example, 'editing React state'). Do not repeat file types already specified by mime."
   })
 })
 

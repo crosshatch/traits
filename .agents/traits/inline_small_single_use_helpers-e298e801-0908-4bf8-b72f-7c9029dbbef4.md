@@ -1,7 +1,7 @@
 ---
 id: e298e801-0908-4bf8-b72f-7c9029dbbef4
 name: inline_small_single_use_helpers
-activation: When introducing or reviewing small single-use helpers, including React atom logic.
+when: introducing or reviewing small single-use helpers, including React atom logic.
 mime: [text/typescript, text/tsx, text/javascript, text/jsx]
 skip: When helper extraction materially improves readability through naming or defines a meaningful domain or API boundary.
 ---

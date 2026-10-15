@@ -24,7 +24,7 @@ frontmatter describing when they apply:
 ---
 name: react_state_and_actions_as_atoms
 id: 91f2990f-cdc0-4a1c-9a10-b0939e4de481
-activation: When editing React component state.
+when: editing React component state.
 mime: [text/typescript, text/tsx]
 ---
 
@@ -47,17 +47,17 @@ configured `decisionConcurrency` limits concurrent requests, not the number of
 trait questions within a request. Oversized individual source/trait pairs fail
 with an actionable error rather than being truncated.
 
-`skip` is an optional string describing an independent exception within
-`activation`'s scope. Omit it if it only repeats or negates `activation` or
-`mime`. Checks supply applicability metadata to the decision model; these
-natural-language conditions are not deterministic filesystem filters.
+`skip` is an optional string describing an independent exception within `when`'s
+scope. Omit it if it only repeats or negates `when` or `mime`. Checks supply
+applicability metadata to the decision model; these natural-language conditions
+are not deterministic filesystem filters.
 
-`activation` is an optional description of applicability. `mime` is an optional
+`when` is an optional description of applicability, written without a redundant
+leading "When" (for example, `when: editing React state`). `mime` is an optional
 file type or language identifier, or a list of identifiers. Additional metadata
-is preserved. The SDK exposes metadata directly as `Trait.activation`,
-`Trait.mime`, and `Trait.skip`, alongside `Trait.id`, `Trait.name`, and
-`Trait.body`. These fields describe applicability but do not automatically
-filter checks.
+is preserved. The SDK exposes metadata directly as `Trait.when`, `Trait.mime`,
+and `Trait.skip`, alongside `Trait.id`, `Trait.name`, and `Trait.body`. These
+fields describe applicability but do not automatically filter checks.
 
 The MCP tools `derive_trait` and `check_traits` maintain preferences and review
 code. Model assessments are guidance—not guarantees.
@@ -76,3 +76,19 @@ Your agent handles dependencies, configuration, the skill, and the MCP
 connection. You choose the models and supply credentials privately.
 
 See [SETUP.md](SETUP.md) for setup instructions and troubleshooting.
+
+## Upgrade an existing collection
+
+The bundled [`migrate_traits` skill](traits/skills/migrate_traits/SKILL.md)
+guides an agent from the old random-word UUID filenames and body-only Markdown
+to the current frontmatter format. It preserves UUIDs and bodies, previews
+renames, updates active ignore directives and focused-check references, and
+validates the collection before reconnecting the server.
+
+Install that skill through your agent's existing skill setup, then ask:
+
+> Use the migrate_traits skill to migrate this project's existing trait files.
+> Preserve their UUIDs and bodies, and show me the migration plan first.
+
+Loading the skill does not itself migrate files. See [SETUP.md](SETUP.md) for
+installation options, including upgrading an older installation.

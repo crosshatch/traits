@@ -1,7 +1,7 @@
 ---
 id: 350bedad-3ca2-473d-9f5d-c1d575471eca
 name: shared_layers_at_program_boundaries
-activation: When providing shared Effect service layers or choosing dependency scopes.
+when: providing shared Effect service layers or choosing dependency scopes.
 mime: [text/typescript, text/tsx]
 skip: When every locally provided dependency under assessment has scope or configuration that genuinely belongs to that operation rather than being shared program-wide.
 ---

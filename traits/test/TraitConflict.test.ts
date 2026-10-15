@@ -13,7 +13,7 @@ const trait = Trait.Trait.make({
   id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
   name: Trait.TraitName.make("direct_callbacks"),
   body: "Pass compatible callbacks directly.",
-  activation: "When passing callbacks.",
+  when: "passing callbacks.",
   mime: "text/typescript",
   skip: "When receiver preservation requires a wrapper."
 })
@@ -104,7 +104,7 @@ for (const coverage of ["complete", "incomplete", "inconclusive"] as const) {
         expect(TraitDerivation.TraitDerivation.guards.ApprovalRequired(derived)).toBe(true)
         if (TraitDerivation.TraitDerivation.guards.ApprovalRequired(derived)) {
           expect(derived.message).toContain(trait.id)
-          expect(derived.message).toContain(trait.activation)
+          expect(derived.message).toContain(trait.when)
           expect(derived.message).toContain("incomplete coverage")
         }
       } else {

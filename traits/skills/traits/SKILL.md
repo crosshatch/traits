@@ -21,15 +21,16 @@ and remove, so other implementations can key records directly by ID without
 filesystem conventions. Only the filesystem adapter builds `<name>-<uuid>.md`
 paths.
 
-Keep frontmatter fields complementary. `mime` restricts file types; `activation`
-defines positive semantic scope. Add `skip` only for an independent exception
-inside that scope, not for its negation or a restriction already expressed by
-another field. For example,
-`activation: When importing from local project modules` already excludes
-external packages; do not repeat that as a skip. Leave unnecessary optional
-fields absent. Keep the body concise and standalone, preserving essential scope
-and exceptions without repeated restatements. Reuse existing traits that already
-cover the same rule rather than creating duplicates.
+Keep frontmatter fields complementary. `mime` restricts file types; `when`
+defines positive semantic scope. Write `when` values without a leading "When",
+such as `when: editing React state`. Add `skip` only for an independent
+exception inside that scope, not for its negation or a restriction already
+expressed by another field. For example,
+`when: importing from local project modules` already excludes external packages;
+do not repeat that as a skip. Leave unnecessary optional fields absent. Keep the
+body concise and standalone, preserving essential scope and exceptions without
+repeated restatements. Reuse existing traits that already cover the same rule
+rather than creating duplicates.
 
 ## Capture a reusable insight
 
@@ -125,7 +126,7 @@ authenticated consent token.
    otherwise enter approval-gated reconciliation within this same tool.
 
 `Covered.traits` requires an independent second decision-model check of the
-saved body and activation, mime, and skip metadata against the entire proposal.
+saved body and when, mime, and skip metadata against the entire proposal.
 Partial overlap or similar intent is insufficient. Verified coverage gaps enter
 approval-gated reconciliation, including needed applicability updates;
 inconclusive verification blocks writes. `Covered.traits` means existing traits

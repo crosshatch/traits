@@ -1,7 +1,7 @@
 ---
 id: bba15a12-fe32-4e75-a50b-c0b1cf4682ab
 name: remove_effect_free_generators
-activation: When introducing or reviewing Effect.gen wrappers and Layer construction.
+when: introducing or reviewing Effect.gen wrappers and Layer construction.
 mime:
   - text/typescript
   - text/tsx

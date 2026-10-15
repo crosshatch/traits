@@ -1,7 +1,7 @@
 ---
 id: a77ea439-dc66-47dc-bddc-08fcc9f1d88e
 name: domain_specific_parsing_errors
-activation: When modeling recoverable domain-specific failures at parsing boundaries.
+when: modeling recoverable domain-specific failures at parsing boundaries.
 mime: [text/typescript, text/tsx]
 skip: When the parsing failure is already represented by SchemaError from input-schema validation.
 ---

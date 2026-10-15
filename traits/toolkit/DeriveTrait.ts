@@ -21,7 +21,8 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings and unnecessary examples.
   | Supply a descriptive snake_case name for a newly created trait; it becomes the frontmatter name and filesystem filename prefix. Creation generates a stable random UUID. Names need not be unique; trait IDs distinguish records.
   | Avoid repeated requirements and duplicate traits. Keep bodies standalone; do not strip essential scope or exceptions just to shorten them.
-  | When authoring trait frontmatter, let mime restrict file types and activation define positive semantic scope. Include skip only for an independent exception within that scope, never its negation or a repetition of another field.
+  | When authoring trait frontmatter, let mime restrict file types and when define positive semantic scope. Include skip only for an independent exception within that scope, never its negation or a repetition of another field.
+  | Write when values without a leading When, for example when: editing React state.
   | Compare against all stored traits. Only a distinct proposal is saved as a new trait.
   | Inconclusive returns relationship findings and blocks all writes; clarify ambiguity or revise the proposal before retrying.
   | Confirmed conflicts and independently verified coverage gaps enter reconciliation within this tool. Approval shows affected trait names, IDs, bodies, applicability metadata, removals, the proposal, and replacement policy.
@@ -29,7 +30,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | The proposal takes precedence only in direct conflicts; preserve unrelated requirements, scopes, and exceptions. Resolved returns saved replacements.
   | Do not submit the same proposal again after Resolved: it is already incorporated. Inspect replacements and check relevant TypeScript files.
   | Reconciliation is not transactional; on an error, inspect the store before retrying because some writes or removals may have completed.
-  | Covered requires a second independent decision-model assessment of the saved body and activation/mime/skip metadata against every proposed requirement. Similar intent or partial overlap is insufficient. Coverage gaps require approval-gated revision; inconclusive verification blocks writes.
+  | Covered requires a second independent decision-model assessment of the saved body and when/mime/skip metadata against every proposed requirement. Similar intent or partial overlap is insufficient. Coverage gaps require approval-gated revision; inconclusive verification blocks writes.
   | Covered returns only independently verified existing traits; reuse them without writing a duplicate.
   | A single clarification candidate is selected automatically for approval; provide a complete replacement body preserving existing requirements and exceptions.
   | Multiple clarification candidates return Clarification with those traits and the proposal without writing. Refine the proposal or clarify intent.

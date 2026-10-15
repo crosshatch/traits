@@ -1,7 +1,7 @@
 ---
 id: 653d9c0c-bfe6-48cc-ad36-2171aa80695c
 name: explicit_undefined_in_optional_properties
-activation: When declaring optional properties.
+when: declaring optional properties.
 mime: [text/typescript, text/tsx]
 skip: When every optional property under assessment intentionally permits omission but disallows explicitly passing undefined.
 ---

@@ -1,7 +1,7 @@
 ---
 id: 121f5624-31b3-41d6-a63c-30c040743ef8
 name: effect_platform_services
-activation: When accessing filesystem, paths, working directories, or child processes in application code or synchronous tooling boundaries.
+when: accessing filesystem, paths, working directories, or child processes in application code or synchronous tooling boundaries.
 mime: [text/typescript, text/tsx, text/javascript, text/jsx]
 skip: When all native Node API usage under assessment is confined to synchronous tooling boundaries and is needed to preserve the framework's synchronous execution contract.
 ---

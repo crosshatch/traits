@@ -1,7 +1,7 @@
 ---
 id: 1a5a3ff4-8ef8-4a5e-bbea-4261fe4ed349
 name: inline_single_use_schema_and_decision_definitions
-activation: When defining single-use schemas, transcoders, or lightweight Decision.make values.
+when: defining single-use schemas, transcoders, or lightweight Decision.make values.
 mime: [text/typescript, text/tsx]
 skip: When extracting a schema, transcoder, or Decision.make definition is needed for readability or justified by profiled construction overhead.
 ---

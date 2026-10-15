@@ -1,7 +1,7 @@
 ---
 id: 65b7f131-4429-4328-8c70-935360bebec1
 name: inline_guaranteed_react_root_lookup
-activation: When mounting a React client into an application-owned HTML root element.
+when: mounting a React client into an application-owned HTML root element.
 mime: [text/tsx, text/jsx, text/html]
 skip: When the DOM elements under assessment are not guaranteed to exist by application-owned HTML and therefore require null handling.
 ---

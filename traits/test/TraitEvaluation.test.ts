@@ -13,7 +13,7 @@ const traits = Array.makeBy(20, (index) =>
     id: Trait.TraitId.make(`2535ceab-5702-4ab4-932a-${pipe(`${index}`, String.padStart(12, "0"))}`),
     name: Trait.TraitName.make(`example_trait_${index}`),
     body: "Prefer const declarations.",
-    activation: "When declaring bindings.",
+    when: "declaring bindings.",
     mime: "text/typescript",
     skip: "When mutation is required."
   })

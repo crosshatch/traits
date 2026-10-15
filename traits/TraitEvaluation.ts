@@ -19,7 +19,7 @@ export const requiresReview = (evaluation: TraitEvaluation) =>
 const question = (trait: Trait) =>
   Decision.classify({
     instructions: String.stripMargin(`
-    | Assess state.source.text against the following stored trait, including its body, activation, mime, and skip metadata.
+    | Assess state.source.text against the following stored trait, including its body, when, mime, and skip metadata.
     | ${JSON.stringify(trait)}
     | Evaluate only this trait; other questions do not change its requirements or applicability.
     | state.source.location identifies the file and 1-based starting line of this excerpt when available; it is context, not proof of a violation.

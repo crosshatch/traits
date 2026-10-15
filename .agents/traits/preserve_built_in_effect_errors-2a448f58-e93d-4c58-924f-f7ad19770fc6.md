@@ -1,7 +1,7 @@
 ---
 id: 2a448f58-e93d-4c58-924f-f7ad19770fc6
 name: preserve_built_in_effect_errors
-activation: When deciding whether to wrap or remap built-in Effect errors.
+when: deciding whether to wrap or remap built-in Effect errors.
 mime: [text/typescript, text/tsx]
 skip: When every custom error or error mapping under assessment is needed for recovery or a meaningful external boundary rather than merely wrapping a built-in Effect error.
 ---

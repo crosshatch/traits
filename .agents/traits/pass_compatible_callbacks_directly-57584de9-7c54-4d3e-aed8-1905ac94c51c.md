@@ -1,7 +1,7 @@
 ---
 id: 57584de9-7c54-4d3e-aed8-1905ac94c51c
 name: pass_compatible_callbacks_directly
-activation: When passing callbacks or defining forwarding functions or service methods.
+when: passing callbacks or defining forwarding functions or service methods.
 mime:
   - text/typescript
   - text/tsx

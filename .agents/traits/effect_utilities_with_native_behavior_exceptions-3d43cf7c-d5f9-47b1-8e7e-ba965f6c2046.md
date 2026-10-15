@@ -1,7 +1,7 @@
 ---
 id: 3d43cf7c-d5f9-47b1-8e7e-ba965f6c2046
 name: effect_utilities_with_native_behavior_exceptions
-activation: When choosing collection, string, numeric, or other utilities beyond inline comparisons and simple runtime checks.
+when: choosing collection, string, numeric, or other utilities beyond inline comparisons and simple runtime checks.
 mime: [text/typescript, text/tsx]
 skip: When all native utility choices under assessment are required to preserve behavior or lack a suitable Effect equivalent, including local mutations without an Effect mutation equivalent.
 ---

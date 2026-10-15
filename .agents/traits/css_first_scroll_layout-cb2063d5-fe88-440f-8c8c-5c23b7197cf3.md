@@ -1,7 +1,7 @@
 ---
 id: cb2063d5-fe88-440f-8c8c-5c23b7197cf3
 name: css_first_scroll_layout
-activation: When implementing scroll-dependent UI layout, sticky positioning, or visibility behavior.
+when: implementing scroll-dependent UI layout, sticky positioning, or visibility behavior.
 mime: [text/css, text/html, text/tsx, text/jsx, text/typescript, text/javascript]
 skip: When every scripted scroll-dependent behavior under assessment implements a requirement that DOM placement, layout, and CSS cannot reliably express.
 ---

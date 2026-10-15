@@ -2,8 +2,8 @@
 "traits": patch
 ---
 
-Support YAML frontmatter in traits, exposing activation, MIME, and skip metadata
-with descriptive snake_case names and stable crypto-random UUID identities. Use
+Support YAML frontmatter in traits, exposing when, MIME, and skip metadata with
+descriptive snake_case names and stable crypto-random UUID identities. Use
 name-UUID Markdown filenames only in the filesystem adapter; the storage service
 uses UUIDs independently of its backend and preserves full trait metadata.
 

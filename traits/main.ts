@@ -51,7 +51,8 @@ Command.make("traits", {
       | Approval to edit code alone is not approval to persist a trait. Make the requested edit, but also propose the reusable rule before your final response.
       | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
       | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
-      | Keep frontmatter complementary: mime restricts file types, activation defines positive semantic scope, and skip is only an independent exception within that scope. Omit redundant fields; never repeat activation's negation as skip. Keep bodies standalone without repeated requirements or duplicate traits.
+      | Keep frontmatter complementary: mime restricts file types, when defines positive semantic scope, and skip is only an independent exception within that scope. Omit redundant fields; never repeat when's negation as skip. Keep bodies standalone without repeated requirements or duplicate traits.
+      | Write when values as conditions without a redundant leading When, for example when: editing React state.
       | Call derive_trait with the drafted body as proposedTrait. It saves only distinct rules; Covered means reuse an existing trait.
       | A single clarification candidate is selected automatically and shown for approval; supply a complete replacement preserving the existing rule.
       | Multiple candidates return Clarification entries without writing: refine the proposal or clarify intent. Do not supply a clarification target.
