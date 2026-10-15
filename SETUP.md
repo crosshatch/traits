@@ -135,43 +135,6 @@ skills CLI as described above. Older Traits versions copied the skill into
 `.agents/skills/traits`; back up customizations and avoid loading that copy
 alongside a package-managed skill.
 
-### Upgrading an existing trait collection
-
-Older Traits versions stored body-only Markdown under random-word UUID
-filenames. The new format requires `id` and a descriptive snake_case `name` in
-leading YAML frontmatter, with matching `<name>-<uuid>.md` filenames. Do not run
-the upgraded store against legacy files until they have been migrated.
-
-If the collection already has `activation` frontmatter, rename that field to
-`when` and remove its redundant leading "When ", preserving the condition. The
-migration skill covers this intermediate format too.
-
-The package also bundles `skills/migrate_traits/SKILL.md`. Install it using the
-same agent-specific mechanism described in step 5. For a local installation
-targeting OpenCode, adapt this example to the consumer's package-manager rules:
-
-```sh
-npx --yes skills add ./node_modules/traits --skill migrate_traits --agent opencode
-```
-
-The `--yes` here belongs to npm's package runner, not the skills CLI. Review any
-overwrite plan; preserve customized skills. Dependency-linked skill users should
-review and approve the newly bundled skill through their package manager.
-
-Reload the current agent's skill catalog if it does not discover the new skill;
-reconnecting the MCP server alone may not refresh the agent's skills.
-
-Ask the agent to load `migrate_traits`, preview the migration, preserve existing
-UUIDs and bodies, and update active references. Pause trait writes during the
-migration and keep backups outside `.agents/traits`. If the old installed
-package does not contain the skill yet, the agent can read its [canonical
-instructions] directly while planning the package update. Preserve provider and
-credential configuration. Reconnect only after validating the complete
-collection; the skill itself does not automatically migrate anything.
-
-[canonical instructions]:
-  https://github.com/crosshatch/traits/blob/main/traits/skills/migrate_traits/SKILL.md
-
 ### File filtering
 
 Ignore rules refresh on every check. Untracked files do not need to be added to

@@ -1,19 +1,18 @@
----
-name: migrate_traits
-description: >-
-  Migrate an existing Traits collection from random-word UUID filenames and
-  body-only Markdown to descriptive snake_case names, UUID frontmatter, and
-  name-UUID filenames. Use when upgrading an older Traits installation or
-  repairing a partially migrated collection, including old ignore directives and
-  focused-check references.
----
-
 # Migrate Traits
+
+One-time migration instructions for collaborators experimenting with older
+Traits formats. This is not a packaged agent skill or a routine setup step.
+Follow the steps manually, or give your agent this document:
+
+> Follow MIGRATE_TRAITS.md to migrate this project's existing collection.
+> Preserve UUIDs and bodies, and show me the migration plan before making
+> changes.
 
 Migrate the user's existing files; do not derive replacement preferences or
 create a fresh collection. Preserve each trait's identity and Markdown body.
 This is a filesystem migration, not an MCP tool or an automatic package-upgrade
-step. Do not migrate this repository merely because you loaded this skill.
+step. Reading this document does not authorize changes; confirm the target
+collection and migration plan first.
 
 ## Format change
 
@@ -48,9 +47,9 @@ concisely describe the trait. Do not retain random words as descriptive names.
 ## 1. Establish scope and protect existing work
 
 - Read project instructions and identify the worktree, configured MCP working
-  directory, installed Traits version, package manager, and skill location.
-  Default to the current project's `.agents/traits`; ask before migrating other
-  checkouts or a global collection. Do not follow symlinks outside that scope.
+  directory, installed Traits version, and package manager. Default to the
+  current project's `.agents/traits`; ask before migrating other checkouts or a
+  global collection. Do not follow symlinks outside that scope.
 - Read the installed `traits` skill and `traits/Trait` exports when available.
   The target format described here requires `Trait.parse`, `Trait.serialize`,
   `TraitId`, and `TraitName` in that module. If the installed version is older,

@@ -97,7 +97,7 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
       const result = yield* DecisionModel.decide(
         Decision.make({
           input: S.Struct({ source: Source }),
-          decisions: Record.fromEntries(Array.map(entries, (entry) => [entry.trait.id, entry.question] as const))
+          decisions: Record.fromIterableWith(entries, (entry) => [entry.trait.id, entry.question])
         }),
         { input: { source } }
       ).pipe(context.semaphore.withPermits(1))
