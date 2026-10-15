@@ -240,7 +240,7 @@ p {
   letter-spacing: 0.1em;
 }
 .hero h1 {
-  font-size: clamp(5rem, 13vw, 10.2rem);
+  font-size: clamp(4.25rem, 11vw, 8.7rem);
   text-transform: uppercase;
   line-height: 1;
   letter-spacing: -0.06em;
@@ -1221,9 +1221,6 @@ h3 {
 .closing > p {
   font-size: 1.25rem;
 }
-.closing em {
-  color: var(--green);
-}
 .docked-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -1381,7 +1378,7 @@ h3 {
     font-size: 0.65rem;
   }
   .hero h1 {
-    font-size: clamp(3.5rem, 15vw, 6rem);
+    font-size: clamp(3rem, 12.75vw, 5.1rem);
     margin-block: 1.5rem;
   }
   .hero-description {
