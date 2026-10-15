@@ -1,4 +1,4 @@
-import { Array, Effect, pipe, Record, Schema as S, String } from "effect"
+import { Array, Effect, Record, Schema as S, String } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 
 import { Assessment } from "./Assessment.ts"
@@ -101,32 +101,18 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
         }),
         { input: { source } }
       ).pipe(context.semaphore.withPermits(1))
-      return yield* Effect.forEach(entries, (entry) => {
-        const trait = entry.trait
-        const answer = result.answers[trait.id]!
-        const assessment = Assessment.make({
-          classification: answer.label,
-          probabilities: answer.probabilities
-        })
-        return Effect.succeed(TraitEvaluation.make({ trait, source, assessment })).pipe(
-          Effect.withSpan("TraitEvaluation.result", {
-            attributes: {
-              "trait.id": trait.id,
-              "trait.name": trait.name,
-              "trait.classification": answer.label,
-              "trait.probability.compliant": answer.probabilities.compliant,
-              "trait.probability.violation": answer.probabilities.violation,
-              "trait.probability.not_applicable": answer.probabilities["not-applicable"],
-              "trait.probability.inconclusive": answer.probabilities.inconclusive
-            }
+      return Array.map(entries, (entry) => {
+        const answer = result.answers[entry.trait.id]!
+        return TraitEvaluation.make({
+          trait: entry.trait,
+          source,
+          assessment: Assessment.make({
+            classification: answer.label,
+            probabilities: answer.probabilities
           })
-        )
+        })
       })
     }),
     { concurrency: "unbounded" }
   ).pipe(Effect.map(Array.flatten))
 })
-
-export const evaluate = Effect.fn("TraitEvaluation.evaluate")((trait: Trait, source: Source) =>
-  pipe(evaluateAll([trait], source), Effect.map(Array.getUnsafe(0)))
-)

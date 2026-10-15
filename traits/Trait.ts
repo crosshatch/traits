@@ -1,8 +1,8 @@
 import { Effect, pipe, Schema as S, String, Struct } from "effect"
 import { Decision, DecisionModel, LanguageModel } from "effect/ai"
 import { VariantSchema } from "effect/schema"
-import * as Yaml from "yaml"
 
+import * as Frontmatter from "./_util/Frontmatter.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
 export type TraitName = typeof TraitName.Type
@@ -61,85 +61,16 @@ export const TraitFrontmatter = variants.extract(fields, "frontmatter")
 export type Generated = typeof Generated.Type
 export const Generated = variants.extract(fields, "generated")
 
-export class MissingTraitFrontMatterError extends S.TaggedError<MissingTraitFrontMatterError>()(
-  "MissingTraitFrontMatterError",
-  {
-    message: S.String,
-    path: S.String.pipe(S.optional)
-  }
-) {}
-
-export class UnterminatedTraitFrontMatterError extends S.TaggedError<UnterminatedTraitFrontMatterError>()(
-  "UnterminatedTraitFrontMatterError",
-  {
-    message: S.String,
-    path: S.String.pipe(S.optional)
-  }
-) {}
-
-export class InvalidTraitYamlError extends S.TaggedError<InvalidTraitYamlError>()("InvalidTraitYamlError", {
-  message: S.String,
-  path: S.String.pipe(S.optional),
-  line: S.Int.pipe(S.optional),
-  column: S.Int.pipe(S.optional),
-  cause: S.Defect()
-}) {}
-
-export type ParseError = typeof ParseError.Type
-export const ParseError = S.Union([
-  MissingTraitFrontMatterError,
-  UnterminatedTraitFrontMatterError,
-  InvalidTraitYamlError
-])
-
 export type Trait = typeof Trait.Type
 export const Trait = S.StructWithRest(variants.extract(fields, "stored"), [S.JsonObject])
 
-const OpeningDelimiter = S.Literals(["---\r\n", "---\n"])
-const FrontMatterLines = S.String.check(S.isPattern(/^(?:(?!---(?:\r?\n|$))[^\n]*\n)*$/))
-const DocumentParts = S.String.pipe(
-  S.decodeTo(
-    S.Union([
-      S.TemplateLiteralParser([OpeningDelimiter, FrontMatterLines, "---\r\n", S.String]),
-      S.TemplateLiteralParser([OpeningDelimiter, FrontMatterLines, "---\n", S.String]),
-      S.TemplateLiteralParser([OpeningDelimiter, FrontMatterLines, "---", ""])
-    ])
-  )
-)
-
-export const parse = Effect.fn("Trait.parse")(function* (text: string, path?: string) {
-  const [, yaml, , body] = yield* pipe(
-    text,
-    S.decodeEffect(DocumentParts),
-    Effect.mapError(() =>
-      pipe(text, S.is(S.Union([S.Literal("---"), S.TemplateLiteral([OpeningDelimiter, S.String])])))
-        ? UnterminatedTraitFrontMatterError.make({
-            message: "Trait frontmatter is missing its closing delimiter",
-            path
-          })
-        : MissingTraitFrontMatterError.make({ message: "Trait must start with YAML frontmatter", path })
-    )
-  )
-  const parsed = yield* Effect.try({
-    try: () => Yaml.parse(yaml),
-    catch: (cause) => {
-      const position = cause instanceof Yaml.YAMLParseError ? cause.linePos?.[0] : undefined
-      return InvalidTraitYamlError.make({
-        message: "Invalid YAML trait frontmatter",
-        path,
-        ...(position === undefined ? {} : { line: position.line + 1, column: position.col }),
-        cause
-      })
-    }
-  })
-  const frontmatter = yield* pipe(parsed ?? {}, S.decodeUnknownEffect(S.JsonObject))
-  return yield* pipe({ ...frontmatter, body }, S.decodeUnknownEffect(Trait))
+export const parse = Effect.fn("Trait.parse")(function* (text: string, path: string) {
+  const document = yield* Frontmatter.parse(S.StructWithRest(TraitFrontmatter, [S.JsonObject]))({ text, path })
+  return Trait.make({ ...document.frontmatter, body: document.body })
 })
 
-export const serialize = (trait: Trait): string => {
-  const frontmatter = { id: trait.id, name: trait.name, ...Struct.omit(trait, ["body", "id", "name"]) }
-  return `---\n${Yaml.stringify(frontmatter)}---\n${trait.body}`
-}
+export const serialize = (trait: Trait): string =>
+  Frontmatter.serialize({ frontmatter: Struct.omit(trait, ["body"]), body: trait.body })
 
 export const checkDecomposability = Effect.fn("Trait.checkDecomposability")(function* (proposedTrait: string) {
   const context = yield* TraitsContext

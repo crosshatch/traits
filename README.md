@@ -78,32 +78,39 @@ code. Model assessments are guidance—not guarantees.
 Recoverable domain failures have distinct tags, usable with `Effect.catchTags`
 or the MCP tools' JSON error payloads:
 
-| Error                               | Useful context                                                      |
-| ----------------------------------- | ------------------------------------------------------------------- |
-| `MissingTraitFrontMatterError`      | Optional file `path`                                                |
-| `UnterminatedTraitFrontMatterError` | Optional file `path`                                                |
-| `InvalidTraitYamlError`             | Optional `path`, 1-based document `line`/`column`, original `cause` |
-| `TraitFilenameMismatchError`        | Actual file `path`, `expectedFilename`                              |
-| `TraitNotFoundError`                | Requested `id`                                                      |
-| `TraitAlreadyExistsError`           | Existing `id`                                                       |
-| `DuplicateTraitIdError`             | Conflicting `id` and file `paths`                                   |
-| `TraitAssessmentTooLargeError`      | `traitId`, actual `bytes`, `maxBytes`, optional source `location`   |
-| `GitFileListingError`               | Working `directory` and process `exitCode`                          |
+| Error                          | Useful context                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| `MissingFrontmatterError`      | Required file `path`                                                         |
+| `UnterminatedFrontmatterError` | Required file `path`                                                         |
+| `InvalidYamlError`             | Required `path`, optional 1-based document `line`/`column`, original `cause` |
+| `TraitFilenameMismatchError`   | Actual file `path`, `expectedFilename`                                       |
+| `TraitNotFoundError`           | Requested `id`                                                               |
+| `TraitAlreadyExistsError`      | Existing `id`                                                                |
+| `DuplicateTraitIdError`        | Conflicting `id` and file `paths`                                            |
+| `TraitAssessmentTooLargeError` | `traitId`, actual `bytes`, `maxBytes`, optional source `location`            |
+| `GitFileListingError`          | Working `directory` and process `exitCode`                                   |
 
 All include a human-readable `message`, without copying the full trait or source
-into the error. Pass a diagnostic path as `Trait.parse(text, path)` when parsing
-file content directly; the filesystem store does this automatically. Parsing
-errors live in `Trait.ts`, storage errors in `TraitStore.ts`, assessment errors
-in `TraitEvaluation.ts`, and Git listing errors in `getIncludedFiles.ts`.
-`Trait.ParseError` and `TraitStore.Error` group concrete errors as unions;
-`TraitStore.TraitStoreError` is the tool-response schema. There is no generic
-`TraitParseError` tag. Native filesystem, provider, and input-schema validation
-errors retain their existing error types and diagnostics instead of being
-wrapped just for consistency.
+into the error. Supply the required diagnostic path as `Trait.parse(text, path)`
+when parsing file content directly; the filesystem store does this
+automatically. Parsing errors live in `_util/Frontmatter.ts`, storage errors in
+`TraitStore.ts`, assessment errors in `TraitEvaluation.ts`, and Git listing
+errors in `getIncludedFiles.ts`. `Frontmatter.ParseError` and `TraitStore.Error`
+group concrete errors as unions; `TraitStore.TraitStoreError` is the
+tool-response schema. There is no generic `TraitParseError` tag. Native
+filesystem, provider, and input-schema validation errors retain their existing
+error types and diagnostics instead of being wrapped just for consistency.
 
 MCP failures retain `isError: true` and return the declared error's encoded tag
 and context. Provider errors expose only their tag and message, not internal
 request metadata.
+
+`Frontmatter.parse(schema)({ text, path })` decodes a document's leading YAML
+with the supplied Effect schema and returns `{ frontmatter, body }`, preserving
+schema decoding services and the untouched Markdown body. The path is diagnostic
+context only; parsing does not read files.
+`Frontmatter.serialize({ frontmatter, body })` writes the YAML envelope without
+depending on trait-specific fields.
 
 ## Get started
 

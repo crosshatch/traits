@@ -14,6 +14,7 @@ import {
   String
 } from "effect"
 
+import * as Frontmatter from "./_util/Frontmatter.ts"
 import * as Trait from "./Trait.ts"
 
 export class TraitNotFoundError extends S.TaggedError<TraitNotFoundError>()("TraitNotFoundError", {
@@ -44,7 +45,7 @@ export class TraitFilenameMismatchError extends S.TaggedError<TraitFilenameMisma
 export type Error =
   | PlatformError.PlatformError
   | S.SchemaError
-  | Trait.ParseError
+  | Frontmatter.ParseError
   | TraitNotFoundError
   | TraitAlreadyExistsError
   | DuplicateTraitIdError
@@ -54,7 +55,7 @@ export const TraitStoreError = S.Union([
   TraitAlreadyExistsError,
   DuplicateTraitIdError,
   TraitFilenameMismatchError,
-  Trait.ParseError,
+  Frontmatter.ParseError,
   S.TaggedStruct("PlatformError", { message: S.String }),
   S.TaggedStruct("SchemaError", { message: S.String })
 ])
