@@ -55,12 +55,6 @@ export default defineConfig({
       ...Record.mapEntries(custom.rules, (_, name) => [`custom/${name}`, "error"] as const),
       "vite-plus/prefer-vite-plus-imports": "error"
     },
-    overrides: [
-      {
-        files: ["**/vite.config.ts"],
-        rules: { "effecttsgo/async-function": "off" }
-      }
-    ],
     options: { typeAware: true, typeCheck: true }
   }
 })

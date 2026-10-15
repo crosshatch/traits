@@ -1,3 +1,4 @@
+/* oxlint-disable effecttsgo/async-function */
 import { createServer, defineConfig, type ViteDevServer } from "vite-plus"
 
 let renderer: Promise<ViteDevServer> | undefined
