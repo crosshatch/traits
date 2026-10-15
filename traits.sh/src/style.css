@@ -476,6 +476,30 @@ h3 {
   background: var(--gold);
   animation: tab-underline-arrives 220ms ease-out;
 }
+.step-tabs button::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.walkthrough[data-playing] .step-tabs button[aria-selected="true"]::before {
+  animation-name: step-progress;
+  animation-duration: 9s;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.walkthrough:not([data-visible]) .step-tabs button::before,
+.walkthrough:has(.step-details:hover, .lifecycle-visual:hover, .step-tabs :focus-visible) .step-tabs button::before {
+  animation-play-state: paused;
+}
+@keyframes step-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
 @keyframes tab-underline-arrives {
   from {
     transform: scaleX(0.2);
@@ -499,6 +523,11 @@ h3 {
   padding: 2.3rem;
   min-height: 360px;
   align-items: start;
+  overflow-x: clip;
+  --observation-offset: 1.5rem;
+}
+.step-panel[data-direction="backward"] {
+  --observation-offset: -1.5rem;
 }
 .step-details > .eyebrow {
   color: var(--coral);
@@ -507,14 +536,12 @@ h3 {
 @keyframes observation-arrives {
   from {
     opacity: 0;
-  }
-  to {
-    opacity: 1;
+    transform: translateX(var(--observation-offset));
   }
 }
 .step-details,
 .step-panel > .lifecycle-visual {
-  animation: observation-arrives 180ms ease-out;
+  animation: observation-arrives 320ms ease-out;
 }
 .step-copy h3 {
   margin: 0.85rem 0;
@@ -1459,5 +1486,8 @@ h3 {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+  .step-autoplay {
+    display: none;
   }
 }

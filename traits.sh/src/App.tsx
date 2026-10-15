@@ -1,7 +1,7 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Array, Option } from "effect"
+import { Array, Equal, Option, Predicate } from "effect"
 import { Atom } from "effect/reactivity"
-import type { KeyboardEvent } from "react"
+import type { AnimationEvent, KeyboardEvent } from "react"
 
 import { ActionBar } from "./ActionBar.tsx"
 import { CodeSample } from "./CodeSample.tsx"
@@ -37,9 +37,31 @@ const observeChaptersAtom = Atom.make((ctx) => {
     window.removeEventListener("resize", scheduleUpdate)
   })
 })
-const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, index)))
+const directionAtom = Atom.make<"forward" | "backward">("forward")
+const playingAtom = Atom.make(true)
+const walkthroughVisibleAtom = Atom.make(false)
+const observeWalkthroughAtom = Atom.make((ctx) => {
+  const walkthrough = document.querySelector(".walkthrough")
+  if (Predicate.isNull(walkthrough)) return
+  const observer = new IntersectionObserver(
+    (entries) =>
+      ctx.set(
+        walkthroughVisibleAtom,
+        Array.some(entries, (entry) => entry.isIntersecting)
+      ),
+    { rootMargin: "-30% 0px" }
+  )
+  observer.observe(walkthrough)
+  ctx.addFinalizer(() => observer.disconnect())
+})
+const selectStep = (ctx: Atom.FnContext, index: number) => {
+  ctx.set(directionAtom, index < ctx(activeAtom) ? "backward" : "forward")
+  ctx.set(activeAtom, index)
+  ctx.set(playingAtom, false)
+}
+const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => selectStep(ctx, index)))
 const stepAtom = Atom.family((count: 1 | -1) =>
-  Atom.fnSync((_event: unknown, ctx) => ctx.set(activeAtom, ctx(activeAtom) + count))
+  Atom.fnSync((_event: unknown, ctx) => selectStep(ctx, ctx(activeAtom) + count))
 )
 const navigateStepsAtom = Atom.fnSync((event: KeyboardEvent<HTMLDivElement>, ctx) => {
   const active = ctx(activeAtom)
@@ -50,9 +72,15 @@ const navigateStepsAtom = Atom.fnSync((event: KeyboardEvent<HTMLDivElement>, ctx
   else if (event.key === "End") next = steps.length - 1
   else return
   event.preventDefault()
-  ctx.set(activeAtom, next)
+  selectStep(ctx, next)
   event.currentTarget.querySelector<HTMLButtonElement>(`#step-${next}`)?.focus()
 })
+const advanceStepAtom = Atom.fnSync((event: AnimationEvent<HTMLDivElement>, ctx) => {
+  if (!Equal.equals(event.animationName, "step-progress")) return
+  ctx.set(directionAtom, "forward")
+  ctx.set(activeAtom, (ctx(activeAtom) + 1) % steps.length)
+})
+const togglePlayingAtom = Atom.fnSync((_event: unknown, ctx) => ctx.set(playingAtom, !ctx(playingAtom)))
 
 const StepTab = (props: { readonly step: LifecycleStep; readonly index: number }) => {
   const active = useAtomValue(activeAtom)
@@ -78,10 +106,16 @@ const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.ti
 
 export const App = () => {
   useAtomMount(observeChaptersAtom)
+  useAtomMount(observeWalkthroughAtom)
   const chapter = useAtomValue(chapterAtom)
   const active = useAtomValue(activeAtom)
+  const direction = useAtomValue(directionAtom)
+  const playing = useAtomValue(playingAtom)
+  const walkthroughVisible = useAtomValue(walkthroughVisibleAtom)
   const step = Array.getUnsafe(steps, active)
   const navigateSteps = useAtomSet(navigateStepsAtom)
+  const advanceStep = useAtomSet(advanceStepAtom)
+  const togglePlaying = useAtomSet(togglePlayingAtom)
   const previousStep = useAtomSet(stepAtom(-1))
   const nextStep = useAtomSet(stepAtom(1))
 
@@ -154,11 +188,27 @@ export const App = () => {
               </p>
             </div>
 
-            <div className="walkthrough">
-              <div className="step-tabs" role="tablist" aria-label="Trait lifecycle" onKeyDown={navigateSteps}>
+            <div
+              className="walkthrough"
+              data-playing={playing ? "" : undefined}
+              data-visible={walkthroughVisible ? "" : undefined}
+            >
+              <div
+                className="step-tabs"
+                role="tablist"
+                aria-label="Trait lifecycle"
+                onKeyDown={navigateSteps}
+                onAnimationEnd={advanceStep}
+              >
                 {Array.map(steps, renderStep)}
               </div>
-              <div className="step-panel" id="step-panel" role="tabpanel" aria-labelledby={`step-${active}`}>
+              <div
+                className="step-panel"
+                id="step-panel"
+                role="tabpanel"
+                aria-labelledby={`step-${active}`}
+                data-direction={direction}
+              >
                 <div className="step-copy">
                   <div className="step-details" key={`copy-${active}`}>
                     <span className="eyebrow">
@@ -176,6 +226,9 @@ export const App = () => {
                       aria-label="Previous lifecycle step"
                     >
                       ← Previous
+                    </button>
+                    <button type="button" className="step-autoplay" onClick={togglePlaying}>
+                      <span aria-hidden="true">{playing ? "❚❚" : "▶"}</span> {playing ? "Pause" : "Play"}
                     </button>
                     {active < steps.length - 1 ? (
                       <button type="button" onClick={nextStep}>
