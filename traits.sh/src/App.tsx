@@ -190,7 +190,7 @@ export const App = () => {
               </div>
             </div>
             <aside className="book-note">
-              <span className="eyebrow">A footnote</span>
+              <span className="eyebrow">A note</span>
               <p>
                 Traits are not immutable laws. You can clarify a trait when the wording is too broad and reconcile it
                 when a new preference conflicts.
