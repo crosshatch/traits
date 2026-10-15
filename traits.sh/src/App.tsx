@@ -57,7 +57,6 @@ const observeWalkthroughAtom = Atom.make((ctx) => {
 const selectStep = (ctx: Atom.FnContext, index: number) => {
   ctx.set(directionAtom, index < ctx(activeAtom) ? "backward" : "forward")
   ctx.set(activeAtom, index)
-  ctx.set(playingAtom, false)
 }
 const selectStepAtom = Atom.family((index: number) => Atom.fnSync((_event: unknown, ctx) => selectStep(ctx, index)))
 const stepAtom = Atom.family((count: 1 | -1) =>
@@ -209,37 +208,35 @@ export const App = () => {
                 aria-labelledby={`step-${active}`}
                 data-direction={direction}
               >
-                <div className="step-copy">
-                  <div className="step-details" key={`copy-${active}`}>
-                    <span className="eyebrow">
-                      Observation {active + 1} of {steps.length}
-                    </span>
-                    <h3>{step.heading}</h3>
-                    <p>{step.description}</p>
-                    <p className="margin-note">{step.note}</p>
-                  </div>
-                  <div className="step-controls">
-                    <button
-                      type="button"
-                      disabled={active === 0}
-                      onClick={previousStep}
-                      aria-label="Previous lifecycle step"
-                    >
-                      ← Previous
-                    </button>
-                    <button type="button" className="step-autoplay" onClick={togglePlaying}>
-                      <span aria-hidden="true">{playing ? "❚❚" : "▶"}</span> {playing ? "Pause" : "Play"}
-                    </button>
-                    {active < steps.length - 1 ? (
-                      <button type="button" onClick={nextStep}>
-                        Next observation →
-                      </button>
-                    ) : (
-                      <a href="#tools">Meet the instruments →</a>
-                    )}
-                  </div>
+                <div className="step-details" key={`copy-${active}`}>
+                  <span className="eyebrow">
+                    Observation {active + 1} of {steps.length}
+                  </span>
+                  <h3>{step.heading}</h3>
+                  <p>{step.description}</p>
+                  <p className="margin-note">{step.note}</p>
                 </div>
                 <LifecycleVisual key={`visual-${active}`} {...{ step }} index={active} />
+              </div>
+              <div className="step-controls">
+                <button
+                  type="button"
+                  disabled={active === 0}
+                  onClick={previousStep}
+                  aria-label="Previous lifecycle step"
+                >
+                  ← Previous
+                </button>
+                <button type="button" className="step-autoplay" onClick={togglePlaying}>
+                  <span aria-hidden="true">{playing ? "❚❚" : "▶"}</span> {playing ? "Pause" : "Play"}
+                </button>
+                {active < steps.length - 1 ? (
+                  <button type="button" onClick={nextStep} aria-label="Next lifecycle step">
+                    Next <span className="step-controls-detail">observation</span> →
+                  </button>
+                ) : (
+                  <a href="#tools">Meet the instruments →</a>
+                )}
               </div>
             </div>
             <aside className="book-note">
