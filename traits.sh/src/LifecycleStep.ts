@@ -10,14 +10,14 @@ export const steps: ReadonlyArray<LifecycleStep> = [
   {
     title: "Feedback",
     heading: "Tell the agent what you prefer.",
-    description: "Give a correction once so the agent can learn from it next time.",
-    note: "Keep lasting preferences, not one-off requests.",
+    description: "Each correction is an opportunity to communicate your preferences for future codegen.",
+    note: "No more one-off requests. Keep lasting preferences.",
     visual: "feedback"
   },
   {
     title: "Draft",
     heading: "The agent turns your feedback into a clearly-articulated insight.",
-    description: "This insight is presented to you as a prompt or elicitation",
+    description: "Your agent’s insight is presented to you as a prompt or elicitation.",
     note: "A trait says what you prefer and when it applies.",
     visual: "draft"
   },
@@ -49,16 +49,16 @@ export const steps: ReadonlyArray<LifecycleStep> = [
     title: "Review",
     heading: "Catch the same mistake in new code.",
     description:
-      "As the agent writes code, it checks for missed preferences—like another manual _tag comparison where you wanted a case guard.",
-    note: "Findings need a closer look; not every flag is a mistake.",
+      "As the agent writes code, it checks for missed preferences against established traits, such as another manual _tag comparison where you wanted a case guard.",
+    note: "Review the flags and approve changes where relevant.",
     visual: "review"
   },
   {
     title: "Correct",
-    heading: "Get the fix, not just a warning.",
+    heading: "Get the fix, every time.",
     description:
       "The agent confirms the mistake, switches the filter to Outcome.guards.Fail, and checks the fix before finishing.",
-    note: "Your feedback becomes a habit, not a recurring correction.",
+    note: "Your feedback guards the quality of codegen.",
     visual: "correct"
   }
 ]
