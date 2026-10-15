@@ -13,13 +13,15 @@ Traits are concise, durable coding rules. The filesystem implementation stores
 each body in `.agents/traits/<name>-<uuid>.md`, relative to its working
 directory. Frontmatter contains a descriptive snake_case `name` and a stable
 UUID `id`. The UUID alone is the canonical identity across backends: use it for
-focused `check_traits({ traitIds: [...] })` selections and ignore directives,
-not the name or filename stem. Renaming preserves identity; names need not be
-unique. `Trait.make(draft)` assigns a crypto-random UUID outside the storage
-adapter. `TraitStore` persists complete traits and uses UUIDs for get, update,
-and remove, so other implementations can key records directly by ID without
-filesystem conventions. Only the filesystem adapter builds `<name>-<uuid>.md`
-paths.
+focused `check_traits({ traitIds: [...] })` selections, not a name or filename.
+Ignore directives accept UUIDs or exact trait names. Renaming preserves
+identity; names need not be unique. Generate new UUIDs with `Crypto` outside the
+storage adapter, validate them with `Trait.TraitId.make`, and construct records
+with the schema's `Trait.Trait.make`. Preserve supplied IDs for updates and
+migrations; schema construction itself does not generate IDs. `TraitStore`
+persists complete traits and uses UUIDs for get, update, and remove, so other
+implementations can key records directly by ID without filesystem conventions.
+Only the filesystem adapter builds `<name>-<uuid>.md` paths.
 
 Keep frontmatter fields complementary. `mime` restricts file types; `when`
 defines positive semantic scope. Write `when` values without a leading "When",
@@ -216,13 +218,17 @@ For a justified file-scoped exception, add a line comment in the leading header,
 before any code:
 
 ```ts
-// traits-ignore-file <trait-uuid>: Explain why this trait cannot apply here.
+// traits-ignore-file <trait-uuid-or-name>: Explain why this trait cannot apply here.
 ```
 
-Each directive requires a nonempty reason and exactly one UUID. Repeat the
-comment for additional exceptions. Only the referenced traits are skipped; other
-traits remain checked. Exceptions apply to all file chunks and focused checks.
-Comments after code are ignored.
+Each directive requires a nonempty reason and exactly one UUID or name. UUIDs
+match one trait and survive renames. Names are case-sensitive and match every
+trait with that exact name; update name-based directives after renaming a trait.
+Use a UUID when only one of several same-name traits should be ignored. Filename
+stems and partial names are not selectors. Repeat the comment for additional
+exceptions. Only the referenced traits are skipped; other traits remain checked.
+Exceptions apply to all file chunks and focused checks. Comments after code are
+ignored.
 
 Read the referenced trait and verify the reason before adding or retaining an
 exception. Do not add directives merely to silence findings: fix applicable

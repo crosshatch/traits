@@ -3,7 +3,7 @@ import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Path, Result } from "effect"
 
 import * as Trait from "../Trait.ts"
-import { layerFileSystem, TraitStore } from "../TraitStore.ts"
+import * as TraitStore from "../TraitStore.ts"
 
 it.effect(
   "loads, lists, adds, and updates traits while preserving frontmatter",
@@ -12,7 +12,8 @@ it.effect(
     const path = yield* Path.Path
     const dir = yield* fs.makeTempDirectoryScoped({ directory: "/tmp/opencode", prefix: "traits-frontmatter-" })
     const name = Trait.TraitName.make("test_trait")
-    const initial = yield* Trait.make({
+    const initial = Trait.Trait.make({
+      id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
       name,
       body: "Original",
       when: "testing.",
@@ -22,7 +23,7 @@ it.effect(
     const originalFile = path.join(dir, `${name}-${id}.md`)
     yield* fs.writeFileString(originalFile, Trait.serialize(initial))
     yield* Effect.gen(function* () {
-      const store = yield* TraitStore
+      const store = yield* TraitStore.TraitStore
       const trait = yield* store.get(id)
       expect(trait.body).toBe("Original")
       expect(trait.name).toBe(name)
@@ -46,7 +47,8 @@ it.effect(
       expect(renamedExists).toBe(true)
       expect(renamed.id).toBe(id)
       yield* store.update(Trait.Trait.make({ ...renamed, body: "Updated after rename" }))
-      const completeTrait = yield* Trait.make({
+      const completeTrait = Trait.Trait.make({
+        id: Trait.TraitId.make("8ab974ba-e001-49cc-b6a7-1b2cd9a19bb8"),
         name: Trait.TraitName.make("new_trait"),
         body: "New body",
         when: "testing asynchronous operations.",
@@ -71,15 +73,24 @@ it.effect(
         .add(Trait.Trait.make({ ...completeTrait, body: "Must not overwrite" }))
         .pipe(Effect.result)
       expect(Result.isFailure(collision)).toBe(true)
+      if (Result.isFailure(collision)) {
+        expect(collision.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
+        expect(collision.failure).toMatchObject({ id: completeTrait.id })
+      }
       const afterCollision = yield* store.get(added.id)
       expect(afterCollision).toEqual(replacement)
       const duplicateId = yield* store
         .add(Trait.Trait.make({ ...completeTrait, name: Trait.TraitName.make("different_name") }))
         .pipe(Effect.result)
       expect(Result.isFailure(duplicateId)).toBe(true)
+      if (Result.isFailure(duplicateId)) expect(duplicateId.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
       const stillRenamed = yield* store.get(id)
       expect(stillRenamed.name).toBe(renamedName)
-      const sameName = yield* Trait.make({ name: completeTrait.name, body: "Another trait" })
+      const sameName = Trait.Trait.make({
+        id: Trait.TraitId.make("d015da5c-3fd6-4673-b5c8-d308680e9224"),
+        name: completeTrait.name,
+        body: "Another trait"
+      })
       yield* store.add(sameName)
       const independentlyLoaded = yield* store.get(sameName.id)
       expect(independentlyLoaded).toEqual(sameName)
@@ -92,7 +103,11 @@ it.effect(
       expect(remaining).not.toContainEqual(replacement)
       const missing = yield* store.get(id).pipe(Effect.result)
       expect(Result.isFailure(missing)).toBe(true)
-    }).pipe(Effect.provide(layerFileSystem(dir)))
+      if (Result.isFailure(missing)) {
+        expect(missing.failure).toBeInstanceOf(TraitStore.TraitNotFoundError)
+        expect(missing.failure).toMatchObject({ id })
+      }
+    }).pipe(Effect.provide(TraitStore.layerFileSystem(dir)))
   }, Effect.provide(NodeServices.layer))
 )
 
@@ -102,18 +117,32 @@ it.effect(
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const dir = yield* fs.makeTempDirectoryScoped({ directory: "/tmp/opencode", prefix: "traits-names-" })
-    const actual = yield* Trait.make({ name: Trait.TraitName.make("actual_name"), body: "Body" })
+    const actual = Trait.Trait.make({
+      id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
+      name: Trait.TraitName.make("actual_name"),
+      body: "Body"
+    })
     yield* fs.writeFileString(path.join(dir, `wrong_name-${actual.id}.md`), Trait.serialize(actual))
     yield* Effect.gen(function* () {
-      const store = yield* TraitStore
+      const store = yield* TraitStore.TraitStore
       const result = yield* store.get(actual.id).pipe(Effect.result)
       expect(Result.isFailure(result)).toBe(true)
-      if (Result.isFailure(result)) expect(result.failure).toMatchObject({ reason: "FilenameMismatch" })
-      const valid = yield* Trait.make({ name: Trait.TraitName.make("valid_trait"), body: "Body" })
+      if (Result.isFailure(result)) {
+        expect(result.failure).toBeInstanceOf(TraitStore.TraitFilenameMismatchError)
+        expect(result.failure).toMatchObject({
+          path: path.join(dir, `wrong_name-${actual.id}.md`),
+          expectedFilename: `${actual.name}-${actual.id}.md`
+        })
+      }
+      const valid = Trait.Trait.make({
+        id: Trait.TraitId.make("8ab974ba-e001-49cc-b6a7-1b2cd9a19bb8"),
+        name: Trait.TraitName.make("valid_trait"),
+        body: "Body"
+      })
       yield* store.add(valid)
       const loaded = yield* store.get(valid.id)
       expect(loaded).toEqual(valid)
-    }).pipe(Effect.provide(layerFileSystem(dir)))
+    }).pipe(Effect.provide(TraitStore.layerFileSystem(dir)))
   }, Effect.provide(NodeServices.layer))
 )
 
@@ -123,18 +152,29 @@ it.effect(
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const dir = yield* fs.makeTempDirectoryScoped({ directory: "/tmp/opencode", prefix: "traits-duplicates-" })
-    const first = yield* Trait.make({ name: Trait.TraitName.make("first_trait"), body: "Body" })
+    const first = Trait.Trait.make({
+      id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
+      name: Trait.TraitName.make("first_trait"),
+      body: "Body"
+    })
     const second = Trait.Trait.make({ ...first, name: Trait.TraitName.make("second_trait") })
     yield* fs.writeFileString(path.join(dir, `${first.name}-${first.id}.md`), Trait.serialize(first))
     yield* fs.writeFileString(path.join(dir, `${second.name}-${second.id}.md`), Trait.serialize(second))
     yield* Effect.gen(function* () {
-      const store = yield* TraitStore
+      const store = yield* TraitStore.TraitStore
       const get = yield* store.get(first.id).pipe(Effect.result)
       const list = yield* store.ls.pipe(Effect.result)
       const remove = yield* store.rm([first.id]).pipe(Effect.result)
       expect(Result.isFailure(get)).toBe(true)
       expect(Result.isFailure(list)).toBe(true)
       expect(Result.isFailure(remove)).toBe(true)
-    }).pipe(Effect.provide(layerFileSystem(dir)))
+      if (Result.isFailure(get)) {
+        expect(get.failure).toMatchObject({
+          _tag: "DuplicateTraitIdError",
+          id: first.id,
+          paths: [path.join(dir, `${first.name}-${first.id}.md`), path.join(dir, `${second.name}-${second.id}.md`)]
+        })
+      }
+    }).pipe(Effect.provide(TraitStore.layerFileSystem(dir)))
   }, Effect.provide(NodeServices.layer))
 )

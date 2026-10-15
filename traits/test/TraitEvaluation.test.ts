@@ -143,6 +143,13 @@ it.effect(
     )
     expect(calls).toEqual([])
     expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(Evaluation.TraitAssessmentTooLargeError)
+      expect(result.failure).toMatchObject({ traitId: traits[0]!.id, maxBytes: 24_000, location: source.location })
+      if (result.failure._tag === "TraitAssessmentTooLargeError") {
+        expect(result.failure.bytes).toBeGreaterThan(result.failure.maxBytes)
+      }
+    }
   })
 )
 

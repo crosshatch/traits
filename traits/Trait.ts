@@ -1,6 +1,7 @@
-import { Crypto, Effect, Option, pipe, Schema as S, String, Struct } from "effect"
+import { Effect, pipe, Schema as S, String, Struct } from "effect"
 import { Decision, DecisionModel, LanguageModel } from "effect/ai"
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml"
+import { VariantSchema } from "effect/schema"
+import * as Yaml from "yaml"
 
 import { TraitsContext } from "./TraitsContext.ts"
 
@@ -16,9 +17,28 @@ export const TraitId = S.String.check(S.isUUID()).pipe(S.brand("traits/TraitId")
   description: "The trait's stable UUID, independent of its descriptive name or storage backend."
 })
 
-export type TraitFrontmatter = typeof TraitFrontmatter.Type
-export const TraitFrontmatter = S.Struct({
-  id: TraitId,
+const variants = VariantSchema.make({
+  variants: ["stored", "frontmatter", "generated"],
+  defaultVariant: "stored"
+})
+
+const fields = variants.Struct({
+  body: pipe(
+    S.String.annotate({
+      description:
+        "One concise, standalone trait preserving essential scope and exceptions without repeating another replacement's rule."
+    }),
+    variants.FieldExcept(["frontmatter"])
+  ),
+  extensionMetadata: pipe(
+    S.JsonObject,
+    S.fromJsonString,
+    S.annotate({
+      description: "JSON-encoded object containing preserved extension metadata only, or {} when there is none."
+    }),
+    variants.FieldOnly(["generated"])
+  ),
+  id: pipe(TraitId, variants.FieldExcept(["generated"])),
   mime: S.Union([S.String, S.Array(S.String)])
     .pipe(S.optional)
     .annotate({
@@ -35,42 +55,90 @@ export const TraitFrontmatter = S.Struct({
   })
 })
 
-export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitParseError", {
-  reason: S.Literals(["MissingFrontmatter", "InvalidYaml", "FilenameMismatch"]),
+export type TraitFrontmatter = typeof TraitFrontmatter.Type
+export const TraitFrontmatter = variants.extract(fields, "frontmatter")
+
+export type Generated = typeof Generated.Type
+export const Generated = variants.extract(fields, "generated")
+
+export class MissingTraitFrontMatterError extends S.TaggedError<MissingTraitFrontMatterError>()(
+  "MissingTraitFrontMatterError",
+  {
+    message: S.String,
+    path: S.String.pipe(S.optional)
+  }
+) {}
+
+export class UnterminatedTraitFrontMatterError extends S.TaggedError<UnterminatedTraitFrontMatterError>()(
+  "UnterminatedTraitFrontMatterError",
+  {
+    message: S.String,
+    path: S.String.pipe(S.optional)
+  }
+) {}
+
+export class InvalidTraitYamlError extends S.TaggedError<InvalidTraitYamlError>()("InvalidTraitYamlError", {
   message: S.String,
-  cause: S.Defect().pipe(S.optional)
+  path: S.String.pipe(S.optional),
+  line: S.Int.pipe(S.optional),
+  column: S.Int.pipe(S.optional),
+  cause: S.Defect()
 }) {}
 
+export type ParseError = typeof ParseError.Type
+export const ParseError = S.Union([
+  MissingTraitFrontMatterError,
+  UnterminatedTraitFrontMatterError,
+  InvalidTraitYamlError
+])
+
 export type Trait = typeof Trait.Type
-export const Trait = S.StructWithRest(S.Struct({ body: S.String, ...TraitFrontmatter.fields }), [S.JsonObject])
+export const Trait = S.StructWithRest(variants.extract(fields, "stored"), [S.JsonObject])
 
-export const make = Effect.fn("Trait.make")(function* (
-  draft: Omit<typeof Trait.schema.Type, "id"> & { readonly [key: string]: S.Json }
-) {
-  const crypto = yield* Crypto.Crypto
-  const uuid = yield* crypto.randomUUIDv4
-  return Trait.make({ ...draft, id: TraitId.make(uuid) })
-})
+const OpeningDelimiter = S.Literals(["---\r\n", "---\n"])
+const FrontMatterLines = S.String.check(S.isPattern(/^(?:(?!---(?:\r?\n|$))[^\n]*\n)*$/))
+const DocumentParts = S.String.pipe(
+  S.decodeTo(
+    S.Union([
+      S.TemplateLiteralParser([OpeningDelimiter, FrontMatterLines, "---\r\n", S.String]),
+      S.TemplateLiteralParser([OpeningDelimiter, FrontMatterLines, "---\n", S.String]),
+      S.TemplateLiteralParser([OpeningDelimiter, FrontMatterLines, "---", ""])
+    ])
+  )
+)
 
-export const parse = Effect.fn("Trait.parse")(function* (text: string) {
-  const header = pipe(text, String.match(/^---\r?\n([\s\S]*?)^---(?:\r?\n|$)/m), Option.getOrUndefined)
-  if (header === undefined || header.index !== 0) {
-    return yield* TraitParseError.make({
-      reason: "MissingFrontmatter",
-      message: "Trait must start with complete YAML frontmatter"
-    })
-  }
+export const parse = Effect.fn("Trait.parse")(function* (text: string, path?: string) {
+  const [, yaml, , body] = yield* pipe(
+    text,
+    S.decodeEffect(DocumentParts),
+    Effect.mapError(() =>
+      pipe(text, S.is(S.Union([S.Literal("---"), S.TemplateLiteral([OpeningDelimiter, S.String])])))
+        ? UnterminatedTraitFrontMatterError.make({
+            message: "Trait frontmatter is missing its closing delimiter",
+            path
+          })
+        : MissingTraitFrontMatterError.make({ message: "Trait must start with YAML frontmatter", path })
+    )
+  )
   const parsed = yield* Effect.try({
-    try: () => parseYaml(header[1]!),
-    catch: (cause) => TraitParseError.make({ reason: "InvalidYaml", message: "Invalid YAML trait frontmatter", cause })
+    try: () => Yaml.parse(yaml),
+    catch: (cause) => {
+      const position = cause instanceof Yaml.YAMLParseError ? cause.linePos?.[0] : undefined
+      return InvalidTraitYamlError.make({
+        message: "Invalid YAML trait frontmatter",
+        path,
+        ...(position === undefined ? {} : { line: position.line + 1, column: position.col }),
+        cause
+      })
+    }
   })
   const frontmatter = yield* pipe(parsed ?? {}, S.decodeUnknownEffect(S.JsonObject))
-  return yield* pipe({ ...frontmatter, body: pipe(text, String.slice(header[0].length)) }, S.decodeUnknownEffect(Trait))
+  return yield* pipe({ ...frontmatter, body }, S.decodeUnknownEffect(Trait))
 })
 
 export const serialize = (trait: Trait): string => {
   const frontmatter = { id: trait.id, name: trait.name, ...Struct.omit(trait, ["body", "id", "name"]) }
-  return `---\n${stringifyYaml(frontmatter)}---\n${trait.body}`
+  return `---\n${Yaml.stringify(frontmatter)}---\n${trait.body}`
 }
 
 export const checkDecomposability = Effect.fn("Trait.checkDecomposability")(function* (proposedTrait: string) {

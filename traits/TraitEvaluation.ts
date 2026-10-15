@@ -1,9 +1,9 @@
 import { Array, Effect, pipe, Record, Schema as S, String } from "effect"
-import { AiError, Decision, DecisionModel } from "effect/ai"
+import { Decision, DecisionModel } from "effect/ai"
 
 import { Assessment } from "./Assessment.ts"
 import { Source, SourceLocation } from "./Source.ts"
-import { Trait } from "./Trait.ts"
+import { Trait, TraitId } from "./Trait.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
 export type TraitEvaluation = typeof TraitEvaluation.Type
@@ -12,6 +12,17 @@ export const TraitEvaluation = S.Struct({
   source: Source,
   assessment: Assessment
 })
+
+export class TraitAssessmentTooLargeError extends S.TaggedError<TraitAssessmentTooLargeError>()(
+  "TraitAssessmentTooLargeError",
+  {
+    traitId: TraitId,
+    bytes: S.Int,
+    maxBytes: S.Int,
+    location: SourceLocation.pipe(S.optional),
+    message: S.String
+  }
+) {}
 
 export const requiresReview = (evaluation: TraitEvaluation) =>
   evaluation.assessment.classification === "violation" || evaluation.assessment.classification === "inconclusive"
@@ -54,12 +65,12 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
     const entry = { trait, question: question(trait) }
     const questionBytes = new TextEncoder().encode(JSON.stringify({ [trait.id]: entry.question })).length
     if (inputBytes + questionBytes > 24_000) {
-      return yield* AiError.make({
-        module: "TraitEvaluation",
-        method: "evaluateAll",
-        reason: AiError.InvalidUserInputError.make({
-          description: `Source and trait ${trait.id} exceed the 24000-byte decision request budget; split the source or shorten the trait.`
-        })
+      return yield* TraitAssessmentTooLargeError.make({
+        traitId: trait.id,
+        bytes: inputBytes + questionBytes,
+        maxBytes: 24_000,
+        location: source.location,
+        message: `Source and trait ${trait.id} exceed the decision request budget; split the source or shorten the trait.`
       })
     }
     if (batch.length > 0 && (batch.length === 16 || bytes + questionBytes > 24_000)) {

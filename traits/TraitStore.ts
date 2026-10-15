@@ -9,29 +9,64 @@ import {
   pipe,
   PlatformError,
   Predicate,
+  Record,
   Schema as S,
   String
 } from "effect"
 
 import * as Trait from "./Trait.ts"
 
-export const TraitStoreError = S.TaggedStruct("PlatformError", { message: S.String })
+export class TraitNotFoundError extends S.TaggedError<TraitNotFoundError>()("TraitNotFoundError", {
+  id: Trait.TraitId,
+  message: S.String
+}) {}
+
+export class TraitAlreadyExistsError extends S.TaggedError<TraitAlreadyExistsError>()("TraitAlreadyExistsError", {
+  id: Trait.TraitId,
+  message: S.String
+}) {}
+
+export class DuplicateTraitIdError extends S.TaggedError<DuplicateTraitIdError>()("DuplicateTraitIdError", {
+  id: Trait.TraitId,
+  paths: S.Array(S.String),
+  message: S.String
+}) {}
+
+export class TraitFilenameMismatchError extends S.TaggedError<TraitFilenameMismatchError>()(
+  "TraitFilenameMismatchError",
+  {
+    path: S.String,
+    expectedFilename: S.String,
+    message: S.String
+  }
+) {}
+
+export type Error =
+  | PlatformError.PlatformError
+  | S.SchemaError
+  | Trait.ParseError
+  | TraitNotFoundError
+  | TraitAlreadyExistsError
+  | DuplicateTraitIdError
+  | TraitFilenameMismatchError
+export const TraitStoreError = S.Union([
+  TraitNotFoundError,
+  TraitAlreadyExistsError,
+  DuplicateTraitIdError,
+  TraitFilenameMismatchError,
+  Trait.ParseError,
+  S.TaggedStruct("PlatformError", { message: S.String }),
+  S.TaggedStruct("SchemaError", { message: S.String })
+])
 
 export class TraitStore extends Context.Service<
   TraitStore,
   {
-    readonly add: (trait: Trait.Trait) => Effect.Effect<Trait.Trait, PlatformError.PlatformError>
-    readonly update: (
-      trait: Trait.Trait
-    ) => Effect.Effect<void, PlatformError.PlatformError | Trait.TraitParseError | S.SchemaError>
-    readonly get: (
-      id: Trait.TraitId
-    ) => Effect.Effect<Trait.Trait, PlatformError.PlatformError | Trait.TraitParseError | S.SchemaError>
-    readonly ls: Effect.Effect<
-      ReadonlyArray<Trait.Trait>,
-      PlatformError.PlatformError | Trait.TraitParseError | S.SchemaError
-    >
-    readonly rm: (ids: ReadonlyArray<Trait.TraitId>) => Effect.Effect<void, PlatformError.PlatformError>
+    readonly add: (trait: Trait.Trait) => Effect.Effect<Trait.Trait, Error>
+    readonly update: (trait: Trait.Trait) => Effect.Effect<void, Error>
+    readonly get: (id: Trait.TraitId) => Effect.Effect<Trait.Trait, Error>
+    readonly ls: Effect.Effect<ReadonlyArray<Trait.Trait>, Error>
+    readonly rm: (ids: ReadonlyArray<Trait.TraitId>) => Effect.Effect<void, Error>
   }
 >()("traits/TraitStore") {}
 
@@ -66,24 +101,21 @@ export const layerFileSystem = (dir: string) =>
           Effect.filterOrFail(
             (files) => files.length === 1,
             (files) =>
-              PlatformError.systemError({
-                _tag: files.length === 0 ? "NotFound" : "AlreadyExists",
-                module: "FileSystem",
-                method: "TraitStore.findPath",
-                pathOrDescriptor: root,
-                description: files.length === 0 ? `Trait ${id} was not found` : `Multiple files claim trait ID ${id}`
-              })
+              files.length === 0
+                ? TraitNotFoundError.make({ id, message: `Trait ${id} was not found` })
+                : DuplicateTraitIdError.make({ id, paths: files, message: `Multiple files claim trait ID ${id}` })
           ),
           Effect.map(Array.getUnsafe(0))
         )
       const readFile = Effect.fn("TraitStore.readFile")(function* (file: string) {
         const text = yield* fs.readFileString(file)
-        return yield* Trait.parse(text).pipe(
+        return yield* Trait.parse(text, file).pipe(
           Effect.filterOrFail(
             (trait) => traitPath(trait) === file,
             (trait) =>
-              Trait.TraitParseError.make({
-                reason: "FilenameMismatch",
+              TraitFilenameMismatchError.make({
+                path: file,
+                expectedFilename: `${trait.name}-${trait.id}.md`,
                 message: `Trait filename must be ${trait.name}-${trait.id}.md, received ${path.basename(file)}`
               })
           )
@@ -96,12 +128,9 @@ export const layerFileSystem = (dir: string) =>
             Effect.filterOrFail(
               (files) => files.length === 0,
               () =>
-                PlatformError.systemError({
-                  _tag: "AlreadyExists",
-                  module: "FileSystem",
-                  method: "TraitStore.add",
-                  pathOrDescriptor: root,
-                  description: `Trait ID ${trait.id} already exists`
+                TraitAlreadyExistsError.make({
+                  id: trait.id,
+                  message: `Trait ID ${trait.id} already exists`
                 })
             )
           )
@@ -146,14 +175,21 @@ export const layerFileSystem = (dir: string) =>
         }).pipe(
           Effect.filterOrFail(
             (traits) => Array.dedupeWith(traits, (left, right) => left.id === right.id).length === traits.length,
-            () =>
-              PlatformError.systemError({
-                _tag: "AlreadyExists",
-                module: "FileSystem",
-                method: "TraitStore.ls",
-                pathOrDescriptor: root,
-                description: "Multiple files claim the same trait ID"
+            (traits) => {
+              const duplicates = pipe(
+                traits,
+                Array.groupBy((trait) => trait.id),
+                Record.values,
+                Array.filter((group) => group.length > 1),
+                Array.getUnsafe(0)
+              )
+              const id = Array.getUnsafe(duplicates, 0).id
+              return DuplicateTraitIdError.make({
+                id,
+                paths: Array.map(duplicates, traitPath),
+                message: `Multiple files claim trait ID ${id}`
               })
+            }
           ),
           Effect.withSpan("TraitStore.ls")
         ),

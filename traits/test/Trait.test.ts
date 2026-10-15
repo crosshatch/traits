@@ -1,4 +1,3 @@
-import { NodeCrypto } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Effect, pipe, Result, Schema as S, String } from "effect"
 
@@ -8,25 +7,34 @@ const name = Trait.TraitName.make("test_trait")
 const id = Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6")
 
 it.effect(
-  "returns a domain error for missing frontmatter",
+  "distinguishes missing and unterminated frontmatter",
   Effect.fnUntraced(function* () {
-    const result = yield* Trait.parse("Body").pipe(Effect.result)
+    const result = yield* Trait.parse("Body", "/traits/missing.md").pipe(Effect.result)
     expect(Result.isFailure(result)).toBe(true)
     if (Result.isFailure(result)) {
-      expect(result.failure).toBeInstanceOf(Trait.TraitParseError)
-      expect(result.failure).toMatchObject({ reason: "MissingFrontmatter" })
+      expect(result.failure).toMatchObject({ _tag: "MissingTraitFrontMatterError", path: "/traits/missing.md" })
     }
+    const unclosed = yield* Trait.parse("---\nname: example", "/traits/unclosed.md").pipe(Effect.result)
+    expect(unclosed).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "UnterminatedTraitFrontMatterError", path: "/traits/unclosed.md" }
+    })
   })
 )
 
 it.effect(
   "preserves the YAML parser cause in a domain error",
   Effect.fnUntraced(function* () {
-    const result = yield* Trait.parse("---\nname: [\n---\nBody").pipe(Effect.result)
+    const result = yield* Trait.parse("---\nname: [\n---\nBody", "/traits/broken.md").pipe(Effect.result)
     expect(Result.isFailure(result)).toBe(true)
     if (Result.isFailure(result)) {
-      expect(result.failure).toBeInstanceOf(Trait.TraitParseError)
-      expect(result.failure).toMatchObject({ reason: "InvalidYaml", cause: expect.any(Error) })
+      expect(result.failure).toMatchObject({
+        _tag: "InvalidTraitYamlError",
+        path: "/traits/broken.md",
+        line: 3,
+        column: 1,
+        cause: expect.any(Error)
+      })
     }
   })
 )
@@ -214,17 +222,4 @@ it.effect(
       expect(Result.isFailure(result)).toBe(true)
     }
   })
-)
-
-it.effect(
-  "creates crypto UUIDs outside storage while preserving all draft fields",
-  Effect.fn("test.Trait.make")(function* () {
-    const draft = { name, body: "Body", when: "testing.", mime: ["text/typescript"], priority: 2 }
-    const first = yield* Trait.make(draft)
-    const second = yield* Trait.make(draft)
-    expect(first).toMatchObject(draft)
-    expect(second).toMatchObject(draft)
-    expect(first.id).not.toBe(second.id)
-    expect(first.id).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/)
-  }, Effect.provide(NodeCrypto.layer))
 )

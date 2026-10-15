@@ -131,10 +131,10 @@ available; do not add a new runtime schema dependency solely for this task.
   after verifying the replacement; keep trait readers/writers paused until there
   are no duplicate UUID files. Retain the external backup for recovery.
 
-The migration uses the UUID recovered from the existing record. Do **not** call
-`Trait.make` or `derive_trait` to migrate it: they can generate new identities
-or invoke preference reconciliation. Construct complete records using the
-existing UUID, validate them, and serialize them instead.
+The migration uses the UUID recovered from the existing record. Do **not**
+generate a new UUID or call `derive_trait` to migrate it. Construct complete
+records with the schema's `Trait.Trait.make` using the preserved UUID, validate
+them, and serialize them instead. The schema constructor does not generate IDs.
 
 ## 4. Update active references
 
@@ -145,8 +145,8 @@ output, lockfiles, Git metadata, and the backup. Do not rewrite Git history.
 - Change active filename links to the new `<name>-<uuid>.md` path.
 - Change stored trait selections in `check_traits({ traitIds: [...] })` from old
   complete stems to UUIDs only. Keep the parameter name `traitIds`.
-- Change leading file-ignore directives through the mapping, preserving their
-  reason, location, and file-header position:
+- Change legacy full-stem file-ignore directives to UUIDs through the mapping,
+  preserving their reason, location, and file-header position:
 
   ```ts
   // traits-ignore-file gentle_maple_river-2535ceab-5702-4ab4-932a-f87362adf8c6: Required by this integration.
@@ -158,16 +158,23 @@ output, lockfiles, Git metadata, and the backup. Do not rewrite Git history.
   // traits-ignore-file 2535ceab-5702-4ab4-932a-f87362adf8c6: Required by this integration.
   ```
 
-- Leave already UUID-based references alone. For any name-only or unrecognized
-  reference, resolve it against the inventory; ask if it is ambiguous or has no
-  target. Do not add a name fallback or perform broad replacements of ordinary
-  prose, historical examples, or unrelated identifiers.
+- Leave already UUID-based references alone. Ignore directives may also use an
+  exact descriptive trait name; preserve valid name-based directives when the
+  name is unchanged and update them if the trait is renamed. Name selectors
+  match every trait with that exact name, unlike UUID selectors, so flag any
+  migration that would unexpectedly broaden an existing exception. Focused
+  `traitIds` selections still require UUIDs. Resolve unrecognized references
+  against the inventory and ask about unclear intent or missing targets. Do not
+  perform broad replacements of ordinary prose, historical examples, or
+  unrelated identifiers.
 - If consumer code uses the old SDK, update verified call sites:
-  `TraitStore.add(body)` now accepts a complete trait;
-  `Trait.make({ name, body, ...metadata })` creates a **new** trait with a new
-  UUID before `store.add`. Migration itself must reuse the old UUID. `get(id)`
-  and `rm(ids)` use UUIDs, while `update(trait)` uses `trait.id`. Validate such
-  edits against the consumer's installed API and existing tests.
+  `TraitStore.add(body)` now accepts a complete trait; generate a UUID with
+  `Crypto` only for a genuinely **new** trait, validate it with
+  `Trait.TraitId.make`, and use
+  `Trait.Trait.make({ id, name, body, ...metadata })` before `store.add`.
+  Migration itself must reuse the old UUID. `get(id)` and `rm(ids)` use UUIDs,
+  while `update(trait)` uses `trait.id`. Validate such edits against the
+  consumer's installed API and existing tests.
 
 ## 5. Validate and reconnect
 

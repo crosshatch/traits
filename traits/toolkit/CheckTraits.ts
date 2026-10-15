@@ -1,12 +1,12 @@
 import { Array, Effect, FileSystem, flow, Path, pipe, Schema as S, String } from "effect"
-import { AiError, DecisionModel, Tool, Toolkit } from "effect/ai"
+import { DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
-import { getIncludedFiles } from "../getIncludedFiles.ts"
+import { getIncludedFiles, GitFileListingError } from "../getIncludedFiles.ts"
 import { Source, SourceLocation } from "../Source.ts"
 import * as Trait from "../Trait.ts"
 import * as Evaluation from "../TraitEvaluation.ts"
-import { traitIgnores } from "../traitIgnores.ts"
+import { excludeIgnored } from "../traitIgnores.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
@@ -24,7 +24,7 @@ export const CheckTraits = Tool.make("check_traits", {
   | All entries follow native glob syntax, including escaping filenames with glob characters. No custom directory expansion or literal-path classification is applied.
   | Reads current full file contents, including unstaged edits, and checks each 200-line chunk against the selected traits in parallel.
   | Omit traitIds to check all stored traits; supply UUID trait IDs for a focused check. Unknown IDs fail the call.
-  | A leading // traits-ignore-file <trait-id>: <reason> comment skips only that trait for the entire file, including focused checks. Directives require a reason and must precede code.
+  | A leading // traits-ignore-file <trait-id-or-name>: <reason> comment skips matching traits for the entire file, including focused checks. UUIDs match one trait; names match all traits with that exact name. Names are case-sensitive and must be updated after renaming; use a UUID for a stable single-trait exception. Directives require a reason and must precede code.
   | Returns findings with the trait, source text, absolute path, 1-based chunk startLine, and assessment classification and probabilities.
   | Classification distinguishes violation from inconclusive; probabilities are not calibrated guarantees. No exact offending lines are provided.
   | Diagnose uncertainty using the full distribution, not the selected label alone; inspect source and trait before changing code.
@@ -52,11 +52,12 @@ export const CheckTraits = Tool.make("check_traits", {
   }),
   success: S.Array(Evaluation.TraitEvaluation),
   failure: S.Union([
-    AiError.AiError,
+    S.TaggedStruct("AiError", { message: S.String }),
     TraitStoreError,
-    Trait.TraitParseError,
-    S.TaggedStruct("SchemaError", { message: S.String })
+    Evaluation.TraitAssessmentTooLargeError,
+    GitFileListingError
   ]),
+  failureMode: "return",
   dependencies: [
     DecisionModel.DecisionModel,
     TraitStore,
@@ -112,8 +113,7 @@ export const layer = toolkit.toLayer({
       paths,
       Effect.fn("CheckTraits.file")(function* (file) {
         const text = yield* fs.readFileString(file)
-        const ignored = traitIgnores(text)
-        const activeTraits = Array.filter(traits, (trait) => !ignored.has(trait.id))
+        const activeTraits = pipe(traits, excludeIgnored(text))
         const chunks = Array.chunksOf(String.split(text, "\n"), 200)
         const sources = Array.map(chunks, (lines, index) =>
           Source.make({

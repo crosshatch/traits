@@ -1,5 +1,5 @@
 import { Crypto, Schema as S, String } from "effect"
-import { AiError, DecisionModel, LanguageModel, McpSchema, Tool, Toolkit } from "effect/ai"
+import { DecisionModel, LanguageModel, McpSchema, Tool, Toolkit } from "effect/ai"
 
 import * as Trait from "../Trait.ts"
 import { derive, TraitDerivation } from "../TraitDerivation.ts"
@@ -43,7 +43,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   parameters: S.Struct({
     name: Trait.TraitName.annotate({
       description:
-        "Descriptive snake_case name for a newly created trait and its filename prefix. A separate random UUID is generated as its stable identity. Existing names are preserved on clarification."
+        "Descriptive snake_case name for a newly created trait and its filename prefix. Existing names are preserved on clarification."
     }),
     proposedTrait: S.String.annotate({
       description:
@@ -55,13 +55,8 @@ export const DeriveTrait = Tool.make("derive_trait", {
     })
   }),
   success: TraitDerivation,
-  failure: S.Union([
-    AiError.AiError,
-    TraitStoreError,
-    McpSchema.ElicitationDeclined,
-    Trait.TraitParseError,
-    S.TaggedStruct("SchemaError", { message: S.String })
-  ]),
+  failure: S.Union([S.TaggedStruct("AiError", { message: S.String }), TraitStoreError, McpSchema.ElicitationDeclined]),
+  failureMode: "return",
   dependencies: [Crypto.Crypto, DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
 })
   .annotate(Tool.Title, "Derive Trait")

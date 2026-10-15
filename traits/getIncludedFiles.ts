@@ -1,7 +1,13 @@
-import { Array, Effect, Equal, Path, pipe, PlatformError, Stream, String } from "effect"
+import { Array, Effect, Equal, Path, pipe, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { TraitsContext } from "./TraitsContext.ts"
+
+export class GitFileListingError extends S.TaggedError<GitFileListingError>()("GitFileListingError", {
+  directory: S.String,
+  exitCode: S.Int,
+  message: S.String
+}) {}
 
 export const getIncludedFiles = Effect.gen(function* () {
   const context = yield* TraitsContext
@@ -17,11 +23,10 @@ export const getIncludedFiles = Effect.gen(function* () {
   const output = yield* process.stdout.pipe(Stream.decodeText(), Stream.mkString)
   yield* process.exitCode.pipe(
     Effect.filterOrFail(Equal.equals(0), (exitCode) =>
-      PlatformError.systemError({
-        _tag: "Unknown",
-        module: "ChildProcess",
-        method: "git ls-files",
-        description: `Process exited with code ${exitCode}`
+      GitFileListingError.make({
+        directory: context.configRoot,
+        exitCode,
+        message: `git ls-files exited with code ${exitCode}`
       })
     )
   )
