@@ -467,23 +467,28 @@ h3 {
   background: color-mix(in srgb, var(--paper), var(--gold) 14%);
   color: var(--ink);
 }
-.step-tabs button[aria-selected="true"]::after {
+.step-tabs button::before {
   content: "";
   position: absolute;
-  bottom: 0.45rem;
-  width: 24px;
+  inset: auto 0 0;
   height: 2px;
   background: var(--gold);
-  animation: tab-underline-arrives 220ms ease-out;
+  transform: scaleX(0);
+  transform-origin: left;
 }
-@keyframes tab-underline-arrives {
-  from {
-    transform: scaleX(0.2);
-    opacity: 0;
-  }
+.walkthrough[data-playing] .step-tabs button[aria-selected="true"]::before {
+  animation-name: step-progress;
+  animation-duration: 9s;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.walkthrough:not([data-visible]) .step-tabs button::before,
+.walkthrough:has(.step-details:hover, .lifecycle-visual:hover, .step-tabs :focus-visible) .step-tabs button::before {
+  animation-play-state: paused;
+}
+@keyframes step-progress {
   to {
     transform: scaleX(1);
-    opacity: 1;
   }
 }
 .step-number {
@@ -499,6 +504,11 @@ h3 {
   padding: 2.3rem;
   min-height: 360px;
   align-items: start;
+  overflow-x: clip;
+  --observation-offset: 1.5rem;
+}
+.step-panel[data-direction="backward"] {
+  --observation-offset: -1.5rem;
 }
 .step-details > .eyebrow {
   color: var(--coral);
@@ -507,16 +517,14 @@ h3 {
 @keyframes observation-arrives {
   from {
     opacity: 0;
-  }
-  to {
-    opacity: 1;
+    transform: translateX(var(--observation-offset));
   }
 }
 .step-details,
 .step-panel > .lifecycle-visual {
-  animation: observation-arrives 180ms ease-out;
+  animation: observation-arrives 320ms ease-out;
 }
-.step-copy h3 {
+.step-details h3 {
   margin: 0.85rem 0;
   font-size: 1.65rem;
 }
@@ -531,17 +539,32 @@ h3 {
   font-size: 0.85rem !important;
 }
 .step-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
-  margin-top: 1.5rem;
+  padding: 0.6rem 2.3rem;
+  border-top: 1px solid var(--rule);
+  background: light-dark(#f3ecd6, #302535);
   font-size: 0.75rem;
+}
+.step-controls > :first-child {
+  justify-self: start;
+}
+.step-controls > :last-child {
+  grid-column: 3;
+  justify-self: end;
 }
 .step-controls button {
   background: transparent;
   border: 0;
   padding: 0.35rem 0;
+}
+.step-controls .step-autoplay {
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  background: var(--paper);
 }
 .step-controls button:not(:disabled):hover {
   color: var(--coral);
@@ -1282,6 +1305,9 @@ h3 {
     padding: 1.5rem;
     gap: 1.5rem;
   }
+  .step-controls {
+    padding-inline: 1.5rem;
+  }
   .step-tabs button {
     gap: 0.4rem;
     font-size: 0.62rem;
@@ -1411,14 +1437,17 @@ h3 {
     min-height: 0;
     padding: 0.85rem;
   }
-  .step-copy h3 {
+  .step-details h3 {
     font-size: 1.4rem;
   }
   .step-details > p {
     font-size: 0.9rem;
   }
   .step-controls {
-    margin-block: 1rem;
+    padding-inline: 1.3rem;
+  }
+  .step-controls-detail {
+    display: none;
   }
   .code-sample pre {
     font-size: 0.68rem;
@@ -1459,5 +1488,8 @@ h3 {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+  .step-autoplay {
+    display: none;
   }
 }
