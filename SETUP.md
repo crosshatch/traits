@@ -152,3 +152,27 @@ client-specific; startup failures are not tool responses. Fix setup and
 reconnect to retry. Once started, expected tool failures use MCP error results;
 unexpected defects receive a generic internal error response rather than
 exposing details.
+
+### Reconciliation fails after approval
+
+Conflict reconciliation and trait decomposition use the configured
+`LanguageModel` to generate schema-validated JSON. A
+`LanguageModel.generateObject` / `StructuredOutputError` can mean the provider
+returned plain text instead of JSON; it does not necessarily indicate an
+approval-form failure. Generation completes before replacements are written or
+originals are removed.
+
+When using `@effect/ai-openrouter`, enable strict structured output in the
+language-model configuration, alongside any existing options:
+
+```ts
+OpenRouterLanguageModel.layer({
+  model: "openai/gpt-6.1-sol",
+  config: { strictJsonSchema: true, reasoning: { effort: "low" } }
+})
+```
+
+Use a model and route that support structured output. Traits also explicitly
+describes the required JSON shape in its generation prompts, but provider-side
+enforcement remains preferable. No changes to the decision-model configuration
+are required for this setting.
