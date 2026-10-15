@@ -1,0 +1,8 @@
+---
+id: 121f5624-31b3-41d6-a63c-30c040743ef8
+name: effect_platform_services
+activation: When accessing filesystem, paths, working directories, or child processes in application code or synchronous tooling boundaries.
+mime: [text/typescript, text/tsx, text/javascript, text/jsx]
+skip: When all native Node API usage under assessment is confined to synchronous tooling boundaries and is needed to preserve the framework's synchronous execution contract.
+---
+Use the Effect alternative for Node APIs in ordinary application code: node:fs and node:fs/promises use the FileSystem service; node:path uses the Path service; process.cwd() uses path.resolve() on the injected Path service; node:child_process uses effect/process with ChildProcess and ChildProcessSpawner. Access these services through Effect dependency injection so behavior remains testable and platform-independent. At synchronous tooling boundaries, such as Oxlint rule callbacks, native synchronous Node APIs may remain when needed to preserve the framework’s synchronous execution contract. Keep this exception confined to the tooling boundary rather than using it to bypass Effect in application code.

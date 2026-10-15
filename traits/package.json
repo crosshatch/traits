@@ -41,8 +41,12 @@
     },
     "access": "public"
   },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
+    "@effect/vitest": "catalog:",
     "effect": "catalog:"
   },
   "peerDependencies": {

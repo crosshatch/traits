@@ -1,6 +1,7 @@
-import { Schema as S, String } from "effect"
+import { Crypto, Schema as S, String } from "effect"
 import { AiError, DecisionModel, LanguageModel, McpSchema, Tool, Toolkit } from "effect/ai"
 
+import * as Trait from "../Trait.ts"
 import { derive, TraitDerivation } from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
@@ -18,26 +19,34 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Keep the proposal pending through related work and return to it afterward unless cancelled; obtain fresh approval of the complete revised body.
   | First decide whether the feedback generalizes beyond the current task and inspect existing trait files for coverage.
   | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings and unnecessary examples.
+  | Supply a descriptive snake_case name for a newly created trait; it becomes the frontmatter name and filesystem filename prefix. Creation generates a stable random UUID. Names need not be unique; trait IDs distinguish records.
+  | Avoid repeated requirements and duplicate traits. Keep bodies standalone; do not strip essential scope or exceptions just to shorten them.
+  | When authoring trait frontmatter, let mime restrict file types and activation define positive semantic scope. Include skip only for an independent exception within that scope, never its negation or a repetition of another field.
   | Compare against all stored traits. Only a distinct proposal is saved as a new trait.
   | Inconclusive returns relationship findings and blocks all writes; clarify ambiguity or revise the proposal before retrying.
-  | Confirmed conflicts enter reconciliation within this tool. Approval shows affected trait IDs/bodies, removals, the proposal, and replacement policy.
+  | Confirmed conflicts and independently verified coverage gaps enter reconciliation within this tool. Approval shows affected trait names, IDs, bodies, applicability metadata, removals, the proposal, and replacement policy.
   | Nothing is replaced before approval. After approval, generate compatible standalone replacements, save them, then delete only the conflicting originals.
   | The proposal takes precedence only in direct conflicts; preserve unrelated requirements, scopes, and exceptions. Resolved returns saved replacements.
   | Do not submit the same proposal again after Resolved: it is already incorporated. Inspect replacements and check relevant TypeScript files.
   | Reconciliation is not transactional; on an error, inspect the store before retrying because some writes or removals may have completed.
-  | Covered returns the existing traits representing the proposal; reuse them without writing a duplicate.
+  | Covered requires a second independent decision-model assessment of the saved body and activation/mime/skip metadata against every proposed requirement. Similar intent or partial overlap is insufficient. Coverage gaps require approval-gated revision; inconclusive verification blocks writes.
+  | Covered returns only independently verified existing traits; reuse them without writing a duplicate.
   | A single clarification candidate is selected automatically for approval; provide a complete replacement body preserving existing requirements and exceptions.
   | Multiple clarification candidates return Clarification with those traits and the proposal without writing. Refine the proposal or clarify intent.
   | The shared approval flow shows the existing and proposed bodies; ask in the client UI only if ApprovalRequired is returned.
-  | The tool rechecks all traits before updating, preserving the selected ID. Updated returns the saved trait.
+  | The tool rechecks all traits before updating, preserving the selected UUID on clarification. Updated returns the saved trait.
   | Never use approved: true for an unapproved replacement, and never resolve a mere clarification by deleting traits.
-  | Created returns the saved trait including its generated ID. Every response is one tagged TraitDerivation outcome, never a bare array or void.
+  | Created returns the saved trait including its name and UUID. Every response is one tagged TraitDerivation outcome, never a bare array or void.
   | Then call check_traits on relevant TypeScript files, using returned trait IDs for focused reviews when appropriate.
   `),
   parameters: S.Struct({
+    name: Trait.TraitName.annotate({
+      description:
+        "Descriptive snake_case name for a newly created trait and its filename prefix. A separate random UUID is generated as its stable identity. Existing names are preserved on clarification."
+    }),
     proposedTrait: S.String.annotate({
       description:
-        "The complete reusable rule to save, including scope and exceptions, rather than raw conversation text."
+        "A concise, standalone reusable rule with its essential scope and exceptions, not raw conversation text or repeated restatements of the same requirement."
     }),
     approved: S.Boolean.pipe(S.optional).annotate({
       description:
@@ -45,8 +54,14 @@ export const DeriveTrait = Tool.make("derive_trait", {
     })
   }),
   success: TraitDerivation,
-  failure: S.Union([AiError.AiError, TraitStoreError, McpSchema.ElicitationDeclined]),
-  dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
+  failure: S.Union([
+    AiError.AiError,
+    TraitStoreError,
+    McpSchema.ElicitationDeclined,
+    Trait.TraitParseError,
+    S.TaggedStruct("SchemaError", { message: S.String })
+  ]),
+  dependencies: [Crypto.Crypto, DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
 })
   .annotate(Tool.Title, "Derive Trait")
   .annotate(Tool.Readonly, false)

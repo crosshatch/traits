@@ -1,11 +1,11 @@
-import { Array, Effect, Equal, FileSystem, Path, pipe, Schema as S, String } from "effect"
+import { Array, Effect, FileSystem, flow, Path, pipe, Schema as S, String } from "effect"
 import { AiError, DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
-import { includedFiles as getIncludedFiles } from "../includedFiles.ts"
+import { getIncludedFiles } from "../getIncludedFiles.ts"
 import { Source, SourceLocation } from "../Source.ts"
-import { TraitId } from "../Trait.ts"
-import { evaluate, requiresReview, TraitEvaluation } from "../TraitEvaluation.ts"
+import * as Trait from "../Trait.ts"
+import * as Evaluation from "../TraitEvaluation.ts"
 import { traitIgnores } from "../traitIgnores.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
@@ -23,8 +23,8 @@ export const CheckTraits = Tool.make("check_traits", {
   | Git-ignored files are excluded by default, with ignore rules refreshed on every call. Untracked files do not need to be added to Git to be evaluated. Tracked files remain eligible even if ignore rules match them. Set excludeGitignored: false in traits.ts to disable this filter; explicit excludes still apply. Git failures fail the check.
   | All entries follow native glob syntax, including escaping filenames with glob characters. No custom directory expansion or literal-path classification is applied.
   | Reads current full file contents, including unstaged edits, and checks each 200-line chunk against the selected traits in parallel.
-   | Omit traitIds to check all stored traits; supply trait ids for a focused check of one or more traits. Unknown IDs fail the call.
-   | A leading // traits-ignore-file <trait-id>: <reason> comment skips only that trait for the entire file, including focused checks. Directives require a reason and must precede code.
+  | Omit traitIds to check all stored traits; supply UUID trait IDs for a focused check. Unknown IDs fail the call.
+  | A leading // traits-ignore-file <trait-id>: <reason> comment skips only that trait for the entire file, including focused checks. Directives require a reason and must precede code.
   | Returns findings with the trait, source text, absolute path, 1-based chunk startLine, and assessment classification and probabilities.
   | Classification distinguishes violation from inconclusive; probabilities are not calibrated guarantees. No exact offending lines are provided.
   | Diagnose uncertainty using the full distribution, not the selected label alone; inspect source and trait before changing code.
@@ -45,12 +45,18 @@ export const CheckTraits = Tool.make("check_traits", {
       description:
         "Project-owned source, configuration, or documentation paths/globs, absolute or relative to the MCP working directory. Exclude third-party/generated files, secrets, and binaries. Overlapping matches are deduplicated; unmatched patterns select no files."
     }),
-    traitIds: S.Array(TraitId).pipe(S.optional).annotate({
-      description: "Optional trait ids for a focused review. Omit for all stored traits; an empty array selects none."
+    traitIds: S.Array(Trait.TraitId).pipe(S.optional).annotate({
+      description:
+        "Optional UUID trait IDs for a focused review, independent of names and filenames. Omit for all stored traits; an empty array selects none."
     })
   }),
-  success: S.Array(TraitEvaluation),
-  failure: S.Union([AiError.AiError, TraitStoreError]),
+  success: S.Array(Evaluation.TraitEvaluation),
+  failure: S.Union([
+    AiError.AiError,
+    TraitStoreError,
+    Trait.TraitParseError,
+    S.TaggedStruct("SchemaError", { message: S.String })
+  ]),
   dependencies: [
     DecisionModel.DecisionModel,
     TraitStore,
@@ -96,10 +102,13 @@ export const layer = toolkit.toLayer({
     )
     const paths = yield* Effect.filter(
       includedFiles === undefined ? resolved : Array.filter(resolved, (file) => includedFiles.has(file)),
-      (file) => fs.stat(file).pipe(Effect.map((info) => Equal.equals(info.type, "File"))),
+      flow(
+        fs.stat,
+        Effect.map((info) => info.type === "File")
+      ),
       { concurrency: "unbounded" }
     )
-    const results = yield* Effect.forEach(
+    return yield* Effect.forEach(
       paths,
       Effect.fn("CheckTraits.file")(function* (file) {
         const text = yield* fs.readFileString(file)
@@ -112,15 +121,13 @@ export const layer = toolkit.toLayer({
             location: SourceLocation.cases.File.make({ path: file, startLine: index * 200 + 1 })
           })
         )
-        const results = yield* Effect.forEach(
+        return yield* pipe(
           sources,
-          (source) => Effect.forEach(activeTraits, (trait) => evaluate(trait, source), { concurrency: "unbounded" }),
-          { concurrency: "unbounded" }
+          Effect.forEach((source) => Evaluation.evaluateAll(activeTraits, source), { concurrency: "unbounded" }),
+          Effect.map(flow(Array.flatten, Array.filter(Evaluation.requiresReview)))
         )
-        return pipe(results, Array.flatten, Array.filter(requiresReview))
       }),
       { concurrency: "unbounded" }
-    )
-    return Array.flatten(results)
+    ).pipe(Effect.map(Array.flatten))
   })
 })

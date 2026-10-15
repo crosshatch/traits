@@ -5,7 +5,7 @@ import type { KeyboardEvent } from "react"
 
 import { ActionBar } from "./ActionBar.tsx"
 import { CodeSample } from "./CodeSample.tsx"
-import { BrokenQuill, DriftingLeaf, Flourish, LaurelSeal, MistLantern } from "./Illustrations.tsx"
+import * as Illustrations from "./Illustrations.tsx"
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps, type LifecycleStep } from "./LifecycleStep.ts"
 import { LifecycleVisual } from "./LifecycleVisual.tsx"
@@ -137,7 +137,7 @@ export const App = () => {
             <div className="chapter-heading">
               <p className="eyebrow">Chapter I</p>
               <h2 id="lifecycle-title">The loop</h2>
-              <Flourish />
+              <Illustrations.Flourish />
             </div>
             <div className="prose lead">
               <p>
@@ -203,7 +203,7 @@ export const App = () => {
             <div className="chapter-heading">
               <p className="eyebrow">Chapter II</p>
               <h2 id="tools-title">Two tools. That's it.</h2>
-              <Flourish />
+              <Illustrations.Flourish />
             </div>
             <div className="prose lead">
               <p>
@@ -236,8 +236,8 @@ export const App = () => {
                   with the selected traits, and returns assessments that need attention.
                 </p>
                 <p className="small-note">
-                  Use traitIds for a focused review. Overlapping matches are deduplicated; unmatched patterns review
-                  nothing.
+                  Use <code>traitIds</code> for a focused review. Overlapping matches are deduplicated; unmatched
+                  patterns review nothing.
                 </p>
               </article>
             </div>
@@ -254,22 +254,22 @@ export const App = () => {
               </p>
               <div className="verdict-grid">
                 <div>
-                  <LaurelSeal />
+                  <Illustrations.LaurelSeal />
                   <h4>Compliant</h4>
                   <p>The trait applies and the supplied code follows it.</p>
                 </div>
                 <div>
-                  <DriftingLeaf />
+                  <Illustrations.DriftingLeaf />
                   <h4>Not applicable</h4>
                   <p>This excerpt does not contain behavior governed by the trait.</p>
                 </div>
                 <div>
-                  <BrokenQuill />
+                  <Illustrations.BrokenQuill />
                   <h4>Violation</h4>
                   <p>Inspect the evidence. Fix confirmed issues and review the changed file again.</p>
                 </div>
                 <div>
-                  <MistLantern />
+                  <Illustrations.MistLantern />
                   <h4>Inconclusive</h4>
                   <p>Something is missing or ambiguous. This is not a confirmed violation.</p>
                 </div>
@@ -285,7 +285,7 @@ export const App = () => {
             <div className="chapter-heading">
               <p className="eyebrow">Chapter III</p>
               <h2 id="begin-title">Manual</h2>
-              <Flourish />
+              <Illustrations.Flourish />
             </div>
             <div className="prose lead">
               <p>
@@ -334,7 +334,7 @@ export const App = () => {
               </div>
             </div>
             <div className="closing">
-              <Flourish />
+              <Illustrations.Flourish />
               <p>
                 Every conversation leaves a little wisdom.
                 <br />

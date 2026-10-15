@@ -10,10 +10,26 @@ description: >-
 # Traits
 
 Traits are concise, durable coding rules. The filesystem implementation stores
-each body in `.agents/traits/<three_words-uuid>.md`, relative to its working
-directory. The full filename stem is the trait ID, for example
-`rose_karate_frog-2535ceab-5702-4ab4-932a-f87362adf8c6`. Read these files to
-discover existing rules and IDs; pass the full ID, not just the words, to tools.
+each body in `.agents/traits/<name>-<uuid>.md`, relative to its working
+directory. Frontmatter contains a descriptive snake_case `name` and a stable
+UUID `id`. The UUID alone is the canonical identity across backends: use it for
+focused `check_traits({ traitIds: [...] })` selections and ignore directives,
+not the name or filename stem. Renaming preserves identity; names need not be
+unique. `Trait.make(draft)` assigns a crypto-random UUID outside the storage
+adapter. `TraitStore` persists complete traits and uses UUIDs for get, update,
+and remove, so other implementations can key records directly by ID without
+filesystem conventions. Only the filesystem adapter builds `<name>-<uuid>.md`
+paths.
+
+Keep frontmatter fields complementary. `mime` restricts file types; `activation`
+defines positive semantic scope. Add `skip` only for an independent exception
+inside that scope, not for its negation or a restriction already expressed by
+another field. For example,
+`activation: When importing from local project modules` already excludes
+external packages; do not repeat that as a skip. Leave unnecessary optional
+fields absent. Keep the body concise and standalone, preserving essential scope
+and exceptions without repeated restatements. Reuse existing traits that already
+cover the same rule rather than creating duplicates.
 
 ## Capture a reusable insight
 
@@ -36,17 +52,19 @@ When coverage is uncertain, call `derive_trait` with the specific preference; do
 not skip capture because a broad trait or a combination of general traits seems
 related. Let the tool assess coverage or clarification. For example, “prefer
 Effect utilities” and “pass callbacks directly” are not sufficient grounds to
-skip proposing “prefer Equal/Predicate helpers over manual checks.”
+skip proposing “prefer native inline checks and use Effect predicate helpers
+directly in callbacks or existing pipelines.”
 
-Call `derive_trait` with the drafted rule first, leaving `approved` unset. Do
-not ask for approval separately before invoking: capable clients receive a
-native MCP form. Only if `ApprovalRequired` is returned, show the complete
-message in the interactive question tool with **Save trait**, **Revise**, and
-**Skip** and its automatic free-text option. Do not add a duplicate "Other"
-option. Use plain text only if that UI is unavailable. Approval to edit code
-alone does not approve persisting a trait: make the requested edit and propose
-the reusable rule before the final response. Do not stop after implementing an
-idiom and running code checks; preference capture is a separate responsibility.
+Call `derive_trait` with the drafted rule and a descriptive snake_case `name`
+first, leaving `approved` unset. Do not ask for approval separately before
+invoking: capable clients receive a native MCP form. Only if `ApprovalRequired`
+is returned, show the complete message in the interactive question tool with
+**Save trait**, **Revise**, and **Skip** and its automatic free-text option. Do
+not add a duplicate "Other" option. Use plain text only if that UI is
+unavailable. Approval to edit code alone does not approve persisting a trait:
+make the requested edit and propose the reusable rule before the final response.
+Do not stop after implementing an idiom and running code checks; preference
+capture is a separate responsibility.
 
 ### Shared approval protocol
 
@@ -94,45 +112,50 @@ authenticated consent token.
 3. Draft the complete rule as `proposedTrait`. Preserve essential requirements,
    scopes, and exceptions. Keep independently applicable rules separate; omit
    headings, repetition, and unnecessary explanation or examples.
-4. Call `derive_trait({ proposedTrait })` first, without a separate approval
-   prompt. This checks existing traits and writes only when the proposal is
-   distinct from all of them. It does not independently decide whether the
-   conversation contains a generalizable insight.
-5. `Created` means the trait was saved and includes its body and generated ID.
-   Do not submit it again. Use that ID for focused checks when needed.
+4. Call `derive_trait({ name, proposedTrait })` first, without a separate
+   approval prompt. This checks existing traits and writes only when the
+   proposal is distinct from all of them. It does not independently decide
+   whether the conversation contains a generalizable insight.
+5. `Created` means the trait was saved and includes its body, name, and UUID. Do
+   not submit it again. Use that UUID for focused checks when needed.
 6. `Inconclusive` means nothing was saved and contains relationship findings;
    each finding's `reason` distinguishes conflict from inconclusive. Any
    inconclusive comparison blocks all writes. Inspect the existing bodies and
-   IDs, clarify ambiguity, or revise the proposal. Confirmed conflicts otherwise
-   enter approval-gated reconciliation within this same tool.
+   names, clarify ambiguity, or revise the proposal. Confirmed conflicts
+   otherwise enter approval-gated reconciliation within this same tool.
 
-`Covered.traits` means existing traits already express the proposal; reuse them
-without creating a duplicate. When there is exactly one clarification candidate
-and no covered or blocking result, the tool selects it automatically and
-requests approval of its current body and complete replacement. The proposal
-must preserve the existing rule's intent, requirements, scope, and exceptions;
-the tool does not generate a merged replacement from an incremental hint.
+`Covered.traits` requires an independent second decision-model check of the
+saved body and activation, mime, and skip metadata against the entire proposal.
+Partial overlap or similar intent is insufficient. Verified coverage gaps enter
+approval-gated reconciliation, including needed applicability updates;
+inconclusive verification blocks writes. `Covered.traits` means existing traits
+already express the proposal; reuse them without creating a duplicate. When
+there is exactly one clarification candidate and no covered or blocking result,
+the tool selects it automatically and requests approval of its current body and
+complete replacement. The proposal must preserve the existing rule's intent,
+requirements, scope, and exceptions; the tool does not generate a merged
+replacement from an incremental hint.
 
 Multiple candidates return `Clarification` with `traits` and `proposedTrait`
 without writing. Refine the proposal or clarify intent rather than choosing an
-ID arbitrarily. Do not supply a clarification target parameter.
+name arbitrarily. Do not supply a clarification target parameter.
 
 Use the interactive question UI only on `ApprovalRequired`, then retry the same
 `proposedTrait` with `approved: true` after Save. The tool rechecks every
-existing trait and preserves the selected ID on update. If the store or selected
-action changes between approval and retry, obtain fresh approval rather than
-reusing the flag. `Updated` returns the saved trait. Never claim approval not
-given by the user or delete a trait merely needing clearer wording.
+existing trait and preserves the selected UUID on clarification. If the store or
+selected action changes between approval and retry, obtain fresh approval rather
+than reusing the flag. `Updated` returns the saved trait. Never claim approval
+not given by the user or delete a trait merely needing clearer wording.
 
 ## Reconcile conflicting traits
 
 `derive_trait` checks the proposal against every stored trait and automatically
 selects confirmed conflicts for reconciliation. There is no separate resolution
-tool and no ID-selection parameter. Inconclusive comparisons block
+tool and no trait-selection parameter. Inconclusive comparisons block
 reconciliation rather than authorizing deletion.
 
 Before writing, the shared approval flow shows the selected originals with their
-IDs and bodies, the proposal, the removal plan, and the replacement policy.
+names and bodies, the proposal, the removal plan, and the replacement policy.
 Approval authorizes model-generated reconciliation, not silent deletion. On
 `ApprovalRequired`, ask through the interactive UI and retry the same proposal
 with `approved: true` only after Save. If relationships or originals change,
@@ -142,7 +165,7 @@ After approval, the tool evaluates each body and the proposal for decomposition,
 then generates standalone replacements. The proposal takes precedence in direct
 conflicts; unrelated requirements, scopes, and exceptions should be preserved.
 It saves the replacements before deleting the selected originals and returns
-`Resolved` with the saved traits and their new IDs.
+`Resolved` with the saved traits and their new names and UUIDs.
 
 Inspect those replacements. Do not call `derive_trait` again for the same
 proposal: resolution has already saved its content. The initial comparison
@@ -192,13 +215,13 @@ For a justified file-scoped exception, add a line comment in the leading header,
 before any code:
 
 ```ts
-// traits-ignore-file <full-trait-id>: Explain why this trait cannot apply here.
+// traits-ignore-file <trait-uuid>: Explain why this trait cannot apply here.
 ```
 
-Each directive requires a nonempty reason and exactly one full trait ID. Repeat
-the comment for additional exceptions. Only the referenced traits are skipped;
-other traits remain checked. Exceptions apply to all file chunks and focused
-checks. Comments after code are ignored.
+Each directive requires a nonempty reason and exactly one UUID. Repeat the
+comment for additional exceptions. Only the referenced traits are skipped; other
+traits remain checked. Exceptions apply to all file chunks and focused checks.
+Comments after code are ignored.
 
 Read the referenced trait and verify the reason before adding or retaining an
 exception. Do not add directives merely to silence findings: fix applicable
@@ -211,7 +234,7 @@ their preference. Respect existing justified exceptions during manual review.
   `check_traits({ include: files })`.
 - After creating or resolving traits, explicitly review relevant TypeScript
   files. Saving traits does not automatically check code.
-- Omit `traitIds` for the full trait set. Supply IDs for focused follow-ups,
+- Omit `traitIds` for the full trait set. Supply UUIDs for focused follow-ups,
   especially the replacements returned by resolution. An empty array selects no
   traits; unknown IDs fail the call.
 - `include` accepts file paths or glob patterns, absolute or relative to the MCP

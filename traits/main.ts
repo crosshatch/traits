@@ -34,8 +34,8 @@ Command.make("traits", {
       version: PackageJson.version,
       protocols: [McpProtocol.v2025_11_25],
       instructions: String.stripMargin(`
-      | Traits are durable, reusable coding preferences stored as .agents/traits/<three_words-uuid>.md in the working directory.
-      | The full filename stem is the trait ID; use it in tool calls, for example rose_karate_frog-<uuid>.
+      | Traits are durable, reusable coding preferences. The filesystem adapter stores each as .agents/traits/<name>-<uuid>.md, with a descriptive snake_case name and stable UUID id in frontmatter.
+      | The UUID is the canonical identity across storage backends. Use only the UUID for traitIds and ignore directives, not the name or filename. Supply a descriptive name when deriving a new trait; creation generates its UUID.
       | Before completing a response to a user correction, coding preference, or approved alternative idiom, check whether it expresses a reusable rule.
       | Treat multi-turn exchanges as a whole: asking about a better idiom and then approving it can establish a preference without saying "always" or "trait".
       | Err on the side of proposing a concise trait unless you have read an existing trait that clearly covers the exact rule and its scope.
@@ -51,24 +51,26 @@ Command.make("traits", {
       | Approval to edit code alone is not approval to persist a trait. Make the requested edit, but also propose the reusable rule before your final response.
       | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
       | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
+      | Keep frontmatter complementary: mime restricts file types, activation defines positive semantic scope, and skip is only an independent exception within that scope. Omit redundant fields; never repeat activation's negation as skip. Keep bodies standalone without repeated requirements or duplicate traits.
       | Call derive_trait with the drafted body as proposedTrait. It saves only distinct rules; Covered means reuse an existing trait.
       | A single clarification candidate is selected automatically and shown for approval; supply a complete replacement preserving the existing rule.
-      | Multiple candidates return Clarification entries without writing: refine the proposal or clarify intent. Do not supply a target ID.
-      | After fallback approval, retry with the same proposedTrait and approved: true; Updated preserves the selected existing ID.
-      | Every derive_trait response is one tagged TraitDerivation outcome. Created returns the saved trait and ID; Updated and Resolved return saved replacements.
+      | Multiple candidates return Clarification entries without writing: refine the proposal or clarify intent. Do not supply a clarification target.
+      | After fallback approval, retry with the same name, proposedTrait and approved: true; Updated preserves the selected existing UUID.
+      | Every derive_trait response is one tagged TraitDerivation outcome. Created returns the saved trait with its name and UUID; Updated and Resolved return saved replacements.
       | Covered and Clarification return existing traits without writing. Inconclusive returns relationship findings and blocks all writes.
-      | Each inconclusive outcome's findings distinguish conflict from inconclusive via reason; clarify ambiguity before retrying.
-      | Confirmed conflicts enter reconciliation inside derive_trait, selecting only the conflicting originals for an explicit replacement approval.
-      | Approval must cover affected IDs/bodies, removals, the proposal, and generated reconciliation. Nothing is replaced silently.
+      | Inconclusive outcome findings use reason to distinguish conflict, coverage_gap, and inconclusive; clarify ambiguity before retrying.
+      | Covered requires independent second-pass verification of the saved body and applicability metadata against the complete proposal. Similar intent is insufficient; coverage gaps enter approval-gated reconciliation and inconclusive verification blocks writes.
+      | Confirmed conflicts and verified coverage gaps enter reconciliation inside derive_trait, selecting only the affected originals for an explicit replacement approval.
+      | Approval must cover affected names, UUIDs, bodies, removals, the proposal, and generated reconciliation. Nothing is replaced silently.
       | After approval, reconciliation gives the proposal precedence in direct conflicts, saves generated replacements, then removes the conflicting originals.
-      | Resolved returns saved replacement bodies and IDs. Review them and check relevant code; do not derive the same proposal again.
+      | Resolved returns saved replacement bodies, names, and UUIDs. Review them and check relevant code; do not derive the same proposal again.
       | After generating or changing TypeScript files, call check_traits on those files.
       | check_traits accepts include as file paths or glob strings, for example include: ["traits/**/*.ts"]. Overlapping matches are deduplicated.
       | Restrict assessments to project-owned source and relevant authored configuration/docs. Prefer an explicit project-file manifest for whole-project audits.
       | Never submit dependency/reference code, generated build output or lockfiles, Git metadata, secrets, .env files, credentials, or binary assets for assessment.
       | Unmatched patterns select nothing. Built-in exclusions cover dependencies, Git metadata, and nested worktrees; configure project-specific filenames or native glob patterns through TraitsConfig.excludes.
       | After saving or resolving a trait, check the relevant TypeScript files explicitly; creation does not run that review for you.
-      | Omit traitIds for all traits; use specific IDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
+      | Omit traitIds for all traits; use specific UUIDs for focused follow-ups. Before committing or opening a PR, review the changed TypeScript files.
       | Checks read current full files in 200-line chunks, not Git diffs. A finding's startLine locates a chunk, not an exact violation.
       | Each finding includes assessment.classification and probabilities: inconclusive is unresolved context, not a confirmed violation. Probabilities are not calibrated guarantees.
       | Take responsibility for trait compliance whenever a violation is discovered, through tool findings or your own inspection.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// traits-ignore-file dawn_sparrow_wolf-37a52965-6425-476e-bc3a-d20ce70bc1a6: Effect utilities are unavailable until this launcher installs dependencies.
+// traits-ignore-file 3d43cf7c-d5f9-47b1-8e7e-ba965f6c2046: Effect utilities are unavailable until this launcher installs dependencies.
 import { spawn } from "node:child_process"
 import { once } from "node:events"
 import { existsSync, readFileSync } from "node:fs"

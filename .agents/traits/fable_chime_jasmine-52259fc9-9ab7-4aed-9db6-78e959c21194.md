@@ -1,1 +1,0 @@
-For TypeScript optional properties, explicitly include undefined in the property type by default: readonly copyable?: boolean | undefined, not readonly copyable?: boolean. Omit the undefined union only when the API intentionally disallows explicitly passing undefined while still permitting omission.
