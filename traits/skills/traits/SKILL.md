@@ -32,6 +32,12 @@ rule; if an existing rule needs clearer wording, propose a clarification. Skip
 only clearly one-off requests, transient facts, or rules you can identify as
 already covered.
 
+When coverage is uncertain, call `derive_trait` with the specific preference; do
+not skip capture because a broad trait or a combination of general traits seems
+related. Let the tool assess coverage or clarification. For example, “prefer
+Effect utilities” and “pass callbacks directly” are not sufficient grounds to
+skip proposing “prefer Equal/Predicate helpers over manual checks.”
+
 Call `derive_trait` with the drafted rule first, leaving `approved` unset. Do
 not ask for approval separately before invoking: capable clients receive a
 native MCP form. Only if `ApprovalRequired` is returned, show the complete
