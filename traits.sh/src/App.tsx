@@ -99,9 +99,13 @@ export const App = () => {
               height="420"
               alt="An ornamental T surrounded by an ivy flourish and a returning feedback loop."
             />
+            <p className="eyebrow">Global desloppification</p>
             <h1 id="hero-title">Traits</h1>
-            <p className="hero-tagline">Global desloppification.</p>
             <InstallCommand />
+            <p className="hero-description">
+              Your agent learns from your feedback.
+              <em className="hero-coda">And corrects itself with subsequent generations.</em>
+            </p>
             <p className="hero-byline">
               BY{" "}
               <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
@@ -184,7 +188,7 @@ export const App = () => {
               </div>
             </div>
             <aside className="book-note">
-              <span className="eyebrow">A footnote from the fairy folk</span>
+              <span className="eyebrow">A footnote</span>
               <p>
                 Traits are not immutable laws. You can clarify a trait when the wording is too broad and reconcile it
                 when a new preference conflicts.
