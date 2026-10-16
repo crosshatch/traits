@@ -17,8 +17,8 @@ export class TraitAssessmentTooLargeError extends S.TaggedError<TraitAssessmentT
   "TraitAssessmentTooLargeError",
   {
     traitId: TraitId,
-    bytes: S.Int,
-    maxBytes: S.Int,
+    bytes: S.Int.check(S.isGreaterThan(0)),
+    maxBytes: S.Int.check(S.isGreaterThan(0)),
     location: SourceLocation.pipe(S.optional)
   }
 ) {

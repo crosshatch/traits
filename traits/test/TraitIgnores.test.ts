@@ -6,14 +6,14 @@ import { excludeIgnored, traitIgnores } from "../traitIgnores.ts"
 
 const first = Trait.Trait.make({
   id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
-  name: Trait.TraitName.make("direct_callbacks"),
+  name: Trait.TraitName.make("direct-callbacks"),
   body: "Pass callbacks directly."
 })
 const second = Trait.Trait.make({ ...first, id: Trait.TraitId.make("8ab974ba-e001-49cc-b6a7-1b2cd9a19bb8") })
 const third = Trait.Trait.make({
   ...first,
   id: Trait.TraitId.make("d015da5c-3fd6-4673-b5c8-d308680e9224"),
-  name: Trait.TraitName.make("use_arrow_functions")
+  name: Trait.TraitName.make("use-arrow-functions")
 })
 
 it("reads repeated directives from the leading header", () => {
@@ -62,12 +62,12 @@ it("uses UUIDs for a single-trait exception even when names are duplicated", () 
 })
 
 it("does not match partial names, different casing, filenames, or unknown references", () => {
-  const header = `// traits-ignore-file direct: partial\n// traits-ignore-file Direct_callbacks: wrong casing\n// traits-ignore-file ${first.name}-${first.id}.md: filename\n// traits-ignore-file unknown_trait: unknown`
+  const header = `// traits-ignore-file direct: partial\n// traits-ignore-file Direct-callbacks: wrong casing\n// traits-ignore-file ${first.name}-${first.id}.md: filename\n// traits-ignore-file unknown-trait: unknown`
   expect(pipe([first, second, third], excludeIgnored(header))).toEqual([first, second, third])
 })
 
 it("preserves UUID exceptions across renames without treating old names as aliases", () => {
-  const renamed = Trait.Trait.make({ ...first, name: Trait.TraitName.make("renamed_callbacks") })
+  const renamed = Trait.Trait.make({ ...first, name: Trait.TraitName.make("renamed-callbacks") })
   expect(pipe([renamed], excludeIgnored(`// traits-ignore-file ${first.id}: stable identity`))).toEqual([])
   expect(pipe([renamed], excludeIgnored(`// traits-ignore-file ${first.name}: old name`))).toEqual([renamed])
 })

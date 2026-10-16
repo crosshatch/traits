@@ -11,17 +11,18 @@ description: >-
 
 Traits are concise, durable coding rules. The filesystem implementation stores
 each body in `.agents/traits/<name>-<uuid>.md`, relative to its working
-directory. Frontmatter contains a descriptive snake_case `name` and a stable
-UUID `id`. The UUID alone is the canonical identity across backends: use it for
-focused `check_traits({ traitIds: [...] })` selections, not a name or filename.
-Ignore directives accept UUIDs or exact trait names. Renaming preserves
-identity; names need not be unique. Generate new UUIDs with `Crypto` outside the
-storage adapter, validate them with `Trait.TraitId.make`, and construct records
-with the schema's `Trait.Trait.make`. Preserve supplied IDs for updates and
-migrations; schema construction itself does not generate IDs. `TraitStore`
-persists complete traits and uses UUIDs for get, update, and remove, so other
-implementations can key records directly by ID without filesystem conventions.
-Only the filesystem adapter builds `<name>-<uuid>.md` paths.
+directory. Frontmatter contains a descriptive kebab-case `name` without a
+redundant `trait-` prefix and a stable UUID `id`. The UUID alone is the
+canonical identity across backends: use it for focused
+`check_traits({ traitIds: [...] })` selections, not a name or filename. Ignore
+directives accept UUIDs or exact trait names. Renaming preserves identity; names
+need not be unique. Generate new UUIDs with `Crypto` outside the storage
+adapter, validate them with `Trait.TraitId.make`, and construct records with the
+schema's `Trait.Trait.make`. Preserve supplied IDs for updates and migrations;
+schema construction itself does not generate IDs. `TraitStore` persists complete
+traits and uses UUIDs for get, update, and remove, so other implementations can
+key records directly by ID without filesystem conventions. Only the filesystem
+adapter builds `<name>-<uuid>.md` paths.
 
 Keep frontmatter fields complementary. `mime` restricts file types; `when`
 defines positive semantic scope. Write `when` values without a leading "When",
@@ -58,7 +59,7 @@ Effect utilities” and “pass callbacks directly” are not sufficient grounds
 skip proposing “prefer native inline checks and use Effect predicate helpers
 directly in callbacks or existing pipelines.”
 
-Call `derive_trait` with the drafted rule and a descriptive snake_case `name`
+Call `derive_trait` with the drafted rule and a descriptive kebab-case `name`
 first, leaving `approved` unset. Do not ask for approval separately before
 invoking: capable clients receive a native MCP form. Only if `ApprovalRequired`
 is returned, show the complete message in the interactive question tool with

@@ -14,7 +14,6 @@ import {
   String
 } from "effect"
 
-import { errorResponse } from "./_util/ErrorResponse.ts"
 import * as Frontmatter from "./_util/Frontmatter.ts"
 import * as Trait from "./Trait.ts"
 
@@ -56,13 +55,13 @@ export class TraitFilenameMismatchError extends S.TaggedError<TraitFilenameMisma
 }
 
 export const TraitStoreError = S.Union([
-  errorResponse(TraitNotFoundError),
-  errorResponse(TraitAlreadyExistsError),
-  errorResponse(DuplicateTraitIdError),
-  errorResponse(TraitFilenameMismatchError),
-  errorResponse(Frontmatter.MissingFrontmatterError),
-  errorResponse(Frontmatter.UnterminatedFrontmatterError),
-  errorResponse(Frontmatter.InvalidYamlError),
+  S.Struct({ ...TraitNotFoundError.fields, message: S.String }),
+  S.Struct({ ...TraitAlreadyExistsError.fields, message: S.String }),
+  S.Struct({ ...DuplicateTraitIdError.fields, message: S.String }),
+  S.Struct({ ...TraitFilenameMismatchError.fields, message: S.String }),
+  S.Struct({ ...Frontmatter.MissingFrontmatterError.fields, message: S.String }),
+  S.Struct({ ...Frontmatter.UnterminatedFrontmatterError.fields, message: S.String }),
+  S.Struct({ ...Frontmatter.InvalidYamlError.fields, message: S.String }),
   S.TaggedStruct("PlatformError", { message: S.String }),
   S.TaggedStruct("SchemaError", { message: S.String })
 ])

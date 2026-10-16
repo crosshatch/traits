@@ -34,7 +34,7 @@ Command.make("traits", {
       version: PackageJson.version,
       protocols: [McpProtocol.v2025_11_25],
       instructions: String.stripMargin(`
-      | Traits are durable, reusable coding preferences. The filesystem adapter stores each as .agents/traits/<name>-<uuid>.md, with a descriptive snake_case name and stable UUID id in frontmatter.
+      | Traits are durable, reusable coding preferences. The filesystem adapter stores each as .agents/traits/<name>-<uuid>.md, with a descriptive kebab-case name (no redundant trait- prefix) and stable UUID id in frontmatter.
       | The UUID is the canonical identity across storage backends. Use only UUIDs for focused traitIds selections. Ignore directives accept a UUID or an exact trait name, not a filename: a UUID targets one stable identity, while a name skips every trait with that name and must be updated after renaming. Supply a descriptive name when deriving a new trait; creation generates its UUID.
       | Before completing a response to a user correction, coding preference, or approved alternative idiom, check whether it expresses a reusable rule.
       | Treat multi-turn exchanges as a whole: asking about a better idiom and then approving it can establish a preference without saying "always" or "trait".

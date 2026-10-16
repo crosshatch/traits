@@ -17,7 +17,7 @@ Traits live as readable Markdown in `.agents/traits`, alongside your project:
 ```markdown
 ---
 id: 91f2990f-cdc0-4a1c-9a10-b0939e4de481
-name: direct_callbacks
+name: direct-callbacks
 when: passing callbacks.
 ---
 

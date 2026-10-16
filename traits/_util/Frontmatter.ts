@@ -22,8 +22,8 @@ export class UnterminatedFrontmatterError extends S.TaggedError<UnterminatedFron
 
 export class InvalidYamlError extends S.TaggedError<InvalidYamlError>()("InvalidYamlError", {
   path: S.String,
-  line: S.Int.pipe(S.optional),
-  column: S.Int.pipe(S.optional),
+  line: S.Int.check(S.isGreaterThan(0)).pipe(S.optional),
+  column: S.Int.check(S.isGreaterThan(0)).pipe(S.optional),
   cause: S.Defect()
 }) {
   override get message() {

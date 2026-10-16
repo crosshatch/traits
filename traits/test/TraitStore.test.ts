@@ -11,7 +11,7 @@ it.effect(
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-frontmatter-" })
-    const name = Trait.TraitName.make("test_trait")
+    const name = Trait.TraitName.make("test-trait")
     const initial = Trait.Trait.make({
       id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
       name,
@@ -37,7 +37,7 @@ it.effect(
       expect(reloaded).toEqual(updated)
       const text = yield* fs.readFileString(originalFile)
       expect(text).toContain(`name: ${name}`)
-      const renamedName = Trait.TraitName.make("renamed_trait")
+      const renamedName = Trait.TraitName.make("renamed-trait")
       yield* store.update(Trait.Trait.make({ ...updated, name: renamedName }))
       const renamed = yield* store.get(id)
       expect(renamed).toEqual({ ...updated, name: renamedName })
@@ -49,7 +49,7 @@ it.effect(
       yield* store.update(Trait.Trait.make({ ...renamed, body: "Updated after rename" }))
       const completeTrait = Trait.Trait.make({
         id: Trait.TraitId.make("8ab974ba-e001-49cc-b6a7-1b2cd9a19bb8"),
-        name: Trait.TraitName.make("new_trait"),
+        name: Trait.TraitName.make("new-trait"),
         body: "New body",
         when: "testing asynchronous operations.",
         mime: ["text/typescript", "text/tsx"],
@@ -80,7 +80,7 @@ it.effect(
       const afterCollision = yield* store.get(added.id)
       expect(afterCollision).toEqual(replacement)
       const duplicateId = yield* store
-        .add(Trait.Trait.make({ ...completeTrait, name: Trait.TraitName.make("different_name") }))
+        .add(Trait.Trait.make({ ...completeTrait, name: Trait.TraitName.make("different-name") }))
         .pipe(Effect.result)
       expect(Result.isFailure(duplicateId)).toBe(true)
       if (Result.isFailure(duplicateId)) expect(duplicateId.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
@@ -119,10 +119,10 @@ it.effect(
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-names-" })
     const actual = Trait.Trait.make({
       id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
-      name: Trait.TraitName.make("actual_name"),
+      name: Trait.TraitName.make("actual-name"),
       body: "Body"
     })
-    yield* fs.writeFileString(path.join(dir, `wrong_name-${actual.id}.md`), Trait.serialize(actual))
+    yield* fs.writeFileString(path.join(dir, `wrong-name-${actual.id}.md`), Trait.serialize(actual))
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
       const result = yield* store.get(actual.id).pipe(Effect.result)
@@ -130,13 +130,13 @@ it.effect(
       if (Result.isFailure(result)) {
         expect(result.failure).toBeInstanceOf(TraitStore.TraitFilenameMismatchError)
         expect(result.failure).toMatchObject({
-          path: path.join(dir, `wrong_name-${actual.id}.md`),
+          path: path.join(dir, `wrong-name-${actual.id}.md`),
           expectedFilename: `${actual.name}-${actual.id}.md`
         })
       }
       const valid = Trait.Trait.make({
         id: Trait.TraitId.make("8ab974ba-e001-49cc-b6a7-1b2cd9a19bb8"),
-        name: Trait.TraitName.make("valid_trait"),
+        name: Trait.TraitName.make("valid-trait"),
         body: "Body"
       })
       yield* store.add(valid)
@@ -154,10 +154,10 @@ it.effect(
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-duplicates-" })
     const first = Trait.Trait.make({
       id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
-      name: Trait.TraitName.make("first_trait"),
+      name: Trait.TraitName.make("first-trait"),
       body: "Body"
     })
-    const second = Trait.Trait.make({ ...first, name: Trait.TraitName.make("second_trait") })
+    const second = Trait.Trait.make({ ...first, name: Trait.TraitName.make("second-trait") })
     yield* fs.writeFileString(path.join(dir, `${first.name}-${first.id}.md`), Trait.serialize(first))
     yield* fs.writeFileString(path.join(dir, `${second.name}-${second.id}.md`), Trait.serialize(second))
     yield* Effect.gen(function* () {

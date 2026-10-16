@@ -3,7 +3,7 @@ import { Effect, pipe, Result, Schema as S, String } from "effect"
 
 import * as Trait from "../Trait.ts"
 
-const name = Trait.TraitName.make("test_trait")
+const name = Trait.TraitName.make("test-trait")
 const id = Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6")
 
 it.effect(
@@ -150,7 +150,8 @@ it.effect(
       "name.md",
       "Uppercase",
       "two words",
-      "kebab-case",
+      "snake_case",
+      "trait-example",
       pipe("a", String.repeat(81))
     ]) {
       const result = yield* Trait.parse(

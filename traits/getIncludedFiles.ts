@@ -5,7 +5,7 @@ import { TraitsContext } from "./TraitsContext.ts"
 
 export class GitFileListingError extends S.TaggedError<GitFileListingError>()("GitFileListingError", {
   directory: S.String,
-  exitCode: S.Int
+  exitCode: S.Int.check(S.isGreaterThan(0))
 }) {
   override get message() {
     return `git ls-files exited with code ${this.exitCode}`

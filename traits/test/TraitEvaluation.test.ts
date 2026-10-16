@@ -11,7 +11,7 @@ const source = Source.Source.make({ text: "const value = 1", location: Source.So
 const traits = Array.makeBy(20, (index) =>
   Trait.Trait.make({
     id: Trait.TraitId.make(`2535ceab-5702-4ab4-932a-${pipe(`${index}`, String.padStart(12, "0"))}`),
-    name: Trait.TraitName.make(`example_trait_${index}`),
+    name: Trait.TraitName.make(`example-trait-${index}`),
     body: "Prefer const declarations.",
     when: "declaring bindings.",
     mime: "text/typescript",

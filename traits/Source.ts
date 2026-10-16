@@ -2,7 +2,7 @@ import { Schema as S } from "effect"
 
 export type SourceLocation = typeof SourceLocation.Type
 export const SourceLocation = S.TaggedUnion({
-  File: { path: S.String, startLine: S.Int },
+  File: { path: S.String, startLine: S.Int.check(S.isGreaterThan(0)) },
   Generated: {}
 })
 

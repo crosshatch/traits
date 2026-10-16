@@ -19,7 +19,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Keep the proposal pending through related work and return to it afterward unless cancelled; obtain fresh approval of the complete revised body.
   | First decide whether the feedback generalizes beyond the current task and inspect existing trait files for coverage.
   | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings and unnecessary examples.
-  | Supply a descriptive snake_case name for a newly created trait; it becomes the frontmatter name and filesystem filename prefix. Creation generates a stable random UUID. Names need not be unique; trait IDs distinguish records.
+  | Supply a descriptive kebab-case name without a redundant trait- prefix for a newly created trait; it becomes the frontmatter name and filesystem filename prefix. Creation generates a stable random UUID. Names need not be unique; trait IDs distinguish records.
   | Avoid repeated requirements and duplicate traits. Keep bodies standalone; do not strip essential scope or exceptions just to shorten them.
   | When authoring trait frontmatter, let mime restrict file types and when define positive semantic scope. Include skip only for an independent exception within that scope, never its negation or a repetition of another field.
   | Write when values without a leading When, for example when: editing React state.
@@ -43,7 +43,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   parameters: S.Struct({
     name: Trait.TraitName.annotate({
       description:
-        "Descriptive snake_case name for a newly created trait and its filename prefix. Existing names are preserved on clarification."
+        "Descriptive kebab-case name without a redundant trait- prefix for a newly created trait and its filename prefix. Existing names are preserved on clarification."
     }),
     proposedTrait: S.String.annotate({
       description:

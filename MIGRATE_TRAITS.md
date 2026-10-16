@@ -26,12 +26,12 @@ Before: `gentle_maple_river-2535ceab-5702-4ab4-932a-f87362adf8c6.md`
 Prefer arrow functions for ordinary functions.
 ```
 
-After: `prefer_arrow_functions-2535ceab-5702-4ab4-932a-f87362adf8c6.md`
+After: `prefer-arrow-functions-2535ceab-5702-4ab4-932a-f87362adf8c6.md`
 
 ```text
 ---
 id: 2535ceab-5702-4ab4-932a-f87362adf8c6
-name: prefer_arrow_functions
+name: prefer-arrow-functions
 ---
 Prefer arrow functions for ordinary functions.
 ```
@@ -81,6 +81,12 @@ old-reference-to-UUID mapping before changing anything.
   name, the current `when` field rather than `activation`, and the matching
   filename. Leave a valid record unchanged. A repeated run must not regenerate
   UUIDs, rename valid descriptive names, or add another frontmatter block.
+- Names now use kebab-case, without a redundant leading `trait-`. Convert
+  earlier snake_case names by replacing underscores with hyphens and removing
+  that prefix. Rename the file to `<name>-<uuid>.md` using the same UUID, and
+  update exact-name ignore directives and filename links through the mapping.
+  UUID-based references are unchanged. Flag empty names or target collisions
+  before writing; do not guess a replacement name or overwrite another file.
 - For partial migrations, preserve a valid frontmatter UUID only when it agrees
   with any filename UUID. A frontmatter ID equal to the old complete filename
   stem may be converted through the explicit mapping to that stem's UUID.

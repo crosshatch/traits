@@ -6,10 +6,11 @@ import * as Frontmatter from "./_util/Frontmatter.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
 export type TraitName = typeof TraitName.Type
-export const TraitName = S.String.check(S.isPattern(/^[a-z0-9]+(?:_[a-z0-9]+)*$/), S.isMaxLength(80))
+export const TraitName = S.String.check(S.isPattern(/^(?!trait-)[a-z0-9]+(?:-[a-z0-9]+)*$/), S.isMaxLength(80))
   .pipe(S.brand("traits/TraitName"))
   .annotate({
-    description: "A descriptive snake_case trait name, used as the human-readable prefix of its Markdown filename."
+    description:
+      "A descriptive kebab-case name without a redundant trait- prefix, used as the human-readable prefix of its Markdown filename."
   })
 
 export type TraitId = typeof TraitId.Type
