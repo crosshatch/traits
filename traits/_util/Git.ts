@@ -1,16 +1,17 @@
 import { Data, Effect, Path, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-export class GitRootError extends Data.TaggedError("GitRootError")<{ readonly message: string }> {}
+export class GitRootError extends Data.TaggedError("GitRootError") {
+  override get message() {
+    return "Run from inside a Git repository or worktree"
+  }
+}
 
 const resolveRoot = Effect.fn("Git.resolveRoot")(function* (command: ChildProcess.Command) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
   return yield* spawner.string(command).pipe(
     Effect.map(String.trim),
-    Effect.filterOrFail(
-      String.isNonEmpty,
-      () => new GitRootError({ message: "Run from inside a Git repository or worktree" })
-    )
+    Effect.filterOrFail(String.isNonEmpty, () => new GitRootError())
   )
 })
 

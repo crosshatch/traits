@@ -14,48 +14,55 @@ import {
   String
 } from "effect"
 
+import { errorResponse } from "./_util/ErrorResponse.ts"
 import * as Frontmatter from "./_util/Frontmatter.ts"
 import * as Trait from "./Trait.ts"
 
 export class TraitNotFoundError extends S.TaggedError<TraitNotFoundError>()("TraitNotFoundError", {
-  id: Trait.TraitId,
-  message: S.String
-}) {}
+  id: Trait.TraitId
+}) {
+  override get message() {
+    return `Trait ${this.id} was not found`
+  }
+}
 
 export class TraitAlreadyExistsError extends S.TaggedError<TraitAlreadyExistsError>()("TraitAlreadyExistsError", {
-  id: Trait.TraitId,
-  message: S.String
-}) {}
+  id: Trait.TraitId
+}) {
+  override get message() {
+    return `Trait ID ${this.id} already exists`
+  }
+}
 
 export class DuplicateTraitIdError extends S.TaggedError<DuplicateTraitIdError>()("DuplicateTraitIdError", {
   id: Trait.TraitId,
-  paths: S.Array(S.String),
-  message: S.String
-}) {}
+  paths: S.Array(S.String)
+}) {
+  override get message() {
+    return `Multiple files claim trait ID ${this.id}`
+  }
+}
 
 export class TraitFilenameMismatchError extends S.TaggedError<TraitFilenameMismatchError>()(
   "TraitFilenameMismatchError",
   {
     path: S.String,
-    expectedFilename: S.String,
-    message: S.String
+    expectedFilename: S.String
   }
-) {}
+) {
+  override get message() {
+    return `Trait filename must be ${this.expectedFilename}, received ${this.path}`
+  }
+}
 
-export type Error =
-  | PlatformError.PlatformError
-  | S.SchemaError
-  | Frontmatter.ParseError
-  | TraitNotFoundError
-  | TraitAlreadyExistsError
-  | DuplicateTraitIdError
-  | TraitFilenameMismatchError
 export const TraitStoreError = S.Union([
-  TraitNotFoundError,
-  TraitAlreadyExistsError,
-  DuplicateTraitIdError,
-  TraitFilenameMismatchError,
-  Frontmatter.ParseError,
+  errorResponse(TraitNotFoundError),
+  errorResponse(TraitAlreadyExistsError),
+  errorResponse(DuplicateTraitIdError),
+  errorResponse(TraitFilenameMismatchError),
+  errorResponse(Frontmatter.MissingFrontmatterError),
+  errorResponse(Frontmatter.UnterminatedFrontmatterError),
+  errorResponse(Frontmatter.InvalidYamlError),
   S.TaggedStruct("PlatformError", { message: S.String }),
   S.TaggedStruct("SchemaError", { message: S.String })
 ])
@@ -63,11 +70,42 @@ export const TraitStoreError = S.Union([
 export class TraitStore extends Context.Service<
   TraitStore,
   {
-    readonly add: (trait: Trait.Trait) => Effect.Effect<Trait.Trait, Error>
-    readonly update: (trait: Trait.Trait) => Effect.Effect<void, Error>
-    readonly get: (id: Trait.TraitId) => Effect.Effect<Trait.Trait, Error>
-    readonly ls: Effect.Effect<ReadonlyArray<Trait.Trait>, Error>
-    readonly rm: (ids: ReadonlyArray<Trait.TraitId>) => Effect.Effect<void, Error>
+    readonly add: (
+      trait: Trait.Trait
+    ) => Effect.Effect<Trait.Trait, PlatformError.PlatformError | TraitAlreadyExistsError>
+    readonly update: (
+      trait: Trait.Trait
+    ) => Effect.Effect<
+      void,
+      | PlatformError.PlatformError
+      | S.SchemaError
+      | Frontmatter.ParseError
+      | TraitNotFoundError
+      | DuplicateTraitIdError
+      | TraitFilenameMismatchError
+    >
+    readonly get: (
+      id: Trait.TraitId
+    ) => Effect.Effect<
+      Trait.Trait,
+      | PlatformError.PlatformError
+      | S.SchemaError
+      | Frontmatter.ParseError
+      | TraitNotFoundError
+      | DuplicateTraitIdError
+      | TraitFilenameMismatchError
+    >
+    readonly ls: Effect.Effect<
+      ReadonlyArray<Trait.Trait>,
+      | PlatformError.PlatformError
+      | S.SchemaError
+      | Frontmatter.ParseError
+      | DuplicateTraitIdError
+      | TraitFilenameMismatchError
+    >
+    readonly rm: (
+      ids: ReadonlyArray<Trait.TraitId>
+    ) => Effect.Effect<void, PlatformError.PlatformError | TraitNotFoundError | DuplicateTraitIdError>
   }
 >()("traits/TraitStore") {}
 
@@ -102,9 +140,7 @@ export const layerFileSystem = (dir: string) =>
           Effect.filterOrFail(
             (files) => files.length === 1,
             (files) =>
-              files.length === 0
-                ? TraitNotFoundError.make({ id, message: `Trait ${id} was not found` })
-                : DuplicateTraitIdError.make({ id, paths: files, message: `Multiple files claim trait ID ${id}` })
+              files.length === 0 ? TraitNotFoundError.make({ id }) : DuplicateTraitIdError.make({ id, paths: files })
           ),
           Effect.map(Array.getUnsafe(0))
         )
@@ -116,8 +152,7 @@ export const layerFileSystem = (dir: string) =>
             (trait) =>
               TraitFilenameMismatchError.make({
                 path: file,
-                expectedFilename: `${trait.name}-${trait.id}.md`,
-                message: `Trait filename must be ${trait.name}-${trait.id}.md, received ${path.basename(file)}`
+                expectedFilename: `${trait.name}-${trait.id}.md`
               })
           )
         )
@@ -130,8 +165,7 @@ export const layerFileSystem = (dir: string) =>
               (files) => files.length === 0,
               () =>
                 TraitAlreadyExistsError.make({
-                  id: trait.id,
-                  message: `Trait ID ${trait.id} already exists`
+                  id: trait.id
                 })
             )
           )
@@ -187,8 +221,7 @@ export const layerFileSystem = (dir: string) =>
               const id = Array.getUnsafe(duplicates, 0).id
               return DuplicateTraitIdError.make({
                 id,
-                paths: Array.map(duplicates, traitPath),
-                message: `Multiple files claim trait ID ${id}`
+                paths: Array.map(duplicates, traitPath)
               })
             }
           ),

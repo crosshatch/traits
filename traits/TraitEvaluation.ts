@@ -19,10 +19,13 @@ export class TraitAssessmentTooLargeError extends S.TaggedError<TraitAssessmentT
     traitId: TraitId,
     bytes: S.Int,
     maxBytes: S.Int,
-    location: SourceLocation.pipe(S.optional),
-    message: S.String
+    location: SourceLocation.pipe(S.optional)
   }
-) {}
+) {
+  override get message() {
+    return `Source and trait ${this.traitId} exceed the decision request budget; split the source or shorten the trait.`
+  }
+}
 
 export const requiresReview = (evaluation: TraitEvaluation) =>
   evaluation.assessment.classification === "violation" || evaluation.assessment.classification === "inconclusive"
@@ -69,8 +72,7 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
         traitId: trait.id,
         bytes: inputBytes + questionBytes,
         maxBytes: 24_000,
-        location: source.location,
-        message: `Source and trait ${trait.id} exceed the decision request budget; split the source or shorten the trait.`
+        location: source.location
       })
     }
     if (batch.length > 0 && (batch.length === 16 || bytes + questionBytes > 24_000)) {

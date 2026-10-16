@@ -2,7 +2,23 @@ import { Array, Console, Data, Effect, FileSystem, Path } from "effect"
 import { Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-class RepoSyncError extends Data.TaggedError("RepoSyncError")<{ readonly message: string }> {}
+class RepoInitializationError extends Data.TaggedError("RepoInitializationError") {
+  override get message() {
+    return "Failed to initialize reference repositories"
+  }
+}
+
+class RepoFetchError extends Data.TaggedError("RepoFetchError")<{ readonly repository: string }> {
+  override get message() {
+    return `Failed to fetch "${this.repository}"`
+  }
+}
+
+class RepoSwitchError extends Data.TaggedError("RepoSwitchError")<{ readonly repository: string }> {
+  override get message() {
+    return `Failed to switch "${this.repository}" to main`
+  }
+}
 
 export const syncRepos = Command.make("sync-repos").pipe(
   Command.withHandler(
@@ -16,7 +32,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
         (command) => spawner.exitCode(command),
         Effect.filterOrFail(
           (exitCode) => exitCode === 0,
-          () => new RepoSyncError({ message: "Failed to initialize reference repositories" })
+          () => new RepoInitializationError()
         )
       )
 
@@ -61,7 +77,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => new RepoSyncError({ message: `Failed to fetch "${repo.entry}"` })
+              () => new RepoFetchError({ repository: repo.entry })
             )
           )
           yield* ChildProcess.make`git switch -C main origin/main`.pipe(
@@ -69,7 +85,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => new RepoSyncError({ message: `Failed to switch "${repo.entry}" to main` })
+              () => new RepoSwitchError({ repository: repo.entry })
             )
           )
           yield* Console.log(`Synced "${repo.entry}" (main)`)

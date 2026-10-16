@@ -2,6 +2,7 @@ import { Array, Effect, FileSystem, flow, Path, pipe, Schema as S, String } from
 import { DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
+import { errorResponse } from "../_util/ErrorResponse.ts"
 import { getIncludedFiles, GitFileListingError } from "../getIncludedFiles.ts"
 import { Source, SourceLocation } from "../Source.ts"
 import * as Trait from "../Trait.ts"
@@ -54,8 +55,8 @@ export const CheckTraits = Tool.make("check_traits", {
   failure: S.Union([
     S.TaggedStruct("AiError", { message: S.String }),
     TraitStoreError,
-    Evaluation.TraitAssessmentTooLargeError,
-    GitFileListingError
+    errorResponse(Evaluation.TraitAssessmentTooLargeError),
+    errorResponse(GitFileListingError)
   ]),
   failureMode: "return",
   dependencies: [

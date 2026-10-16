@@ -150,11 +150,9 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
         Struct.omit(draft, ["extensionMetadata"]),
         Record.filter<string, S.Json | undefined, S.Json>(Predicate.isNotUndefined)
       )
-      const inherited =
-        options.traits.length === 1 ? Struct.omit(Array.getUnsafe(options.traits, 0), ["id", "name", "body"]) : {}
       const uuid = yield* crypto.randomUUIDv4
       const trait = Trait.Trait.make({
-        ...inherited,
+        ...(options.traits.length === 1 ? options.traits[0] : {}),
         ...draft.extensionMetadata,
         ...generated,
         id: Trait.TraitId.make(uuid),

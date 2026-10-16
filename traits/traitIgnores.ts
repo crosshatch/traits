@@ -1,4 +1,4 @@
-import { Array, String } from "effect"
+import { Array, flow, String } from "effect"
 
 import type { Trait } from "./Trait.ts"
 
@@ -17,7 +17,6 @@ export const traitIgnores = (text: string): ReadonlySet<string> => {
 }
 
 /** Names match every trait with that exact name; UUIDs match a single stable identity. */
-export const excludeIgnored = (text: string) => {
-  const references = traitIgnores(text)
-  return Array.filter<Trait>((trait) => !references.has(trait.id) && !references.has(trait.name))
-}
+export const excludeIgnored = flow(traitIgnores, (references) =>
+  Array.filter<Trait>((trait) => !references.has(trait.id) && !references.has(trait.name))
+)

@@ -5,9 +5,12 @@ import { TraitsContext } from "./TraitsContext.ts"
 
 export class GitFileListingError extends S.TaggedError<GitFileListingError>()("GitFileListingError", {
   directory: S.String,
-  exitCode: S.Int,
-  message: S.String
-}) {}
+  exitCode: S.Int
+}) {
+  override get message() {
+    return `git ls-files exited with code ${this.exitCode}`
+  }
+}
 
 export const getIncludedFiles = Effect.gen(function* () {
   const context = yield* TraitsContext
@@ -25,8 +28,7 @@ export const getIncludedFiles = Effect.gen(function* () {
     Effect.filterOrFail(Equal.equals(0), (exitCode) =>
       GitFileListingError.make({
         directory: context.configRoot,
-        exitCode,
-        message: `git ls-files exited with code ${exitCode}`
+        exitCode
       })
     )
   )
