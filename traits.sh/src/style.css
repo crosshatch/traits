@@ -1,11 +1,13 @@
 :root {
-  font-family: "Libre Baskerville", Georgia, serif;
+  font-family: var(--font-serif);
   color: var(--ink);
   background: var(--surface);
   color-scheme: light dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  --font-serif: "Libre Baskerville", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
   --surface: light-dark(#faf4e3, #241d28);
   --surface-well: light-dark(#f5edd3, #352a39);
   --surface-band: light-dark(#f2e9cb, #302535);
@@ -108,7 +110,7 @@ button:disabled {
   background: var(--selection);
 }
 code {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: var(--font-mono);
 }
 p {
   line-height: 1.9;
@@ -188,7 +190,7 @@ p {
   height: 18px;
 }
 .eyebrow {
-  font-family: "Libre Baskerville", Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 0.7rem;
   line-height: 1.8;
   text-transform: uppercase;
@@ -289,7 +291,7 @@ p {
 .install-command code {
   position: relative;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.025em;
   color: var(--lapis);
 }
@@ -698,7 +700,9 @@ h3 {
   line-height: 1.7;
 }
 .visual-label {
-  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .visual-footnote {
@@ -718,9 +722,7 @@ h3 {
   padding: 0.7rem 0.85rem;
   border-bottom: 1px solid var(--rule);
   font:
-    0.66rem/1.7 "SFMono-Regular",
-    Consolas,
-    monospace;
+    0.66rem/1.7 var(--font-mono);
 }
 .visual-card-heading > span {
   color: var(--ink-muted);
@@ -886,9 +888,7 @@ h3 {
 }
 .visual-folder {
   font:
-    0.75rem/2 "SFMono-Regular",
-    Consolas,
-    monospace;
+    0.75rem/2 var(--font-mono);
   color: var(--lapis);
 }
 .visual-tree-indent {
@@ -917,7 +917,7 @@ h3 {
 .visual-file-icon {
   padding: 0.45rem 0.25rem;
   border: 1px solid var(--rule);
-  font: 0.6rem/1 monospace;
+  font: 0.6rem/1 var(--font-mono);
 }
 .visual-file-new {
   background: var(--verdigris-wash);
@@ -1050,7 +1050,7 @@ h3 {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--rule);
   font-size: 0.75rem;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: var(--font-mono);
 }
 .code-heading > span {
   overflow-wrap: anywhere;
