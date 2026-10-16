@@ -7,6 +7,8 @@ allowBuilds:
   workerd: true
 
 catalog:
+  "@alchemy.run/frontend-frameworks": 2.0.0-beta.80
+  "@astrojs/react": 7.1.0
   "@changesets/changelog-github": 1.0.1
   "@changesets/cli": 3.0.3
   "@effect/ai-openai": 4.0.0
@@ -21,6 +23,7 @@ catalog:
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
   alchemy: 2.0.0-beta.80
+  astro: 7.4.0
   effect: 4.0.0
   react: 19.3.0
   react-dom: 19.3.0

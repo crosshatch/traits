@@ -5,9 +5,9 @@ All paths below are relative to the repository root.
 ## Workspace
 
 - `traits/`: Effect-based MCP server and trait SDK.
-- `traits.sh/`: static Vite + React site; deployment is defined by root `alchemy.run.ts`.
+- `traits.sh/`: static Astro site with React islands; deployment is defined by root `alchemy.run.ts`.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
-- Use `pnpm --filter traits.sh dev` for the local Vite server and `pnpm --filter traits.sh build` to build static assets.
+- Use `pnpm --filter traits.sh dev` for the local Astro server and `pnpm --filter traits.sh build` to build static assets.
 - Deployment runs from the root with `pnpm exec alchemy deploy alchemy.run.ts --stage <stage>`. Do not deploy, destroy, or provision resources without authorization; credentials/profile and stage must be explicit.
 
 ## Verification

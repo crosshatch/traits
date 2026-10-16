@@ -4,6 +4,7 @@ dist/
 coverage/
 *.tsbuildinfo
 .alchemy/
+.astro/
 .wrangler/
 .env*
 !.env.example

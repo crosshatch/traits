@@ -14,13 +14,14 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const stage = yield* Stage
     const env = yield* GitHub.GitHubEnv
-    const site = yield* Cloudflare.Website.Vite("Website", {
+    const site = yield* Cloudflare.Website.Astro("Website", {
       ...(stage === "prod"
         ? { domain: "traits.sh" }
         : env?.pr !== undefined
           ? { domain: `pr-${env.pr}.traits.sh` }
           : {}),
-      rootDir: "traits.sh"
+      rootDir: "traits.sh",
+      astro: { output: "static" }
     })
     if (env !== undefined && env.pr !== undefined) {
       yield* GitHub.Comment("PreviewComment", {
