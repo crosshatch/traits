@@ -11,7 +11,8 @@
     "build": "tsc -b tsconfig.json",
     "test": "vp check && pnpm build && pnpm test:rules && pnpm test:traits",
     "test:rules": "vp test run --project rules",
-    "test:traits": "vp test run --project traits --passWithNoTests"
+    "test:traits": "vp test run --project traits --passWithNoTests",
+    "test:traits:integration": "vp test run --config traits.integration.config.ts"
   },
   "dependencies": {
     "alchemy": "catalog:",

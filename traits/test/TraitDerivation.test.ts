@@ -1,14 +1,20 @@
+import { NodeCrypto } from "@effect/platform-node"
+import { expect, it } from "@effect/vitest"
 import { Effect, Layer, Predicate, Semaphore, Stream } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
-import { expect, it } from "vite-plus/test"
 
-import { checkDecomposability, Trait, TraitId } from "../Trait.ts"
+import * as Trait from "../Trait.ts"
 import { derive } from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore } from "../TraitStore.ts"
 
-const original = Trait.make({ id: TraitId.make("original"), body: "Use tabs for indentation." })
+const name = Trait.TraitName.make("indentation")
+const original = Trait.Trait.make({
+  id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
+  name,
+  body: "Use tabs for indentation."
+})
 const proposedTrait = "Use two spaces for indentation."
 
 const harness = Effect.fn("test.harness")(function* (options: {
@@ -19,8 +25,8 @@ const harness = Effect.fn("test.harness")(function* (options: {
   const mutations: Array<string> = []
   const requests: Array<LanguageModel.ProviderOptions> = []
   const decisionModel = yield* DecisionModel.make({
-    decide: ({ state }) => {
-      const relationship = Predicate.hasProperty(state, "trait")
+    decide: (request) => {
+      const relationship = Predicate.hasProperty(request.state, "trait")
       const label = relationship ? "conflict" : options.decomposable === true ? "decomposable" : "atomic"
       const labels = relationship
         ? ["distinct", "covered", "clarification", "conflict", "inconclusive"]
@@ -41,7 +47,11 @@ const harness = Effect.fn("test.harness")(function* (options: {
     generateText: (request) => {
       requests.push(request)
       return Effect.succeed([
-        { type: "text", text: options.responseText ?? JSON.stringify({ traits: [{ body: proposedTrait }] }) }
+        {
+          type: "text",
+          text:
+            options.responseText ?? JSON.stringify({ traits: [{ name, body: proposedTrait, extensionMetadata: "{}" }] })
+        }
       ])
     },
     streamText: () => Stream.empty,
@@ -49,9 +59,8 @@ const harness = Effect.fn("test.harness")(function* (options: {
   })
   const store = TraitStore.of({
     ls: Effect.sync(() => [...stored.values()]),
-    add: (body) =>
+    add: (trait) =>
       Effect.sync(() => {
-        const trait = Trait.make({ id: TraitId.make(`replacement-${stored.size}`), body })
         mutations.push("add")
         stored.set(trait.id, trait)
         return trait
@@ -69,6 +78,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
       })
   })
   const layer = Layer.mergeAll(
+    NodeCrypto.layer,
     Layer.succeed(DecisionModel.DecisionModel, decisionModel),
     Layer.succeed(LanguageModel.LanguageModel, languageModel),
     Layer.succeed(TraitStore, store),
@@ -88,62 +98,61 @@ const harness = Effect.fn("test.harness")(function* (options: {
   return { stored, mutations, requests, layer }
 })
 
-it("does not generate replacements or mutate traits before approval", () =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const test = yield* harness({})
-      const result = yield* derive({ proposedTrait }).pipe(Effect.provide(test.layer))
-      expect(result._tag).toBe("ApprovalRequired")
-      expect(test.requests).toEqual([])
-      expect(test.mutations).toEqual([])
-    })
-  ))
-
-it("requests explicit JSON and saves replacements before removing originals", () =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const test = yield* harness({})
-      const result = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
-      expect(result._tag).toBe("Resolved")
-      expect(test.mutations).toEqual(["add", "rm"])
-      expect([...test.stored.values()].map((trait) => trait.body)).toEqual([proposedTrait])
-      expect(test.requests).toHaveLength(1)
-      expect(test.requests[0]?.prompt.content[0]).toMatchObject({
-        role: "system",
-        content: expect.stringContaining('Return only a JSON object with this shape: {"traits":[{"body":')
-      })
-    })
-  ))
-
-it.each(["Use two spaces for indentation.", '{"traits":[]}'])(
-  "leaves originals untouched when generation returns invalid output: %s",
-  (responseText) =>
-    Effect.runPromise(
-      Effect.gen(function* () {
-        const test = yield* harness({ responseText })
-        const error = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer), Effect.flip)
-        expect(error).toMatchObject({
-          module: "LanguageModel",
-          method: "generateObject",
-          reason: { _tag: "StructuredOutputError" }
-        })
-        expect(test.mutations).toEqual([])
-        expect([...test.stored.values()]).toEqual([original])
-      })
-    )
+it.effect(
+  "does not generate replacements or mutate traits before approval",
+  Effect.fnUntraced(function* () {
+    const test = yield* harness({})
+    const result = yield* derive({ name, proposedTrait }).pipe(Effect.provide(test.layer))
+    expect(result._tag).toBe("ApprovalRequired")
+    expect(test.requests).toEqual([])
+    expect(test.mutations).toEqual([])
+  })
 )
 
-it("requests the distinct JSON shape required for decomposition", () =>
-  Effect.runPromise(
-    Effect.gen(function* () {
-      const bodies = ["Use two spaces for indentation.", "Use single quotes."]
-      const test = yield* harness({ decomposable: true, responseText: JSON.stringify({ traits: bodies }) })
-      const result = yield* checkDecomposability(bodies.join(" ")).pipe(Effect.provide(test.layer))
-      expect(result).toEqual(bodies)
-      expect(test.requests[0]?.prompt.content[0]).toMatchObject({
-        role: "system",
-        content: expect.stringContaining('Return only a JSON object with this shape: {"traits":["')
+it.effect(
+  "requests explicit JSON and saves replacements before removing originals",
+  Effect.fnUntraced(function* () {
+    const test = yield* harness({})
+    const result = yield* derive({ name, proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
+    expect(result._tag).toBe("Resolved")
+    expect(test.mutations).toEqual(["add", "rm"])
+    expect([...test.stored.values()].map((trait) => trait.body)).toEqual([proposedTrait])
+    expect(test.requests).toHaveLength(1)
+    expect(test.requests[0]?.prompt.content[0]).toMatchObject({
+      role: "system",
+      content: expect.stringContaining('Return only a JSON object with this shape: {"traits":[{"name":')
+    })
+  })
+)
+
+it.effect(
+  "leaves originals untouched when generation returns invalid output",
+  Effect.fnUntraced(function* () {
+    for (const responseText of ["Use two spaces for indentation.", '{"traits":[]}']) {
+      const test = yield* harness({ responseText })
+      const error = yield* derive({ name, proposedTrait, approved: true }).pipe(Effect.provide(test.layer), Effect.flip)
+      expect(error).toMatchObject({
+        module: "LanguageModel",
+        method: "generateObject",
+        reason: { _tag: "StructuredOutputError" }
       })
       expect(test.mutations).toEqual([])
+      expect([...test.stored.values()]).toEqual([original])
+    }
+  })
+)
+
+it.effect(
+  "requests the distinct JSON shape required for decomposition",
+  Effect.fnUntraced(function* () {
+    const bodies = ["Use two spaces for indentation.", "Use single quotes."]
+    const test = yield* harness({ decomposable: true, responseText: JSON.stringify({ traits: bodies }) })
+    const result = yield* Trait.checkDecomposability(bodies.join(" ")).pipe(Effect.provide(test.layer))
+    expect(result).toEqual(bodies)
+    expect(test.requests[0]?.prompt.content[0]).toMatchObject({
+      role: "system",
+      content: expect.stringContaining('Return only a JSON object with this shape: {"traits":["')
     })
-  ))
+    expect(test.mutations).toEqual([])
+  })
+)
