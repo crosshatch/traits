@@ -10,7 +10,7 @@ it.effect(
   Effect.fn("test.TraitStore")(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const dir = yield* fs.makeTempDirectoryScoped({ directory: "/tmp/opencode", prefix: "traits-frontmatter-" })
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-frontmatter-" })
     const name = Trait.TraitName.make("test_trait")
     const initial = Trait.Trait.make({
       id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
@@ -116,7 +116,7 @@ it.effect(
   Effect.fn("test.TraitStore.nameMismatch")(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const dir = yield* fs.makeTempDirectoryScoped({ directory: "/tmp/opencode", prefix: "traits-names-" })
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-names-" })
     const actual = Trait.Trait.make({
       id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
       name: Trait.TraitName.make("actual_name"),
@@ -151,7 +151,7 @@ it.effect(
   Effect.fn("test.TraitStore.duplicateIds")(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const dir = yield* fs.makeTempDirectoryScoped({ directory: "/tmp/opencode", prefix: "traits-duplicates-" })
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-duplicates-" })
     const first = Trait.Trait.make({
       id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
       name: Trait.TraitName.make("first_trait"),
