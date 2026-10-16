@@ -10,6 +10,7 @@ import { InstallCommand } from "./InstallCommand.tsx"
 import { steps, type LifecycleStep } from "./LifecycleStep.ts"
 import { LifecycleVisual } from "./LifecycleVisual.tsx"
 import { setupPrompt } from "./SetupPrompt.ts"
+import { trackAtom, visitAtom } from "./Traffic.ts"
 
 const repository = "https://github.com/crosshatch/traits"
 const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii"] as const
@@ -106,6 +107,7 @@ const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.ti
 export const App = () => {
   useAtomMount(observeChaptersAtom)
   useAtomMount(observeWalkthroughAtom)
+  useAtomMount(visitAtom)
   const chapter = useAtomValue(chapterAtom)
   const active = useAtomValue(activeAtom)
   const direction = useAtomValue(directionAtom)
@@ -117,6 +119,7 @@ export const App = () => {
   const togglePlaying = useAtomSet(togglePlayingAtom)
   const previousStep = useAtomSet(stepAtom(-1))
   const nextStep = useAtomSet(stepAtom(1))
+  const track = useAtomSet(trackAtom)
 
   return (
     <>
@@ -352,11 +355,15 @@ export const App = () => {
                   Choose your providers and models when asked, then supply their credentials privately. Your agent
                   verifies the connection and tells you if anything still needs your attention.
                 </p>
-                <a className="text-link" href={`${repository}/blob/main/SETUP.md`}>
+                <a
+                  className="text-link"
+                  href={`${repository}/blob/main/SETUP.md`}
+                  onClick={() => track({ event: "setup_click", placement: "guide" })}
+                >
                   Setup guide &amp; troubleshooting ↗
                 </a>
               </div>
-              <CodeSample title="agent prompt · set up Traits" code={setupPrompt} />
+              <CodeSample title="agent prompt · set up Traits" code={setupPrompt} copyPlacement="guide" />
             </div>
             <div className="practice-list">
               <div>

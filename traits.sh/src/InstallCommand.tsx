@@ -3,12 +3,14 @@ import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
 
 import { setupPrompt } from "./SetupPrompt.ts"
+import { track } from "./Traffic.ts"
 
 const statusAtom = Atom.family((_compact: boolean) => Atom.make("Paste into your coding agent"))
 const copyAtom = Atom.family((compact: boolean) =>
   Atom.fn(
     Effect.fn("InstallCommand.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
       const status = yield* Effect.promise(() => navigator.clipboard.writeText(setupPrompt)).pipe(
+        Effect.tap(() => track({ event: "copy_prompt", placement: compact ? "footer" : "hero" }, ctx)),
         Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
       )
       ctx.set(statusAtom(compact), status)

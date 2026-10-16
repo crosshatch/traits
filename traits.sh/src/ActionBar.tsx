@@ -1,8 +1,12 @@
+import { useAtomSet } from "@effect/atom-react"
+
 import { InstallCommand } from "./InstallCommand.tsx"
 import { ThemeToggle } from "./ThemeToggle.tsx"
+import { trackAtom } from "./Traffic.ts"
 
 export const ActionBar = (props: { readonly docked?: boolean | undefined }) => {
   const Tag = props.docked === true ? "footer" : "header"
+  const track = useAtomSet(trackAtom)
   return (
     <Tag className={props.docked === true ? "masthead docked-header" : "masthead"}>
       <a className="brand" href="#top" aria-label="Traits, back to top">
@@ -17,6 +21,7 @@ export const ActionBar = (props: { readonly docked?: boolean | undefined }) => {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Source on GitHub (opens in a new tab)"
+          onClick={() => track({ event: "github_click", placement: props.docked === true ? "footer" : "header" })}
         >
           Source <span aria-hidden="true">↗</span>
         </a>

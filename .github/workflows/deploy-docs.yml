@@ -23,6 +23,9 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # Traction dashboard collector for traits.sh events; unset on PR previews so they are not counted.
+      VITE_SITE_EVENTS_URL: ${{ github.event_name != 'pull_request' && vars.SITE_EVENTS_URL || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

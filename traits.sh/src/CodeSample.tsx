@@ -1,14 +1,25 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Array, Data, Effect, pipe, String } from "effect"
+import { Array, Data, Effect, pipe, Predicate, String } from "effect"
 import { Atom } from "effect/reactivity"
 import { useId } from "react"
 
+import { track } from "./Traffic.ts"
+
 const statusAtom = Atom.family((_id: string) => Atom.make("Copy"))
-class CopyInput extends Data.Class<{ readonly id: string; readonly code: string }> {}
+class CopyInput extends Data.Class<{
+  readonly id: string
+  readonly code: string
+  readonly copyPlacement: string | undefined
+}> {}
 const copyAtom = Atom.family((params: CopyInput) =>
   Atom.fn(
     Effect.fn("CodeSample.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
       const status = yield* Effect.promise(() => navigator.clipboard.writeText(params.code)).pipe(
+        Effect.tap(() =>
+          Predicate.isUndefined(params.copyPlacement)
+            ? Effect.void
+            : track({ event: "copy_prompt", placement: params.copyPlacement }, ctx)
+        ),
         Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
       )
       ctx.set(statusAtom(params.id), status)
@@ -22,6 +33,8 @@ export interface CodeSampleProps {
   readonly title: string
   readonly code: string
   readonly copyable?: boolean | undefined
+  /** Counts copies as setup-prompt copies from this placement on the page. */
+  readonly copyPlacement?: string | undefined
 }
 
 const renderLine = (line: string, index: number) => (
@@ -37,7 +50,7 @@ export const CodeSample = (props: CodeSampleProps) => {
   const id = useId()
   const status = useAtomValue(statusAtom(id))
   const code = String.trim(props.code)
-  const copy = useAtomSet(copyAtom(new CopyInput({ id, code })))
+  const copy = useAtomSet(copyAtom(new CopyInput({ id, code, copyPlacement: props.copyPlacement })))
 
   return (
     <div className="code-sample">
