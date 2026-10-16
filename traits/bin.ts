@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // traits-ignore-file effect-utilities-with-native-behavior-exceptions: Effect utilities are unavailable until this launcher installs dependencies.
+/* oxlint-disable effecttsgo/prefer-effect-array */
 import { spawn } from "node:child_process"
 import { once } from "node:events"
 import { existsSync, readFileSync } from "node:fs"
