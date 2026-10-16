@@ -125,7 +125,7 @@ export const App = () => {
       </a>
       <div className="opening" id="top">
         <ActionBar />
-        <section className="hero margin-coral" aria-labelledby="hero-title">
+        <section className="hero margin-rubric" aria-labelledby="hero-title">
           <div className="hero-content">
             <img
               className="hero-emblem"
@@ -166,7 +166,7 @@ export const App = () => {
         </div>
 
         <div className="reading-area">
-          <section className="chapter margin-blue" id="lifecycle" aria-labelledby="lifecycle-title">
+          <section className="chapter margin-lapis" id="lifecycle" aria-labelledby="lifecycle-title">
             <div className="chapter-heading">
               <p className="eyebrow">Chapter I</p>
               <h2 id="lifecycle-title">The loop</h2>
@@ -248,7 +248,7 @@ export const App = () => {
             </aside>
           </section>
 
-          <section className="chapter margin-gold" id="tools" aria-labelledby="tools-title">
+          <section className="chapter margin-gilt" id="tools" aria-labelledby="tools-title">
             <div className="chapter-heading">
               <p className="eyebrow">Chapter II</p>
               <h2 id="tools-title">Two tools</h2>
@@ -328,7 +328,7 @@ export const App = () => {
             </div>
           </section>
 
-          <section className="chapter margin-green" id="begin" aria-labelledby="begin-title">
+          <section className="chapter margin-verdigris" id="begin" aria-labelledby="begin-title">
             <div className="chapter-heading">
               <p className="eyebrow">Chapter III</p>
               <h2 id="begin-title">Manual</h2>

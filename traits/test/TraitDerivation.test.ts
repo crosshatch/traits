@@ -1,6 +1,6 @@
 import { NodeCrypto } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, Layer, Predicate, Semaphore, Stream } from "effect"
+import { Array, Effect, Equal, Layer, pipe, Predicate, Record, Semaphore, Stream } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
 
@@ -18,8 +18,8 @@ const original = Trait.Trait.make({
 const proposedTrait = "Use two spaces for indentation."
 
 const harness = Effect.fn("test.harness")(function* (options: {
-  readonly responseText?: string
-  readonly decomposable?: boolean
+  readonly responseText?: string | undefined
+  readonly decomposable?: boolean | undefined
 }) {
   const stored = new Map([[original.id, original]])
   const mutations: Array<string> = []
@@ -36,7 +36,11 @@ const harness = Effect.fn("test.harness")(function* (options: {
           assessment: {
             _tag: "Classify",
             label,
-            probabilities: Object.fromEntries(labels.map((key) => [key, key === label ? 1 : 0]))
+            probabilities: pipe(
+              labels,
+              Array.map((key) => [key, Equal.equals(key, label) ? 1 : 0] as const),
+              Record.fromEntries
+            )
           }
         },
         usage: { inputTokens: 0, outputTokens: 0 }
@@ -58,7 +62,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
     codecTransformer: toCodecOpenAI
   })
   const store = TraitStore.of({
-    ls: Effect.sync(() => [...stored.values()]),
+    ls: Effect.sync(() => Array.fromIterable(stored.values())),
     add: (trait) =>
       Effect.sync(() => {
         mutations.push("add")
@@ -116,7 +120,13 @@ it.effect(
     const result = yield* derive({ name, proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
     expect(result._tag).toBe("Resolved")
     expect(test.mutations).toEqual(["add", "rm"])
-    expect([...test.stored.values()].map((trait) => trait.body)).toEqual([proposedTrait])
+    expect(
+      pipe(
+        test.stored.values(),
+        Array.fromIterable,
+        Array.map((trait) => trait.body)
+      )
+    ).toEqual([proposedTrait])
     expect(test.requests).toHaveLength(1)
     expect(test.requests[0]?.prompt.content[0]).toMatchObject({
       role: "system",
@@ -137,7 +147,7 @@ it.effect(
         reason: { _tag: "StructuredOutputError" }
       })
       expect(test.mutations).toEqual([])
-      expect([...test.stored.values()]).toEqual([original])
+      expect(Array.fromIterable(test.stored.values())).toEqual([original])
     }
   })
 )
@@ -147,7 +157,7 @@ it.effect(
   Effect.fnUntraced(function* () {
     const bodies = ["Use two spaces for indentation.", "Use single quotes."]
     const test = yield* harness({ decomposable: true, responseText: JSON.stringify({ traits: bodies }) })
-    const result = yield* Trait.checkDecomposability(bodies.join(" ")).pipe(Effect.provide(test.layer))
+    const result = yield* Trait.checkDecomposability(Array.join(bodies, " ")).pipe(Effect.provide(test.layer))
     expect(result).toEqual(bodies)
     expect(test.requests[0]?.prompt.content[0]).toMatchObject({
       role: "system",

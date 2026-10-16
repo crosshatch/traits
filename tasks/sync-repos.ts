@@ -1,20 +1,24 @@
-import { Array, Console, Data, Effect, FileSystem, Path } from "effect"
+import { Array, Console, Effect, Equal, FileSystem, Path, Schema as S } from "effect"
 import { Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-class RepoInitializationError extends Data.TaggedError("RepoInitializationError") {
+class RepoInitializationError extends S.TaggedError<RepoInitializationError>()("RepoInitializationError", {}) {
   override get message() {
     return "Failed to initialize reference repositories"
   }
 }
 
-class RepoFetchError extends Data.TaggedError("RepoFetchError")<{ readonly repository: string }> {
+class RepoFetchError extends S.TaggedError<RepoFetchError>()("RepoFetchError", {
+  repository: S.String
+}) {
   override get message() {
     return `Failed to fetch "${this.repository}"`
   }
 }
 
-class RepoSwitchError extends Data.TaggedError("RepoSwitchError")<{ readonly repository: string }> {
+class RepoSwitchError extends S.TaggedError<RepoSwitchError>()("RepoSwitchError", {
+  repository: S.String
+}) {
   override get message() {
     return `Failed to switch "${this.repository}" to main`
   }
@@ -30,10 +34,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
 
       yield* ChildProcess.make`git submodule update --init -- repos`.pipe(
         (command) => spawner.exitCode(command),
-        Effect.filterOrFail(
-          (exitCode) => exitCode === 0,
-          () => new RepoInitializationError()
-        )
+        Effect.filterOrFail(Equal.equals(0), () => RepoInitializationError.make({}))
       )
 
       const orgs = yield* fs
@@ -42,7 +43,8 @@ export const syncRepos = Command.make("sync-repos").pipe(
           Effect.flatMap((entries) =>
             Effect.filter(
               entries,
-              (entry) => fs.stat(path.join(reposDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
+              (entry) =>
+                fs.stat(path.join(reposDir, entry)).pipe(Effect.map((info) => Equal.equals(info.type, "Directory"))),
               { concurrency: "unbounded" }
             )
           )
@@ -56,7 +58,8 @@ export const syncRepos = Command.make("sync-repos").pipe(
 
           const repoNames = yield* Effect.filter(
             entries,
-            (entry) => fs.stat(path.join(orgDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
+            (entry) =>
+              fs.stat(path.join(orgDir, entry)).pipe(Effect.map((info) => Equal.equals(info.type, "Directory"))),
             { concurrency: "unbounded" }
           )
 
@@ -75,18 +78,12 @@ export const syncRepos = Command.make("sync-repos").pipe(
           yield* ChildProcess.make`git fetch origin main`.pipe(
             ChildProcess.setCwd(repo.repoDir),
             (command) => spawner.exitCode(command),
-            Effect.filterOrFail(
-              (exitCode) => exitCode === 0,
-              () => new RepoFetchError({ repository: repo.entry })
-            )
+            Effect.filterOrFail(Equal.equals(0), () => RepoFetchError.make({ repository: repo.entry }))
           )
           yield* ChildProcess.make`git switch -C main origin/main`.pipe(
             ChildProcess.setCwd(repo.repoDir),
             (command) => spawner.exitCode(command),
-            Effect.filterOrFail(
-              (exitCode) => exitCode === 0,
-              () => new RepoSwitchError({ repository: repo.entry })
-            )
+            Effect.filterOrFail(Equal.equals(0), () => RepoSwitchError.make({ repository: repo.entry }))
           )
           yield* Console.log(`Synced "${repo.entry}" (main)`)
         }),

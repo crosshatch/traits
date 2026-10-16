@@ -7,6 +7,8 @@ allowBuilds:
   workerd: true
 
 catalog:
+  "@alchemy.run/frontend-frameworks": 2.0.0-beta.80
+  "@astrojs/react": 7.1.0
   "@changesets/changelog-github": 1.0.1
   "@changesets/cli": 3.0.3
   "@effect/ai-openai": 4.0.0
@@ -14,19 +16,21 @@ catalog:
   "@effect/atom-react": 4.0.0
   "@effect/platform-browser": 4.0.0
   "@effect/platform-node": 4.0.0
-  "@effect/tsgo": 0.47.2
+  "@effect/tsgo": 0.53.1
   "@effect/vitest": 4.0.0
+  "@fontsource/ibm-plex-mono": 5.3.0
   "@fontsource/libre-baskerville": 5.3.0
   "@types/node": 26.6.3
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
   alchemy: 2.0.0-beta.80
+  astro: 7.4.0
   effect: 4.0.0
   react: 19.3.0
   react-dom: 19.3.0
   typescript: 7.0.2
-  vite: npm:@voidzero-dev/vite-plus-core@1.0.0
-  vite-plus: 1.0.0
+  vite: npm:@voidzero-dev/vite-plus-core@1.2.0
+  vite-plus: 1.2.0
   vitest: 5.0.1
 
 minimumReleaseAgeExclude:
@@ -50,14 +54,6 @@ minimumReleaseAgeExclude:
   - "@distilled.cloud/railway@1.0.0-rc.13"
   - "@distilled.cloud/stripe@1.0.0-rc.13"
   - "@distilled.cloud/zerossl@1.0.0-rc.13"
-  - "@effect/tsgo-darwin-arm64@0.47.2"
-  - "@effect/tsgo-darwin-x64@0.47.2"
-  - "@effect/tsgo-linux-arm@0.47.2"
-  - "@effect/tsgo-linux-arm64@0.47.2"
-  - "@effect/tsgo-linux-x64@0.47.2"
-  - "@effect/tsgo-win32-arm64@0.47.2"
-  - "@effect/tsgo-win32-x64@0.47.2"
-  - "@effect/tsgo@0.47.2"
   - "@vitest/mocker@5.0.3"
   - "@vitest/spy@5.0.3"
   - alchemy@2.0.0-beta.80

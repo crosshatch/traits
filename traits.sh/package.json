@@ -4,13 +4,16 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev": "vp dev",
-    "build": "vp build",
-    "preview": "vp preview"
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
   },
   "dependencies": {
+    "@astrojs/react": "catalog:",
     "@effect/atom-react": "catalog:",
+    "@fontsource/ibm-plex-mono": "catalog:",
     "@fontsource/libre-baskerville": "catalog:",
+    "astro": "catalog:",
     "effect": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
@@ -18,7 +21,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "vite-plus": "catalog:"
+    "@types/react-dom": "catalog:"
   }
 }

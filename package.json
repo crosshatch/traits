@@ -20,6 +20,7 @@
     "traits": "workspace:*"
   },
   "devDependencies": {
+    "@alchemy.run/frontend-frameworks": "catalog:",
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
     "@effect/ai-openai": "catalog:",
