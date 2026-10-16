@@ -87,6 +87,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
       excludes: [],
       semaphore: yield* Semaphore.make(4),
       config: {
+        includes: [],
         decisionConcurrency: 4,
         excludeGitignored: true,
         excludes: [],

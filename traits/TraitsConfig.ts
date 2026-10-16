@@ -8,6 +8,12 @@ import { TraitsContext } from "./TraitsContext.ts"
 
 export type TraitsConfig = typeof TraitsConfig.Encoded
 export const TraitsConfig = S.Struct({
+  includes: S.Array(S.NonEmptyString)
+    .pipe(S.withDecodingDefault(Effect.succeed([])))
+    .annotate({
+      description:
+        "Authoritative project-owned source/configuration/documentation globs for incremental coverage. Required for check_traits; exclude secrets, generated output and dependencies."
+    }),
   decisionConcurrency: S.Int.check(S.isGreaterThan(0))
     .pipe(S.withDecodingDefault(Effect.succeed(4)))
     .annotate({
@@ -51,7 +57,10 @@ export const layer = Effect.gen(function* () {
       TraitsContext,
       Effect.gen(function* () {
         const excludes = Array.appendAll(
-          Array.flatMap([".git", ".worktrees"], (directory) => [`**/${directory}`, `**/${directory}/**`]),
+          Array.flatMap([".git", ".worktrees", "node_modules"], (directory) => [
+            `**/${directory}`,
+            `**/${directory}/**`
+          ]),
           Array.map(config.excludes, (pattern) =>
             path.isAbsolute(pattern) ? path.relative(configRoot, pattern) : pattern
           )

@@ -54,6 +54,16 @@ models, checking their installed APIs. Preserve existing configuration and ask
 before replacing it. The selected providers determine the config's imports and
 model layers.
 
+Set `includes` to explicit owned-file paths/globs covering the whole reviewable
+project, not just the files being edited. For example, use
+`includes: ["src/**/*.ts", "test/**/*.ts", "README.md"]`, adjusted to the actual
+project. Missing or empty matching scope blocks checks. Never include secrets,
+generated output, dependencies or reference repositories. The first coverage
+pass establishes a baseline; later calls assess only missing chunk/trait pairs.
+Explain and obtain approval for the baseline model cost before calling
+`check_traits` with `establishBaseline: true`. Until then, checks and trait
+mutation are blocked, not marked successful.
+
 Git-ignored files are excluded by default. Explicit `excludes` can omit other
 files; use patterns such as `**/dist/**` and `node_modules/**`. Keep the default
 Git filter unless the user requests otherwise.

@@ -59,6 +59,7 @@ const run = Effect.fnUntraced(function* (
       excludes: [],
       semaphore,
       config: {
+        includes: [],
         decisionConcurrency: 1,
         excludeGitignored: true,
         excludes: [],

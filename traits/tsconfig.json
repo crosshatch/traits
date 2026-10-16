@@ -2,6 +2,7 @@
   "extends": "../tsconfig.base.json",
   "include": ["**/*.ts", "package.json"],
   "exclude": ["node_modules", "dist"],
+  "references": [{ "path": "../tracewick" }],
   "compilerOptions": {
     "outDir": "dist",
     "noEmit": false,

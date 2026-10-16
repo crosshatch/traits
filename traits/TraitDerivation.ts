@@ -4,16 +4,17 @@ import { LanguageModel } from "effect/ai"
 import * as Approval from "./_util/Approval.ts"
 import * as Trait from "./Trait.ts"
 import { check, TraitConflict } from "./TraitConflict.ts"
+import { TraitEvaluation } from "./TraitEvaluation.ts"
 import { TraitStore } from "./TraitStore.ts"
 
 export type TraitDerivation = typeof TraitDerivation.Type
 export const TraitDerivation = S.Union([
-  S.TaggedStruct("Created", { trait: Trait.Trait }),
+  S.TaggedStruct("Created", { trait: Trait.Trait, findings: S.Array(TraitEvaluation).pipe(S.optionalKey) }),
   S.TaggedStruct("Covered", { traits: S.Array(Trait.Trait) }),
   S.TaggedStruct("Clarification", { traits: S.Array(Trait.Trait), proposedTrait: S.String }),
   S.TaggedStruct("Inconclusive", { findings: S.Array(TraitConflict.cases.Fail) }),
-  S.TaggedStruct("Updated", { trait: Trait.Trait }),
-  S.TaggedStruct("Resolved", { traits: S.Array(Trait.Trait) }),
+  S.TaggedStruct("Updated", { trait: Trait.Trait, findings: S.Array(TraitEvaluation).pipe(S.optionalKey) }),
+  S.TaggedStruct("Resolved", { traits: S.Array(Trait.Trait), findings: S.Array(TraitEvaluation).pipe(S.optionalKey) }),
   Approval.Approval.cases.ApprovalRequired,
   Approval.Approval.cases.RevisionRequired,
   Approval.Approval.cases.Declined
