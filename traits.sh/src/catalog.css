@@ -1,0 +1,135 @@
+.catalog {
+  width: min(880px, 100%);
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+.catalog-header h1 {
+  font-size: clamp(2.75rem, 7vw, 4.5rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  margin: 0.5rem 0 1rem;
+}
+.catalog-header > p:last-child {
+  max-width: 640px;
+  color: var(--muted);
+}
+.catalog code {
+  font-size: 0.9em;
+}
+
+.catalog-source {
+  margin-top: 3.5rem;
+}
+.catalog-source h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 1.1rem;
+}
+.catalog-source h2 a {
+  text-decoration: none;
+}
+.catalog-count {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.trait-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trait-list > li {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent);
+}
+.trait-name {
+  font-weight: 700;
+  color: var(--blue);
+  text-decoration: none;
+}
+.trait-name:hover {
+  text-decoration: underline;
+}
+.trait-when {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.mime-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+.mime-chips li {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.catalog-breadcrumb {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.trait-detail h1 {
+  margin: 1rem 0 2rem;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  overflow-wrap: anywhere;
+}
+.trait-detail h1 code {
+  font-size: 1em;
+}
+.trait-body {
+  padding-left: 1.5rem;
+  border-left: 7px solid var(--gold);
+  font-size: 1.1rem;
+}
+.trait-body > :first-child {
+  margin-top: 0;
+}
+.trait-body > :last-child {
+  margin-bottom: 0;
+}
+
+.trait-facts {
+  display: grid;
+  gap: 1.25rem;
+  margin: 3rem 0;
+}
+.trait-facts dt {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.trait-facts dd {
+  margin: 0.35rem 0 0;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.trait-facts dd .mime-chips {
+  margin-top: 0;
+}
+.trait-facts dd a {
+  text-decoration: none;
+}
+
+.trait-ignore h2 {
+  font-size: 1.1rem;
+  font-weight: 400;
+}

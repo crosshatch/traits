@@ -1,0 +1,85 @@
+---
+import "../../../../catalog.css"
+
+import type { GetStaticPaths } from "astro"
+import { getCollection, render } from "astro:content"
+
+import { ActionBar } from "../../../../ActionBar.tsx"
+import { CodeSample } from "../../../../CodeSample.tsx"
+import Page from "../../../../layouts/Page.astro"
+import { mimeLabel } from "../../../../mimeLabel.ts"
+
+export const getStaticPaths = (async () => {
+  const traits = await getCollection("traits")
+  return traits.map((entry) => ({
+    params: { owner: entry.data.owner, repo: entry.data.repo, id: entry.data.traitId },
+    props: { entry }
+  }))
+}) satisfies GetStaticPaths
+
+const { entry } = Astro.props
+const { name, when, skip, mime, traitId, owner, repo, path, url } = entry.data
+const { Content } = await render(entry)
+---
+
+<Page title={`${name} — Traits`} description={when === undefined ? `A trait from ${owner}/${repo}.` : `Applies when ${when}.`}>
+  <ActionBar client:load home />
+  <main class="catalog trait-detail">
+    <nav class="catalog-breadcrumb" aria-label="Breadcrumb">
+      <a href="/traits/">Catalog</a>
+      <span aria-hidden="true">/</span>
+      <span>{owner}/{repo}</span>
+    </nav>
+    <h1><code>{name}</code></h1>
+    <div class="trait-body">
+      <Content />
+    </div>
+    <dl class="trait-facts">
+      {
+        when !== undefined && (
+          <div>
+            <dt>Applies when</dt>
+            <dd>{when}</dd>
+          </div>
+        )
+      }
+      {
+        skip !== undefined && (
+          <div>
+            <dt>Except</dt>
+            <dd>{skip}</dd>
+          </div>
+        )
+      }
+      {
+        mime.length > 0 && (
+          <div>
+            <dt>File types</dt>
+            <dd>
+              <ul class="mime-chips">
+                {mime.map((type) => (
+                  <li>{mimeLabel(type)}</li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        )
+      }
+      <div>
+        <dt>ID</dt>
+        <dd><code>{traitId}</code></dd>
+      </div>
+      <div>
+        <dt>Source</dt>
+        <dd>
+          <a href={url} target="_blank" rel="noopener noreferrer">{path} <span aria-hidden="true">↗</span></a>
+        </dd>
+      </div>
+    </dl>
+    <section class="trait-ignore" aria-labelledby="ignore-heading">
+      <h2 id="ignore-heading">Skipping this trait</h2>
+      <p>Add this comment before any code to skip the trait for a whole file. A reason is required.</p>
+      <CodeSample client:visible title="File header" code={`// traits-ignore-file ${traitId}: <reason>`} />
+    </section>
+  </main>
+</Page>

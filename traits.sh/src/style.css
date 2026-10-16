@@ -1337,6 +1337,9 @@ h3 {
   .docked-header .social-link {
     min-width: 32px;
   }
+  .docked-header .catalog-link {
+    display: none;
+  }
   .docked-header .compact-install-command {
     padding: 0.45rem 0.6rem;
   }

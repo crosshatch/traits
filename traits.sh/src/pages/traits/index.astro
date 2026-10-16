@@ -1,0 +1,64 @@
+---
+import "../../catalog.css"
+
+import { getCollection } from "astro:content"
+import { Array, Order, pipe, Record } from "effect"
+
+import { ActionBar } from "../../ActionBar.tsx"
+import Page from "../../layouts/Page.astro"
+import { mimeLabel } from "../../mimeLabel.ts"
+
+const traits = await getCollection("traits")
+const sources = pipe(
+  traits,
+  Array.sortWith((entry) => entry.data.name, Order.String),
+  Array.groupBy((entry) => `${entry.data.owner}/${entry.data.repo}`),
+  Record.toEntries,
+  Array.sortWith(([repository]) => repository, Order.String)
+)
+---
+
+<Page
+  title="Catalog — Traits"
+  description="Browse the coding preferences agents have learned and stored as traits, with when each one applies and how to skip it."
+>
+  <ActionBar client:load home />
+  <main class="catalog">
+    <header class="catalog-header">
+      <p class="eyebrow">The catalog</p>
+      <h1>Traits</h1>
+      <p>
+        Coding preferences learned from feedback, stored as Markdown in each repository's <code>.agents/traits</code> directory.
+      </p>
+    </header>
+    {
+      sources.map(([repository, entries]) => (
+        <section class="catalog-source" aria-labelledby={`source-${repository}`}>
+          <h2 id={`source-${repository}`}>
+            <a href={`https://github.com/${repository}`} target="_blank" rel="noopener noreferrer">
+              {repository}
+            </a>
+            <span class="catalog-count">{entries.length} traits</span>
+          </h2>
+          <ul class="trait-list">
+            {entries.map((entry) => (
+              <li>
+                <a class="trait-name" href={`/traits/${entry.id}/`}>
+                  <code>{entry.data.name}</code>
+                </a>
+                {entry.data.when !== undefined && <p class="trait-when">When {entry.data.when}</p>}
+                {entry.data.mime.length > 0 && (
+                  <ul class="mime-chips" aria-label="File types">
+                    {entry.data.mime.map((mime) => (
+                      <li>{mimeLabel(mime)}</li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </main>
+</Page>
