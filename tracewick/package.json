@@ -1,0 +1,51 @@
+{
+  "name": "tracewick",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "bin": {
+    "tracewick": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "!dist/test",
+    "!dist/**/*.tsbuildinfo",
+    "!dist/vite.config.*"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./Api": "./Api.ts",
+    "./client": "./client.ts",
+    "./contracts": "./contracts.ts",
+    "./errors": "./errors.ts",
+    "./Queries": "./Queries.ts",
+    "./launcher": "./launcher.ts",
+    "./mcp": "./mcp.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./Api": "./dist/Api.js",
+      "./client": "./dist/client.js",
+      "./contracts": "./dist/contracts.js",
+      "./errors": "./dist/errors.js",
+      "./Queries": "./dist/Queries.js",
+      "./launcher": "./dist/launcher.js",
+      "./mcp": "./dist/mcp.js"
+    },
+    "access": "public"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@effect/sql-sqlite-node": "catalog:",
+    "drizzle-kit": "catalog:",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
+    "protobufjs": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

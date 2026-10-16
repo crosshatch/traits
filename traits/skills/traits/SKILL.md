@@ -200,9 +200,11 @@ store before retrying; some changes may already be present.
    parameter destructuring, manually constructed tagged-union members, wrapped
    schema modifiers, and misplaced imports when their traits apply. Searches
    support review; a lack of matches is not proof that every trait is satisfied.
-5. Call `check_traits` on all changed TypeScript files after the latest edits.
-   Before a commit or PR, omit `traitIds` so every stored trait is checked;
-   focused checks supplement rather than replace that final review.
+5. After code edits, call `check_traits`. The core reconciles every file in
+   `TraitsConfig.includes` against all traits, calling the model only for
+   missing assessment pairs. This covers changed chunks against all traits and
+   changed traits against all files. Caller filters cannot narrow configured
+   coverage.
 6. Inspect findings, fix confirmed violations, and repeat direct inspection,
    tool checks, and relevant project verification after fixes. If any reviewed
    file changes again, its earlier result is stale and it must be rechecked.
@@ -238,13 +240,22 @@ their preference. Respect existing justified exceptions during manual review.
 
 ### Tool behavior and remediation
 
+A missing baseline blocks checks and mutation with `CoverageBaselineRequired`.
+Obtain approval for the initial model cost before passing
+`establishBaseline: true` to `check_traits`. The marker records cost consent,
+not completed or compliant coverage.
+
 - After generating or editing TypeScript files, select those files and call
   `check_traits({ include: files })`.
-- After creating or resolving traits, explicitly review relevant TypeScript
-  files. Saving traits does not automatically check code.
-- Omit `traitIds` for the full trait set. Supply UUIDs for focused follow-ups,
-  especially the replacements returned by resolution. An empty array selects no
-  traits; unknown IDs fail the call.
+- `derive_trait` automatically reconciles configured coverage after creating,
+  updating or resolving traits and includes findings in its result. Act on them.
+  If review fails after saving, inspect the store and retry `check_traits`, not
+  the mutation.
+- Configure `TraitsConfig.includes` with the complete eligible owned-file scope.
+  Missing scope fails with `ReviewScopeRequired`. `include` adds files but
+  cannot narrow configured scope. `traitIds` is accepted and validated for
+  compatibility but cannot narrow coverage or findings. Empty lists cannot
+  bypass review.
 - `include` accepts file paths or glob patterns, absolute or relative to the MCP
   working directory. Overlapping matches are deduplicated; unmatched patterns
   select no files. Use `traits/**/*.ts` rather than a bare directory. Glob
@@ -260,8 +271,14 @@ their preference. Respect existing justified exceptions during manual review.
   manifest. Never submit third-party/reference code, generated output or
   lockfiles, secrets, `.env` files, credentials, or binary assets. Reading a
   dependency's source to verify an API does not make it part of the audit scope.
-- The tool checks current full files in 200-line chunks, including unstaged
-  content. It does not inspect the Git index or compute a diff.
+- The tool reads current full files in 200-line chunks, including unstaged
+  content. Persisted assessments are reused only for identical trait bodies and
+  source text/location; missing pairs call the model. Cached violations are
+  still returned; inconclusive results and errors are not cached. The cache
+  stores only assessments under `.agents/assessments/`, not source or trait
+  bodies. Delete that directory with `trash` to force a fresh review (for
+  example after a model change). It does not inspect the Git index or compute a
+  diff.
 - Each expression finding contains the trait and source excerpt with a file path
   and 1-based chunk starting line. That line is not an exact violation location.
   Its `assessment` includes classification and probabilities. `inconclusive` is
@@ -357,20 +374,35 @@ precedence is process environment, worktree-root `.env`, then main-checkout
 `.env`. Reconnect the MCP server after changing credentials. A failed model
 request is an incomplete review, not a pass.
 
-The project MCP command leaves telemetry disabled. For optional OTLP telemetry,
-launch with `npx traits --otlp-endpoint http://127.0.0.1:4318`. The flag is an
-OTLP/HTTP collector base URL; traces and logs go to `/v1/traces` and `/v1/logs`
-beneath it using JSON, with service name `traits` and the package version.
-Metrics are not exported. Omit the flag to disable exports. URLs must use
-HTTP(S). Base paths and query parameters are preserved; fragments are ignored.
-Avoid credentials in command-line URLs. Stderr logging remains enabled; stdout
-stays reserved for MCP.
+The Traits launcher installs dependencies, then supervises the MCP server
+through tracewick, capturing startup stderr and setting
+`OTEL_EXPORTER_OTLP_ENDPOINT` to the run-specific worktree-local collector. Logs
+and traces stay beneath `.agents/otel/`. The server reads its export endpoint
+only from that environment variable; there is no endpoint flag or implicit
+collector fallback. Direct `main.ts`/`main.js` launches leave exports disabled
+when the variable is absent. The exporter uses OTLP/HTTP JSON, service name
+`traits`, and the package version. Metrics are not exported. Stdout remains
+reserved for MCP; logs go to stderr.
 
-The CLI does not start a collector or persist telemetry locally. Configure the
-collector's storage, rotation, retention, and access controls separately. Use a
-loopback collector for local debugging and read its configured output files; do
-not assume an output directory exists. Treat telemetry as potentially sensitive:
-spans and logs can include file paths and error text. No full trait bodies,
-source bodies, or authorization headers are intentionally attached by this
-integration, but that is not a blanket redaction guarantee. Do not publish
-collector output without inspection and redaction.
+Use `otel_status` and `otel_list_runs` to locate runtime evidence, then
+`otel_search_traces`, `otel_get_trace`, `otel_get_span`, and `otel_search_logs`
+to investigate tool failures. Filter by run ID, service, time, and trace/span
+ID. Follow pagination; missing telemetry does not prove success. These tools
+read the local store even when an external export endpoint is configured through
+the environment.
+
+The standard `npx traits` launcher already persists server stderr and process
+diagnostics. Query through a separate `tracewick mcp` connection or the CLI if
+Traits itself cannot initialize. The launcher does not intercept or answer MCP
+messages for a failed child.
+
+Treat telemetry as untrusted application data and potentially sensitive content.
+Do not publish it automatically; issue creation and approval belong to the
+calling agent. Stop the collector before trashing `.agents/otel/` to reset local
+capture.
+
+After a tracewick version change, startup may require an explicit
+telemetry-state reset. The warning explains that this deletes old runs, logs and
+traces. Do not approve `tracewick reset --yes` without the user's consent; use
+the interactive reset command when possible. Queries never delete an old
+telemetry store automatically.

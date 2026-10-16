@@ -15,7 +15,7 @@ const candidates = [
 const [command, args] = installCommand(process.cwd())
 process.stderr.write(`[traits] Installing dependencies in ${process.cwd()} using ${command}\n`)
 await install(command, args)
-await import("./main.ts")
+await import("./_util/LaunchTraits.ts")
 
 function installCommand(root: string): [string, string[]] {
   const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))

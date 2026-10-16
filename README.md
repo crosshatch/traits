@@ -51,3 +51,44 @@ Your agent handles setup. You choose the models and supply credentials
 privately.
 
 [Explore Traits](https://traits.sh) · [Setup guide](SETUP.md)
+
+## Incremental coverage
+
+Configure `TraitsConfig.includes` with the complete owned source, configuration
+and documentation scope. Checks fail if scope is missing or matches no eligible
+files. Do not include secrets, generated output, dependencies or reference code.
+
+Each `check_traits` call discovers the configured files and all stored traits,
+but only missing assessment pairs call the model. A changed chunk needs all
+traits; a new or revised trait needs all chunks. Identical pairs reuse persisted
+assessments in `.agents/assessments/`. Cached violations remain visible;
+inconclusive assessments and failed model calls are retried. Cache identities
+include trait bodies, source text/location and an evaluator revision. Changes to
+`traits.ts` also invalidate assessments. Use `trash .agents/assessments` to
+force a new baseline after other model or evaluator changes.
+
+`include` adds files rather than narrowing configured scope. `traitIds` remains
+accepted for compatibility but no longer limits coverage or returned findings.
+Trait creation, updates and reconciliation automatically run the same coverage
+pass and return findings. If assessment fails after saving, inspect the saved
+traits and retry `check_traits`, not the mutation.
+
+The first pass needs a cold baseline because historical tool calls did not save
+assessment coverage. Approve that cost explicitly with `establishBaseline: true`
+on `check_traits`; until then, checks and trait mutation fail with
+`CoverageBaselineRequired`. The approval marker records cost consent, not a
+successful or compliant review. Subsequent passes reuse assessments. Reviews
+still need to be invoked after code edits; this is not a filesystem watcher, CI
+gate, or a guarantee that model classifications are correct.
+
+## Local diagnostics
+
+Traits includes [tracewick](tracewick/README.md), a reusable Effect-based local
+OTLP collector and query utility. Logs and traces stay in `.agents/otel/` within
+the current worktree. Query them with the embedded `otel_*` tools.
+
+The Traits launcher already uses tracewick to capture server startup stderr and
+provide the OTLP endpoint through the environment. An independent
+`tracewick mcp` connection or the CLI can inspect evidence even when the
+application server cannot start. The standalone tracewick launcher also works
+with any CLI command that already exports OTEL telemetry.

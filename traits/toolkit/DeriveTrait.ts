@@ -1,10 +1,14 @@
-import { Crypto, Schema as S, String } from "effect"
+import { Crypto, Effect, FileSystem, Path, Schema as S, String } from "effect"
 import { DecisionModel, LanguageModel, McpSchema, Tool, Toolkit } from "effect/ai"
+import { ChildProcessSpawner } from "effect/process"
 
+import { GitFileListingError } from "../getIncludedFiles.ts"
 import * as Trait from "../Trait.ts"
 import { derive, TraitDerivation } from "../TraitDerivation.ts"
+import { TraitAssessmentTooLargeError } from "../TraitEvaluation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
+import { check, CoverageBaselineRequired, ReviewScopeEmpty, ReviewScopeRequired } from "./CheckTraits.ts"
 
 export const DeriveTrait = Tool.make("derive_trait", {
   description: String.stripMargin(`
@@ -38,7 +42,11 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | The tool rechecks all traits before updating, preserving the selected UUID on clarification. Updated returns the saved trait.
   | Never use approved: true for an unapproved replacement, and never resolve a mere clarification by deleting traits.
   | Created returns the saved trait including its name and UUID. Every response is one tagged TraitDerivation outcome, never a bare array or void.
-  | Then call check_traits on relevant TypeScript files, using returned trait IDs for focused reviews when appropriate.
+  | After Created, Updated or Resolved, the tool automatically reconciles configured project coverage and returns findings. Cached unchanged pairs do not call the model. Act on findings; saving is not proof of compliance.
+  | Establish configured project coverage with check_traits before saving traits. A missing approved baseline blocks mutation to avoid unexpected full-project model costs.
+  | Review errors can occur after a trait has been saved. Inspect the store, then retry check_traits rather than blindly repeating the mutation. Missing assessments are retried on the next check.
+  | On unexpected tool errors, inspect otel_status and query recent otel_search_traces or otel_search_logs for service traits; drill into trace/span IDs for evidence.
+  | Inspect the trait store before retrying a failed mutation. Diagnostic queries do not establish whether partially completed writes are safe to repeat.
   `),
   parameters: S.Struct({
     name: Trait.TraitName.annotate({
@@ -55,9 +63,27 @@ export const DeriveTrait = Tool.make("derive_trait", {
     })
   }),
   success: TraitDerivation,
-  failure: S.Union([S.TaggedStruct("AiError", { message: S.String }), TraitStoreError, McpSchema.ElicitationDeclined]),
+  failure: S.Union([
+    S.TaggedStruct("AiError", { message: S.String }),
+    TraitStoreError,
+    McpSchema.ElicitationDeclined,
+    ReviewScopeRequired,
+    ReviewScopeEmpty,
+    CoverageBaselineRequired,
+    S.Struct({ ...TraitAssessmentTooLargeError.fields, message: S.String }),
+    S.Struct({ ...GitFileListingError.fields, message: S.String })
+  ]),
   failureMode: "return",
-  dependencies: [Crypto.Crypto, DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
+  dependencies: [
+    DecisionModel.DecisionModel,
+    LanguageModel.LanguageModel,
+    TraitStore,
+    TraitsContext,
+    Crypto.Crypto,
+    FileSystem.FileSystem,
+    Path.Path,
+    ChildProcessSpawner.ChildProcessSpawner
+  ]
 })
   .annotate(Tool.Title, "Derive Trait")
   .annotate(Tool.Readonly, false)
@@ -65,6 +91,38 @@ export const DeriveTrait = Tool.make("derive_trait", {
 
 export const toolkit = Toolkit.make(DeriveTrait)
 
-export const layer = toolkit.toLayer({
-  derive_trait: derive
+export const deriveAndReview = Effect.fn("DeriveTrait.deriveAndReview")(function* (params: {
+  readonly name: Trait.TraitName
+  readonly proposedTrait: string
+  readonly approved?: boolean | undefined
+}) {
+  const context = yield* TraitsContext.pipe(
+    Effect.filterOrFail(
+      (context) => context.config.includes.length > 0,
+      (context) => ReviewScopeRequired.make({ configRoot: context.configRoot })
+    )
+  )
+  const fs = yield* FileSystem.FileSystem
+  yield* fs.exists(`${context.configRoot}/.agents/assessments/baseline-approved.json`).pipe(
+    Effect.filterOrFail(
+      (exists) => exists,
+      () => CoverageBaselineRequired.make({ directory: context.configRoot })
+    )
+  )
+  const result = yield* derive(params)
+  if (TraitDerivation.guards.Created(result)) {
+    const findings = yield* check({ include: [] })
+    return TraitDerivation.cases.Created.make({ trait: result.trait, findings })
+  }
+  if (TraitDerivation.guards.Updated(result)) {
+    const findings = yield* check({ include: [] })
+    return TraitDerivation.cases.Updated.make({ trait: result.trait, findings })
+  }
+  if (TraitDerivation.guards.Resolved(result)) {
+    const findings = yield* check({ include: [] })
+    return TraitDerivation.cases.Resolved.make({ traits: result.traits, findings })
+  }
+  return result
 })
+
+export const layer = toolkit.toLayer({ derive_trait: deriveAndReview })
