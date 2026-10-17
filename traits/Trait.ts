@@ -18,6 +18,16 @@ const variants = VariantSchema.make({
   defaultVariant: "stored"
 })
 
+export type TraitDiff = typeof TraitDiff.Type
+export const TraitDiff = S.String.check(
+  S.isPattern(/^-[^\n]*\S/m),
+  S.isPattern(/^\+[^\n]*\S/m),
+  S.isPattern(/^(?:(?!```)[^\n]*(?:\n|$))+$/)
+).annotate({
+  description:
+    "A concise unified diff showing removed BAD (-) and added GOOD (+) code, without Markdown fences. Include whenever the trait admits a useful code example; omit otherwise."
+})
+
 const fields = variants.Struct({
   body: pipe(
     S.String.annotate({
@@ -26,6 +36,7 @@ const fields = variants.Struct({
     }),
     variants.FieldExcept(["frontmatter"])
   ),
+  diff: TraitDiff.pipe(S.optional, variants.FieldExcept(["frontmatter"])),
   extensionMetadata: pipe(
     S.JsonObject,
     S.fromJsonString,
@@ -59,16 +70,45 @@ export const Generated = variants.extract(fields, "generated")
 export type Trait = typeof Trait.Type
 export const Trait = S.StructWithRest(variants.extract(fields, "stored"), [S.JsonObject])
 
+const ExampleParts = S.String.pipe(
+  S.decodeTo(
+    S.TemplateLiteralParser([
+      S.Literals(["```diff\n", "```diff\r\n", "\n```diff\n", "\r\n```diff\r\n"]),
+      S.String.check(S.isPattern(/^(?:(?!```)[^\n]*\n)*$/)),
+      S.Literals(["```\n\n---\n", "```\r\n\r\n---\r\n"]),
+      S.String
+    ])
+  )
+)
+
 export const parse = Effect.fn("Trait.parse")((text: string, path: string) =>
   pipe(
     { text, path },
     Frontmatter.parse(S.StructWithRest(TraitFrontmatter, [S.JsonObject])),
-    Effect.map((document) => Trait.make({ ...document.frontmatter, body: document.body }))
+    Effect.flatMap(
+      Effect.fn("Trait.parseBody")(function* (document) {
+        if (!/^\s*```diff(?:\r?\n|$)/.test(document.body)) {
+          return Trait.make({
+            ...Struct.omit(document.frontmatter, ["diff"]),
+            name: document.frontmatter.name,
+            body: document.body
+          })
+        }
+        const [, diff, , body] = yield* pipe(document.body, S.decodeEffect(ExampleParts))
+        return yield* pipe({ ...document.frontmatter, diff: String.trimEnd(diff), body }, S.decodeUnknownEffect(Trait))
+      })
+    )
   )
 )
 
 export const serialize = (trait: Trait): string =>
-  Frontmatter.serialize({ frontmatter: Struct.omit(trait, ["body"]), body: trait.body })
+  Frontmatter.serialize({
+    frontmatter: Struct.omit(trait, ["body", "diff"]),
+    body:
+      trait.diff === undefined
+        ? trait.body
+        : `\n\`\`\`diff\n${String.trimEnd(trait.diff)}\n\`\`\`\n\n---\n${trait.body}`
+  })
 
 export const checkDecomposability = Effect.fn("Trait.checkDecomposability")(function* (proposedTrait: string) {
   const context = yield* TraitsContext

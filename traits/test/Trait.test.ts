@@ -6,6 +6,37 @@ import * as Trait from "../Trait.ts"
 const name = Trait.TraitName.make("test-trait")
 
 it.effect(
+  "roundtrips a dedicated BAD-to-GOOD diff separately from metadata and body",
+  Effect.fnUntraced(function* () {
+    const diff = "-const value = bad()\n+const value = good()"
+    const body = "Prefer good().\n\n---\nKeep this separator.\n"
+    const trait = Trait.Trait.make({ name, diff, body, priority: 2 })
+    const text = Trait.serialize(trait)
+    expect(text).toContain(`---\n\n\`\`\`diff\n${diff}\n\`\`\`\n\n---\n${body}`)
+    expect(text).not.toContain("diff:")
+    const parsed = yield* Trait.parse(text, "/traits/test.md")
+    expect(parsed).toEqual(trait)
+    const crlf = yield* Trait.parse(pipe(text, String.replaceAll("\n", "\r\n")), "/traits/test.md")
+    expect(crlf.diff).toBe(pipe(diff, String.replaceAll("\n", "\r\n")))
+    expect(crlf.body).toBe(pipe(body, String.replaceAll("\n", "\r\n")))
+  })
+)
+
+it.effect(
+  "rejects incomplete leading examples and examples without both sides",
+  Effect.fnUntraced(function* () {
+    for (const example of [
+      "```diff\n-bad()\n+good()\n```\nBody",
+      "```diff\n+good()\n```\n\n---\nBody",
+      "```diff\n-bad()\n"
+    ]) {
+      const result = yield* Trait.parse(`---\nname: ${name}\n---\n${example}`, "/traits/test.md").pipe(Effect.result)
+      expect(Result.isFailure(result)).toBe(true)
+    }
+  })
+)
+
+it.effect(
   "loads frontmatter without changing the Markdown body",
   Effect.fnUntraced(function* () {
     const body = "Keep this body.\n\n---\nNot a header.\n"

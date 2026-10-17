@@ -18,7 +18,8 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | If Revise supplies no concrete feedback, ask for revision details with the interactive question UI and free text. Do not guess or set approved: true.
   | Keep the proposal pending through related work and return to it afterward unless cancelled; obtain fresh approval of the complete revised body.
   | First decide whether the feedback generalizes beyond the current task and inspect existing trait files for coverage.
-  | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings and unnecessary examples.
+  | Supply a concise, standalone rule as proposedTrait, preserving its scope and exceptions; omit headings.
+  | Include a separate diff showing BAD (-) versus GOOD (+) code whenever a useful example applies. Omit it only when a code example is not meaningful. Approval covers the exact diff as well as the body.
   | Supply a unique descriptive kebab-case name without a redundant trait- prefix for a newly created trait; it is the canonical identity, frontmatter name, and Markdown filename stem. Duplicate names are rejected.
   | Avoid repeated requirements and duplicate traits. Keep bodies standalone; do not strip essential scope or exceptions just to shorten them.
   | When authoring trait frontmatter, let mime restrict file types and when define positive semantic scope. Include skip only for an independent exception within that scope, never its negation or a repetition of another field.
@@ -41,6 +42,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Then call check_traits on relevant TypeScript files, using returned trait names for focused reviews when appropriate.
   `),
   parameters: S.Struct({
+    diff: Trait.TraitDiff.pipe(S.optional),
     name: Trait.TraitName.annotate({
       description:
         "Unique descriptive kebab-case identity and Markdown filename stem without a redundant trait- prefix for a newly created trait. Existing names are preserved on clarification."

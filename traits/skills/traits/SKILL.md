@@ -24,6 +24,15 @@ rename requires adding the new name and removing the old one after saving. The
 colocated in the same module. Only the filesystem adapter builds `<name>.md`
 paths.
 
+Include a concise BAD-to-GOOD code example whenever meaningful. Pass its raw
+unified diff as `diff` to `derive_trait` (removed `-` lines are BAD, added `+`
+lines are GOOD), separately from `proposedTrait`. Omit it only when a code
+example does not apply. Approval and retries cover the exact diff too. On disk,
+`diff` is not frontmatter: put it in a Markdown `diff` fence directly after the
+frontmatter, followed by a blank line, `---`, and the standalone body. Keep
+examples out of the body and preserve them when updating a trait unless the
+updated rule needs a changed example.
+
 Keep frontmatter fields complementary. `mime` restricts file types; `when`
 defines positive semantic scope. Write `when` values without a leading "When",
 such as `when: editing React state`. Add `skip` only for an independent
