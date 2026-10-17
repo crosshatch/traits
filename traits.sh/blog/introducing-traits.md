@@ -69,17 +69,16 @@ An example workflow looks like:
 4. Next time your agent drifts, `check_traits` flags it, and the agent corrects
    the mistake before you see it
 
-Most coding preferences are judgment calls, not rules a linter could enforce.
-Whether a helper is small enough to inline, or whether a sticky header needs
-JavaScript at all, depends on context. Checking every piece of generated code
-against a growing catalog of preferences like these means making thousands of
-small structured decisions. LLM structured output was never fast or cheap enough
-to do that routinely, so it wasn't economical to check all codegen against all
-of your preferences. System One decision models, like TypeSafe's Jev, are built
-for this kind of high-speed, low-cost classification, and they return
-probabilities for every label. The traits themselves aren't fixed laws either.
-You can narrow wording deemed too broad or update preferences when your
-conventions change.
+Most coding preferences are judgment calls that a linter can’t enforce. Whether
+a helper is small enough to inline, or whether a sticky header needs JavaScript
+at all, depends on context. Checking every piece of generated code against a
+growing catalog of preferences like these means making thousands of small
+structured decisions. LLM structured output was never fast or cheap enough to do
+that routinely, so it wasn't economical to check all codegen against all of your
+preferences. System One decision models, like TypeSafe's Jev, are built for this
+kind of high-speed, low-cost classification, and they return probabilities for
+every label. The traits themselves aren't fixed laws either. You can narrow
+wording deemed too broad or update preferences when your conventions change.
 
 ## Reviewing: `check_traits`
 
