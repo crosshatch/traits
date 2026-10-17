@@ -1,7 +1,7 @@
 ---
 import "../docs.css"
 
-import Masthead from "../Masthead.astro"
+import { ActionBar } from "../ActionBar.tsx"
 import type * as Catalog from "../Catalog.ts"
 import SideNav from "../SideNav.astro"
 import Page from "./Page.astro"
@@ -14,14 +14,16 @@ interface Props {
   /** The section's thumb-index pigment: Catalog is rubric. */
   readonly band: "rubric" | "lapis" | "gilt" | "verdigris"
   readonly navigation: ReadonlyArray<Catalog.NavigationGroup>
+  /** "index" on the section's index page, "page" on the pages under it. */
+  readonly page: "index" | "page"
 }
 
-const { title, description, section, band, navigation } = Astro.props
+const { title, description, section, band, navigation, page } = Astro.props
 ---
 
 <Page {...{ title, description }}>
   <a class="skip-link" href="#content">Skip to content</a>
-  <Masthead />
+  <ActionBar client:load catalog={page} />
   <div class={`docs margin-${band}`}>
     <button class="docs-contents quiet-button" type="button" popovertarget="docs-navigation">
       <span aria-hidden="true">◆</span> Contents

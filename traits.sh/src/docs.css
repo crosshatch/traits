@@ -1,4 +1,4 @@
-/* Docs and catalog chrome: the masthead's sections, the sidebar and the content column. */
+/* Docs and catalog chrome: the sidebar and the content column. */
 
 .label {
   font-family: var(--font-mono);
@@ -32,27 +32,6 @@
 .quiet-button > [aria-hidden] {
   font-size: 0.75rem;
   color: var(--gilt);
-}
-
-.masthead-sections {
-  display: flex;
-  gap: var(--space-5);
-  margin-right: auto;
-  margin-left: var(--space-5);
-}
-.masthead .masthead-sections a {
-  position: relative;
-  font-size: 0.875rem;
-}
-.masthead-sections a[aria-current]::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -10px;
-  width: 5px;
-  height: 5px;
-  background: var(--gilt);
-  transform: translateX(-50%) rotate(45deg);
 }
 
 /* The body's grain and the thumb band reach the foot of the viewport however short the page. */
@@ -186,14 +165,6 @@ body:has(> .docs) {
 }
 
 @media (max-width: 640px) {
-  .masthead:has(.masthead-sections) {
-    flex-wrap: nowrap;
-    gap: var(--space-2);
-    padding-inline: var(--space-4);
-  }
-  .masthead-sections {
-    margin-left: var(--space-2);
-  }
   .docs-contents {
     margin-inline: var(--space-4);
   }

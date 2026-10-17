@@ -28,6 +28,7 @@ const { Content } = await render(entry)
   description={when === undefined ? `A trait from ${owner}/${repo}.` : `Applies when ${when}.`}
   section="Catalog"
   band="rubric"
+  page="page"
   navigation={Catalog.navigation({ traits, current: entry })}
 >
   <div class="catalog trait-page">
