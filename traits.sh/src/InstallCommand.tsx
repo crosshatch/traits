@@ -33,21 +33,21 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
       {props.compact !== true && (
         <svg className="ivy-frame" viewBox="0 0 340 110" aria-hidden="true" fill="none">
           <defs>
-            <g id="command-frame-scroll" stroke="var(--muted)" strokeOpacity=".6" strokeWidth=".8">
+            <g id="command-frame-scroll" stroke="var(--ink-muted)" strokeOpacity=".6" strokeWidth=".8">
               <path d="M0 0C4-4 12-4 14 0S6 4 7 0s5-2 4 0M14 0c4 4 12 4 14 0S20-4 21 0s5 2 4 0" />
             </g>
             <path id="command-ivy-outline" d="M30 27H310V85H30Z" />
           </defs>
           <use
             href="#command-ivy-outline"
-            stroke="var(--gold)"
+            stroke="var(--gilt)"
             strokeOpacity=".5"
             strokeWidth="17"
             strokeLinejoin="miter"
           />
           <use
             href="#command-ivy-outline"
-            stroke="color-mix(in srgb, var(--paper), var(--blue) 18%)"
+            stroke="color-mix(in srgb, var(--surface), var(--lapis) 18%)"
             strokeWidth="15"
             strokeLinejoin="miter"
           />
@@ -73,7 +73,7 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
           </g>
           <path
             d="m25 22 5-3 5 3-5 3Zm280 0 5-3 5 3-5 3ZM25 90l5-3 5 3-5 3Zm280 0 5-3 5 3-5 3Z"
-            fill="var(--gold)"
+            fill="var(--gilt)"
             fillOpacity=".6"
             stroke="none"
           />

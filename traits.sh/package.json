@@ -12,6 +12,7 @@
     "@astrojs/react": "catalog:",
     "@effect/atom-react": "catalog:",
     "@effect/platform-node": "catalog:",
+    "@fontsource/ibm-plex-mono": "catalog:",
     "@fontsource/libre-baskerville": "catalog:",
     "astro": "catalog:",
     "effect": "catalog:",
