@@ -4,27 +4,32 @@ import "../../../../catalog.css"
 import type { GetStaticPaths } from "astro"
 import { getCollection, render } from "astro:content"
 
-import { ActionBar } from "../../../../ActionBar.tsx"
+import * as Catalog from "../../../../Catalog.ts"
 import { CodeSample } from "../../../../CodeSample.tsx"
-import Page from "../../../../layouts/Page.astro"
+import Docs from "../../../../layouts/Docs.astro"
 import { mimeLabel } from "../../../../mimeLabel.ts"
 
 export const getStaticPaths = (async () => {
   const traits = await getCollection("traits")
   return traits.map((entry) => ({
     params: { owner: entry.data.owner, repo: entry.data.repo, id: entry.data.traitId },
-    props: { entry }
+    props: { entry, traits }
   }))
 }) satisfies GetStaticPaths
 
-const { entry } = Astro.props
+const { entry, traits } = Astro.props
 const { name, when, skip, mime, traitId, owner, repo, path, url } = entry.data
 const { Content } = await render(entry)
 ---
 
-<Page title={`${name} — Traits`} description={when === undefined ? `A trait from ${owner}/${repo}.` : `Applies when ${when}.`}>
-  <ActionBar client:load home />
-  <main class="catalog trait-detail">
+<Docs
+  title={`${name} — Traits`}
+  description={when === undefined ? `A trait from ${owner}/${repo}.` : `Applies when ${when}.`}
+  section="Catalog"
+  band="rubric"
+  navigation={Catalog.navigation({ traits, current: entry })}
+>
+  <div class="catalog trait-detail">
     <nav class="catalog-breadcrumb" aria-label="Breadcrumb">
       <a href="/traits/">Catalog</a>
       <span aria-hidden="true">/</span>
@@ -81,5 +86,5 @@ const { Content } = await render(entry)
       <p>Add this comment before any code to skip the trait for a whole file. A reason is required.</p>
       <CodeSample client:visible title="File header" code={`// traits-ignore-file ${traitId}: <reason>`} />
     </section>
-  </main>
-</Page>
+  </div>
+</Docs>

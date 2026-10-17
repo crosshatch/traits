@@ -1,21 +1,11 @@
 import { InstallCommand } from "./InstallCommand.tsx"
 import { ThemeToggle } from "./ThemeToggle.tsx"
 
-export interface ActionBarProps {
-  readonly docked?: boolean | undefined
-  /** Links the brand to the landing page instead of the top of the current page. */
-  readonly home?: boolean | undefined
-}
-
-export const ActionBar = (props: ActionBarProps) => {
+export const ActionBar = (props: { readonly docked?: boolean | undefined }) => {
   const Tag = props.docked === true ? "footer" : "header"
   return (
     <Tag className={props.docked === true ? "masthead docked-header" : "masthead"}>
-      <a
-        className="brand"
-        href={props.home === true ? "/" : "#top"}
-        aria-label={props.home === true ? "Traits home" : "Traits, back to top"}
-      >
+      <a className="brand" href="#top" aria-label="Traits, back to top">
         <img className="emblem" src="/traits-mark.svg" width="48" height="48" alt="" />
         <span>TRAITS</span>
       </a>

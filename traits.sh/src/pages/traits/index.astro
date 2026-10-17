@@ -2,28 +2,23 @@
 import "../../catalog.css"
 
 import { getCollection } from "astro:content"
-import { Array, Order, pipe, Record } from "effect"
 
-import { ActionBar } from "../../ActionBar.tsx"
-import Page from "../../layouts/Page.astro"
+import * as Catalog from "../../Catalog.ts"
+import Docs from "../../layouts/Docs.astro"
 import { mimeLabel } from "../../mimeLabel.ts"
 
 const traits = await getCollection("traits")
-const sources = pipe(
-  traits,
-  Array.sortWith((entry) => entry.data.name, Order.String),
-  Array.groupBy((entry) => `${entry.data.owner}/${entry.data.repo}`),
-  Record.toEntries,
-  Array.sortWith(([repository]) => repository, Order.String)
-)
+const sources = Catalog.sources(traits)
 ---
 
-<Page
+<Docs
   title="Catalog — Traits"
   description="Browse the coding preferences agents have learned and stored as traits, with when each one applies and how to skip it."
+  section="Catalog"
+  band="rubric"
+  navigation={Catalog.navigation({ traits })}
 >
-  <ActionBar client:load home />
-  <main class="catalog">
+  <div class="catalog">
     <header class="catalog-header">
       <p class="eyebrow">The catalog</p>
       <h1>Traits</h1>
@@ -43,7 +38,7 @@ const sources = pipe(
           <ul class="trait-list">
             {entries.map((entry) => (
               <li>
-                <a class="trait-name" href={`/traits/${entry.id}/`}>
+                <a class="trait-name" href={Catalog.href(entry)}>
                   <code>{entry.data.name}</code>
                 </a>
                 {entry.data.when !== undefined && <p class="trait-when">When {entry.data.when}</p>}
@@ -60,5 +55,5 @@ const sources = pipe(
         </section>
       ))
     }
-  </main>
-</Page>
+  </div>
+</Docs>

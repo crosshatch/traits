@@ -1,7 +1,5 @@
 .catalog {
-  width: min(880px, 100%);
-  margin: 0 auto;
-  padding: 4rem 1.5rem 6rem;
+  max-width: 880px;
 }
 .catalog-header h1 {
   font-size: clamp(2.75rem, 7vw, 4.5rem);

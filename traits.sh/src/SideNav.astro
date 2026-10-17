@@ -1,0 +1,34 @@
+---
+import type * as Catalog from "./Catalog.ts"
+
+interface Props {
+  readonly id: string
+  readonly label: string
+  readonly groups: ReadonlyArray<Catalog.NavigationGroup>
+}
+
+const { id, label, groups } = Astro.props
+---
+
+<nav class="sidenav" {...{ id }} aria-label={label} popover>
+  <button class="sidenav-close quiet-button" type="button" popovertarget={id} popovertargetaction="hide">
+    Close
+  </button>
+  {
+    groups.map((group) => (
+      <div class="sidenav-group">
+        <span class={group.code === true ? "label" : "eyebrow"}>{group.title}</span>
+        <ul>
+          {group.items.map((item) => (
+            <li>
+              <a href={item.href} aria-current={item.current === true ? "page" : undefined}>
+                {item.code === true ? <code>{item.label}</code> : item.label}
+                {item.count !== undefined && <span class="sidenav-count">{item.count}</span>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</nav>

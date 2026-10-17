@@ -46,6 +46,7 @@
   --margin-band: 7px;
   --measure-prose: 730px;
   --measure-page: 1160px;
+  --sidebar-width: 260px;
 }
 :root[data-theme="light"] {
   color-scheme: light;
