@@ -4,26 +4,23 @@ import { defineConfig } from "vite-plus"
 
 import custom from "./rules/index.ts"
 
-const toolingIgnores = [".agents/**", "repos/**", "**/.worktrees/**"]
+const toolingIgnores = ["**/.worktrees/**", ".agents/**", "repos/**"]
 
 export default defineConfig({
   fmt: {
     ignorePatterns: toolingIgnores,
-    semi: false,
-    trailingComma: "none",
-    sortPackageJson: {},
-    sortImports: {},
-    sortTailwindcss: { functions: ["cn"] },
-    proseWrap: "always",
     overrides: [
       {
         files: ["**/*.md"],
         options: { printWidth: 80 }
       }
-    ]
-  },
-  test: {
-    projects: ["rules/vite.config.ts", "traits/vite.config.ts"]
+    ],
+    proseWrap: "always",
+    semi: false,
+    sortImports: {},
+    sortPackageJson: {},
+    sortTailwindcss: { functions: ["cn"] },
+    trailingComma: "none"
   },
   lint: {
     extends: [recommended],
@@ -32,6 +29,7 @@ export default defineConfig({
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
       { name: "custom", specifier: "./rules/index.ts" }
     ],
+    options: { typeAware: true, typeCheck: true },
     rules: {
       ...Record.mapEntries(
         {
@@ -42,19 +40,21 @@ export default defineConfig({
         },
         (_, name) => [name, "error"] as const
       ),
-      "effecttsgo/experimental-api-usage": "error",
-      "effecttsgo/unstable-api-usage": "off",
-      "effecttsgo/strict-effect-provide": "off",
-      "effecttsgo/node-builtin-import": "off",
-      "effecttsgo/lazy-effect": "off",
-      "effecttsgo/return-effect-in-gen": "off",
-      "effecttsgo/layer-merge-all-with-dependencies": "off",
-      "effecttsgo/prefer-schema-over-json": "off",
       "effecttsgo/effect-succeed-with-void": "off",
+      "effecttsgo/experimental-api-usage": "error",
+      "effecttsgo/layer-merge-all-with-dependencies": "off",
+      "effecttsgo/lazy-effect": "off",
+      "effecttsgo/node-builtin-import": "off",
+      "effecttsgo/prefer-schema-over-json": "off",
+      "effecttsgo/return-effect-in-gen": "off",
+      "effecttsgo/strict-effect-provide": "off",
+      "effecttsgo/unstable-api-usage": "off",
       "typescript/no-import-type-side-effects": "error",
       ...Record.mapEntries(custom.rules, (_, name) => [`custom/${name}`, "error"] as const),
       "vite-plus/prefer-vite-plus-imports": "error"
-    },
-    options: { typeAware: true, typeCheck: true }
+    }
+  },
+  test: {
+    projects: ["rules/vite.config.ts", "traits/vite.config.ts"]
   }
 })

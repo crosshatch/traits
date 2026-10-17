@@ -67,8 +67,11 @@ export const parse = <Schema extends S.Top>(schema: Schema) =>
         })
       }
     })
-    const frontmatter = yield* pipe(parsed, S.decodeUnknownEffect(schema))
-    return { frontmatter, body }
+    return yield* pipe(
+      parsed,
+      S.decodeUnknownEffect(schema),
+      Effect.map((frontmatter) => ({ frontmatter, body }))
+    )
   })
 
 export const serialize = (document: { readonly frontmatter: unknown; readonly body: string }): string =>

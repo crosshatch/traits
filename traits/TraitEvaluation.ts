@@ -96,24 +96,28 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
             }
           : {})
       })
-      const result = yield* DecisionModel.decide(
+      return yield* DecisionModel.decide(
         Decision.make({
           input: S.Struct({ source: Source }),
           decisions: Record.fromIterableWith(entries, (entry) => [entry.trait.id, entry.question])
         }),
         { input: { source } }
-      ).pipe(context.semaphore.withPermits(1))
-      return Array.map(entries, (entry) => {
-        const answer = result.answers[entry.trait.id]!
-        return TraitEvaluation.make({
-          trait: entry.trait,
-          source,
-          assessment: Assessment.make({
-            classification: answer.label,
-            probabilities: answer.probabilities
+      ).pipe(
+        context.semaphore.withPermits(1),
+        Effect.map((result) =>
+          Array.map(entries, (entry) => {
+            const answer = result.answers[entry.trait.id]!
+            return TraitEvaluation.make({
+              trait: entry.trait,
+              source,
+              assessment: Assessment.make({
+                classification: answer.label,
+                probabilities: answer.probabilities
+              })
+            })
           })
-        })
-      })
+        )
+      )
     }),
     { concurrency: "unbounded" }
   ).pipe(Effect.map(Array.flatten))

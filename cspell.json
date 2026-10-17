@@ -1,15 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
-  "version": "0.2",
-  "enableGlobDot": true,
+  "dictionaries": ["networking-terms", "project-words"],
   "dictionaryDefinitions": [
     {
+      "addWords": true,
       "name": "project-words",
-      "path": "./words.txt",
-      "addWords": true
+      "path": "./words.txt"
     }
   ],
-  "dictionaries": ["networking-terms", "project-words"],
+  "enableGlobDot": true,
+  "ignorePaths": [".worktrees/**", "LICENSE", "patches/**", "pnpm-lock.yaml", "repos/**"],
   "useGitignore": true,
-  "ignorePaths": ["LICENSE", "repos/**", "patches/**", "pnpm-lock.yaml", ".worktrees/**"]
+  "version": "0.2"
 }

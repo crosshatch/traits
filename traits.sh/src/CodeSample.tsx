@@ -50,7 +50,7 @@ export const CodeSample = (props: CodeSampleProps) => {
         )}
       </div>
       <pre>
-        <code>{Array.map(String.split(code, "\n"), renderLine)}</code>
+        <code>{pipe(code, String.split("\n"), Array.map(renderLine))}</code>
       </pre>
       <span className="sr-only" role="status">
         {status !== "Copy" && status}

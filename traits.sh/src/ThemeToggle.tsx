@@ -1,13 +1,14 @@
 import { useAtomSet } from "@effect/atom-react"
-import { Array, Effect, Equal, Predicate } from "effect"
+import { Array, Effect } from "effect"
 import { Atom } from "effect/reactivity"
 
 const toggleTheme = Effect.gen(function* () {
   const theme = yield* Effect.sync(() => {
     const root = document.documentElement
-    const dark = Predicate.isUndefined(root.dataset.theme)
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-      : Equal.equals(root.dataset.theme, "dark")
+    const dark =
+      root.dataset.theme === undefined
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        : root.dataset.theme === "dark"
     const next = dark ? "light" : "dark"
     root.dataset.theme = next
     Array.forEach(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'), (meta) => {

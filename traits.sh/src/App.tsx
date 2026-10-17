@@ -1,5 +1,5 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Array, Equal, Option, Predicate } from "effect"
+import { Array, Option } from "effect"
 import { Atom } from "effect/reactivity"
 import type { AnimationEvent, KeyboardEvent } from "react"
 
@@ -42,7 +42,7 @@ const playingAtom = Atom.make(true)
 const walkthroughVisibleAtom = Atom.make(false)
 const observeWalkthroughAtom = Atom.make((ctx) => {
   const walkthrough = document.querySelector(".walkthrough")
-  if (Predicate.isNull(walkthrough)) return
+  if (walkthrough === null) return
   const observer = new IntersectionObserver(
     (entries) =>
       ctx.set(
@@ -75,7 +75,7 @@ const navigateStepsAtom = Atom.fnSync((event: KeyboardEvent<HTMLDivElement>, ctx
   event.currentTarget.querySelector<HTMLButtonElement>(`#step-${next}`)?.focus()
 })
 const advanceStepAtom = Atom.fnSync((event: AnimationEvent<HTMLDivElement>, ctx) => {
-  if (!Equal.equals(event.animationName, "step-progress")) return
+  if (event.animationName !== "step-progress") return
   ctx.set(directionAtom, "forward")
   ctx.set(activeAtom, (ctx(activeAtom) + 1) % steps.length)
 })

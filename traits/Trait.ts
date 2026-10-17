@@ -65,10 +65,13 @@ export const Generated = variants.extract(fields, "generated")
 export type Trait = typeof Trait.Type
 export const Trait = S.StructWithRest(variants.extract(fields, "stored"), [S.JsonObject])
 
-export const parse = Effect.fn("Trait.parse")(function* (text: string, path: string) {
-  const document = yield* Frontmatter.parse(S.StructWithRest(TraitFrontmatter, [S.JsonObject]))({ text, path })
-  return Trait.make({ ...document.frontmatter, body: document.body })
-})
+export const parse = Effect.fn("Trait.parse")((text: string, path: string) =>
+  pipe(
+    { text, path },
+    Frontmatter.parse(S.StructWithRest(TraitFrontmatter, [S.JsonObject])),
+    Effect.map((document) => Trait.make({ ...document.frontmatter, body: document.body }))
+  )
+)
 
 export const serialize = (trait: Trait): string =>
   Frontmatter.serialize({ frontmatter: Struct.omit(trait, ["body"]), body: trait.body })
