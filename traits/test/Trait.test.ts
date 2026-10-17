@@ -1,9 +1,65 @@
 import { expect, it } from "@effect/vitest"
-import { Effect, pipe, Result, Schema as S, String } from "effect"
+import { Array, Effect, Layer, pipe, Result, Schema as S, Semaphore, Stream, String } from "effect"
+import { DecisionModel, LanguageModel } from "effect/ai"
+import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
 
 import * as Trait from "../Trait.ts"
+import { TraitsContext } from "../TraitsContext.ts"
 
 const name = Trait.TraitName.make("test-trait")
+
+it.effect(
+  "requests the distinct JSON shape required for decomposition",
+  Effect.fnUntraced(function* () {
+    const bodies = ["Use two spaces for indentation.", "Use single quotes."]
+    const requests: Array<LanguageModel.ProviderOptions> = []
+    const decisionModel = yield* DecisionModel.make({
+      decide: () =>
+        Effect.succeed({
+          answers: {
+            assessment: { _tag: "Classify", label: "decomposable", probabilities: { atomic: 0, decomposable: 1 } }
+          },
+          usage: { inputTokens: 0, outputTokens: 0 }
+        })
+    })
+    const languageModel = yield* LanguageModel.make({
+      generateText: (request) => {
+        requests.push(request)
+        return Effect.succeed([{ type: "text", text: JSON.stringify({ traits: bodies }) }])
+      },
+      streamText: () => Stream.empty,
+      codecTransformer: toCodecOpenAI
+    })
+    const semaphore = yield* Semaphore.make(1)
+    const layerDecisionModel = Layer.succeed(DecisionModel.DecisionModel, decisionModel)
+    const layerLanguageModel = Layer.succeed(LanguageModel.LanguageModel, languageModel)
+    const result = yield* Trait.checkDecomposability(Array.join(bodies, " ")).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          layerDecisionModel,
+          layerLanguageModel,
+          Layer.succeed(TraitsContext, {
+            configRoot: "/test",
+            excludes: [],
+            semaphore,
+            config: {
+              decisionConcurrency: 1,
+              excludeGitignored: true,
+              excludes: [],
+              layerDecisionModel,
+              layerLanguageModel
+            }
+          })
+        )
+      )
+    )
+    expect(result).toEqual(bodies)
+    expect(requests[0]?.prompt.content[0]).toMatchObject({
+      role: "system",
+      content: expect.stringContaining('Return only a JSON object with this shape: {"traits":["')
+    })
+  })
+)
 
 it.effect(
   "roundtrips a dedicated BAD-to-GOOD diff separately from metadata and body",
