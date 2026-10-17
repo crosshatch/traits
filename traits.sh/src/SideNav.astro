@@ -17,7 +17,7 @@ const { id, label, groups } = Astro.props
   {
     groups.map((group) => (
       <div class="sidenav-group">
-        <span class={group.code === true ? "label" : "eyebrow"}>{group.title}</span>
+        <span class="eyebrow">{group.title}</span>
         <ul>
           {group.items.map((item) => (
             <li>

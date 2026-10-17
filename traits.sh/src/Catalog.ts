@@ -1,5 +1,7 @@
 import type { CollectionEntry } from "astro:content"
-import { Array, Order, pipe, Record } from "effect"
+import { Array, Order, pipe, Record, String } from "effect"
+
+import { mimeLabel } from "./mimeLabel.ts"
 
 export type Entry = CollectionEntry<"traits">
 
@@ -16,8 +18,6 @@ export interface NavigationItem {
 export interface NavigationGroup {
   readonly title: string
   readonly items: ReadonlyArray<NavigationItem>
-  /** Sets the title as a mono label, for identifiers such as repository slugs. */
-  readonly code?: boolean | undefined
 }
 
 export const href = (entry: Entry) => `/traits/${entry.id}/`
@@ -38,28 +38,43 @@ export const sources = (traits: ReadonlyArray<Entry>) =>
     Array.sortWith((source) => source.repository, Order.String)
   )
 
+/** A link to the catalog index with one facet applied, read back by `catalogSearch.ts`. */
+const facetHref = (name: "mime" | "source", value: string) =>
+  `/traits/?${name}=${pipe(encodeURIComponent(value), String.replaceAll("%2F", "/"))}`
+
 export interface NavigationOptions {
   readonly traits: ReadonlyArray<Entry>
-  /** The entry whose page is showing, if any. */
-  readonly current?: Entry | undefined
+  /** Marks "All traits" as current, on the catalog index. */
+  readonly index: boolean
 }
 
-/** The catalog's sidebar. */
+/** The catalog's sidebar: every trait, then facets by file type and by source, with counts. */
 export const navigation = (options: NavigationOptions): Array<NavigationGroup> => [
   {
     title: "Catalog",
-    items: [
-      { label: "All traits", href: "/traits/", current: options.current === undefined, count: options.traits.length }
-    ]
+    items: [{ label: "All traits", href: "/traits/", current: options.index, count: options.traits.length }]
   },
-  ...Array.map(sources(options.traits), (source) => ({
-    title: source.repository,
-    code: true,
-    items: Array.map(source.entries, (entry) => ({
-      label: entry.data.name,
-      href: href(entry),
-      current: entry.id === options.current?.id,
+  {
+    title: "File types",
+    items: pipe(
+      options.traits,
+      Array.flatMap((entry) => entry.data.mime),
+      Array.dedupe,
+      Array.map((mime) => ({
+        label: mimeLabel(mime),
+        href: facetHref("mime", mime),
+        count: Array.countBy(options.traits, (entry) => Array.contains(entry.data.mime, mime))
+      })),
+      Array.sortWith((item) => item.label, Order.String)
+    )
+  },
+  {
+    title: "Sources",
+    items: Array.map(sources(options.traits), (source) => ({
+      label: source.repository,
+      href: facetHref("source", source.repository),
+      count: source.entries.length,
       code: true
     }))
-  }))
+  }
 ]

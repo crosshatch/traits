@@ -3,10 +3,12 @@ import "../../../../catalog.css"
 
 import type { GetStaticPaths } from "astro"
 import { getCollection, render } from "astro:content"
+import { Array, Option, pipe } from "effect"
 
 import * as Catalog from "../../../../Catalog.ts"
 import { CodeSample } from "../../../../CodeSample.tsx"
 import Docs from "../../../../layouts/Docs.astro"
+import Pager from "../../../../Pager.astro"
 import Prose from "../../../../Prose.astro"
 import TraitEntry from "../../../../TraitEntry.astro"
 
@@ -21,6 +23,14 @@ export const getStaticPaths = (async () => {
 const { entry, traits } = Astro.props
 const { name, when, traitId, owner, repo } = entry.data
 const { Content } = await render(entry)
+const ordered = Array.flatMap(Catalog.sources(traits), (source) => source.entries)
+const position = Array.findFirstIndex(ordered, (other) => other.id === entry.id)
+const link = (index: number) =>
+  pipe(
+    Option.flatMap(position, (current) => Array.get(ordered, current + index)),
+    Option.map((other) => ({ title: other.data.name, href: Catalog.href(other) })),
+    Option.getOrUndefined
+  )
 ---
 
 <Docs
@@ -29,7 +39,7 @@ const { Content } = await render(entry)
   section="Catalog"
   band="rubric"
   page="page"
-  navigation={Catalog.navigation({ traits, current: entry })}
+  navigation={Catalog.navigation({ traits, index: false })}
 >
   <div class="catalog trait-page">
     <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -45,5 +55,6 @@ const { Content } = await render(entry)
       <p>Add this comment before any code to skip the trait for a whole file. A reason is required.</p>
       <CodeSample client:visible title="File header" code={`// traits-ignore-file ${traitId}: <reason>`} />
     </Prose>
+    <Pager previous={link(-1)} next={link(1)} code />
   </div>
 </Docs>

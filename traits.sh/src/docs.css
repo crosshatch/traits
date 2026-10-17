@@ -120,11 +120,11 @@ aligned with the masthead. */
   color: var(--ink);
   background: var(--surface-hover);
 }
-.sidenav a[aria-current="page"] {
+.sidenav a[aria-current] {
   color: var(--ink);
   background: var(--gilt-wash);
 }
-.sidenav a[aria-current="page"]::before {
+.sidenav a[aria-current]::before {
   content: "";
   position: absolute;
   left: 6px;
@@ -160,6 +160,9 @@ aligned with the masthead. */
   .docs-contents {
     display: inline-flex;
   }
+  .search-field {
+    margin-bottom: var(--space-2);
+  }
   .docs-content {
     padding: var(--space-5) 0 var(--space-8);
   }
@@ -188,6 +191,54 @@ aligned with the masthead. */
 @media (max-width: 640px) {
   .docs {
     padding-inline: var(--space-4);
+  }
+}
+
+/* The catalog's search field, at the top of the sidebar on every catalog page. */
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 0 var(--space-5);
+}
+.search-field svg {
+  position: absolute;
+  left: var(--space-3);
+  width: 16px;
+  height: 16px;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+.search-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 var(--space-7) 0 36px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-well);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+.search-field input::placeholder {
+  color: var(--ink-muted);
+}
+.search-field input:focus-visible {
+  outline-offset: 2px;
+}
+.search-field kbd {
+  position: absolute;
+  right: var(--space-3);
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-1);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+@media (pointer: coarse) {
+  .search-field kbd {
+    display: none;
   }
 }
 
@@ -362,4 +413,42 @@ page's .prose, .chapter-heading and .flourish rules in style.css apply too. */
 }
 .chapter-heading > .flourish {
   margin-block: var(--space-5) 0;
+}
+
+.pager {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+.pager a {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  text-decoration: none;
+}
+.pager .eyebrow {
+  color: var(--ink-muted);
+}
+.pager-next {
+  grid-column: 2;
+  text-align: right;
+}
+.pager-title {
+  font-size: 1.125rem;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  transition: color 180ms ease;
+}
+.pager[data-code] .pager-title {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+}
+.pager a:hover .pager-title {
+  color: var(--rubric-ink);
 }

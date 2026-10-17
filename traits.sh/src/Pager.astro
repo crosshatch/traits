@@ -1,0 +1,38 @@
+---
+interface Link {
+  readonly title: string
+  readonly href: string
+}
+
+interface Props {
+  readonly previous?: Link | undefined
+  readonly next?: Link | undefined
+  /** Sets the titles in mono, for identifiers such as trait names. */
+  readonly code?: boolean | undefined
+}
+
+const { previous, next, code } = Astro.props
+---
+
+<nav class="pager" aria-label="Previous and next" data-code={code === true || undefined}>
+  {
+    previous !== undefined && (
+      <a class="pager-previous" href={previous.href} rel="prev">
+        <span class="eyebrow">
+          <span aria-hidden="true">←</span> Previous
+        </span>
+        <span class="pager-title">{previous.title}</span>
+      </a>
+    )
+  }
+  {
+    next !== undefined && (
+      <a class="pager-next" href={next.href} rel="next">
+        <span class="eyebrow">
+          Next <span aria-hidden="true">→</span>
+        </span>
+        <span class="pager-title">{next.title}</span>
+      </a>
+    )
+  }
+</nav>

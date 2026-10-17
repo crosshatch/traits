@@ -27,8 +27,31 @@ const { title, description, section, band, navigation, page } = Astro.props
   <div class="docs" style={{ "--band": `var(--${band})` }}>
     <div class="docs-frame">
       <aside class="docs-aside">
+        <form class="search-field" action="/traits/" method="get" role="search" data-catalog-search>
+          <label class="sr-only" for="catalog-search">Search traits</label>
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="7" cy="7" r="4.5"></circle>
+            <path d="m10.5 10.5 3.5 3.5"></path>
+          </svg>
+          <input
+            id="catalog-search"
+            type="search"
+            name="q"
+            placeholder="Search traits"
+            autocomplete="off"
+            aria-keyshortcuts="/"
+          />
+          <kbd aria-hidden="true">/</kbd>
+        </form>
         <button class="docs-contents quiet-button" type="button" popovertarget="docs-navigation">
-          <span aria-hidden="true">◆</span> Contents
+          <span aria-hidden="true">◆</span> Filters
         </button>
         <SideNav id="docs-navigation" label={section} groups={navigation} />
       </aside>
@@ -38,3 +61,7 @@ const { title, description, section, band, navigation, page } = Astro.props
     </div>
   </div>
 </Page>
+
+<script>
+  import "../catalogSearch.ts"
+</script>
