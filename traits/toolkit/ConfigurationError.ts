@@ -1,11 +1,20 @@
 import { Cause, Effect, Layer, Schema as S } from "effect"
 import { McpServer, Tool, Toolkit } from "effect/ai"
 
+import { CheckTraits } from "./CheckTraits.ts"
+import { DeriveTrait } from "./DeriveTrait.ts"
+
 const toolkit = Toolkit.make(
-  Tool.make("traits_configuration_error", {
-    description:
-      "Traits failed to initialize. Call this tool to learn where configuration failed. Help the user fix setup, then restart the Traits MCP server before using Traits. Never ask the user to paste credentials into chat.",
-    parameters: Tool.EmptyParams,
+  Tool.make("derive_trait", {
+    description: DeriveTrait.description,
+    parameters: DeriveTrait.parametersSchema,
+    success: S.Never,
+    failure: S.String,
+    failureMode: "return"
+  }).annotate(Tool.Readonly, true),
+  Tool.make("check_traits", {
+    description: CheckTraits.description,
+    parameters: CheckTraits.parametersSchema,
     success: S.Never,
     failure: S.String,
     failureMode: "return"
@@ -18,9 +27,13 @@ export const layer = (cause: Cause.Cause<unknown>) =>
     : McpServer.toolkit(toolkit).pipe(
         Layer.provide(
           toolkit.toLayer({
-            traits_configuration_error: () =>
+            derive_trait: () =>
               Effect.fail(
-                `${Cause.pretty(cause)}\n\nFix the reported error, then restart the Traits MCP server and retry. Do not paste credentials into chat.`
+                `${Cause.pretty(cause)}\n\nSurface this configuration failure to the user. Fix the reported error, then restart the Traits MCP server and retry the same trait derivation with the identical arguments. No trait was saved; keep the proposal pending until the error is resolved. Do not paste credentials into chat.`
+              ),
+            check_traits: () =>
+              Effect.fail(
+                `${Cause.pretty(cause)}\n\nSurface this configuration failure to the user. Fix the reported error, then restart the Traits MCP server and retry the same check. No trait review was performed. Do not paste credentials into chat.`
               )
           })
         )

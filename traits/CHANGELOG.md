@@ -1,5 +1,16 @@
 # traits
 
+## 0.5.4
+
+### Patch Changes
+
+- [#56](https://github.com/crosshatch/traits/pull/56)
+  [`8ebd418`](https://github.com/crosshatch/traits/commit/8ebd4188eb9a8d81d151df6f44d7a36348968767) -
+  Expose configuration-error fallbacks as derive_trait and check_traits with
+  their normal descriptions and parameters so clients surface startup failures.
+  Include instructions to retry the identical trait derivation after fixing
+  configuration and restarting the server.
+
 ## 0.5.3
 
 ### Patch Changes

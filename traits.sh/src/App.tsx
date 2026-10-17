@@ -144,7 +144,7 @@ export const App = () => {
             <p className="hero-byline">
               BY{" "}
               <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
-                CROSSHATCH LABS <span aria-hidden="true">↗</span>
+                CROSSHATCH LABS <span aria-hidden="true">↗&#xfe0e;</span>
               </a>
             </p>
           </div>
@@ -353,7 +353,7 @@ export const App = () => {
                   verifies the connection and tells you if anything still needs your attention.
                 </p>
                 <a className="text-link" href={`${repository}/blob/main/SETUP.md`}>
-                  Setup guide &amp; troubleshooting ↗
+                  Setup guide &amp; troubleshooting <span aria-hidden="true">↗&#xfe0e;</span>
                 </a>
               </div>
               <CodeSample title="agent prompt · set up Traits" code={setupPrompt} />
