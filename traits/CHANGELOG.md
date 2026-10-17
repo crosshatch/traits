@@ -1,5 +1,19 @@
 # traits
 
+## 0.5.5
+
+### Patch Changes
+
+- [#60](https://github.com/crosshatch/traits/pull/60)
+  [`bf32233`](https://github.com/crosshatch/traits/commit/bf322334f96722e23488ef6968e0b21938679229) -
+  Accept caller-supplied applicability metadata without an extra model call.
+  Include it in relationship checks and approval previews, and prevent stale
+  applicability from surviving clarification or reconciliation.
+
+  Group domain applicability and extension metadata into explicit objects. The
+  derive tool accepts a complete applicability object; Markdown encoding and
+  decoding handle flat frontmatter at the storage boundary.
+
 ## 0.5.4
 
 ### Patch Changes
