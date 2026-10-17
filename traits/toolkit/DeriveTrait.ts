@@ -2,7 +2,7 @@ import { Crypto, Schema as S, String } from "effect"
 import { DecisionModel, LanguageModel, McpSchema, Tool, Toolkit } from "effect/ai"
 
 import * as Trait from "../Trait.ts"
-import { derive, TraitDerivation } from "../TraitDerivation.ts"
+import * as Derivation from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore, TraitStoreError } from "../TraitStore.ts"
 
@@ -54,10 +54,10 @@ export const DeriveTrait = Tool.make("derive_trait", {
         "Fallback approval for the exact proposal and automatically selected action shown to the user, including any existing trait being updated. Set true only after approval; native clients still receive a form. Does not bypass relationship checks."
     })
   }),
-  success: TraitDerivation,
+  success: Derivation.TraitDerivation,
   failure: S.Union([S.TaggedStruct("AiError", { message: S.String }), TraitStoreError, McpSchema.ElicitationDeclined]),
   failureMode: "return",
-  dependencies: [Crypto.Crypto, DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitStore, TraitsContext]
+  dependencies: [Crypto.Crypto, DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitsContext, TraitStore]
 })
   .annotate(Tool.Title, "Derive Trait")
   .annotate(Tool.Readonly, false)
@@ -66,5 +66,5 @@ export const DeriveTrait = Tool.make("derive_trait", {
 export const toolkit = Toolkit.make(DeriveTrait)
 
 export const layer = toolkit.toLayer({
-  derive_trait: derive
+  derive_trait: Derivation.derive
 })

@@ -162,10 +162,7 @@ export const layerFileSystem = (dir: string) =>
           yield* pathsForId(trait.id).pipe(
             Effect.filterOrFail(
               (files) => files.length === 0,
-              () =>
-                TraitAlreadyExistsError.make({
-                  id: trait.id
-                })
+              () => TraitAlreadyExistsError.make({ id: trait.id })
             )
           )
           yield* fs.writeFileString(traitPath(trait), Trait.serialize(trait), { flag: "wx" })

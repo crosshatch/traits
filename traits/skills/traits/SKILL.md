@@ -21,8 +21,10 @@ adapter, validate them with `Trait.TraitId.make`, and construct records with the
 schema's `Trait.Trait.make`. Preserve supplied IDs for updates and migrations;
 schema construction itself does not generate IDs. `TraitStore` persists complete
 traits and uses UUIDs for get, update, and remove, so other implementations can
-key records directly by ID without filesystem conventions. Only the filesystem
-adapter builds `<name>-<uuid>.md` paths.
+key records directly by ID without filesystem conventions. The `TraitStore`
+service class declares its shape inline; use `TraitStore["Service"]` for its
+implementation type. Its filesystem layer is colocated in the same module. Only
+the filesystem adapter builds `<name>-<uuid>.md` paths.
 
 Keep frontmatter fields complementary. `mime` restricts file types; `when`
 defines positive semantic scope. Write `when` values without a leading "When",

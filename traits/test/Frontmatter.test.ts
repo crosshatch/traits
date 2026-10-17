@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest"
-import { Effect, Schema as S } from "effect"
+import { Effect, pipe, Schema as S } from "effect"
 
 import * as Frontmatter from "../_util/Frontmatter.ts"
 
@@ -14,7 +14,9 @@ it.effect(
         error: { _tag: "InvalidYamlError", line: 3, column: 1, cause: expect.any(Error) }
       }
     ]) {
-      const result = yield* Frontmatter.parse(S.JsonObject)({ text: example.text, path: "/docs/example.md" }).pipe(
+      const result = yield* pipe(
+        { text: example.text, path: "/docs/example.md" },
+        Frontmatter.parse(S.JsonObject),
         Effect.result
       )
       expect(result).toMatchObject({ _tag: "Failure", failure: { ...example.error, path: "/docs/example.md" } })
@@ -25,15 +27,22 @@ it.effect(
 it.effect(
   "decodes supplied schemas and preserves body delimiters and line endings",
   Effect.fnUntraced(function* () {
-    const document = yield* Frontmatter.parse(S.Struct({ title: S.String }))({
-      text: "---\r\ntitle: Example\r\n---\r\nBody\r\n---\r\n",
-      path: "/docs/example.md"
-    })
+    const document = yield* pipe(
+      {
+        text: "---\r\ntitle: Example\r\n---\r\nBody\r\n---\r\n",
+        path: "/docs/example.md"
+      },
+      Frontmatter.parse(S.Struct({ title: S.String }))
+    )
     expect(document).toEqual({ frontmatter: { title: "Example" }, body: "Body\r\n---\r\n" })
-    const invalid = yield* Frontmatter.parse(S.Struct({ title: S.String }))({
-      text: "---\ntitle: 2\n---",
-      path: "/docs/example.md"
-    }).pipe(Effect.result)
+    const invalid = yield* pipe(
+      {
+        text: "---\ntitle: 2\n---",
+        path: "/docs/example.md"
+      },
+      Frontmatter.parse(S.Struct({ title: S.String })),
+      Effect.result
+    )
     expect(invalid).toMatchObject({ _tag: "Failure", failure: { _tag: "SchemaError" } })
   })
 )

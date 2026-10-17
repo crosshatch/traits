@@ -1,13 +1,13 @@
 import { NodeCrypto } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, Layer, Predicate, Semaphore, Stream } from "effect"
+import { Array, Effect, Layer, pipe, Predicate, Record, Semaphore, Stream } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
 
 import * as Trait from "../Trait.ts"
 import { derive } from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
-import { TraitStore } from "../TraitStore.ts"
+import { TraitNotFoundError, TraitStore } from "../TraitStore.ts"
 
 const name = Trait.TraitName.make("indentation")
 const original = Trait.Trait.make({
@@ -18,8 +18,8 @@ const original = Trait.Trait.make({
 const proposedTrait = "Use two spaces for indentation."
 
 const harness = Effect.fn("test.harness")(function* (options: {
-  readonly responseText?: string
-  readonly decomposable?: boolean
+  readonly decomposable?: boolean | undefined
+  readonly responseText?: string | undefined
 }) {
   const stored = new Map([[original.id, original]])
   const mutations: Array<string> = []
@@ -36,7 +36,11 @@ const harness = Effect.fn("test.harness")(function* (options: {
           assessment: {
             _tag: "Classify",
             label,
-            probabilities: Object.fromEntries(labels.map((key) => [key, key === label ? 1 : 0]))
+            probabilities: pipe(
+              labels,
+              Array.map((key) => [key, key === label ? 1 : 0] as const),
+              Record.fromEntries
+            )
           }
         },
         usage: { inputTokens: 0, outputTokens: 0 }
@@ -70,13 +74,18 @@ const harness = Effect.fn("test.harness")(function* (options: {
         mutations.push("update")
         stored.set(trait.id, trait)
       }),
-    get: () => Effect.succeed(original),
+    get: (id) =>
+      Effect.suspend(() => {
+        const trait = stored.get(id)
+        return trait === undefined ? TraitNotFoundError.make({ id }) : Effect.succeed(trait)
+      }),
     rm: (ids) =>
       Effect.sync(() => {
         mutations.push("rm")
         for (const id of ids) stored.delete(id)
       })
   })
+  const semaphore = yield* Semaphore.make(4)
   const layer = Layer.mergeAll(
     NodeCrypto.layer,
     Layer.succeed(DecisionModel.DecisionModel, decisionModel),
@@ -85,7 +94,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
     Layer.succeed(TraitsContext, {
       configRoot: "/test",
       excludes: [],
-      semaphore: yield* Semaphore.make(4),
+      semaphore,
       config: {
         decisionConcurrency: 4,
         excludeGitignored: true,
@@ -116,7 +125,13 @@ it.effect(
     const result = yield* derive({ name, proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
     expect(result._tag).toBe("Resolved")
     expect(test.mutations).toEqual(["add", "rm"])
-    expect([...test.stored.values()].map((trait) => trait.body)).toEqual([proposedTrait])
+    expect(
+      pipe(
+        test.stored.values(),
+        Array.fromIterable,
+        Array.map((trait) => trait.body)
+      )
+    ).toEqual([proposedTrait])
     expect(test.requests).toHaveLength(1)
     expect(test.requests[0]?.prompt.content[0]).toMatchObject({
       role: "system",
@@ -147,7 +162,7 @@ it.effect(
   Effect.fnUntraced(function* () {
     const bodies = ["Use two spaces for indentation.", "Use single quotes."]
     const test = yield* harness({ decomposable: true, responseText: JSON.stringify({ traits: bodies }) })
-    const result = yield* Trait.checkDecomposability(bodies.join(" ")).pipe(Effect.provide(test.layer))
+    const result = yield* Trait.checkDecomposability(Array.join(bodies, " ")).pipe(Effect.provide(test.layer))
     expect(result).toEqual(bodies)
     expect(test.requests[0]?.prompt.content[0]).toMatchObject({
       role: "system",
