@@ -8,7 +8,7 @@ import * as Catalog from "../../../../Catalog.ts"
 import { CodeSample } from "../../../../CodeSample.tsx"
 import Docs from "../../../../layouts/Docs.astro"
 import Prose from "../../../../Prose.astro"
-import { mimeLabel } from "../../../../mimeLabel.ts"
+import TraitEntry from "../../../../TraitEntry.astro"
 
 export const getStaticPaths = (async () => {
   const traits = await getCollection("traits")
@@ -19,7 +19,7 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths
 
 const { entry, traits } = Astro.props
-const { name, when, skip, mime, traitId, owner, repo, path, url } = entry.data
+const { name, when, traitId, owner, repo } = entry.data
 const { Content } = await render(entry)
 ---
 
@@ -30,58 +30,15 @@ const { Content } = await render(entry)
   band="rubric"
   navigation={Catalog.navigation({ traits, current: entry })}
 >
-  <div class="catalog trait-detail">
-    <nav class="catalog-breadcrumb" aria-label="Breadcrumb">
+  <div class="catalog trait-page">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
       <a href="/traits/">Catalog</a>
       <span aria-hidden="true">/</span>
-      <span>{owner}/{repo}</span>
+      <span class="meta">{owner}/{repo}</span>
     </nav>
-    <h1><code>{name}</code></h1>
-    <Prose lead>
+    <TraitEntry {...{ entry }} headingLevel={1}>
       <Content />
-    </Prose>
-    <dl class="trait-facts">
-      {
-        when !== undefined && (
-          <div>
-            <dt>Applies when</dt>
-            <dd>{when}</dd>
-          </div>
-        )
-      }
-      {
-        skip !== undefined && (
-          <div>
-            <dt>Except</dt>
-            <dd>{skip}</dd>
-          </div>
-        )
-      }
-      {
-        mime.length > 0 && (
-          <div>
-            <dt>File types</dt>
-            <dd>
-              <ul class="mime-chips">
-                {mime.map((type) => (
-                  <li>{mimeLabel(type)}</li>
-                ))}
-              </ul>
-            </dd>
-          </div>
-        )
-      }
-      <div>
-        <dt>ID</dt>
-        <dd><code>{traitId}</code></dd>
-      </div>
-      <div>
-        <dt>Source</dt>
-        <dd>
-          <a href={url} target="_blank" rel="noopener noreferrer">{path} <span aria-hidden="true">↗</span></a>
-        </dd>
-      </div>
-    </dl>
+    </TraitEntry>
     <Prose as="section">
       <h2>Skipping this trait</h2>
       <p>Add this comment before any code to skip the trait for a whole file. A reason is required.</p>
