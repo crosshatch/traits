@@ -154,6 +154,15 @@ sensitive values embedded in errors; do not paste credentials into chat.
 Expected tool failures use MCP error results; unexpected runtime defects receive
 a generic internal error response.
 
+### Stored trait parsing fails
+
+If a stored trait cannot be parsed, tools return `TraitParseError` with the file
+path and original diagnostic instead of stopping the server. Update all stored
+traits to the format/schema of the currently installed `traits` package: inspect
+its `Trait` schema and `serialize` format, preserving the rules and metadata.
+Retry after fixing the files; no server restart is needed. A failed check is not
+a clean review, and no automatic migration is performed.
+
 ### Reconciliation fails after approval
 
 Conflict reconciliation and trait decomposition use the configured
