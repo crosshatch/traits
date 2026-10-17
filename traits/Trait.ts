@@ -14,7 +14,7 @@ export const TraitName = S.String.check(S.isPattern(/^(?!trait-)[a-z0-9]+(?:-[a-
   })
 
 const variants = VariantSchema.make({
-  variants: ["stored", "frontmatter", "generated"],
+  variants: ["stored", "frontmatter", "generated", "applicability"],
   defaultVariant: "stored"
 })
 
@@ -34,9 +34,9 @@ const fields = variants.Struct({
       description:
         "One concise, standalone trait preserving essential scope and exceptions without repeating another replacement's rule."
     }),
-    variants.FieldExcept(["frontmatter"])
+    variants.FieldExcept(["frontmatter", "applicability"])
   ),
-  diff: TraitDiff.pipe(S.optional, variants.FieldExcept(["frontmatter"])),
+  diff: TraitDiff.pipe(S.optional, variants.FieldExcept(["frontmatter", "applicability"])),
   extensionMetadata: pipe(
     S.JsonObject,
     S.fromJsonString,
@@ -50,7 +50,7 @@ const fields = variants.Struct({
     .annotate({
       description: "Applicable MIME types, file types, or languages; do not repeat these restrictions in when or skip."
     }),
-  name: TraitName,
+  name: TraitName.pipe(variants.FieldExcept(["applicability"])),
   skip: S.String.pipe(S.optional).annotate({
     description:
       "An additional exception within when's scope that overrides applicability. Omit when no independent exception exists; never restate or negate when or mime."
@@ -63,6 +63,9 @@ const fields = variants.Struct({
 
 export type TraitFrontmatter = typeof TraitFrontmatter.Type
 export const TraitFrontmatter = variants.extract(fields, "frontmatter")
+
+export type Applicability = typeof Applicability.Type
+export const Applicability = variants.extract(fields, "applicability")
 
 export type Generated = typeof Generated.Type
 export const Generated = variants.extract(fields, "generated")

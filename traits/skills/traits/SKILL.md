@@ -44,6 +44,11 @@ body concise and standalone, preserving essential scope and exceptions without
 repeated restatements. Reuse existing traits that already cover the same rule
 rather than creating duplicates.
 
+Pass applicable `when`, `mime`, and `skip` directly to `derive_trait` alongside
+`proposedTrait`; the server persists them without another model call. On
+clarification these fields are the complete replacement applicability: omission
+removes old restrictions. Approval and retries cover the exact metadata too.
+
 ## Capture a reusable insight
 
 ### Required pre-response preference check

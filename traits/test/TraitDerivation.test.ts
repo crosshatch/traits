@@ -19,6 +19,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
   readonly decomposable?: boolean | undefined
   readonly responseText?: string | undefined
   readonly unaffected?: Trait.Trait | undefined
+  readonly relationship?: "distinct" | "clarification" | undefined
 }) {
   const stored = new Map([[original.name, original]])
   if (options.unaffected !== undefined) stored.set(options.unaffected.name, options.unaffected)
@@ -29,7 +30,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
       const relationship = Predicate.hasProperty(request.state, "trait")
       const label = relationship
         ? Predicate.hasProperty(request.state.trait, "name") && request.state.trait.name === original.name
-          ? "conflict"
+          ? (options.relationship ?? "conflict")
           : "distinct"
         : options.decomposable === true
           ? "decomposable"
@@ -112,6 +113,37 @@ const harness = Effect.fn("test.harness")(function* (options: {
   )
   return { stored, mutations, requests, layer }
 })
+
+it.effect(
+  "persists caller applicability without generation for creation and clarification",
+  Effect.fnUntraced(function* () {
+    const applicability = { when: "editing state", mime: "text/tsx", skip: "generated components" }
+    for (const relationship of ["distinct", "clarification"] as const) {
+      const test = yield* harness({ relationship })
+      const pending = yield* derive({
+        name: Trait.TraitName.make("state-updates"),
+        proposedTrait,
+        ...applicability
+      }).pipe(Effect.provide(test.layer))
+      expect(pending).toMatchObject({
+        _tag: "ApprovalRequired",
+        message: expect.stringContaining("when: editing state")
+      })
+      expect(test.mutations).toEqual([])
+      const result = yield* derive({
+        name: Trait.TraitName.make("state-updates"),
+        proposedTrait,
+        ...applicability,
+        approved: true
+      }).pipe(Effect.provide(test.layer))
+      expect(result).toMatchObject({
+        _tag: relationship === "distinct" ? "Created" : "Updated",
+        trait: { ...applicability, body: proposedTrait, name: relationship === "distinct" ? "state-updates" : name }
+      })
+      expect(test.requests).toEqual([])
+    }
+  })
+)
 
 it.effect(
   "does not generate replacements or mutate traits before approval",
