@@ -1,5 +1,18 @@
 # traits
 
+## 0.5.3
+
+### Patch Changes
+
+- [#54](https://github.com/crosshatch/traits/pull/54)
+  [`e9a5b1d`](https://github.com/crosshatch/traits/commit/e9a5b1d4e3b4de05f9c40ae2c806b430ca586ade) -
+  Keep the MCP connection alive after configuration failures and expose an
+  actionable diagnostic tool with restart instructions.
+
+  Report stored trait parsing failures with original diagnostics and
+  instructions to migrate all traits to the installed schema without stopping
+  the MCP server.
+
 ## 0.5.2
 
 ### Patch Changes
