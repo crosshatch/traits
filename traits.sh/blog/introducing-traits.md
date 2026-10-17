@@ -17,21 +17,28 @@ against them. This post walks through how it works.
 
 ## A trait is a small Markdown file
 
-A trait is one coding preference, stored as plain text in `.agents/traits` next
-to your code. Here is one from the Traits repo itself:
+A trait is one coding preference, stored as markdown in `.agents/traits` next to
+your code. Here is one from the Traits repo itself:
 
 ```markdown
 ---
-id: 70c6403e-0028-4443-bc07-9ec0f769ef16
-name: catch-tags-for-tagged-errors
-when: recovering from tagged Effect errors.
-mime: [text/typescript, text/tsx]
+id: cb2063d5-fe88-440f-8c8c-5c23b7197cf3
+name: css-first-scroll-layout
+when:
+  implementing scroll-dependent UI layout, sticky positioning, or visibility
+  behavior.
+mime:
+  [text/css, text/html, text/tsx, text/jsx, text/typescript, text/javascript]
+skip:
+  When every scripted scroll-dependent behavior under assessment implements a
+  requirement that DOM placement, layout, and CSS cannot reliably express.
 ---
 
-Always prefer Effect.catchTags over Effect.catchTag for tagged-error recovery,
-including when handling only one error tag: Effect.catchTags({ UnknownError:
-handler }), not Effect.catchTag("UnknownError", handler). Preserve the existing
-handlers and error propagation behavior.
+Prefer DOM placement, appropriate containing blocks, and CSS positioning for
+scroll-dependent UI layout such as sticky bars. Do not add JavaScript scroll
+listeners, visibility atoms, or reveal/hide logic when CSS can reliably express
+the intended behavior. Use scripted behavior only when the requirement cannot be
+achieved reliably through layout and styling.
 ```
 
 The preference is stated in the body, and the frontmatter identifies and scopes
@@ -62,12 +69,17 @@ An example workflow looks like:
 4. Next time your agent drifts, `check_traits` flags it, and the agent corrects
    the mistake before you see it
 
-Most coding preferences are non-deterministic in nature. For example, it's a
-judgment call whether a helper is small enough to inline or an import style fits
-the API. System One decision models, like Jev, return probabilities for every
-label, making them an ideal tool for quality checks. The traits themselves
-aren't fixed laws either. You can narrow wording deemed too broad or update
-preferences when your conventions change.
+Most coding preferences are judgment calls, not rules a linter could enforce.
+Whether a helper is small enough to inline, or whether a sticky header needs
+JavaScript at all, depends on context. Checking every piece of generated code
+against a growing catalog of preferences like these means making thousands of
+small structured decisions. LLM structured output was never fast or cheap enough
+to do that routinely, so it wasn't economical to check all codegen against all
+of your preferences. System One decision models, like TypeSafe's Jev, are built
+for this kind of high-speed, low-cost classification, and they return
+probabilities for every label. The traits themselves aren't fixed laws either.
+You can narrow wording deemed too broad or update preferences when your
+conventions change.
 
 ## Reviewing: `check_traits`
 
@@ -104,7 +116,7 @@ trait for that file. It names the trait by UUID or name and must include a
 reason:
 
 ```ts
-// traits-ignore-file catch-tags-for-tagged-errors: this adapter mirrors an upstream API that uses catchTag.
+// traits-ignore-file css-first-scroll-layout: the virtualized list must measure scroll position to load more rows.
 ```
 
 ## Checking in both directions
@@ -146,7 +158,7 @@ export default {
 ```
 
 The defaults are TypeSafe's Jev for decisions and an OpenAI model for language,
-but both are swappable for any Effect provider that supplies the right service.
+but both are swappable via Effect layers.
 
 ## Built with itself
 
@@ -160,10 +172,10 @@ different stacks or needs, like security or DevOps.
 
 ## What it isn't
 
-Obviously, you still need to review any agent's generated code. It will still
-get things wrong and we don't like slop. However, we've found that the more we
-iterate, and the more comprehensive our trait library becomes, the more we spend
-our reviews admiring the code because it's written in our own voice.
+You may still want to review any agent's generated code. Agents get things wrong
+and we don't like slop. However, we've found that the more we iterate, and the
+more comprehensive our trait library becomes, the more we spend our reviews
+admiring the code because it's written in our own voice.
 
 ## Try it
 
