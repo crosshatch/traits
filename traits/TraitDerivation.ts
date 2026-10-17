@@ -19,14 +19,14 @@ export const TraitDerivation = S.Union([
   Approval.Approval.cases.Declined
 ]).pipe(S.toTaggedUnion("_tag"))
 
-export const derive = Effect.fn("TraitDerivation.derive")(function* (
-  params: Trait.Applicability & {
-    readonly name: Trait.TraitName
-    readonly proposedTrait: string
-    readonly diff?: Trait.TraitDiff | undefined
-    readonly approved?: boolean | undefined
-  }
-) {
+export interface DeriveParams extends Trait.Applicability {
+  readonly name: Trait.TraitName
+  readonly proposedTrait: string
+  readonly diff?: Trait.TraitDiff | undefined
+  readonly approved?: boolean | undefined
+}
+
+export const derive = Effect.fn("TraitDerivation.derive")(function* (params: DeriveParams) {
   const store = yield* TraitStore
   const traits = yield* store.ls
   const proposal = params.proposedTrait
