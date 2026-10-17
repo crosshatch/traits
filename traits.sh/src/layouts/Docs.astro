@@ -24,13 +24,17 @@ const { title, description, section, band, navigation, page } = Astro.props
 <Page {...{ title, description }}>
   <a class="skip-link" href="#content">Skip to content</a>
   <ActionBar client:load catalog={page} />
-  <div class={`docs margin-${band}`}>
-    <button class="docs-contents quiet-button" type="button" popovertarget="docs-navigation">
-      <span aria-hidden="true">◆</span> Contents
-    </button>
-    <SideNav id="docs-navigation" label={section} groups={navigation} />
-    <main class="docs-content" id="content">
-      <slot />
-    </main>
+  <div class="docs" style={{ "--band": `var(--${band})` }}>
+    <div class="docs-frame">
+      <aside class="docs-aside">
+        <button class="docs-contents quiet-button" type="button" popovertarget="docs-navigation">
+          <span aria-hidden="true">◆</span> Contents
+        </button>
+        <SideNav id="docs-navigation" label={section} groups={navigation} />
+      </aside>
+      <main class="docs-content" id="content">
+        <slot />
+      </main>
+    </div>
   </div>
 </Page>

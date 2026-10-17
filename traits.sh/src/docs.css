@@ -41,39 +41,52 @@ body:has(> .docs) {
   min-height: 100svh;
 }
 .docs {
+  position: relative;
   flex-grow: 1;
+  padding-inline: max(3.5%, calc((100% - var(--measure-page)) / 2));
+}
+/* The section's thumb-index band, on the window's left edge. */
+.docs::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--margin-band);
+  background: var(--band);
+}
+/* The sidebar on the frame's left edge and the content at the prose measure on its right, both
+aligned with the masthead. */
+.docs-frame {
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, var(--measure-prose));
+  justify-content: space-between;
+  column-gap: var(--space-7);
   align-items: start;
-  background: linear-gradient(
-      to right,
-      var(--surface-band) calc(var(--sidebar-width) - 1px),
-      var(--rule) 0 var(--sidebar-width),
-      transparent 0
-    )
-    no-repeat;
+}
+.docs-aside {
+  position: sticky;
+  top: 0;
+  max-height: 100svh;
+  padding: var(--space-7) 0 var(--space-6);
+  overflow-y: auto;
 }
 .docs-contents,
 .sidenav-close {
   display: none;
 }
 .docs-content {
-  width: min(100%, var(--measure-page));
   min-width: 0;
-  padding: var(--space-7) var(--space-7) var(--space-9);
+  padding: var(--space-7) 0 var(--space-9);
 }
 
 .sidenav {
-  position: sticky;
-  top: 0;
+  position: static;
   display: block;
   inset: auto;
   width: auto;
   height: auto;
-  max-height: 100svh;
   margin: 0;
-  padding: var(--space-5);
-  overflow-y: auto;
+  padding: 0;
+  overflow: visible;
   border: 0;
   background: transparent;
   color: inherit;
@@ -133,22 +146,30 @@ body:has(> .docs) {
 
 @media (max-width: 900px) {
   .docs {
+    padding-inline: var(--space-5);
+  }
+  .docs-frame {
     display: block;
-    background: none;
+  }
+  .docs-aside {
+    position: static;
+    max-height: none;
+    padding: var(--space-3) 0 0;
+    overflow: visible;
   }
   .docs-contents {
     display: inline-flex;
-    margin: var(--space-3) var(--space-5) 0;
   }
   .docs-content {
-    padding: var(--space-5) var(--space-5) var(--space-8);
+    padding: var(--space-5) 0 var(--space-8);
   }
   .sidenav {
     position: fixed;
     inset: 0 auto 0 0;
     width: min(320px, 88vw);
     height: 100%;
-    max-height: none;
+    padding: var(--space-5);
+    overflow-y: auto;
     background: var(--surface-band);
     border-right: 1px solid var(--rule);
   }
@@ -165,10 +186,7 @@ body:has(> .docs) {
 }
 
 @media (max-width: 640px) {
-  .docs-contents {
-    margin-inline: var(--space-4);
-  }
-  .docs-content {
+  .docs {
     padding-inline: var(--space-4);
   }
 }
