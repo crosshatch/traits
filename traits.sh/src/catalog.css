@@ -39,6 +39,7 @@
 
 .trait-entry {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   padding: var(--space-5) 0;
   border-bottom: 1px solid var(--rule);
@@ -69,6 +70,7 @@
 }
 .trait-entry-body {
   max-width: var(--measure-prose);
+  overflow-wrap: break-word;
   font-size: 1rem;
   line-height: 1.8;
 }
@@ -80,6 +82,7 @@
   margin-bottom: 0;
 }
 .trait-entry-body code {
+  overflow-wrap: anywhere;
   padding: 0.1em 0.25em;
   background: var(--surface-well);
   border-radius: var(--radius-1);
