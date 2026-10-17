@@ -15,7 +15,6 @@ const layer = TraitsConfig.layer.pipe(
 )
 
 const callbacks = Trait.Trait.make({
-  id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
   name: Trait.TraitName.make("direct-callbacks"),
   body: "Pass compatible functions directly as callbacks instead of wrapping them in forwarding arrows. Retain wrappers needed to preserve the receiver or control forwarded arguments.",
   when: "passing callbacks.",

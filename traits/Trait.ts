@@ -10,13 +10,8 @@ export const TraitName = S.String.check(S.isPattern(/^(?!trait-)[a-z0-9]+(?:-[a-
   .pipe(S.brand("traits/TraitName"))
   .annotate({
     description:
-      "A descriptive kebab-case name without a redundant trait- prefix, used as the human-readable prefix of its Markdown filename."
+      "The unique trait identity: a descriptive kebab-case name without a redundant trait- prefix, also used as its Markdown filename stem."
   })
-
-export type TraitId = typeof TraitId.Type
-export const TraitId = S.String.check(S.isUUID()).pipe(S.brand("traits/TraitId")).annotate({
-  description: "The trait's stable UUID, independent of its descriptive name or storage backend."
-})
 
 const variants = VariantSchema.make({
   variants: ["stored", "frontmatter", "generated"],
@@ -39,7 +34,6 @@ const fields = variants.Struct({
     }),
     variants.FieldOnly(["generated"])
   ),
-  id: pipe(TraitId, variants.FieldExcept(["generated"])),
   mime: S.Union([S.String, S.Array(S.String)])
     .pipe(S.optional)
     .annotate({

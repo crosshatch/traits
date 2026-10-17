@@ -3,7 +3,7 @@ import { Decision, DecisionModel } from "effect/ai"
 
 import { Assessment } from "./Assessment.ts"
 import { Source, SourceLocation } from "./Source.ts"
-import { Trait, TraitId } from "./Trait.ts"
+import { Trait, TraitName } from "./Trait.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
 export type TraitEvaluation = typeof TraitEvaluation.Type
@@ -16,14 +16,14 @@ export const TraitEvaluation = S.Struct({
 export class TraitAssessmentTooLargeError extends S.TaggedError<TraitAssessmentTooLargeError>()(
   "TraitAssessmentTooLargeError",
   {
-    traitId: TraitId,
+    traitName: TraitName,
     bytes: S.Int.check(S.isGreaterThan(0)),
     maxBytes: S.Int.check(S.isGreaterThan(0)),
     location: SourceLocation.pipe(S.optional)
   }
 ) {
   override get message() {
-    return `Source and trait ${this.traitId} exceed the decision request budget; split the source or shorten the trait.`
+    return `Source and trait ${this.traitName} exceed the decision request budget; split the source or shorten the trait.`
   }
 }
 
@@ -66,10 +66,10 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
   let bytes = inputBytes
   for (const trait of traits) {
     const entry = { trait, question: question(trait) }
-    const questionBytes = new TextEncoder().encode(JSON.stringify({ [trait.id]: entry.question })).length
+    const questionBytes = new TextEncoder().encode(JSON.stringify({ [trait.name]: entry.question })).length
     if (inputBytes + questionBytes > 24_000) {
       return yield* TraitAssessmentTooLargeError.make({
-        traitId: trait.id,
+        traitName: trait.name,
         bytes: inputBytes + questionBytes,
         maxBytes: 24_000,
         location: source.location
@@ -99,14 +99,14 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
       return yield* DecisionModel.decide(
         Decision.make({
           input: S.Struct({ source: Source }),
-          decisions: Record.fromIterableWith(entries, (entry) => [entry.trait.id, entry.question])
+          decisions: Record.fromIterableWith(entries, (entry) => [entry.trait.name, entry.question])
         }),
         { input: { source } }
       ).pipe(
         context.semaphore.withPermits(1),
         Effect.map((result) =>
           Array.map(entries, (entry) => {
-            const answer = result.answers[entry.trait.id]!
+            const answer = result.answers[entry.trait.name]!
             return TraitEvaluation.make({
               trait: entry.trait,
               source,

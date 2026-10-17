@@ -10,21 +10,19 @@ description: >-
 # Traits
 
 Traits are concise, durable coding rules. The filesystem implementation stores
-each body in `.agents/traits/<name>-<uuid>.md`, relative to its working
-directory. Frontmatter contains a descriptive kebab-case `name` without a
-redundant `trait-` prefix and a stable UUID `id`. The UUID alone is the
-canonical identity across backends: use it for focused
-`check_traits({ traitIds: [...] })` selections, not a name or filename. Ignore
-directives accept UUIDs or exact trait names. Renaming preserves identity; names
-need not be unique. Generate new UUIDs with `Crypto` outside the storage
-adapter, validate them with `Trait.TraitId.make`, and construct records with the
-schema's `Trait.Trait.make`. Preserve supplied IDs for updates and migrations;
-schema construction itself does not generate IDs. `TraitStore` persists complete
-traits and uses UUIDs for get, update, and remove, so other implementations can
-key records directly by ID without filesystem conventions. The `TraitStore`
-service class declares its shape inline; use `TraitStore["Service"]` for its
-implementation type. Its filesystem layer is colocated in the same module. Only
-the filesystem adapter builds `<name>-<uuid>.md` paths.
+each body in `.agents/traits/<name>.md`, relative to its working directory.
+Frontmatter contains a unique descriptive kebab-case `name` without a redundant
+`trait-` prefix and no separate `id`. The name is the canonical identity across
+backends: use exact names for focused `check_traits({ traitNames: [...] })`
+selections and ignore directives, not filenames. Duplicate names are rejected.
+Renaming changes identity and requires updating references. Construct complete
+records with the schema's `Trait.Trait.make`. `TraitStore` persists complete
+traits and uses names for get, update, and remove. Updates retain the name; a
+rename requires adding the new name and removing the old one after saving. The
+`TraitStore` service class declares its shape inline; use
+`TraitStore["Service"]` for its implementation type. Its filesystem layer is
+colocated in the same module. Only the filesystem adapter builds `<name>.md`
+paths.
 
 Keep frontmatter fields complementary. `mime` restricts file types; `when`
 defines positive semantic scope. Write `when` values without a leading "When",
@@ -82,7 +80,7 @@ without form support use the same fallback.
 
 On `ApprovalRequired`, show its complete message in the interactive question UI
 with Save/Revise/Skip and free text. Save permits retrying the identical body
-and target IDs with `approved: true`. Revision or free-text input requires
+and target names with `approved: true`. Revision or free-text input requires
 drafting the changed proposal and asking approval again, not silently setting
 approved. Skip means stop. Native `RevisionRequired` and `Declined` have the
 same meanings. Transport errors are failures, never declines or approvals.
@@ -122,8 +120,8 @@ authenticated consent token.
    approval prompt. This checks existing traits and writes only when the
    proposal is distinct from all of them. It does not independently decide
    whether the conversation contains a generalizable insight.
-5. `Created` means the trait was saved and includes its body, name, and UUID. Do
-   not submit it again. Use that UUID for focused checks when needed.
+5. `Created` means the trait was saved and includes its body and unique name. Do
+   not submit it again. Use that name for focused checks when needed.
 6. `Inconclusive` means nothing was saved and contains relationship findings;
    each finding's `reason` distinguishes conflict from inconclusive. Any
    inconclusive comparison blocks all writes. Inspect the existing bodies and
@@ -148,7 +146,7 @@ name arbitrarily. Do not supply a clarification target parameter.
 
 Use the interactive question UI only on `ApprovalRequired`, then retry the same
 `proposedTrait` with `approved: true` after Save. The tool rechecks every
-existing trait and preserves the selected UUID on clarification. If the store or
+existing trait and preserves the selected name on clarification. If the store or
 selected action changes between approval and retry, obtain fresh approval rather
 than reusing the flag. `Updated` returns the saved trait. Never claim approval
 not given by the user or delete a trait merely needing clearer wording.
@@ -170,8 +168,10 @@ obtain fresh approval.
 After approval, the tool evaluates each body and the proposal for decomposition,
 then generates standalone replacements. The proposal takes precedence in direct
 conflicts; unrelated requirements, scopes, and exceptions should be preserved.
-It saves the replacements before deleting the selected originals and returns
-`Resolved` with the saved traits and their new names and UUIDs.
+It validates replacement names against each other and unaffected traits before
+writing. It updates selected names reused by replacements, adds new names, then
+deletes only selected originals whose names were not reused. It returns
+`Resolved` with the saved traits and their unique names.
 
 Inspect those replacements. Do not call `derive_trait` again for the same
 proposal: resolution has already saved its content. The initial comparison
@@ -203,7 +203,7 @@ store before retrying; some changes may already be present.
    schema modifiers, and misplaced imports when their traits apply. Searches
    support review; a lack of matches is not proof that every trait is satisfied.
 5. Call `check_traits` on all changed TypeScript files after the latest edits.
-   Before a commit or PR, omit `traitIds` so every stored trait is checked;
+   Before a commit or PR, omit `traitNames` so every stored trait is checked;
    focused checks supplement rather than replace that final review.
 6. Inspect findings, fix confirmed violations, and repeat direct inspection,
    tool checks, and relevant project verification after fixes. If any reviewed
@@ -221,14 +221,12 @@ For a justified file-scoped exception, add a line comment in the leading header,
 before any code:
 
 ```ts
-// traits-ignore-file <trait-uuid-or-name>: Explain why this trait cannot apply here.
+// traits-ignore-file <trait-name>: Explain why this trait cannot apply here.
 ```
 
-Each directive requires a nonempty reason and exactly one UUID or name. UUIDs
-match one trait and survive renames. Names are case-sensitive and match every
-trait with that exact name; update name-based directives after renaming a trait.
-Use a UUID when only one of several same-name traits should be ignored. Filename
-stems and partial names are not selectors. Repeat the comment for additional
+Each directive requires a nonempty reason and exactly one unique trait name.
+Names are case-sensitive; update directives after renaming a trait. Filenames
+and partial names are not selectors. Repeat the comment for additional
 exceptions. Only the referenced traits are skipped; other traits remain checked.
 Exceptions apply to all file chunks and focused checks. Comments after code are
 ignored.
@@ -244,9 +242,9 @@ their preference. Respect existing justified exceptions during manual review.
   `check_traits({ include: files })`.
 - After creating or resolving traits, explicitly review relevant TypeScript
   files. Saving traits does not automatically check code.
-- Omit `traitIds` for the full trait set. Supply UUIDs for focused follow-ups,
+- Omit `traitNames` for the full trait set. Supply names for focused follow-ups,
   especially the replacements returned by resolution. An empty array selects no
-  traits; unknown IDs fail the call.
+  traits; unknown names fail the call.
 - `include` accepts file paths or glob patterns, absolute or relative to the MCP
   working directory. Overlapping matches are deduplicated; unmatched patterns
   select no files. Use `traits/**/*.ts` rather than a bare directory. Glob

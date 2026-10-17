@@ -13,7 +13,7 @@ export const TraitConflict = S.TaggedUnion({
 })
 
 export const check = Effect.fn("TraitConflict.check")(function* (trait: Trait, proposedTrait: string) {
-  yield* Effect.annotateCurrentSpan({ "trait.id": trait.id, "trait.name": trait.name })
+  yield* Effect.annotateCurrentSpan({ "trait.name": trait.name })
   const context = yield* TraitsContext
   const result = yield* DecisionModel.decide(
     Decision.make({
