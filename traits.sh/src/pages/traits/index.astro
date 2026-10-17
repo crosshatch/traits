@@ -1,0 +1,76 @@
+---
+import "../../catalog.css"
+
+import { getCollection, render } from "astro:content"
+import { Array, String } from "effect"
+
+import * as Catalog from "../../Catalog.ts"
+import ChapterHeading from "../../ChapterHeading.astro"
+import Docs from "../../layouts/Docs.astro"
+import Prose from "../../Prose.astro"
+import TraitEntry from "../../TraitEntry.astro"
+
+const traits = await getCollection("traits")
+const sources = await Promise.all(
+  Array.map(Catalog.sources(traits), async (source) => ({
+    repository: source.repository,
+    entries: await Promise.all(
+      Array.map(source.entries, async (entry) => ({ entry, Content: (await render(entry)).Content }))
+    )
+  }))
+)
+---
+
+<Docs
+  title="Catalog — Traits"
+  description="Browse the coding preferences agents have learned and stored as traits, with when each one applies and how to skip it."
+  section="Catalog"
+  band="rubric"
+  page="index"
+  navigation={Catalog.navigation({ traits, index: true })}
+>
+  <div class="catalog">
+    <header class="catalog-header">
+      <ChapterHeading eyebrow="The catalog" accent="rubric" level={1}>Traits</ChapterHeading>
+      <Prose lead>
+        <p>
+          Coding preferences learned from feedback, stored as Markdown in each repository's <code>.agents/traits</code> directory.
+        </p>
+      </Prose>
+    </header>
+    <div class="catalog-status">
+      <p class="meta" role="status" data-catalog-status></p>
+      <a href="/traits/" data-catalog-clear hidden>Clear filters</a>
+    </div>
+    {
+      sources.map((source) => (
+        <section class="catalog-source" data-catalog-source aria-labelledby={`source-${source.repository}`}>
+          <div class="catalog-source-head">
+            <h2 id={`source-${source.repository}`}>
+              <a href={`https://github.com/${source.repository}`} target="_blank" rel="noopener noreferrer">
+                {source.repository} <span aria-hidden="true">↗</span>
+              </a>
+            </h2>
+            <span class="meta">{source.entries.length} traits</span>
+          </div>
+          <ul class="trait-list">
+            {source.entries.map((item) => (
+              <li
+                data-trait={String.toLowerCase(
+                  `${item.entry.data.name} ${item.entry.data.when ?? ""} ${item.entry.data.skip ?? ""} ${item.entry.body ?? ""}`
+                )}
+                data-mime={Array.join(item.entry.data.mime, " ")}
+                data-source={source.repository}
+              >
+                <TraitEntry entry={item.entry} href={Catalog.href(item.entry)}>
+                  <item.Content />
+                </TraitEntry>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</Docs>
+

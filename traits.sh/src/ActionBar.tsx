@@ -1,16 +1,33 @@
 import { InstallCommand } from "./InstallCommand.tsx"
 import { ThemeToggle } from "./ThemeToggle.tsx"
 
-export const ActionBar = (props: { readonly docked?: boolean | undefined }) => {
+export interface ActionBarProps {
+  readonly docked?: boolean | undefined
+  /** On a catalog page, marks the Catalog link as the current section and links the brand home. */
+  readonly catalog?: "index" | "page" | undefined
+}
+
+export const ActionBar = (props: ActionBarProps) => {
   const Tag = props.docked === true ? "footer" : "header"
   return (
     <Tag className={props.docked === true ? "masthead docked-header" : "masthead"}>
-      <a className="brand" href="#top" aria-label="Traits, back to top">
+      <a
+        className="brand"
+        href={props.catalog === undefined ? "#top" : "/"}
+        aria-label={props.catalog === undefined ? "Traits, back to top" : "Traits home"}
+      >
         <img className="emblem" src="/traits-mark.svg" width="48" height="48" alt="" />
         <span>TRAITS</span>
       </a>
       {props.docked === true && <InstallCommand compact />}
       <nav aria-label={props.docked === true ? "Bottom navigation" : "Main navigation"}>
+        <a
+          className="catalog-link"
+          href="/traits/"
+          aria-current={props.catalog === "index" ? "page" : props.catalog === "page" ? "true" : undefined}
+        >
+          Catalog
+        </a>
         <a
           className="source-link"
           href="https://github.com/crosshatch/traits"

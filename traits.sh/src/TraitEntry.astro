@@ -1,0 +1,63 @@
+---
+import { pipe, String } from "effect"
+
+import type * as Catalog from "./Catalog.ts"
+
+interface Props {
+  readonly entry: Catalog.Entry
+  /** Links the name to the trait's own page. */
+  readonly href?: string | undefined
+  /** 1 on the trait's own page, where the name is the page title and the breadcrumb names the repository. */
+  readonly headingLevel?: 1 | 2 | 3 | undefined
+}
+
+const { entry, href, headingLevel = 3 } = Astro.props
+const { traitId, name, when, skip, mime, owner, repo, path, url } = entry.data
+const Heading = `h${headingLevel}` as const
+---
+
+<article class="trait-entry" aria-labelledby={`trait-${traitId}`} data-level={headingLevel}>
+  <div class="trait-entry-head">
+    <Heading class="trait-entry-name" id={`trait-${traitId}`}>
+      {href === undefined ? name : <a {...{ href }}>{name}</a>}
+    </Heading>
+    {headingLevel !== 1 && <span class="meta">{owner}/{repo}</span>}
+  </div>
+  <div class="trait-entry-body">
+    <slot />
+  </div>
+  {
+    (when !== undefined || skip !== undefined) && (
+      <dl class="trait-entry-scope">
+        {when !== undefined && (
+          <>
+            <dt class="label">When</dt>
+            <dd>{when}</dd>
+          </>
+        )}
+        {skip !== undefined && (
+          <>
+            <dt class="label">Skip</dt>
+            <dd>{skip}</dd>
+          </>
+        )}
+      </dl>
+    )
+  }
+  <div class="trait-entry-foot">
+    {
+      mime.length > 0 && (
+        <ul class="tags" aria-label="File types">
+          {mime.map((type) => (
+            <li class="tag">{type}</li>
+          ))}
+        </ul>
+      )
+    }
+    <span class="meta">
+      <span title={traitId}>{pipe(traitId, String.takeLeft(8))}</span>{" · "}<a {...{ href: url }} target="_blank" rel="noopener noreferrer" title={path}>
+        Source <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span>
+      </a>
+    </span>
+  </div>
+</article>

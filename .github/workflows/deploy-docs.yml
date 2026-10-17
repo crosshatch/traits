@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, closed]
+    types: [opened, reopened, synchronize, ready_for_review, labeled, closed]
 
 permissions:
   contents: read
@@ -19,8 +19,9 @@ concurrency:
 jobs:
   alchemize:
     if:
-      ${{ github.event_name != 'pull_request' || (!github.event.pull_request.draft &&
-      github.event.pull_request.head.repo.full_name == github.repository) }}
+      ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action != 'labeled' || github.event.label.name == 'deploy-website') &&
+      (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'deploy-website'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

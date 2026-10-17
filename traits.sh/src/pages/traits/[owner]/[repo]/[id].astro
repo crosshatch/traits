@@ -1,0 +1,60 @@
+---
+import "../../../../catalog.css"
+
+import type { GetStaticPaths } from "astro"
+import { getCollection, render } from "astro:content"
+import { Array, Option, pipe } from "effect"
+
+import * as Catalog from "../../../../Catalog.ts"
+import { CodeSample } from "../../../../CodeSample.tsx"
+import Docs from "../../../../layouts/Docs.astro"
+import Pager from "../../../../Pager.astro"
+import Prose from "../../../../Prose.astro"
+import TraitEntry from "../../../../TraitEntry.astro"
+
+export const getStaticPaths = (async () => {
+  const traits = await getCollection("traits")
+  return traits.map((entry) => ({
+    params: { owner: entry.data.owner, repo: entry.data.repo, id: entry.data.traitId },
+    props: { entry, traits }
+  }))
+}) satisfies GetStaticPaths
+
+const { entry, traits } = Astro.props
+const { name, when, traitId, owner, repo } = entry.data
+const { Content } = await render(entry)
+const ordered = Array.flatMap(Catalog.sources(traits), (source) => source.entries)
+const position = Array.findFirstIndex(ordered, (other) => other.id === entry.id)
+const link = (index: number) =>
+  pipe(
+    Option.flatMap(position, (current) => Array.get(ordered, current + index)),
+    Option.map((other) => ({ title: other.data.name, href: Catalog.href(other) })),
+    Option.getOrUndefined
+  )
+---
+
+<Docs
+  title={`${name} — Traits`}
+  description={when === undefined ? `A trait from ${owner}/${repo}.` : `Applies when ${when}.`}
+  section="Catalog"
+  band="rubric"
+  page="page"
+  navigation={Catalog.navigation({ traits, index: false })}
+>
+  <div class="catalog trait-page">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/traits/">Catalog</a>
+      <span aria-hidden="true">/</span>
+      <span class="meta">{owner}/{repo}</span>
+    </nav>
+    <TraitEntry {...{ entry }} headingLevel={1}>
+      <Content />
+    </TraitEntry>
+    <Prose as="section">
+      <h2>Skipping this trait</h2>
+      <p>Add this comment before any code to skip the trait for a whole file. A reason is required.</p>
+      <CodeSample client:visible title="File header" code={`// traits-ignore-file ${traitId}: <reason>`} />
+    </Prose>
+    <Pager previous={link(-1)} next={link(1)} code />
+  </div>
+</Docs>

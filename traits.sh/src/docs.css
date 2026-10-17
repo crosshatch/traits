@@ -1,0 +1,454 @@
+/* Docs and catalog chrome: the sidebar and the content column. */
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.meta {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.quiet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+.quiet-button:hover {
+  color: var(--rubric-ink);
+}
+.quiet-button > [aria-hidden] {
+  font-size: 0.75rem;
+  color: var(--gilt);
+}
+
+/* The body's grain and the thumb band reach the foot of the viewport however short the page. */
+body:has(> .docs) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+.docs {
+  position: relative;
+  flex-grow: 1;
+  padding-inline: max(3.5%, calc((100% - var(--measure-page)) / 2));
+}
+/* The section's thumb-index band, on the window's left edge. */
+.docs::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--margin-band);
+  background: var(--band);
+}
+/* The sidebar on the frame's left edge and the content at the prose measure on its right, both
+aligned with the masthead. */
+.docs-frame {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, var(--measure-prose));
+  justify-content: space-between;
+  column-gap: var(--space-7);
+  align-items: start;
+}
+.docs-aside {
+  position: sticky;
+  top: 0;
+  max-height: 100svh;
+  padding: var(--space-7) 0 var(--space-6);
+  overflow-y: auto;
+}
+.docs-contents,
+.sidenav-close {
+  display: none;
+}
+.docs-content {
+  min-width: 0;
+  padding: var(--space-7) 0 var(--space-9);
+}
+
+.sidenav {
+  position: static;
+  display: block;
+  inset: auto;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.sidenav-group + .sidenav-group {
+  margin-top: var(--space-5);
+}
+.sidenav-group > :is(.eyebrow, .label) {
+  display: block;
+  margin-bottom: var(--space-2);
+}
+.sidenav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sidenav a {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px var(--space-2) 6px 18px;
+  border-radius: var(--radius-2);
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+.sidenav a:hover {
+  color: var(--ink);
+  background: var(--surface-hover);
+}
+.sidenav a[aria-current] {
+  color: var(--ink);
+  background: var(--gilt-wash);
+}
+.sidenav a[aria-current]::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: calc(6px + 0.75em);
+  width: 5px;
+  height: 5px;
+  background: var(--gilt);
+  transform: translateY(-50%) rotate(45deg);
+}
+.sidenav code {
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.sidenav-count {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .docs {
+    padding-inline: var(--space-5);
+  }
+  .docs-frame {
+    display: block;
+  }
+  .docs-aside {
+    position: static;
+    max-height: none;
+    padding: var(--space-3) 0 0;
+    overflow: visible;
+  }
+  .docs-contents {
+    display: inline-flex;
+  }
+  .search-field {
+    margin-bottom: var(--space-2);
+  }
+  .docs-content {
+    padding: var(--space-5) 0 var(--space-8);
+  }
+  .sidenav {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(320px, 88vw);
+    height: 100%;
+    padding: var(--space-5);
+    overflow-y: auto;
+    background: var(--surface-band);
+    border-right: 1px solid var(--rule);
+  }
+  .sidenav:not(:popover-open) {
+    display: none;
+  }
+  .sidenav::backdrop {
+    background: color-mix(in srgb, var(--ink) 28%, transparent);
+  }
+  .sidenav-close {
+    display: inline-flex;
+    margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .docs {
+    padding-inline: var(--space-4);
+  }
+}
+
+/* The catalog's search field, at the top of the sidebar on every catalog page. */
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 0 var(--space-5);
+}
+.search-field svg {
+  position: absolute;
+  left: var(--space-3);
+  width: 16px;
+  height: 16px;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+.search-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 var(--space-7) 0 36px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-well);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+.search-field input::placeholder {
+  color: var(--ink-muted);
+}
+.search-field input:focus-visible {
+  outline-offset: 2px;
+}
+.search-field kbd {
+  position: absolute;
+  right: var(--space-3);
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-1);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+@media (pointer: coarse) {
+  .search-field kbd {
+    display: none;
+  }
+}
+
+/* Reading: Prose wraps rendered Markdown; ChapterHeading opens a section's index page. The landing
+page's .prose, .chapter-heading and .flourish rules in style.css apply too. */
+
+.docs .prose {
+  max-width: var(--measure-prose);
+  margin: 0;
+  overflow-wrap: break-word;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+.prose > :first-child {
+  margin-top: 0;
+}
+.prose p {
+  margin: 0 0 1.15em;
+  line-height: inherit;
+}
+.prose h1 {
+  margin: 0 0 var(--space-5);
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+.prose h2 {
+  margin: var(--space-7) 0 var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+}
+.prose h3 {
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+.prose h4 {
+  margin: var(--space-5) 0 var(--space-1);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.prose a {
+  text-decoration: underline;
+  text-decoration-color: var(--gilt);
+  transition:
+    color 180ms ease,
+    text-decoration-color 180ms ease;
+}
+.prose a:hover {
+  text-decoration-color: currentColor;
+}
+.prose :not(pre) > code {
+  overflow-wrap: anywhere;
+  padding: 0.12em 0.3em;
+  background: var(--surface-well);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-1);
+  font-size: 0.88em;
+}
+.prose :is(ul, ol) {
+  margin: 0 0 1.15em;
+  padding-left: 1.5em;
+}
+.prose li {
+  margin: 0.35em 0;
+}
+.prose ul > li::marker {
+  content: "◆  ";
+  font-size: 0.6em;
+  color: var(--gilt);
+}
+.prose ol {
+  list-style: lower-roman;
+}
+.prose ol > li::marker {
+  font-style: italic;
+  color: var(--gilt-ink);
+}
+.prose blockquote {
+  margin: var(--space-5) 0;
+  padding: 2px 0 2px var(--space-4);
+  border-left: 2px solid var(--gilt);
+  font-style: italic;
+}
+.prose hr {
+  position: relative;
+  max-width: 240px;
+  height: 24px;
+  margin: var(--space-7) auto;
+  border: 0;
+  background:
+    linear-gradient(var(--rule), var(--rule)) left center / calc(50% - 16px) 1px no-repeat,
+    linear-gradient(var(--rule), var(--rule)) right center / calc(50% - 16px) 1px no-repeat;
+}
+.prose hr::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--gilt);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.prose table {
+  width: 100%;
+  margin: var(--space-5) 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.prose th {
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.prose td {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.prose > .code-sample {
+  margin: var(--space-5) 0;
+}
+.prose[data-lead] > p:first-of-type {
+  font-size: 1.125rem;
+  line-height: 1.85;
+}
+.prose[data-dropcap] > p:first-of-type::first-letter {
+  float: left;
+  padding: 5px 11px 3px 0;
+  font-size: 5rem;
+  line-height: 0.9;
+  color: var(--lapis);
+}
+
+.docs .chapter-heading {
+  --chapter-accent: var(--gilt);
+}
+.chapter-heading[data-accent="rubric"] {
+  --chapter-accent: var(--rubric);
+}
+.chapter-heading[data-accent="gilt"] {
+  --chapter-accent: var(--gilt);
+}
+.chapter-heading[data-accent="lapis"] {
+  --chapter-accent: var(--lapis);
+}
+.chapter-heading[data-accent="verdigris"] {
+  --chapter-accent: var(--verdigris);
+}
+.chapter-heading > h1 {
+  margin: var(--space-4) 0;
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+}
+.chapter-heading > .flourish {
+  margin-block: var(--space-5) 0;
+}
+
+.pager {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+.pager a {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  text-decoration: none;
+}
+.pager .eyebrow {
+  color: var(--ink-muted);
+}
+.pager-next {
+  grid-column: 2;
+  text-align: right;
+}
+.pager-title {
+  font-size: 1.125rem;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  transition: color 180ms ease;
+}
+.pager[data-code] .pager-title {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+}
+.pager a:hover .pager-title {
+  color: var(--rubric-ink);
+}

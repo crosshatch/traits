@@ -1,0 +1,22 @@
+---
+import * as Illustrations from "./Illustrations.tsx"
+
+interface Props {
+  /** "Chapter II", "Guide", "Catalog". */
+  readonly eyebrow?: string | undefined
+  /** The section's pigment, matching its thumb-index band. Default gilt. */
+  readonly accent?: "rubric" | "gilt" | "lapis" | "verdigris" | undefined
+  /** h1 on a section's index page, where the heading is the page title. */
+  readonly level?: 1 | 2 | undefined
+  readonly id?: string | undefined
+}
+
+const { eyebrow, accent, level = 2, id } = Astro.props
+const Heading = level === 1 ? "h1" : "h2"
+---
+
+<div class="chapter-heading" data-accent={accent}>
+  {eyebrow !== undefined && <p class="eyebrow">{eyebrow}</p>}
+  <Heading {...{ id }}><slot /></Heading>
+  <Illustrations.Flourish />
+</div>

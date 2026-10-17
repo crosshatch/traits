@@ -1,0 +1,184 @@
+/* The trait catalog: sources, TraitEntry and Tag. */
+
+.catalog {
+  max-width: var(--measure-prose);
+}
+.catalog-header > .prose {
+  max-width: 34rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.catalog-source {
+  margin-top: var(--space-7);
+}
+.catalog-source-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+}
+.catalog-source-head h2 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+.catalog-source-head h2 a {
+  text-decoration: none;
+}
+.trait-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trait-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.trait-entry-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+.trait-entry-name {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.trait-entry-name::before {
+  content: "§ ";
+  font-weight: 400;
+  color: var(--rubric-ink);
+}
+.trait-entry-name a {
+  text-decoration: none;
+}
+.trait-entry-body {
+  max-width: var(--measure-prose);
+  overflow-wrap: break-word;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+.trait-entry-body p {
+  margin: 0 0 0.75em;
+  line-height: inherit;
+}
+.trait-entry-body > :last-child {
+  margin-bottom: 0;
+}
+.trait-entry-body code {
+  overflow-wrap: anywhere;
+  padding: 0.1em 0.25em;
+  background: var(--surface-well);
+  border-radius: var(--radius-1);
+  font-size: 0.88em;
+}
+.trait-entry-scope {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.trait-entry-scope dt {
+  padding-top: 3px;
+}
+.trait-entry-scope dd {
+  margin: 0;
+  font-style: italic;
+}
+.trait-entry-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.trait-entry-foot .meta a {
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+.trait-entry-foot .meta a:hover {
+  color: var(--rubric-ink);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.breadcrumb {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+.breadcrumb a {
+  text-decoration: none;
+}
+
+.trait-entry[data-level="1"] {
+  gap: var(--space-4);
+  padding-top: 0;
+  border-bottom: 0;
+}
+.trait-entry[data-level="1"] .trait-entry-name {
+  font-size: clamp(1.375rem, 3vw, 1.75rem);
+  line-height: 1.3;
+}
+.trait-entry[data-level="1"] .trait-entry-body {
+  font-size: 1.125rem;
+  line-height: 1.85;
+}
+
+.catalog-status {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 0;
+}
+.catalog-status:has(> [data-catalog-status]:empty) {
+  margin: 0;
+}
+.catalog-status p {
+  margin: 0;
+}
+.catalog-status a {
+  font-size: 0.875rem;
+}

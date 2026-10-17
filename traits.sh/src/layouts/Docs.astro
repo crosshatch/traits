@@ -1,0 +1,67 @@
+---
+import "../docs.css"
+
+import { ActionBar } from "../ActionBar.tsx"
+import type * as Catalog from "../Catalog.ts"
+import SideNav from "../SideNav.astro"
+import Page from "./Page.astro"
+
+interface Props {
+  readonly title: string
+  readonly description: string
+  /** The section's name, for its navigation. */
+  readonly section: string
+  /** The section's thumb-index pigment: Catalog is rubric. */
+  readonly band: "rubric" | "lapis" | "gilt" | "verdigris"
+  readonly navigation: ReadonlyArray<Catalog.NavigationGroup>
+  /** "index" on the section's index page, "page" on the pages under it. */
+  readonly page: "index" | "page"
+}
+
+const { title, description, section, band, navigation, page } = Astro.props
+---
+
+<Page {...{ title, description }}>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <ActionBar client:load catalog={page} />
+  <div class="docs" style={{ "--band": `var(--${band})` }}>
+    <div class="docs-frame">
+      <aside class="docs-aside">
+        <form class="search-field" action="/traits/" method="get" role="search" data-catalog-search>
+          <label class="sr-only" for="catalog-search">Search traits</label>
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="7" cy="7" r="4.5"></circle>
+            <path d="m10.5 10.5 3.5 3.5"></path>
+          </svg>
+          <input
+            id="catalog-search"
+            type="search"
+            name="q"
+            placeholder="Search traits"
+            autocomplete="off"
+            aria-keyshortcuts="/"
+          />
+          <kbd aria-hidden="true">/</kbd>
+        </form>
+        <button class="docs-contents quiet-button" type="button" popovertarget="docs-navigation">
+          <span aria-hidden="true">◆</span> Filters
+        </button>
+        <SideNav id="docs-navigation" label={section} groups={navigation} />
+      </aside>
+      <main class="docs-content" id="content">
+        <slot />
+      </main>
+    </div>
+  </div>
+</Page>
+
+<script>
+  import "../catalogSearch.ts"
+</script>
