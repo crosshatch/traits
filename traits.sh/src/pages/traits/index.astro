@@ -2,7 +2,7 @@
 import "../../catalog.css"
 
 import { getCollection, render } from "astro:content"
-import { Array } from "effect"
+import { Array, Order, pipe, String } from "effect"
 
 import * as Catalog from "../../Catalog.ts"
 import ChapterHeading from "../../ChapterHeading.astro"
@@ -11,6 +11,12 @@ import Prose from "../../Prose.astro"
 import TraitEntry from "../../TraitEntry.astro"
 
 const traits = await getCollection("traits")
+const mimes = pipe(
+  traits,
+  Array.flatMap((entry) => entry.data.mime),
+  Array.dedupe,
+  Array.sort(Order.String)
+)
 const sources = await Promise.all(
   Array.map(Catalog.sources(traits), async (source) => ({
     repository: source.repository,
@@ -37,9 +43,30 @@ const sources = await Promise.all(
         </p>
       </Prose>
     </header>
+    <search class="catalog-filter" data-catalog-filter hidden>
+      <label class="search-field">
+        <span class="sr-only">Filter traits</span>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="7" cy="7" r="4.5"></circle>
+          <path d="m10.5 10.5 3.5 3.5"></path>
+        </svg>
+        <input type="search" placeholder="Filter by name, scope or wording" autocomplete="off" />
+        <kbd aria-hidden="true">/</kbd>
+      </label>
+      <div class="tags" role="group" aria-label="File types">
+        {
+          mimes.map((mime) => (
+            <button class="tag" type="button" aria-pressed="false" data-mime={mime}>
+              {mime}
+            </button>
+          ))
+        }
+      </div>
+      <p class="meta" role="status" data-catalog-status></p>
+    </search>
     {
       sources.map((source) => (
-        <section class="catalog-source" aria-labelledby={`source-${source.repository}`}>
+        <section class="catalog-source" data-catalog-source aria-labelledby={`source-${source.repository}`}>
           <div class="catalog-source-head">
             <h2 id={`source-${source.repository}`}>
               <a href={`https://github.com/${source.repository}`} target="_blank" rel="noopener noreferrer">
@@ -50,7 +77,12 @@ const sources = await Promise.all(
           </div>
           <ul class="trait-list">
             {source.entries.map((item) => (
-              <li>
+              <li
+                data-trait={String.toLowerCase(
+                  `${item.entry.data.name} ${item.entry.data.when ?? ""} ${item.entry.data.skip ?? ""} ${item.entry.body ?? ""}`
+                )}
+                data-mime={Array.join(item.entry.data.mime, " ")}
+              >
                 <TraitEntry entry={item.entry} href={Catalog.href(item.entry)}>
                   <item.Content />
                 </TraitEntry>
@@ -62,3 +94,7 @@ const sources = await Promise.all(
     }
   </div>
 </Docs>
+
+<script>
+  import "../../catalogFilter.ts"
+</script>
