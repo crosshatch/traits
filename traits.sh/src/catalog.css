@@ -1,17 +1,6 @@
 .catalog {
   max-width: 880px;
 }
-.catalog-header h1 {
-  font-size: clamp(2.75rem, 7vw, 4.5rem);
-  font-weight: 400;
-  letter-spacing: -0.04em;
-  text-transform: uppercase;
-  margin: 0.5rem 0 1rem;
-}
-.catalog-header > p:last-child {
-  max-width: 640px;
-  color: var(--ink-muted);
-}
 .catalog code {
   font-size: 0.9em;
 }
@@ -92,17 +81,6 @@
 .trait-detail h1 code {
   font-size: 1em;
 }
-.trait-body {
-  padding-left: 1.5rem;
-  border-left: 7px solid var(--gilt);
-  font-size: 1.1rem;
-}
-.trait-body > :first-child {
-  margin-top: 0;
-}
-.trait-body > :last-child {
-  margin-bottom: 0;
-}
 
 .trait-facts {
   display: grid;
@@ -127,7 +105,8 @@
   text-decoration: none;
 }
 
-.trait-ignore h2 {
-  font-size: 1.1rem;
-  font-weight: 400;
+.catalog-header > .prose {
+  max-width: 34rem;
+  margin: 0 auto;
+  text-align: center;
 }

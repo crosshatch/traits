@@ -189,3 +189,174 @@
     padding-inline: var(--space-4);
   }
 }
+
+/* Reading: Prose wraps rendered Markdown; ChapterHeading opens a section's index page. The landing
+page's .prose, .chapter-heading and .flourish rules in style.css apply too. */
+
+.docs .prose {
+  max-width: var(--measure-prose);
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+.prose > :first-child {
+  margin-top: 0;
+}
+.prose p {
+  margin: 0 0 1.15em;
+  line-height: inherit;
+}
+.prose h1 {
+  margin: 0 0 var(--space-5);
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+.prose h2 {
+  margin: var(--space-7) 0 var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+}
+.prose h3 {
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+.prose h4 {
+  margin: var(--space-5) 0 var(--space-1);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.prose a {
+  text-decoration: underline;
+  text-decoration-color: var(--gilt);
+  transition:
+    color 180ms ease,
+    text-decoration-color 180ms ease;
+}
+.prose a:hover {
+  text-decoration-color: currentColor;
+}
+.prose :not(pre) > code {
+  padding: 0.12em 0.3em;
+  background: var(--surface-well);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-1);
+  font-size: 0.88em;
+}
+.prose :is(ul, ol) {
+  margin: 0 0 1.15em;
+  padding-left: 1.5em;
+}
+.prose li {
+  margin: 0.35em 0;
+}
+.prose ul > li::marker {
+  content: "◆  ";
+  font-size: 0.6em;
+  color: var(--gilt);
+}
+.prose ol {
+  list-style: lower-roman;
+}
+.prose ol > li::marker {
+  font-style: italic;
+  color: var(--gilt-ink);
+}
+.prose blockquote {
+  margin: var(--space-5) 0;
+  padding: 2px 0 2px var(--space-4);
+  border-left: 2px solid var(--gilt);
+  font-style: italic;
+}
+.prose hr {
+  position: relative;
+  max-width: 240px;
+  height: 24px;
+  margin: var(--space-7) auto;
+  border: 0;
+  background:
+    linear-gradient(var(--rule), var(--rule)) left center / calc(50% - 16px) 1px no-repeat,
+    linear-gradient(var(--rule), var(--rule)) right center / calc(50% - 16px) 1px no-repeat;
+}
+.prose hr::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--gilt);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.prose table {
+  width: 100%;
+  margin: var(--space-5) 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.prose th {
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.prose td {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.prose > .code-sample {
+  margin: var(--space-5) 0;
+}
+.prose[data-lead] > p:first-of-type {
+  font-size: 1.125rem;
+  line-height: 1.85;
+}
+.prose[data-dropcap] > p:first-of-type::first-letter {
+  float: left;
+  padding: 5px 11px 3px 0;
+  font-size: 5rem;
+  line-height: 0.9;
+  color: var(--lapis);
+}
+
+.docs .chapter-heading {
+  --chapter-accent: var(--gilt);
+}
+.chapter-heading[data-accent="rubric"] {
+  --chapter-accent: var(--rubric);
+}
+.chapter-heading[data-accent="gilt"] {
+  --chapter-accent: var(--gilt);
+}
+.chapter-heading[data-accent="lapis"] {
+  --chapter-accent: var(--lapis);
+}
+.chapter-heading[data-accent="verdigris"] {
+  --chapter-accent: var(--verdigris);
+}
+.chapter-heading > h1 {
+  margin: var(--space-4) 0;
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+}
+.chapter-heading > .flourish {
+  margin-block: var(--space-5) 0;
+}

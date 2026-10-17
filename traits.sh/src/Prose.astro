@@ -1,0 +1,15 @@
+---
+interface Props {
+  /** Sets the first paragraph in the lead style. */
+  readonly lead?: boolean | undefined
+  /** Illuminates the first letter of the first paragraph. The first page of a guide only. */
+  readonly dropCap?: boolean | undefined
+  readonly as?: "div" | "article" | "section" | undefined
+}
+
+const { lead, dropCap, as: Tag = "div" } = Astro.props
+---
+
+<Tag class="prose" data-lead={lead === true || undefined} data-dropcap={dropCap === true || undefined}>
+  <slot />
+</Tag>

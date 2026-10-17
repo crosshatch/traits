@@ -7,6 +7,7 @@ import { getCollection, render } from "astro:content"
 import * as Catalog from "../../../../Catalog.ts"
 import { CodeSample } from "../../../../CodeSample.tsx"
 import Docs from "../../../../layouts/Docs.astro"
+import Prose from "../../../../Prose.astro"
 import { mimeLabel } from "../../../../mimeLabel.ts"
 
 export const getStaticPaths = (async () => {
@@ -36,9 +37,9 @@ const { Content } = await render(entry)
       <span>{owner}/{repo}</span>
     </nav>
     <h1><code>{name}</code></h1>
-    <div class="trait-body">
+    <Prose lead>
       <Content />
-    </div>
+    </Prose>
     <dl class="trait-facts">
       {
         when !== undefined && (
@@ -81,10 +82,10 @@ const { Content } = await render(entry)
         </dd>
       </div>
     </dl>
-    <section class="trait-ignore" aria-labelledby="ignore-heading">
-      <h2 id="ignore-heading">Skipping this trait</h2>
+    <Prose as="section">
+      <h2>Skipping this trait</h2>
       <p>Add this comment before any code to skip the trait for a whole file. A reason is required.</p>
       <CodeSample client:visible title="File header" code={`// traits-ignore-file ${traitId}: <reason>`} />
-    </section>
+    </Prose>
   </div>
 </Docs>

@@ -4,7 +4,9 @@ import "../../catalog.css"
 import { getCollection } from "astro:content"
 
 import * as Catalog from "../../Catalog.ts"
+import ChapterHeading from "../../ChapterHeading.astro"
 import Docs from "../../layouts/Docs.astro"
+import Prose from "../../Prose.astro"
 import { mimeLabel } from "../../mimeLabel.ts"
 
 const traits = await getCollection("traits")
@@ -20,11 +22,12 @@ const sources = Catalog.sources(traits)
 >
   <div class="catalog">
     <header class="catalog-header">
-      <p class="eyebrow">The catalog</p>
-      <h1>Traits</h1>
-      <p>
-        Coding preferences learned from feedback, stored as Markdown in each repository's <code>.agents/traits</code> directory.
-      </p>
+      <ChapterHeading eyebrow="The catalog" accent="rubric" level={1}>Traits</ChapterHeading>
+      <Prose lead>
+        <p>
+          Coding preferences learned from feedback, stored as Markdown in each repository's <code>.agents/traits</code> directory.
+        </p>
+      </Prose>
     </header>
     {
       sources.map(([repository, entries]) => (
