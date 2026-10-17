@@ -7,7 +7,7 @@ const statusAtom = Atom.family((_id: string) => Atom.make("Copy"))
 class CopyInput extends Data.Class<{ readonly id: string; readonly code: string }> {}
 const copyAtom = Atom.family((params: CopyInput) =>
   Atom.fn(
-    Effect.fn("CodeSample.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
+    Effect.fn("CodeSample.copy")(function* (_event, ctx) {
       const status = yield* Effect.promise(() => navigator.clipboard.writeText(params.code)).pipe(
         Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
       )
