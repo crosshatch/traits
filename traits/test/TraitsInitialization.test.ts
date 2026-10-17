@@ -3,6 +3,9 @@ import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Path, pipe, Queue, Schema as S, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
+import { CheckTraits } from "../toolkit/CheckTraits.ts"
+import { DeriveTrait } from "../toolkit/DeriveTrait.ts"
+
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 const server = new URL("../main.ts", import.meta.url).pathname
 
@@ -101,26 +104,16 @@ for (const fixture of [
       yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`)
       const listed = yield* request(2, "tools/list")
       expect(listed).toMatchObject({
-        tools:
-          "trait" in fixture
-            ? expect.arrayContaining([
-                expect.objectContaining({ name: "check_traits" }),
-                expect.objectContaining({ name: "derive_trait" })
-              ])
-            : [
-                expect.objectContaining({
-                  name: "traits_configuration_error",
-                  description: expect.stringContaining("restart")
-                })
-              ]
+        tools: expect.arrayContaining([
+          expect.objectContaining({ name: "check_traits", description: CheckTraits.description }),
+          expect.objectContaining({ name: "derive_trait", description: DeriveTrait.description })
+        ])
       })
       for (const index of [3, 4]) {
         const tool =
-          "trait" in fixture
-            ? index === 3
-              ? { name: "check_traits", arguments: { include: [] } }
-              : { name: "derive_trait", arguments: { name: "example", proposedTrait: "Example rule" } }
-            : { name: "traits_configuration_error", arguments: {} }
+          index === 3
+            ? { name: "check_traits", arguments: { include: [] } }
+            : { name: "derive_trait", arguments: { name: "example", proposedTrait: "Example rule" } }
         const result = yield* request(index, "tools/call", tool)
         expect(result).toMatchObject({
           isError: true,
@@ -131,6 +124,10 @@ for (const fixture of [
           expect(JSON.stringify(result)).toContain("TraitParseError")
         } else {
           expect(JSON.stringify(result)).toContain("restart the Traits MCP server")
+          if (tool.name === "derive_trait") {
+            expect(JSON.stringify(result)).toContain("retry the same trait derivation with the identical arguments")
+            expect(JSON.stringify(result)).toContain("No trait was saved")
+          }
         }
       }
       if ("trait" in fixture) {

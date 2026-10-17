@@ -146,11 +146,13 @@ apply. Git failures fail the check rather than bypass filtering.
 ### Startup failures
 
 Configuration and providers initialize when the MCP server starts. If setup
-fails, the connection stays alive with a single `traits_configuration_error`
-tool instead of the normal tools. Call it for the original error diagnostics,
-then fix the reported error and restart the Traits MCP server to load the
-corrected setup. Diagnostics include the full Effect cause and may contain
-sensitive values embedded in errors; do not paste credentials into chat.
+fails, the connection stays alive with fallback `derive_trait` and
+`check_traits` tools using the normal descriptions and parameters. Either tool
+returns the original error diagnostics. Surface the failure, fix the reported
+error, and restart the Traits MCP server to load the corrected setup. Then retry
+the same operation; keep any trait proposal pending and retry its derivation
+with identical arguments. Diagnostics include the full Effect cause and may
+contain sensitive values embedded in errors; do not paste credentials into chat.
 Expected tool failures use MCP error results; unexpected runtime defects receive
 a generic internal error response.
 
