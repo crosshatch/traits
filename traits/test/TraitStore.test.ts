@@ -6,6 +6,36 @@ import * as Trait from "../Trait.ts"
 import * as TraitStore from "../TraitStore.ts"
 
 it.effect(
+  "reports migration guidance without changing an unparseable stored trait",
+  Effect.fn("test.TraitStore.parseError")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-parse-" })
+    const trait = Trait.Trait.make({ name: Trait.TraitName.make("old-format"), body: "Preserve this rule." })
+    const file = path.join(dir, "old-format.md")
+    const original = "---\nname: [\n---\nPreserve this rule."
+    yield* fs.writeFileString(file, original)
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      for (const operation of [store.get(trait.name), store.update(trait), store.rm([trait.name])]) {
+        const result = yield* operation.pipe(Effect.result)
+        expect(Result.isFailure(result)).toBe(true)
+        if (Result.isFailure(result)) {
+          expect(result.failure).toMatchObject({
+            _tag: "TraitParseError",
+            path: file,
+            cause: { _tag: "InvalidYamlError" },
+            message: expect.stringContaining("Update all stored traits")
+          })
+        }
+      }
+      const text = yield* fs.readFileString(file)
+      expect(text).toBe(original)
+    }).pipe(Effect.provide(TraitStore.layerFileSystem(dir)))
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.effect(
   "stores complete traits by unique name without overwriting duplicates",
   Effect.fn("test.TraitStore")(function* () {
     const fs = yield* FileSystem.FileSystem

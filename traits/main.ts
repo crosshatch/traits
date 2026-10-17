@@ -8,6 +8,7 @@ import { FetchHttpClient } from "effect/http"
 import * as TraitsConfigProvider from "./_util/TraitsConfigProvider.ts"
 import * as TraitsTelemetry from "./_util/TraitsTelemetry.ts"
 import PackageJson from "./package.json" with { type: "json" }
+import * as ConfigurationError from "./toolkit/ConfigurationError.ts"
 import { toolkit } from "./toolkit/toolkit.ts"
 import * as TraitsConfig from "./TraitsConfig.ts"
 import * as TraitStore from "./TraitStore.ts"
@@ -93,6 +94,8 @@ Command.make("traits", {
         toolkit.pipe(
           Layer.provide(TraitStore.layerFileSystem(".agents/traits")),
           Layer.provide(TraitsConfig.layer),
+          Layer.provide(TraitsConfigProvider.layer),
+          Layer.catchCause(ConfigurationError.layer),
           Layer.provideMerge(McpServer.McpServer.layer)
         )
       ),
@@ -100,7 +103,6 @@ Command.make("traits", {
       Effect.withSpan("traits.server"),
       Effect.provide(
         TraitsTelemetry.layer(Option.getOrUndefined(params.otlpEndpoint)).pipe(
-          Layer.provideMerge(TraitsConfigProvider.layer),
           Layer.provideMerge(FetchHttpClient.layer)
         )
       )

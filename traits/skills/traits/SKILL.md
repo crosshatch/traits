@@ -334,11 +334,21 @@ simultaneous installations in the same worktree. During development, use
 `node traits/bin.ts` with a Node version supporting native TypeScript execution;
 pass server flags after the filename.
 
-Configuration and providers currently initialize at server startup. Startup
-failures go to stderr and require fixing setup and reconnecting; whether the
-agent can see these diagnostics depends on its MCP client. Expected tool
-failures use MCP error results; unexpected defects receive a generic internal
-error rather than implementation details.
+Configuration and providers initialize at server startup. If setup fails, the
+connection stays alive with `traits_configuration_error` instead of the normal
+tools. Call it for the original error diagnostics, help the user fix the
+reported error, then restart the Traits MCP server. Diagnostics include the full
+Effect cause and may contain sensitive values embedded in errors. Never ask for
+credentials in chat. Expected tool failures use MCP error results; unexpected
+runtime defects receive a generic internal error rather than implementation
+details.
+
+Stored trait parsing failures return `TraitParseError` with the file path,
+original diagnostic, and migration guidance. Update all stored traits to the
+currently installed package's `Trait` schema and `serialize` format, preserving
+their intent and metadata, then retry. Do not treat the failed operation as a
+successful check. The server stays connected; a restart is not needed for file
+repairs, and no automatic migration is performed.
 
 Git-ignored files are excluded by default, with ignore rules refreshed on every
 check. Untracked files do not need to be added to Git to be evaluated. Tracked

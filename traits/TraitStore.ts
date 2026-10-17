@@ -1,5 +1,6 @@
 import {
   Array,
+  Cause,
   Context,
   Effect,
   FileSystem,
@@ -13,8 +14,16 @@ import {
   String
 } from "effect"
 
-import * as Frontmatter from "./_util/Frontmatter.ts"
 import * as Trait from "./Trait.ts"
+
+export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitParseError", {
+  path: S.String,
+  cause: S.Defect()
+}) {
+  override get message() {
+    return `Unable to parse trait ${this.path}.\n${Cause.pretty(Cause.fail(this.cause))}\n\nUpdate all stored traits to the format/schema of the currently installed traits package. Inspect its Trait schema and serialize format, preserve each trait's intent and metadata, then retry the tool. Do not treat this failed operation as a successful check.`
+  }
+}
 
 export class TraitNotFoundError extends S.TaggedError<TraitNotFoundError>()("TraitNotFoundError", {
   name: Trait.TraitName
@@ -45,11 +54,8 @@ export const TraitStoreError = S.Union([
   S.Struct({ ...TraitNotFoundError.fields, message: S.String }),
   S.Struct({ ...TraitAlreadyExistsError.fields, message: S.String }),
   S.Struct({ ...TraitFilenameMismatchError.fields, message: S.String }),
-  S.Struct({ ...Frontmatter.MissingFrontmatterError.fields, message: S.String }),
-  S.Struct({ ...Frontmatter.UnterminatedFrontmatterError.fields, message: S.String }),
-  S.Struct({ ...Frontmatter.InvalidYamlError.fields, message: S.String }),
-  S.TaggedStruct("PlatformError", { message: S.String }),
-  S.TaggedStruct("SchemaError", { message: S.String })
+  S.Struct({ ...TraitParseError.fields, message: S.String }),
+  S.TaggedStruct("PlatformError", { message: S.String })
 ])
 
 export class TraitStore extends Context.Service<
@@ -62,35 +68,23 @@ export class TraitStore extends Context.Service<
       trait: Trait.Trait
     ) => Effect.Effect<
       void,
-      | PlatformError.PlatformError
-      | S.SchemaError
-      | Frontmatter.ParseError
-      | TraitNotFoundError
-      | TraitFilenameMismatchError
+      PlatformError.PlatformError | TraitParseError | TraitNotFoundError | TraitFilenameMismatchError
     >
     readonly get: (
       name: Trait.TraitName
     ) => Effect.Effect<
       Trait.Trait,
-      | PlatformError.PlatformError
-      | S.SchemaError
-      | Frontmatter.ParseError
-      | TraitNotFoundError
-      | TraitFilenameMismatchError
+      PlatformError.PlatformError | TraitParseError | TraitNotFoundError | TraitFilenameMismatchError
     >
     readonly ls: Effect.Effect<
       ReadonlyArray<Trait.Trait>,
-      PlatformError.PlatformError | S.SchemaError | Frontmatter.ParseError | TraitFilenameMismatchError
+      PlatformError.PlatformError | TraitParseError | TraitFilenameMismatchError
     >
     readonly rm: (
       names: ReadonlyArray<Trait.TraitName>
     ) => Effect.Effect<
       void,
-      | PlatformError.PlatformError
-      | S.SchemaError
-      | Frontmatter.ParseError
-      | TraitNotFoundError
-      | TraitFilenameMismatchError
+      PlatformError.PlatformError | TraitParseError | TraitNotFoundError | TraitFilenameMismatchError
     >
   }
 >()("traits/TraitStore") {}
@@ -108,6 +102,7 @@ export const layerFileSystem = (dir: string) =>
       const readFile = Effect.fn("TraitStore.readFile")(function* (file: string) {
         const text = yield* fs.readFileString(file)
         return yield* Trait.parse(text, file).pipe(
+          Effect.mapError((cause) => TraitParseError.make({ path: file, cause })),
           Effect.filterOrFail(
             (trait) => traitPath(trait.name) === file,
             (trait) => TraitFilenameMismatchError.make({ path: file, expectedFilename: `${trait.name}.md` })

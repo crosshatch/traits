@@ -145,13 +145,23 @@ apply. Git failures fail the check rather than bypass filtering.
 
 ### Startup failures
 
-Configuration and providers initialize when the MCP server starts. Startup
-failures are logged to stderr and the process exits unsuccessfully. MCP clients
-can capture these diagnostics, but forwarding them to the model is
-client-specific; startup failures are not tool responses. Fix setup and
-reconnect to retry. Once started, expected tool failures use MCP error results;
-unexpected defects receive a generic internal error response rather than
-exposing details.
+Configuration and providers initialize when the MCP server starts. If setup
+fails, the connection stays alive with a single `traits_configuration_error`
+tool instead of the normal tools. Call it for the original error diagnostics,
+then fix the reported error and restart the Traits MCP server to load the
+corrected setup. Diagnostics include the full Effect cause and may contain
+sensitive values embedded in errors; do not paste credentials into chat.
+Expected tool failures use MCP error results; unexpected runtime defects receive
+a generic internal error response.
+
+### Stored trait parsing fails
+
+If a stored trait cannot be parsed, tools return `TraitParseError` with the file
+path and original diagnostic instead of stopping the server. Update all stored
+traits to the format/schema of the currently installed `traits` package: inspect
+its `Trait` schema and `serialize` format, preserving the rules and metadata.
+Retry after fixing the files; no server restart is needed. A failed check is not
+a clean review, and no automatic migration is performed.
 
 ### Reconciliation fails after approval
 
