@@ -113,7 +113,10 @@ for (const fixture of [
         const tool =
           index === 3
             ? { name: "check_traits", arguments: { include: [] } }
-            : { name: "derive_trait", arguments: { name: "example", proposedTrait: "Example rule" } }
+            : {
+                name: "derive_trait",
+                arguments: { name: "example", proposedTrait: "Example rule", applicability: {} }
+              }
         const result = yield* request(index, "tools/call", tool)
         expect(result).toMatchObject({
           isError: true,

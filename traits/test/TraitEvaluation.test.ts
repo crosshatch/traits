@@ -12,9 +12,12 @@ const traits = Array.makeBy(20, (index) =>
   Trait.Trait.make({
     name: Trait.TraitName.make(`example-trait-${index}`),
     body: "Prefer const declarations.",
-    when: "declaring bindings.",
-    mime: "text/typescript",
-    skip: "When mutation is required."
+    applicability: {
+      when: "declaring bindings.",
+      mime: "text/typescript",
+      skip: "When mutation is required."
+    },
+    extensionMetadata: {}
   })
 )
 

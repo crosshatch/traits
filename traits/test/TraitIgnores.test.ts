@@ -4,8 +4,18 @@ import { expect, it } from "vite-plus/test"
 import * as Trait from "../Trait.ts"
 import { excludeIgnored, traitIgnores } from "../traitIgnores.ts"
 
-const first = Trait.Trait.make({ name: Trait.TraitName.make("direct-callbacks"), body: "Pass callbacks directly." })
-const second = Trait.Trait.make({ name: Trait.TraitName.make("use-arrow-functions"), body: "Use arrow functions." })
+const first = Trait.Trait.make({
+  name: Trait.TraitName.make("direct-callbacks"),
+  body: "Pass callbacks directly.",
+  applicability: {},
+  extensionMetadata: {}
+})
+const second = Trait.Trait.make({
+  name: Trait.TraitName.make("use-arrow-functions"),
+  body: "Use arrow functions.",
+  applicability: {},
+  extensionMetadata: {}
+})
 
 it("reads repeated directives from the leading header", () => {
   const references = traitIgnores(
