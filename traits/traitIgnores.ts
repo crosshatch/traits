@@ -16,7 +16,7 @@ export const traitIgnores = (text: string): ReadonlySet<string> => {
   return references
 }
 
-/** Names match every trait with that exact name; UUIDs match a single stable identity. */
+/** References match unique trait names exactly. */
 export const excludeIgnored = flow(traitIgnores, (references) =>
-  Array.filter<Trait>((trait) => !references.has(trait.id) && !references.has(trait.name))
+  Array.filter<Trait>((trait) => !references.has(trait.name))
 )

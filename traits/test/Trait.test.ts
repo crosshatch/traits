@@ -4,15 +4,14 @@ import { Effect, pipe, Result, Schema as S, String } from "effect"
 import * as Trait from "../Trait.ts"
 
 const name = Trait.TraitName.make("test-trait")
-const id = Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6")
 
 it.effect(
   "loads frontmatter without changing the Markdown body",
   Effect.fnUntraced(function* () {
     const body = "Keep this body.\n\n---\nNot a header.\n"
-    const trait = yield* Trait.parse(`---\nid: ${id}\nname: ${name}\n---\n${body}`, "/traits/test.md")
-    expect(trait).toEqual({ id, name, body })
-    expect(Trait.serialize(trait)).toBe(`---\nid: ${id}\nname: ${name}\n---\n${body}`)
+    const trait = yield* Trait.parse(`---\nname: ${name}\n---\n${body}`, "/traits/test.md")
+    expect(trait).toEqual({ name, body })
+    expect(Trait.serialize(trait)).toBe(`---\nname: ${name}\n---\n${body}`)
   })
 )
 
@@ -20,12 +19,11 @@ it.effect(
   "parses YAML metadata separately from the body and preserves additional fields",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\nid: ${id}\nname: ${name}\nwhen: editing schemas.\nmime:\n  - text/typescript\npriority: 2\n---\nBody.\n`,
+      `---\nname: ${name}\nwhen: editing schemas.\nmime:\n  - text/typescript\npriority: 2\n---\nBody.\n`,
       "/traits/test.md"
     )
     expect(trait).toEqual({
       name,
-      id,
       body: "Body.\n",
       when: "editing schemas.",
       mime: ["text/typescript"],
@@ -42,7 +40,7 @@ it.effect(
   "supports scalar MIME values, multiline when, and CRLF headers",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\r\nid: ${id}\r\nname: ${name}\r\nwhen: |\r\n  editing\r\n  React components.\r\nmime: text/tsx\r\n---\r\nBody.\r\n`,
+      `---\r\nname: ${name}\r\nwhen: |\r\n  editing\r\n  React components.\r\nmime: text/tsx\r\n---\r\nBody.\r\n`,
       "/traits/test.md"
     )
     expect(trait.when).toBe("editing\nReact components.\n")
@@ -54,12 +52,11 @@ it.effect(
 it.effect(
   "supports minimal frontmatter and a closing delimiter at end of file",
   Effect.fnUntraced(function* () {
-    const empty = yield* Trait.parse(`---\nid: ${id}\nname: ${name}\n---\nBody`, "/traits/test.md")
-    expect(empty).toEqual({ id, name, body: "Body" })
-    const atEnd = yield* Trait.parse(`---\nid: ${id}\nname: ${name}\nmime: text/typescript\n---`, "/traits/test.md")
+    const empty = yield* Trait.parse(`---\nname: ${name}\n---\nBody`, "/traits/test.md")
+    expect(empty).toEqual({ name, body: "Body" })
+    const atEnd = yield* Trait.parse(`---\nname: ${name}\nmime: text/typescript\n---`, "/traits/test.md")
     expect(atEnd).toEqual({
       name,
-      id,
       body: "",
       mime: "text/typescript"
     })
@@ -73,11 +70,9 @@ it.effect(
       "---\nmime: [\n---\nBody",
       "---\nmime: text/typescript\nBody",
       "---\n- not an object\n---\nBody",
-      `---\nid: ${id}\nname: ${name}\nwhen: false\n---\nBody`,
-      `---\nid: ${id}\nname: ${name}\nmime: 123\n---\nBody`,
-      `---\nid: invalid\nname: ${name}\n---\nBody`,
-      `---\nname: ${name}\n---\nBody`,
-      "---\nname: invalid-name\n---\nBody",
+      `---\nname: ${name}\nwhen: false\n---\nBody`,
+      `---\nname: ${name}\nmime: 123\n---\nBody`,
+      "---\nname: invalid_name\n---\nBody",
       "---\nwhen: Missing name\n---\nBody",
       "Body without frontmatter",
       `Body before frontmatter\n---\nname: ${name}\n---\nBody`
@@ -92,7 +87,6 @@ it.effect(
   "serializes updated bodies without dropping metadata",
   Effect.fnUntraced(function* () {
     const trait = Trait.Trait.make({
-      id,
       name,
       body: "Replacement\n",
       when: "editing.",
@@ -107,7 +101,7 @@ it.effect(
   "preserves skip conditions alongside when without changing the body",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\nid: ${id}\nname: ${name}\nwhen: editing React state.\nskip: When a custom registry is required.\n---\nBody`,
+      `---\nname: ${name}\nwhen: editing React state.\nskip: When a custom registry is required.\n---\nBody`,
       "/traits/test.md"
     )
     expect(trait.skip).toBe("When a custom registry is required.")
@@ -121,7 +115,7 @@ it.effect(
 it.effect(
   "rejects non-string skip conditions",
   Effect.fnUntraced(function* () {
-    const result = yield* Trait.parse(`---\nid: ${id}\nname: ${name}\nskip: true\n---\nBody`, "/traits/test.md").pipe(
+    const result = yield* Trait.parse(`---\nname: ${name}\nskip: true\n---\nBody`, "/traits/test.md").pipe(
       Effect.result
     )
     expect(Result.isFailure(result)).toBe(true)
@@ -132,11 +126,11 @@ it.effect(
   "preserves frontmatter identity while keeping the Markdown body authoritative",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\nid: ${id}\nname: ${name}\nbody: Other body\nmime: text/typescript\n---\nBody`,
+      `---\nname: ${name}\nbody: Other body\nmime: text/typescript\n---\nBody`,
       "/traits/test.md"
     )
-    expect(trait).toEqual({ id, name, body: "Body", mime: "text/typescript" })
-    expect(Trait.serialize(trait)).toBe(`---\nid: ${id}\nmime: text/typescript\nname: ${name}\n---\nBody`)
+    expect(trait).toEqual({ name, body: "Body", mime: "text/typescript" })
+    expect(Trait.serialize(trait)).toBe(`---\nmime: text/typescript\nname: ${name}\n---\nBody`)
   })
 )
 
@@ -154,13 +148,12 @@ it.effect(
       "trait-example",
       pipe("a", String.repeat(81))
     ]) {
-      const result = yield* Trait.parse(
-        `---\nid: ${id}\nname: ${JSON.stringify(invalid)}\n---\nBody`,
-        "/traits/test.md"
-      ).pipe(Effect.result)
+      const result = yield* Trait.parse(`---\nname: ${JSON.stringify(invalid)}\n---\nBody`, "/traits/test.md").pipe(
+        Effect.result
+      )
       expect(Result.isFailure(result)).toBe(true)
     }
-    const missing = yield* Trait.parse(`---\nid: ${id}\n---\nBody`, "/traits/test.md").pipe(Effect.result)
+    const missing = yield* Trait.parse("---\nmime: text/typescript\n---\nBody", "/traits/test.md").pipe(Effect.result)
     expect(Result.isFailure(missing)).toBe(true)
   })
 )
@@ -169,7 +162,6 @@ it.effect(
   "roundtrips nested JSON-compatible extension metadata",
   Effect.fnUntraced(function* () {
     const trait = Trait.Trait.make({
-      id,
       name,
       body: "Body",
       metadata: { values: [null, true, 2, "text", { nested: false }] }
@@ -183,18 +175,13 @@ it.effect(
   "rejects non-JSON extension values in frontmatter and domain records",
   Effect.fnUntraced(function* () {
     for (const value of [".nan", ".inf", "-.inf", "{ nested: [.nan] }"]) {
-      const result = yield* Trait.parse(
-        `---\nid: ${id}\nname: ${name}\nmetadata: ${value}\n---\nBody`,
-        "/traits/test.md"
-      ).pipe(Effect.result)
+      const result = yield* Trait.parse(`---\nname: ${name}\nmetadata: ${value}\n---\nBody`, "/traits/test.md").pipe(
+        Effect.result
+      )
       expect(Result.isFailure(result)).toBe(true)
     }
     for (const metadata of [undefined, NaN, Infinity, { nested: [undefined] }]) {
-      const result = yield* pipe(
-        { id, name, body: "Body", metadata },
-        S.decodeUnknownEffect(Trait.Trait),
-        Effect.result
-      )
+      const result = yield* pipe({ name, body: "Body", metadata }, S.decodeUnknownEffect(Trait.Trait), Effect.result)
       expect(Result.isFailure(result)).toBe(true)
     }
   })

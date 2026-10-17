@@ -103,23 +103,23 @@ const visuals = {
         <div className="visual-file visual-file-new">
           <span className="visual-file-icon">md</span>
           <div>
-            <strong>tagged_union_case_guards</strong>
-            <span>-〈uuid〉.md · Use case guards</span>
+            <strong>tagged-union-case-guards</strong>
+            <span>.md · Use case guards</span>
           </div>
           <span className="visual-saved-mark">✓</span>
         </div>
         <div className="visual-file">
           <span className="visual-file-icon">md</span>
           <div>
-            <strong>effect_utilities_with_native_behavior_exceptions</strong>
-            <span>-〈uuid〉.md · Prefer Effect utilities</span>
+            <strong>effect-utilities-with-native-behavior-exceptions</strong>
+            <span>.md · Prefer Effect utilities</span>
           </div>
         </div>
         <div className="visual-file">
           <span className="visual-file-icon">md</span>
           <div>
-            <strong>strip_margin_for_multiline_text</strong>
-            <span>-〈uuid〉.md · Readable multiline strings</span>
+            <strong>strip-margin-for-multiline-text</strong>
+            <span>.md · Readable multiline strings</span>
           </div>
         </div>
       </div>

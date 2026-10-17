@@ -3,9 +3,9 @@
 ---
 
 Support YAML frontmatter in traits, exposing when, MIME, and skip metadata with
-descriptive kebab-case names and stable crypto-random UUID identities. Use
-name-UUID Markdown filenames only in the filesystem adapter; the storage service
-uses UUIDs independently of its backend and preserves full trait metadata.
+unique descriptive kebab-case names as identities. Use name-only Markdown
+filenames in the filesystem adapter; the storage service uses names
+independently of its backend and preserves full trait metadata.
 
 Independently verify full coverage against saved bodies and applicability
 metadata before returning Covered. Route coverage gaps through approval-gated

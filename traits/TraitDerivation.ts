@@ -1,10 +1,10 @@
-import { Array, Crypto, Effect, pipe, Predicate, Record, Schema as S, String, Struct } from "effect"
+import { Array, Effect, pipe, Predicate, Record, Schema as S, String, Struct } from "effect"
 import { LanguageModel } from "effect/ai"
 
 import * as Approval from "./_util/Approval.ts"
 import * as Trait from "./Trait.ts"
 import { check, TraitConflict } from "./TraitConflict.ts"
-import { TraitStore } from "./TraitStore.ts"
+import { TraitAlreadyExistsError, TraitStore } from "./TraitStore.ts"
 
 export type TraitDerivation = typeof TraitDerivation.Type
 export const TraitDerivation = S.Union([
@@ -54,7 +54,7 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: {
     const target = Array.getUnsafe(clarifications, 0).trait
     const approval = yield* Approval.request({
       message: Array.join(
-        [`Clarify trait ${target.name} (${target.id})?`, "Current body:", target.body, "Replacement body:", proposal],
+        [`Clarify trait ${target.name}?`, "Current body:", target.body, "Replacement body:", proposal],
         "\n\n"
       ),
       approved: params.approved
@@ -64,14 +64,15 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: {
     yield* store.update(trait)
     return TraitDerivation.cases.Updated.make({ trait })
   }
+  if (Array.some(traits, (trait) => trait.name === params.name)) {
+    return yield* TraitAlreadyExistsError.make({ name: params.name })
+  }
   const approval = yield* Approval.request({
     message: `Save trait ${params.name}?\n\n${proposal}`,
     approved: params.approved
   })
   if (!Approval.Approval.guards.Approved(approval)) return approval
-  const crypto = yield* Crypto.Crypto
-  const uuid = yield* crypto.randomUUIDv4
-  const proposed = Trait.Trait.make({ id: Trait.TraitId.make(uuid), name: params.name, body: proposal })
+  const proposed = Trait.Trait.make({ name: params.name, body: proposal })
   const trait = yield* store.add(proposed)
   return TraitDerivation.cases.Created.make({ trait })
 })
@@ -87,7 +88,7 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
       [
         "Reconcile these stored traits with conflicts or incomplete coverage?",
         "After approval, generated replacements will incorporate the proposal and preserve unrelated requirements, scopes, and exceptions.",
-        "The selected originals will be deleted after replacements are saved. The proposal takes precedence in direct conflicts.",
+        "Replacements may reuse selected names. Selected originals without replacements under the same name will be deleted after replacements are saved. The proposal takes precedence in direct conflicts.",
         "Existing traits:",
         pipe(options.traits, Array.map(Trait.serialize), Array.join("\n\n")),
         "Proposed rule:",
@@ -115,6 +116,17 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
     }).pipe(S.fromJsonString, S.encodeEffect),
     Effect.orDie
   )
+  const stored = yield* store.ls
+  const selectedNames = pipe(
+    options.traits,
+    Array.map((trait) => trait.name),
+    (names) => new Set(names)
+  )
+  const reservedNames = pipe(
+    stored,
+    Array.filter((trait) => !selectedNames.has(trait.name)),
+    Array.map((trait) => trait.name)
+  )
   const response = yield* LanguageModel.generateObject({
     prompt: [
       {
@@ -123,6 +135,8 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
         | Reconcile and decompose these existing and proposed trait contents into standalone, mutually compatible traits.
         | Give each a concise body.
         | Give each a unique descriptive kebab-case name reflecting its rule, without a redundant trait- prefix or random words.
+        | Selected names may be reused; never use a reserved name belonging to an unaffected trait.
+        | Reserved names: ${JSON.stringify(reservedNames)}
         | The proposed trait takes precedence only where requirements directly conflict.
         | Preserve all other requirements, scopes, and exceptions.
         | Inspect storedTraits for the complete saved bodies and applicability metadata, not just their decomposed text.
@@ -142,7 +156,13 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
       traits: S.Array(Trait.Generated).check(S.isMinLength(1))
     })
   })
-  const crypto = yield* Crypto.Crypto
+  const replacementNames = new Set<Trait.TraitName>()
+  for (const draft of response.value.traits) {
+    if (replacementNames.has(draft.name) || Array.contains(reservedNames, draft.name)) {
+      return yield* TraitAlreadyExistsError.make({ name: draft.name })
+    }
+    replacementNames.add(draft.name)
+  }
   const replacements = yield* Effect.forEach(
     response.value.traits,
     Effect.fn("TraitDerivation.saveReplacement")(function* (draft) {
@@ -150,18 +170,20 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
         Struct.omit(draft, ["extensionMetadata"]),
         Record.filter<string, S.Json | undefined, S.Json>(Predicate.isNotUndefined)
       )
-      const uuid = yield* crypto.randomUUIDv4
       const trait = Trait.Trait.make({
         ...(options.traits.length === 1 ? options.traits[0] : {}),
         ...draft.extensionMetadata,
         ...generated,
-        id: Trait.TraitId.make(uuid),
         name: draft.name,
         body: draft.body
       })
+      if (selectedNames.has(trait.name)) {
+        yield* store.update(trait)
+        return trait
+      }
       return yield* store.add(trait)
     })
   )
-  yield* store.rm(Array.map(options.traits, (trait) => trait.id))
+  yield* store.rm(Array.filter(Array.fromIterable(selectedNames), (name) => !replacementNames.has(name)))
   return TraitDerivation.cases.Resolved.make({ traits: replacements })
 })

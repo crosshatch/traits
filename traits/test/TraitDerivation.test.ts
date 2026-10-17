@@ -1,4 +1,3 @@
-import { NodeCrypto } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, pipe, Predicate, Record, Semaphore, Stream } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
@@ -7,11 +6,10 @@ import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
 import * as Trait from "../Trait.ts"
 import { derive } from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
-import { TraitNotFoundError, TraitStore } from "../TraitStore.ts"
+import * as TraitStore from "../TraitStore.ts"
 
 const name = Trait.TraitName.make("indentation")
 const original = Trait.Trait.make({
-  id: Trait.TraitId.make("2535ceab-5702-4ab4-932a-f87362adf8c6"),
   name,
   body: "Use tabs for indentation."
 })
@@ -20,14 +18,22 @@ const proposedTrait = "Use two spaces for indentation."
 const harness = Effect.fn("test.harness")(function* (options: {
   readonly decomposable?: boolean | undefined
   readonly responseText?: string | undefined
+  readonly unaffected?: Trait.Trait | undefined
 }) {
-  const stored = new Map([[original.id, original]])
+  const stored = new Map([[original.name, original]])
+  if (options.unaffected !== undefined) stored.set(options.unaffected.name, options.unaffected)
   const mutations: Array<string> = []
   const requests: Array<LanguageModel.ProviderOptions> = []
   const decisionModel = yield* DecisionModel.make({
     decide: (request) => {
       const relationship = Predicate.hasProperty(request.state, "trait")
-      const label = relationship ? "conflict" : options.decomposable === true ? "decomposable" : "atomic"
+      const label = relationship
+        ? Predicate.hasProperty(request.state.trait, "name") && request.state.trait.name === original.name
+          ? "conflict"
+          : "distinct"
+        : options.decomposable === true
+          ? "decomposable"
+          : "atomic"
       const labels = relationship
         ? ["distinct", "covered", "clarification", "conflict", "inconclusive"]
         : ["atomic", "decomposable"]
@@ -61,36 +67,36 @@ const harness = Effect.fn("test.harness")(function* (options: {
     streamText: () => Stream.empty,
     codecTransformer: toCodecOpenAI
   })
-  const store = TraitStore.of({
+  const store = TraitStore.TraitStore.of({
     ls: Effect.sync(() => [...stored.values()]),
     add: (trait) =>
-      Effect.sync(() => {
+      Effect.suspend(() => {
+        if (stored.has(trait.name)) return TraitStore.TraitAlreadyExistsError.make({ name: trait.name })
         mutations.push("add")
-        stored.set(trait.id, trait)
-        return trait
+        stored.set(trait.name, trait)
+        return Effect.succeed(trait)
       }),
     update: (trait) =>
       Effect.sync(() => {
         mutations.push("update")
-        stored.set(trait.id, trait)
+        stored.set(trait.name, trait)
       }),
-    get: (id) =>
+    get: (name) =>
       Effect.suspend(() => {
-        const trait = stored.get(id)
-        return trait === undefined ? TraitNotFoundError.make({ id }) : Effect.succeed(trait)
+        const trait = stored.get(name)
+        return trait === undefined ? TraitStore.TraitNotFoundError.make({ name }) : Effect.succeed(trait)
       }),
-    rm: (ids) =>
+    rm: (names) =>
       Effect.sync(() => {
         mutations.push("rm")
-        for (const id of ids) stored.delete(id)
+        for (const name of names) stored.delete(name)
       })
   })
   const semaphore = yield* Semaphore.make(4)
   const layer = Layer.mergeAll(
-    NodeCrypto.layer,
     Layer.succeed(DecisionModel.DecisionModel, decisionModel),
     Layer.succeed(LanguageModel.LanguageModel, languageModel),
-    Layer.succeed(TraitStore, store),
+    Layer.succeed(TraitStore.TraitStore, store),
     Layer.succeed(TraitsContext, {
       configRoot: "/test",
       excludes: [],
@@ -119,12 +125,12 @@ it.effect(
 )
 
 it.effect(
-  "requests explicit JSON and saves replacements before removing originals",
+  "requests explicit JSON and updates reused names without deleting replacements",
   Effect.fnUntraced(function* () {
     const test = yield* harness({})
     const result = yield* derive({ name, proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
     expect(result._tag).toBe("Resolved")
-    expect(test.mutations).toEqual(["add", "rm"])
+    expect(test.mutations).toEqual(["update", "rm"])
     expect(
       pipe(
         test.stored.values(),
@@ -154,6 +160,47 @@ it.effect(
       expect(test.mutations).toEqual([])
       expect([...test.stored.values()]).toEqual([original])
     }
+  })
+)
+
+it.effect(
+  "rejects duplicate replacement names and unaffected-name collisions before any writes",
+  Effect.fnUntraced(function* () {
+    const unaffected = Trait.Trait.make({
+      name: Trait.TraitName.make("unrelated"),
+      body: "Keep unrelated requirements."
+    })
+    for (const names of [
+      ["replacement", "replacement"],
+      ["replacement", unaffected.name]
+    ]) {
+      const test = yield* harness({
+        unaffected,
+        responseText: JSON.stringify({
+          traits: Array.map(names, (name) => ({ name, body: proposedTrait, extensionMetadata: "{}" }))
+        })
+      })
+      const error = yield* derive({ name, proposedTrait, approved: true }).pipe(Effect.provide(test.layer), Effect.flip)
+      expect(error).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
+      expect(test.mutations).toEqual([])
+      expect([...test.stored.values()]).toEqual([original, unaffected])
+    }
+  })
+)
+
+it.effect(
+  "saves a new replacement name before removing the original",
+  Effect.fnUntraced(function* () {
+    const replacementName = Trait.TraitName.make("two-space-indentation")
+    const test = yield* harness({
+      responseText: JSON.stringify({
+        traits: [{ name: replacementName, body: proposedTrait, extensionMetadata: "{}" }]
+      })
+    })
+    const result = yield* derive({ name, proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
+    expect(result._tag).toBe("Resolved")
+    expect(test.mutations).toEqual(["add", "rm"])
+    expect([...test.stored.keys()]).toEqual([replacementName])
   })
 )
 

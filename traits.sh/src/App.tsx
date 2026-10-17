@@ -285,8 +285,8 @@ export const App = () => {
                   with the selected traits, and returns assessments that need attention.
                 </p>
                 <p className="small-note">
-                  Use <code>traitIds</code> for a focused review. Overlapping matches are deduplicated, while unmatched
-                  patterns review nothing.
+                  Use <code>traitNames</code> for a focused review. Overlapping matches are deduplicated, while
+                  unmatched patterns review nothing.
                 </p>
               </article>
             </div>
