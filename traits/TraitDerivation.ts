@@ -22,6 +22,7 @@ export const TraitDerivation = S.Union([
 export const derive = Effect.fn("TraitDerivation.derive")(function* (params: {
   readonly name: Trait.TraitName
   readonly proposedTrait: string
+  readonly diff?: Trait.TraitDiff | undefined
   readonly approved?: boolean | undefined
 }) {
   const store = yield* TraitStore
@@ -36,6 +37,7 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: {
     return yield* reconcile({
       traits: Array.map(failures, (failure) => failure.existing),
       proposedTrait: proposal,
+      diff: params.diff,
       approved: params.approved
     })
   }
@@ -52,15 +54,25 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: {
   }
   if (clarifications.length === 1) {
     const target = Array.getUnsafe(clarifications, 0).trait
+    const trait = Trait.Trait.make({
+      ...target,
+      body: proposal,
+      ...(params.diff === undefined ? {} : { diff: params.diff })
+    })
     const approval = yield* Approval.request({
       message: Array.join(
-        [`Clarify trait ${target.name}?`, "Current body:", target.body, "Replacement body:", proposal],
+        [
+          `Clarify trait ${target.name}?`,
+          "Current trait:",
+          Trait.serialize(target),
+          "Replacement trait:",
+          Trait.serialize(trait)
+        ],
         "\n\n"
       ),
       approved: params.approved
     })
     if (!Approval.Approval.guards.Approved(approval)) return approval
-    const trait = Trait.Trait.make({ ...target, body: proposal })
     yield* store.update(trait)
     return TraitDerivation.cases.Updated.make({ trait })
   }
@@ -68,11 +80,15 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: {
     return yield* TraitAlreadyExistsError.make({ name: params.name })
   }
   const approval = yield* Approval.request({
-    message: `Save trait ${params.name}?\n\n${proposal}`,
+    message: `Save trait ${params.name}?\n\n${proposal}${params.diff === undefined ? "" : `\n\n\`\`\`diff\n${params.diff}\n\`\`\``}`,
     approved: params.approved
   })
   if (!Approval.Approval.guards.Approved(approval)) return approval
-  const proposed = Trait.Trait.make({ name: params.name, body: proposal })
+  const proposed = Trait.Trait.make({
+    name: params.name,
+    body: proposal,
+    ...(params.diff === undefined ? {} : { diff: params.diff })
+  })
   const trait = yield* store.add(proposed)
   return TraitDerivation.cases.Created.make({ trait })
 })
@@ -80,6 +96,7 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: {
 const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
   readonly traits: ReadonlyArray<Trait.Trait>
   readonly proposedTrait: string
+  readonly diff?: Trait.TraitDiff | undefined
   readonly approved?: boolean | undefined
 }) {
   const store = yield* TraitStore
@@ -92,7 +109,8 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
         "Existing traits:",
         pipe(options.traits, Array.map(Trait.serialize), Array.join("\n\n")),
         "Proposed rule:",
-        options.proposedTrait
+        options.proposedTrait,
+        ...(options.diff === undefined ? [] : [`\`\`\`diff\n${options.diff}\n\`\`\``])
       ],
       "\n\n"
     ),
@@ -108,10 +126,11 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
     { concurrency: "unbounded" }
   )
   const input = yield* pipe(
-    { ...decomposed, storedTraits: options.traits },
+    { ...decomposed, proposedDiff: options.diff, storedTraits: options.traits },
     S.Struct({
       existing: S.Array(S.Array(S.String)),
       proposed: S.Array(S.String),
+      proposedDiff: Trait.TraitDiff.pipe(S.optional),
       storedTraits: S.Array(Trait.Trait)
     }).pipe(S.fromJsonString, S.encodeEffect),
     Effect.orDie
@@ -142,7 +161,8 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
         | Inspect storedTraits for the complete saved bodies and applicability metadata, not just their decomposed text.
         | Repair incomplete coverage, including when, mime, or skip that excludes proposed cases.
         | Preserve optional metadata and extension fields unless the proposal requires changing them; do not silently drop them.
-        | Return extension fields in extensionMetadata as a JSON-encoded object string. Keep name, body, when, mime, and skip in their dedicated fields, not extensionMetadata.
+        | Return extension fields in extensionMetadata as a JSON-encoded object string. Keep name, body, diff, when, mime, and skip in their dedicated fields, not extensionMetadata.
+        | Include diff whenever a useful code example applies: removed (-) lines show BAD code and added (+) lines show GOOD code. Do not include Markdown fences in diff. Omit diff for traits without a meaningful code example.
         | Keep when, mime, and skip complementary; omit skip when it only negates the positive scope.
         | Merge duplicate rules instead of emitting overlapping replacements; do not invent new rules.
         | Return only a JSON object with this shape: {"traits":[{"name":"standalone-rule","body":"A standalone rule.","extensionMetadata":"{}"}]}.
@@ -171,7 +191,7 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
         Record.filter<string, S.Json | undefined, S.Json>(Predicate.isNotUndefined)
       )
       const trait = Trait.Trait.make({
-        ...(options.traits.length === 1 ? options.traits[0] : {}),
+        ...(options.traits.length === 1 ? Struct.omit(Array.getUnsafe(options.traits, 0), ["diff"]) : {}),
         ...draft.extensionMetadata,
         ...generated,
         name: draft.name,

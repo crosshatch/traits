@@ -3,6 +3,16 @@ name: strip-margin-for-multiline-text
 when: writing large multiline text strings with Effect String.stripMargin.
 mime: [text/typescript, text/tsx]
 ---
+
+```diff
+ const instructions = String.stripMargin(`
+-  | Keep the text concise.
+-  `)
++| Keep the text concise.
++`)
+```
+
+---
 Write large text strings as multiline template literals using Effect’s String.stripMargin, with a leading | on each text line. Align every | and the closing backtick with the containing statement or property when it directly calls stripMargin, without an extra indentation level: instructions: String.stripMargin(`
 | text
 `), not instructions: String.stripMargin(`
