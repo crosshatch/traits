@@ -22,7 +22,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Include a separate diff showing BAD (-) versus GOOD (+) code whenever a useful example applies. Omit it only when a code example is not meaningful. Approval covers the exact diff as well as the body.
   | Supply a unique descriptive kebab-case name without a redundant trait- prefix for a newly created trait; it is the canonical identity, frontmatter name, and Markdown filename stem. Duplicate names are rejected.
   | Avoid repeated requirements and duplicate traits. Keep bodies standalone; do not strip essential scope or exceptions just to shorten them.
-  | Supply applicable mime, when, and skip parameters explicitly; the server persists them without a separate generation call. Let mime restrict file types and when define positive semantic scope. Include skip only for an independent exception within that scope, never its negation or a repetition of another field.
+  | Supply mime, when, and skip inside applicability; use {} when unrestricted. The server persists this object without a separate generation call. Let mime restrict file types and when define positive semantic scope. Include skip only for an independent exception within that scope, never its negation or a repetition of another field.
   | On clarification, supply the complete replacement applicability; omitted fields remove old restrictions. Approval and retries cover the exact metadata too.
   | Write when values without a leading When, for example when: editing React state.
   | Compare against all stored traits. Only a distinct proposal is saved as a new trait.
@@ -43,7 +43,10 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Then call check_traits on relevant TypeScript files, using returned trait names for focused reviews when appropriate.
   `),
   parameters: S.Struct({
-    ...Trait.Applicability.fields,
+    applicability: Trait.Applicability.annotate({
+      description:
+        "Complete applicability metadata: when, mime, and skip. Use {} for unrestricted applicability. On clarification this replaces all previous applicability conditions."
+    }),
     diff: Trait.TraitDiff.pipe(S.optional),
     name: Trait.TraitName.annotate({
       description:

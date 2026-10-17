@@ -17,8 +17,8 @@ const layer = TraitsConfig.layer.pipe(
 const callbacks = Trait.Trait.make({
   name: Trait.TraitName.make("direct-callbacks"),
   body: "Pass compatible functions directly as callbacks instead of wrapping them in forwarding arrows. Retain wrappers needed to preserve the receiver or control forwarded arguments.",
-  when: "passing callbacks.",
-  mime: "text/typescript"
+  applicability: { when: "passing callbacks.", mime: "text/typescript" },
+  extensionMetadata: {}
 })
 const broaderProposal =
   "Pass compatible functions directly instead of wrapping them in forwarding arrows, both for callbacks and service method definitions. Use a curried library overload directly when it produces the required function. Retain wrappers needed to preserve the receiver or control forwarded arguments."

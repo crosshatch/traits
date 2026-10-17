@@ -54,7 +54,7 @@ Command.make("traits", {
       | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
       | Keep frontmatter complementary: mime restricts file types, when defines positive semantic scope, and skip is only an independent exception within that scope. Omit redundant fields; never repeat when's negation as skip. Keep bodies standalone without repeated requirements or duplicate traits.
       | Write when values as conditions without a redundant leading When, for example when: editing React state.
-      | Call derive_trait with the drafted body as proposedTrait and applicable when, mime, and skip parameters. These are persisted directly without a separate generation call. It saves only distinct rules; Covered means reuse an existing trait.
+      | Call derive_trait with the drafted body as proposedTrait and an applicability object containing relevant when, mime, and skip fields ({} when unrestricted). These are persisted directly without a separate generation call. It saves only distinct rules; Covered means reuse an existing trait.
       | Supply complete replacement applicability on clarification; omitted fields remove old restrictions. Approval and retries cover the exact metadata too.
       | A single clarification candidate is selected automatically and shown for approval; supply a complete replacement preserving the existing rule.
       | Multiple candidates return Clarification entries without writing: refine the proposal or clarify intent. Do not supply a clarification target.
