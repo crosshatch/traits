@@ -55,7 +55,14 @@
   transform: translateX(-50%) rotate(45deg);
 }
 
+/* The body's grain and the thumb band reach the foot of the viewport however short the page. */
+body:has(> .docs) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
 .docs {
+  flex-grow: 1;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   align-items: start;
