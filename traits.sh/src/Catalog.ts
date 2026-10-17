@@ -22,14 +22,20 @@ export interface NavigationGroup {
 
 export const href = (entry: Entry) => `/traits/${entry.id}/`
 
+export interface Source {
+  /** The `owner/repo` slug. */
+  readonly repository: string
+  readonly entries: ReadonlyArray<Entry>
+}
+
 /** Traits grouped by repository, both sorted by name. */
 export const sources = (traits: ReadonlyArray<Entry>) =>
   pipe(
     traits,
     Array.sortWith((entry) => entry.data.name, Order.String),
     Array.groupBy((entry) => `${entry.data.owner}/${entry.data.repo}`),
-    Record.toEntries,
-    Array.sortWith(([repository]) => repository, Order.String)
+    Record.collect((repository, entries): Source => ({ repository, entries })),
+    Array.sortWith((source) => source.repository, Order.String)
   )
 
 export interface NavigationOptions {
@@ -46,10 +52,10 @@ export const navigation = (options: NavigationOptions): Array<NavigationGroup> =
       { label: "All traits", href: "/traits/", current: options.current === undefined, count: options.traits.length }
     ]
   },
-  ...Array.map(sources(options.traits), ([repository, entries]) => ({
-    title: repository,
+  ...Array.map(sources(options.traits), (source) => ({
+    title: source.repository,
     code: true,
-    items: Array.map(entries, (entry) => ({
+    items: Array.map(source.entries, (entry) => ({
       label: entry.data.name,
       href: href(entry),
       current: entry.id === options.current?.id,

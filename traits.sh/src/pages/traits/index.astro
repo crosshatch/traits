@@ -1,16 +1,24 @@
 ---
 import "../../catalog.css"
 
-import { getCollection } from "astro:content"
+import { getCollection, render } from "astro:content"
+import { Array } from "effect"
 
 import * as Catalog from "../../Catalog.ts"
 import ChapterHeading from "../../ChapterHeading.astro"
 import Docs from "../../layouts/Docs.astro"
 import Prose from "../../Prose.astro"
-import { mimeLabel } from "../../mimeLabel.ts"
+import TraitEntry from "../../TraitEntry.astro"
 
 const traits = await getCollection("traits")
-const sources = Catalog.sources(traits)
+const sources = await Promise.all(
+  Array.map(Catalog.sources(traits), async (source) => ({
+    repository: source.repository,
+    entries: await Promise.all(
+      Array.map(source.entries, async (entry) => ({ entry, Content: (await render(entry)).Content }))
+    )
+  }))
+)
 ---
 
 <Docs
@@ -30,28 +38,22 @@ const sources = Catalog.sources(traits)
       </Prose>
     </header>
     {
-      sources.map(([repository, entries]) => (
-        <section class="catalog-source" aria-labelledby={`source-${repository}`}>
-          <h2 id={`source-${repository}`}>
-            <a href={`https://github.com/${repository}`} target="_blank" rel="noopener noreferrer">
-              {repository}
-            </a>
-            <span class="catalog-count">{entries.length} traits</span>
-          </h2>
+      sources.map((source) => (
+        <section class="catalog-source" aria-labelledby={`source-${source.repository}`}>
+          <div class="catalog-source-head">
+            <h2 id={`source-${source.repository}`}>
+              <a href={`https://github.com/${source.repository}`} target="_blank" rel="noopener noreferrer">
+                {source.repository} <span aria-hidden="true">↗</span>
+              </a>
+            </h2>
+            <span class="meta">{source.entries.length} traits</span>
+          </div>
           <ul class="trait-list">
-            {entries.map((entry) => (
+            {source.entries.map((item) => (
               <li>
-                <a class="trait-name" href={Catalog.href(entry)}>
-                  <code>{entry.data.name}</code>
-                </a>
-                {entry.data.when !== undefined && <p class="trait-when">When {entry.data.when}</p>}
-                {entry.data.mime.length > 0 && (
-                  <ul class="mime-chips" aria-label="File types">
-                    {entry.data.mime.map((mime) => (
-                      <li>{mimeLabel(mime)}</li>
-                    ))}
-                  </ul>
-                )}
+                <TraitEntry entry={item.entry} href={Catalog.href(item.entry)}>
+                  <item.Content />
+                </TraitEntry>
               </li>
             ))}
           </ul>
