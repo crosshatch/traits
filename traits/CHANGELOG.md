@@ -1,5 +1,16 @@
 # traits
 
+## 0.5.7
+
+### Patch Changes
+
+- [#67](https://github.com/crosshatch/traits/pull/67)
+  [`76b6023`](https://github.com/crosshatch/traits/commit/76b6023dc4fc1b50745709ea8aba2eed4793576d) -
+  Make whole-project trait checks an explicit completion requirement after
+  creating, updating, or resolving traits. Align returned instructions, tool
+  descriptions, MCP server instructions, and bundled skill documentation while
+  preserving approval safeguards and keeping checks agent-driven.
+
 ## 0.5.6
 
 ### Patch Changes
