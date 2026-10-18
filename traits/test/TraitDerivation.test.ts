@@ -136,6 +136,7 @@ it.effect(
       }).pipe(Effect.provide(test.layer))
       expect(result).toMatchObject({
         _tag: relationship === "distinct" ? "Created" : "Updated",
+        instructions: expect.stringContaining(`Saved traits: ${relationship === "distinct" ? "state-updates" : name}.`),
         trait: { applicability, body: proposedTrait, name: relationship === "distinct" ? "state-updates" : name }
       })
       expect(
@@ -180,6 +181,11 @@ it.effect(
       Effect.provide(test.layer)
     )
     expect(result._tag).toBe("Resolved")
+    expect(result).toMatchObject({
+      instructions: expect.stringContaining(
+        "Use check_traits on all eligible files in this project, not just changed files"
+      )
+    })
     expect(test.mutations).toEqual(["update", "rm"])
     expect(test.stored.get(name)?.applicability).toEqual({})
     expect(test.stored.get(name)?.extensionMetadata).toEqual({})
