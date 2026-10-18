@@ -8,12 +8,12 @@ import { TraitAlreadyExistsError, TraitStore } from "./TraitStore.ts"
 
 export type TraitDerivation = typeof TraitDerivation.Type
 export const TraitDerivation = S.Union([
-  S.TaggedStruct("Created", { trait: Trait.Trait }),
+  S.TaggedStruct("Created", { trait: Trait.Trait, instructions: S.String }),
   S.TaggedStruct("Covered", { traits: S.Array(Trait.Trait) }),
   S.TaggedStruct("Clarification", { traits: S.Array(Trait.Trait), proposedTrait: S.String }),
   S.TaggedStruct("Inconclusive", { findings: S.Array(TraitConflict.cases.Fail) }),
-  S.TaggedStruct("Updated", { trait: Trait.Trait }),
-  S.TaggedStruct("Resolved", { traits: S.Array(Trait.Trait) }),
+  S.TaggedStruct("Updated", { trait: Trait.Trait, instructions: S.String }),
+  S.TaggedStruct("Resolved", { traits: S.Array(Trait.Trait), instructions: S.String }),
   Approval.Approval.cases.ApprovalRequired,
   Approval.Approval.cases.RevisionRequired,
   Approval.Approval.cases.Declined
@@ -26,6 +26,19 @@ export interface DeriveParams {
   readonly diff?: Trait.TraitDiff | undefined
   readonly approved?: boolean | undefined
 }
+
+const reviewInstructions = (traits: ReadonlyArray<Trait.Trait>) =>
+  String.stripMargin(`
+| Saved traits: ${pipe(
+    traits,
+    Array.map((trait) => trait.name),
+    Array.join(", ")
+  )}.
+| Use check_traits on all eligible files in this project, not just changed files, with traitNames set to the saved names above.
+| Enumerate project-owned source, authored configuration, and documentation explicitly. Exclude dependencies, reference repositories, generated output, lockfiles, Git metadata, secrets, .env files, credentials, and binary assets; respect configured exclusions.
+| Inspect findings against each trait's applicability and surrounding code. Fix confirmed applicable violations with minimal behavior-preserving edits, rerun check_traits on corrected files, and run relevant verification. Repeat until confirmed violations are resolved; ask before behavior-changing fixes or ambiguous interpretations.
+| Do not stop at a findings summary. Report incomplete checks and unresolved blockers; saving these traits has not checked or changed project files.
+`)
 
 export const derive = Effect.fn("TraitDerivation.derive")(function* (params: DeriveParams) {
   const store = yield* TraitStore
@@ -85,7 +98,7 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
     })
     if (!Approval.Approval.guards.Approved(approval)) return approval
     yield* store.update(trait)
-    return TraitDerivation.cases.Updated.make({ trait })
+    return TraitDerivation.cases.Updated.make({ trait, instructions: reviewInstructions([trait]) })
   }
   if (Array.some(traits, (trait) => trait.name === params.name)) {
     return yield* TraitAlreadyExistsError.make({ name: params.name })
@@ -96,7 +109,7 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
   })
   if (!Approval.Approval.guards.Approved(approval)) return approval
   const trait = yield* store.add(proposed)
-  return TraitDerivation.cases.Created.make({ trait })
+  return TraitDerivation.cases.Created.make({ trait, instructions: reviewInstructions([trait]) })
 })
 
 const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
@@ -200,5 +213,5 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
     })
   )
   yield* store.rm(Array.filter(Array.fromIterable(selectedNames), (name) => !replacementNames.has(name)))
-  return TraitDerivation.cases.Resolved.make({ traits: replacements })
+  return TraitDerivation.cases.Resolved.make({ traits: replacements, instructions: reviewInstructions(replacements) })
 })
