@@ -155,6 +155,41 @@ it.effect(
 )
 
 it.effect(
+  "requires whole-project post-save trait checks for every saved outcome",
+  Effect.fnUntraced(function* () {
+    for (const relationship of ["distinct", "clarification", "conflict"] as const) {
+      const test = yield* harness({ relationships: { [name]: relationship } })
+      const result = yield* derive({
+        name: Trait.TraitName.make("state-updates"),
+        proposedTrait,
+        applicability: {},
+        approved: true
+      }).pipe(Effect.provide(test.layer))
+      expect(result._tag).toBe(
+        relationship === "distinct" ? "Created" : relationship === "clarification" ? "Updated" : "Resolved"
+      )
+      if (!("instructions" in result)) throw new Error("Expected post-save instructions")
+      for (const requirement of [
+        `Saved traits: ${relationship === "distinct" ? "state-updates" : name}.`,
+        "Required post-save trait checks: This task is incomplete until you run check_traits against all eligible project-owned files",
+        "traitNames set to the saved trait names",
+        "Checking only changed files or the file that prompted the trait does not satisfy this requirement",
+        "project-owned source, authored configuration, and documentation",
+        "Respect trait applicability and configured exclusions",
+        "dependencies, reference repositories, generated output, lockfiles, Git metadata, secrets, .env files, credentials, and binary assets",
+        "minimal behavior-preserving edits",
+        "rerun check_traits on corrected files, and run relevant verification",
+        "ask before behavior-changing fixes or ambiguous interpretations",
+        "explicitly report the blocker and state that the required post-save trait checks remain incomplete",
+        "Saving a trait does not itself check or update project files"
+      ]) {
+        expect(result.instructions).toContain(requirement)
+      }
+    }
+  })
+)
+
+it.effect(
   "does not generate replacements or mutate traits before approval",
   Effect.fnUntraced(function* () {
     const test = yield* harness({ relationships: { [name]: "conflict" } })
@@ -183,7 +218,7 @@ it.effect(
     expect(result._tag).toBe("Resolved")
     expect(result).toMatchObject({
       instructions: expect.stringContaining(
-        "Use check_traits on all eligible files in this project, not just changed files"
+        "This task is incomplete until you run check_traits against all eligible project-owned files"
       )
     })
     expect(test.mutations).toEqual(["update", "rm"])

@@ -139,7 +139,8 @@ authenticated consent token.
    the proposal is distinct from all of them. It does not independently decide
    whether the conversation contains a generalizable insight.
 5. `Created` means the trait was saved and includes its body and unique name. Do
-   not submit it again. Use that name for focused checks when needed.
+   not submit it again. Use that name for the required post-save trait checks
+   below.
 6. `Inconclusive` means nothing was saved and contains relationship findings;
    each finding's `reason` distinguishes conflict from inconclusive. Any
    inconclusive comparison blocks all writes. Inspect the existing bodies and
@@ -195,12 +196,33 @@ Inspect those replacements. Do not call `derive_trait` again for the same
 proposal: resolution has already saved its content. The initial comparison
 covers all stored traits, but generated replacements are not automatically
 revalidated against unaffected traits; review the replacements and check the
-relevant code.
+eligible project-owned files as required below.
 
 Writes and removals are not transactional. If resolution fails, inspect the
 store before retrying; some changes may already be present.
 
 ## Check the implementation
+
+### Required post-save trait checks
+
+After `Created`, `Updated`, or `Resolved`, this task is incomplete until you run
+`check_traits` against all eligible project-owned files, using `traitNames` set
+to the saved trait names. Checking only changed files or the file that prompted
+the trait does not satisfy this requirement.
+
+Enumerate project-owned source, authored configuration, and documentation.
+Respect trait applicability and configured exclusions. Exclude dependencies,
+reference repositories, generated output, lockfiles, Git metadata, secrets,
+`.env` files, credentials, and binary assets.
+
+Review findings against the trait and surrounding code. Fix confirmed applicable
+violations with minimal behavior-preserving changes, recheck corrected files,
+and run relevant verification. Ask before behavior-changing fixes or ambiguous
+interpretations. Do not stop at a findings summary.
+
+If blocked, explicitly report the blocker and state that the required post-save
+trait checks remain incomplete. Saving a trait does not itself check or update
+project files.
 
 ### Required review procedure
 
@@ -258,8 +280,9 @@ their preference. Respect existing justified exceptions during manual review.
 
 - After generating or editing TypeScript files, select those files and call
   `check_traits({ include: files })`.
-- After creating or resolving traits, explicitly review relevant TypeScript
-  files. Saving traits does not automatically check code.
+- After creating, updating, or resolving traits, run the required post-save
+  trait checks across all eligible project-owned files with the saved trait
+  names.
 - Omit `traitNames` for the full trait set. Supply names for focused follow-ups,
   especially the replacements returned by resolution. An empty array selects no
   traits; unknown names fail the call.
@@ -274,10 +297,11 @@ their preference. Respect existing justified exceptions during manual review.
   syntax. This repository configures `repos/**` and `**/dist/**` in `traits.ts`.
   No custom path classification or glob expansion semantics are imposed.
 - Assess only project-owned source and relevant authored configuration or
-  documentation. For whole-project audits, prefer an explicit project-file
+  documentation. For whole-project trait checks, prefer an explicit project-file
   manifest. Never submit third-party/reference code, generated output or
   lockfiles, secrets, `.env` files, credentials, or binary assets. Reading a
-  dependency's source to verify an API does not make it part of the audit scope.
+  dependency's source to verify an API does not make it part of the trait check
+  scope.
 - The tool checks current full files in 200-line chunks, including unstaged
   content. It does not inspect the Git index or compute a diff.
 - Each expression finding contains the trait and source excerpt with a file path
