@@ -44,6 +44,15 @@ body concise and standalone, preserving essential scope and exceptions without
 repeated restatements. Reuse existing traits that already cover the same rule
 rather than creating duplicates.
 
+Pass `applicability: { when, mime, skip }` to `derive_trait` alongside
+`proposedTrait`, omitting unnecessary fields inside the object; use `{}` when
+unrestricted. The server persists it without another model call. On
+clarification this object replaces all previous applicability conditions.
+Approval and retries cover the exact metadata too. Domain traits group these
+conditions under `applicability` and additional metadata under
+`extensionMetadata`; only Markdown frontmatter flattens those objects into
+top-level fields.
+
 ## Capture a reusable insight
 
 ### Required pre-response preference check
@@ -125,9 +134,9 @@ authenticated consent token.
 3. Draft the complete rule as `proposedTrait`. Preserve essential requirements,
    scopes, and exceptions. Keep independently applicable rules separate; omit
    headings, repetition, and unnecessary explanation or examples.
-4. Call `derive_trait({ name, proposedTrait })` first, without a separate
-   approval prompt. This checks existing traits and writes only when the
-   proposal is distinct from all of them. It does not independently decide
+4. Call `derive_trait({ name, proposedTrait, applicability })` first, without a
+   separate approval prompt. This checks existing traits and writes only when
+   the proposal is distinct from all of them. It does not independently decide
    whether the conversation contains a generalizable insight.
 5. `Created` means the trait was saved and includes its body and unique name. Do
    not submit it again. Use that name for focused checks when needed.

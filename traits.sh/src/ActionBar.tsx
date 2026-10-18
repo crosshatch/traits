@@ -18,7 +18,7 @@ export const ActionBar = (props: { readonly docked?: boolean | undefined }) => {
           rel="noopener noreferrer"
           aria-label="Source on GitHub (opens in a new tab)"
         >
-          Source <span aria-hidden="true">↗</span>
+          Source <span aria-hidden="true">↗&#xfe0e;</span>
         </a>
         <ThemeToggle />
         <a
@@ -31,7 +31,7 @@ export const ActionBar = (props: { readonly docked?: boolean | undefined }) => {
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.5 22H2.4l7.2-8.3L1.8 2h6.5l4.5 6.8Zm-1.1 18h1.7L7.4 3.9H5.6Z" />
           </svg>
-          <span aria-hidden="true">↗</span>
+          <span aria-hidden="true">↗&#xfe0e;</span>
         </a>
       </nav>
     </Tag>

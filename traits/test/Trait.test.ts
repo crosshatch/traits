@@ -1,16 +1,72 @@
 import { expect, it } from "@effect/vitest"
-import { Effect, pipe, Result, Schema as S, String } from "effect"
+import { Array, Effect, Layer, pipe, Result, Schema as S, Semaphore, Stream, String } from "effect"
+import { DecisionModel, LanguageModel } from "effect/ai"
+import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
 
 import * as Trait from "../Trait.ts"
+import { TraitsContext } from "../TraitsContext.ts"
 
 const name = Trait.TraitName.make("test-trait")
+
+it.effect(
+  "requests the distinct JSON shape required for decomposition",
+  Effect.fnUntraced(function* () {
+    const bodies = ["Use two spaces for indentation.", "Use single quotes."]
+    const requests: Array<LanguageModel.ProviderOptions> = []
+    const decisionModel = yield* DecisionModel.make({
+      decide: () =>
+        Effect.succeed({
+          answers: {
+            assessment: { _tag: "Classify", label: "decomposable", probabilities: { atomic: 0, decomposable: 1 } }
+          },
+          usage: { inputTokens: 0, outputTokens: 0 }
+        })
+    })
+    const languageModel = yield* LanguageModel.make({
+      generateText: (request) => {
+        requests.push(request)
+        return Effect.succeed([{ type: "text", text: JSON.stringify({ traits: bodies }) }])
+      },
+      streamText: () => Stream.empty,
+      codecTransformer: toCodecOpenAI
+    })
+    const semaphore = yield* Semaphore.make(1)
+    const layerDecisionModel = Layer.succeed(DecisionModel.DecisionModel, decisionModel)
+    const layerLanguageModel = Layer.succeed(LanguageModel.LanguageModel, languageModel)
+    const result = yield* Trait.checkDecomposability(Array.join(bodies, " ")).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          layerDecisionModel,
+          layerLanguageModel,
+          Layer.succeed(TraitsContext, {
+            configRoot: "/test",
+            excludes: [],
+            semaphore,
+            config: {
+              decisionConcurrency: 1,
+              excludeGitignored: true,
+              excludes: [],
+              layerDecisionModel,
+              layerLanguageModel
+            }
+          })
+        )
+      )
+    )
+    expect(result).toEqual(bodies)
+    expect(requests[0]?.prompt.content[0]).toMatchObject({
+      role: "system",
+      content: expect.stringContaining('Return only a JSON object with this shape: {"traits":["')
+    })
+  })
+)
 
 it.effect(
   "roundtrips a dedicated BAD-to-GOOD diff separately from metadata and body",
   Effect.fnUntraced(function* () {
     const diff = "-const value = bad()\n+const value = good()"
     const body = "Prefer good().\n\n---\nKeep this separator.\n"
-    const trait = Trait.Trait.make({ name, diff, body, priority: 2 })
+    const trait = Trait.Trait.make({ name, diff, body, applicability: {}, extensionMetadata: { priority: 2 } })
     const text = Trait.serialize(trait)
     expect(text).toContain(`---\n\n\`\`\`diff\n${diff}\n\`\`\`\n\n---\n${body}`)
     expect(text).not.toContain("diff:")
@@ -41,7 +97,7 @@ it.effect(
   Effect.fnUntraced(function* () {
     const body = "Keep this body.\n\n---\nNot a header.\n"
     const trait = yield* Trait.parse(`---\nname: ${name}\n---\n${body}`, "/traits/test.md")
-    expect(trait).toEqual({ name, body })
+    expect(trait).toEqual({ name, body, applicability: {}, extensionMetadata: {} })
     expect(Trait.serialize(trait)).toBe(`---\nname: ${name}\n---\n${body}`)
   })
 )
@@ -56,9 +112,8 @@ it.effect(
     expect(trait).toEqual({
       name,
       body: "Body.\n",
-      when: "editing schemas.",
-      mime: ["text/typescript"],
-      priority: 2
+      applicability: { when: "editing schemas.", mime: ["text/typescript"] },
+      extensionMetadata: { priority: 2 }
     })
     const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
     expect(roundtrip).toEqual(trait)
@@ -74,8 +129,8 @@ it.effect(
       `---\r\nname: ${name}\r\nwhen: |\r\n  editing\r\n  React components.\r\nmime: text/tsx\r\n---\r\nBody.\r\n`,
       "/traits/test.md"
     )
-    expect(trait.when).toBe("editing\nReact components.\n")
-    expect(trait.mime).toBe("text/tsx")
+    expect(trait.applicability.when).toBe("editing\nReact components.\n")
+    expect(trait.applicability.mime).toBe("text/tsx")
     expect(trait.body).toBe("Body.\r\n")
   })
 )
@@ -84,12 +139,13 @@ it.effect(
   "supports minimal frontmatter and a closing delimiter at end of file",
   Effect.fnUntraced(function* () {
     const empty = yield* Trait.parse(`---\nname: ${name}\n---\nBody`, "/traits/test.md")
-    expect(empty).toEqual({ name, body: "Body" })
+    expect(empty).toEqual({ name, body: "Body", applicability: {}, extensionMetadata: {} })
     const atEnd = yield* Trait.parse(`---\nname: ${name}\nmime: text/typescript\n---`, "/traits/test.md")
     expect(atEnd).toEqual({
       name,
       body: "",
-      mime: "text/typescript"
+      applicability: { mime: "text/typescript" },
+      extensionMetadata: {}
     })
   })
 )
@@ -120,8 +176,8 @@ it.effect(
     const trait = Trait.Trait.make({
       name,
       body: "Replacement\n",
-      when: "editing.",
-      mime: "text/tsx"
+      applicability: { when: "editing.", mime: "text/tsx" },
+      extensionMetadata: {}
     })
     const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
     expect(roundtrip).toEqual(trait)
@@ -135,8 +191,8 @@ it.effect(
       `---\nname: ${name}\nwhen: editing React state.\nskip: When a custom registry is required.\n---\nBody`,
       "/traits/test.md"
     )
-    expect(trait.skip).toBe("When a custom registry is required.")
-    expect(trait.when).toBe("editing React state.")
+    expect(trait.applicability.skip).toBe("When a custom registry is required.")
+    expect(trait.applicability.when).toBe("editing React state.")
     expect(trait.body).toBe("Body")
     const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
     expect(roundtrip).toEqual(trait)
@@ -160,7 +216,7 @@ it.effect(
       `---\nname: ${name}\nbody: Other body\nmime: text/typescript\n---\nBody`,
       "/traits/test.md"
     )
-    expect(trait).toEqual({ name, body: "Body", mime: "text/typescript" })
+    expect(trait).toEqual({ name, body: "Body", applicability: { mime: "text/typescript" }, extensionMetadata: {} })
     expect(Trait.serialize(trait)).toBe(`---\nmime: text/typescript\nname: ${name}\n---\nBody`)
   })
 )
@@ -195,7 +251,8 @@ it.effect(
     const trait = Trait.Trait.make({
       name,
       body: "Body",
-      metadata: { values: [null, true, 2, "text", { nested: false }] }
+      applicability: {},
+      extensionMetadata: { metadata: { values: [null, true, 2, "text", { nested: false }] } }
     })
     const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
     expect(roundtrip).toEqual(trait)
@@ -212,7 +269,11 @@ it.effect(
       expect(Result.isFailure(result)).toBe(true)
     }
     for (const metadata of [undefined, NaN, Infinity, { nested: [undefined] }]) {
-      const result = yield* pipe({ name, body: "Body", metadata }, S.decodeUnknownEffect(Trait.Trait), Effect.result)
+      const result = yield* pipe(
+        { name, body: "Body", applicability: {}, extensionMetadata: { metadata } },
+        S.decodeUnknownEffect(Trait.Trait),
+        Effect.result
+      )
       expect(Result.isFailure(result)).toBe(true)
     }
   })
