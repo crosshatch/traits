@@ -1,5 +1,14 @@
 # traits
 
+## 0.5.6
+
+### Patch Changes
+
+- [#65](https://github.com/crosshatch/traits/pull/65)
+  [`cc2f69e`](https://github.com/crosshatch/traits/commit/cc2f69e9645515eb8c0d4da6ff63bee3134c612b) -
+  Return explicit project-wide review and remediation instructions after
+  creating, updating, or resolving traits.
+
 ## 0.5.5
 
 ### Patch Changes
