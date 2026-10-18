@@ -14,41 +14,37 @@ model then enforces.
 
 This post covers the reasoning behind that split and how we implemented it.
 
-## Drafting and judging are different jobs
+## Drafting and judging as separate workloads
 
-**The LLM.** When you correct your agent, it proposes a trait. A trait is a
-short Markdown file stating one preference, scoped by when it applies and which
-file types it covers. Your LLM compresses a correction into a clear, generalized
-rule and compares it with existing rules and phrases conflicts for you to
-resolve if necessary. LLMs are generally excellent at synthesis and reasoning.
+Traits consists of two subsystems. The first is an LLM. When a developer
+corrects the agent, Traits proposes a trait: a short Markdown file encoding a
+single preference, scoped by trigger condition and file type. Producing that
+file means compressing an unstructured correction into a general rule, diffing
+it against the existing trait set, and phrasing conflicts so a human can resolve
+them. Generation workloads like this play to an LLM's strengths.
 
-**The System One model.** Your LLM feeds the decision model a 200-line chunk of
-code to check against your traits library. The System One model decides whether
-the code is `compliant`, in `violation`, or if the results are `inconclusive`.
-System One models are designed precisely for this type of classification task,
-where they can make hundreds of small judgments and return a set of
-probabilities for each scenario.
+The second subsystem, a decision model, runs compliance checks: given a 200-line
+chunk and a trait, label the chunk `compliant`, in `violation`, or
+`inconclusive`. That reduces to multi-class classification.
 
-Relying on LLMs for classification creates three problems:
+Running it as text generation from an LLM introduces three failure modes:
 
-**The output is a paragraph.** An LLM judge outputs prose that you have to parse
-into a verdict. The verdict can drift with phrasing, temperature, and whatever
-the model decided to emphasize that run. It may include caveats that contradict
-your rulesets.
+1. **Unstructured output.** An LLM judge emits prose, which you then parse into
+   a verdict. The verdict varies with prompt phrasing, sampling temperature, and
+   whatever the model chose to emphasize on a given run. It may include caveats
+   that contradict your rulesets.
+2. **Self-reported confidence.** Asking an LLM for a confidence score yields
+   another generated token sequence. LLMs have a proven tendency toward
+   overconfidence, and there's no principled way to tell a confident violation.
+3. **Correlated errors.** When one model family both writes and reviews the
+   code, its blind spots typically show up on both sides. LLM-as-judge setups
+   also exhibit documented self-preference bias toward outputs resembling their
+   own.
 
-**Confidence is self-reported.** You can ask an LLM how sure it is, but that
-number is more generated text. LLMs have a proven tendency toward
-overconfidence, and there's no principled way to tell a confident violation from
-a coin flip.
+## Anatomy of a trait
 
-**The judge grades its own homework.** If the same model family writes the code
-and reviews it, you inherit its blind spots twice. LLM-as-judge setups are known
-to favor outputs that look like their own.
-
-## What a check actually looks like
-
-In Traits, every (code chunk, trait) pair becomes a classification question with
-four fixed labels:
+Traits converts each (chunk, trait) pair into a classification query over four
+fixed labels:
 
 ```typescript
 Decision.classify({
@@ -64,92 +60,90 @@ Decision.classify({
 })
 ```
 
-The decision model, TypeSafe's Jev by default, doesn't write an answer. It
-returns a probability for each label. Traits takes the top label as the
-classification, keeps the full distribution, and only surfaces `violation` and
-`inconclusive` results to the agent. The agent then inspects the evidence, fixes
-confirmed issues, and re-checks the file.
+The decision model (TypeSafe's Jev by default) returns a probability per label
+instead of a generated answer. Traits takes the argmax as the classification,
+retains the full distribution, and forwards only `violation` and `inconclusive`
+results to the agent. The agent inspects the evidence, patches confirmed issues,
+and re-runs the check on the file.
 
-**`inconclusive` represents a judgement of insufficient evidence.** A 200-line
-chunk is a window into a larger file. Sometimes a rule applies, but whether the
-code follows it depends on something offscreen. The instructions explicitly tell
-the model not to invent surrounding code or assume unseen dependencies are
-absent. Instead of guessing, it can say it doesn't know, and the agent knows to
-look wider. LLMs avoid inconclusive outputs because they are trained to present
-users with a satisfying answer.
+**`inconclusive` gives the model a sanctioned abstention.** A 200-line chunk
+exposes only a window into a larger file. Sometimes a trait applies, but
+compliance depends on code outside the window. The instructions forbid the model
+from inventing surrounding code or assuming unseen dependencies don't exist.
+Rather than guess, the model can abstain, which signals the agent to widen its
+read. LLMs avoid inconclusive outputs because they are trained to present users
+with satisfying answers.
 
-**`not-applicable` keeps the trait set scalable.** Most traits don't apply to
-most chunks. A rule about React state has nothing to say about a database
-migration. You can check every chunk against every trait without worrying about
-false positives.
+**`not-applicable` keeps the trait set scalable.** Most traits have no bearing
+on most chunks; a rule about React state says nothing about a database
+migration. An explicit out-of-scope label, in place of an implicit pass, lets
+Traits evaluate every chunk against every trait without a flood of false
+positives.
 
-Instructions are deliberately conservative in other contexts as well. Code,
-comments, and string literals are treated as evidence, which blunts prompt
-injection from the codebase being reviewed. Merely mentioning a forbidden
-pattern in a comment or a test name isn't a violation.
+The instructions err conservative elsewhere too. Code, comments, and string
+literals count as evidence, which mitigates prompt injection from the repository
+under review. A mention of a forbidden pattern in a comment or test name does
+not constitute a violation.
 
-## Probabilities change what the agent does
+## Distributions drive agent behavior
 
-Every verdict comes with a probability distribution. A violation at 0.95 and a
-violation at 0.52 are different situations, and the agent can treat them
-differently. It will fix the first violation, but it may search for more context
-before fixing the second violation.
+Every verdict comes with a probability distribution. A violation at p=0.95 and
+one at p=0.52 warrant different handling. Patch the former and pull more context
+for the latter.
 
-While linters handle deterministic rules, most coding preferences are
-non-deterministic. Something needs to make a judgment call about whether a
-helper is small enough to inline or whether an import style fits an API. These
-also represent the edge cases developers typically have to either revise in
-review or guide models through with additional prompts. A calibrated sense of
-uncertainty in an edge case is significantly more useful than an overconfident
-(and wrong) string of text.
+Most coding preferences resist deterministic specification. Whether a helper
+merits inlining, or whether an import style suits a given API, boils down to
+judgment. Linters already cover the deterministic rules. However, the judgment
+calls account for the edge cases developers are left revising in review or
+guiding models through with additional prompts. Calibration means a stated 80%
+corresponds to roughly 80% empirical accuracy. Decision models optimize for that
+property during training, whereas chat models generally don't.
 
-## The economics
+## Cost
 
-The architecture also makes coverage more affordable than sponsoring a debate
-between agents and requiring additional prompts before the agent arrives at the
-desired outcome. Traits checks new code against every existing trait, and, when
-you save a new trait, it checks existing code against that trait. With a
-complete trait library for a codebase, you can approach standards alignment and
-code quality that was previously not possible.
+The architecture also keeps full coverage affordable. Traits checks
+bidirectionally: new code against every existing trait, and, on saving a new
+trait, existing code against it. With 100+ traits over a production codebase, it
+is possible to approach standards and quality alignment that previously wasn't
+possible.
 
-A recent Jev bill after 2 full days of development was $4.78 for 117.7 million
-tokens across 47.4k requests. Running the same volume through a frontier LLM at
-typical input pricing would cost hundreds of dollars, not including the output
+A recent Jev bill covering two full days of development came to $4.78 for 117.7M
+tokens across 47.4k requests. The same input volume on a frontier LLM at typical
+input pricing would run into the hundreds of dollars, not including the output
 tokens.
 
-A few engineering choices keep the request count reasonable:
+Several engineering choices bound the request count:
 
 - **Chunking:** files are read in 200-line chunks, so each question sees a
-  bounded excerpt with its file path and starting line.
-- **Batching:** up to 16 trait questions are packed into a single decision
-  request per chunk, within a fixed request budget, and batches run
-  concurrently.
+  bounded excerpt plus file path and start line.
+- **Batching:** each decision request packs up to 16 trait questions per chunk
+  under a fixed request budget, and batches execute concurrently.
 - **Incremental reviews:** each review targets new code or a new trait, so cost
   scales with the diff.
-- **Explicit exceptions:** a `traits-ignore-file` comment with a reason skips a
-  named trait for one file.
+- **Explicit exceptions:** a `traits-ignore-file` comment with a stated reason
+  suppresses a named trait for one file.
 
-## What can still go wrong
+## Failure modes
 
-Calibrated probabilities don't represent a correct answer. A 90% verdict will be
-wrong about one time in ten. That's why the agent verifies findings instead of
-blindly applying them. Humans still need to review the code; however, outputs
-are easier to follow, and corrections become less common with each turn.
+Calibrated probabilities don't represent a correct answer. A 90% verdict fails
+roughly one time in ten. Hence, the agent verifies findings before applying
+them, and humans still review the code. However, output logic is easier to
+follow, and each turn reduces correction volume.
 
-Bad traits produce bad checks. If a trait is worded too broadly, the model will
-enforce the overbroad version. As you build a traits library, you'll naturally
-narrow or reconcile wording for poorly phrased traits.
+Overbroad traits produce overbroad checks. The model enforces whatever wording
+the trait contains. Traits support narrowing and reconciling that wording, which
+will be necessary throughout development.
 
 Model versions also move. Our default config uses `jev-latest`. If you want
 reproducible results, for example in CI, pin a specific model version.
 
-## The general lesson
+## Generalizing
 
-The pattern extends beyond code review. When an agent pipeline needs a judgment,
-ask whether the judgment is really generation or really classification. If it's
-classification, a model built to classify will tell you how sure it is, cost a
-fraction as much, and stop you from grading an LLM's work with the same kind of
-model that produced it.
+The pattern extends past code review. When an agent pipeline needs a judgment,
+determine whether the task reduces to generation or classification. For
+classification, a purpose-built model reports its own uncertainty, costs a
+fraction as much, and avoids grading LLM output with the same class of model
+that produced it.
 
 Traits is open source at
 [github.com/crosshatch/traits](https://github.com/crosshatch/traits), with an
