@@ -34,10 +34,10 @@ const reviewInstructions = (traits: ReadonlyArray<Trait.Trait>) =>
     Array.map((trait) => trait.name),
     Array.join(", ")
   )}.
-| Use check_traits on all eligible files in this project, not just changed files, with traitNames set to the saved names above.
-| Enumerate project-owned source, authored configuration, and documentation explicitly. Exclude dependencies, reference repositories, generated output, lockfiles, Git metadata, secrets, .env files, credentials, and binary assets; respect configured exclusions.
+| Required post-save trait checks: This task is incomplete until you run check_traits against all eligible project-owned files, using traitNames set to the saved trait names above. Checking only changed files or the file that prompted the trait does not satisfy this requirement.
+| Enumerate project-owned source, authored configuration, and documentation explicitly. Respect trait applicability and configured exclusions. Exclude dependencies, reference repositories, generated output, lockfiles, Git metadata, secrets, .env files, credentials, and binary assets.
 | Inspect findings against each trait's applicability and surrounding code. Fix confirmed applicable violations with minimal behavior-preserving edits, rerun check_traits on corrected files, and run relevant verification. Repeat until confirmed violations are resolved; ask before behavior-changing fixes or ambiguous interpretations.
-| Do not stop at a findings summary. Report incomplete checks and unresolved blockers; saving these traits has not checked or changed project files.
+| Do not stop at a findings summary. If blocked, explicitly report the blocker and state that the required post-save trait checks remain incomplete. Saving a trait does not itself check or update project files.
 `)
 
 export const derive = Effect.fn("TraitDerivation.derive")(function* (params: DeriveParams) {

@@ -30,7 +30,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | Confirmed conflicts and independently verified coverage gaps enter reconciliation within this tool. Approval shows affected trait names, bodies, applicability metadata, removals, the proposal, and replacement policy.
   | Nothing is replaced before approval. After approval, validate unique replacement names against unaffected traits, update reused selected names, save new names, then delete only selected originals whose names were not reused.
   | The proposal takes precedence only in direct conflicts; preserve unrelated requirements, scopes, and exceptions. Resolved returns saved replacements.
-  | Do not submit the same proposal again after Resolved: it is already incorporated. Inspect replacements and check relevant TypeScript files.
+  | Do not submit the same proposal again after Resolved: it is already incorporated. Inspect replacements and complete the required post-save trait checks.
   | Reconciliation is not transactional; on an error, inspect the store before retrying because some writes or removals may have completed.
   | Covered requires a second independent decision-model assessment of the saved body and when/mime/skip metadata against every proposed requirement. Similar intent or partial overlap is insufficient. Coverage gaps require approval-gated revision; inconclusive verification blocks writes.
   | Covered returns only independently verified existing traits; reuse them without writing a duplicate.
@@ -40,7 +40,10 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | The tool rechecks all traits before updating, preserving the selected name on clarification. Updated returns the saved trait.
   | Never use approved: true for an unapproved replacement, and never resolve a mere clarification by deleting traits.
   | Created returns the saved trait including its unique name. Every response is one tagged TraitDerivation outcome, never a bare array or void.
-  | Then call check_traits on relevant TypeScript files, using returned trait names for focused reviews when appropriate.
+  | Required post-save trait checks after Created, Updated, or Resolved: This task is incomplete until you run check_traits against all eligible project-owned files, using traitNames set to the saved trait names. Checking only changed files or the file that prompted the trait does not satisfy this requirement.
+  | Enumerate project-owned source, authored configuration, and documentation. Respect trait applicability and configured exclusions. Exclude dependencies, reference repositories, generated output, lockfiles, Git metadata, secrets, .env files, credentials, and binary assets.
+  | Review findings against the trait and surrounding code. Fix confirmed applicable violations with minimal behavior-preserving changes, recheck corrected files, and run relevant verification. Ask before behavior-changing fixes or ambiguous interpretations.
+  | If blocked, explicitly report the blocker and state that the required post-save trait checks remain incomplete. Saving a trait does not itself check or update project files.
   `),
   parameters: S.Struct({
     applicability: Trait.Applicability.annotate({
