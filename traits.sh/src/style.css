@@ -1101,17 +1101,32 @@ h3 {
 
 .instruments {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4rem;
+  gap: 3rem;
   margin-top: 3.5rem;
 }
 .instruments article {
   min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 3rem;
 }
 .instruments article + article {
-  border-left: 1px solid var(--rule);
-  padding-left: 3rem;
-  margin-left: -1rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 3rem;
+}
+.instrument-graphic {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 30rem;
+  border: 3px double var(--gold);
+  padding: 0.4rem;
+  background: color-mix(in srgb, var(--gold) 8%, var(--paper));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent),
+    0 4px 14px color-mix(in srgb, var(--gold) 12%, transparent);
+  justify-self: center;
 }
 .instrument-number {
   color: var(--gold);
@@ -1123,7 +1138,7 @@ h3 {
   margin: 1rem 0;
   font-size: 1.65rem;
 }
-.instruments > article > p:not(.small-note) {
+.instrument-copy > p:not(.small-note) {
   font-size: 1rem;
 }
 .judgment {
@@ -1329,9 +1344,8 @@ h3 {
   .instruments {
     gap: 2.5rem;
   }
-  .instruments article + article {
-    padding-left: 2rem;
-    margin-left: -0.5rem;
+  .instruments article {
+    gap: 2rem;
   }
 }
 
@@ -1508,6 +1522,9 @@ h3 {
     border-top: 1px solid var(--rule);
     margin-left: 0;
     padding: 2.5rem 0 0;
+  }
+  .instruments article {
+    grid-template-columns: minmax(0, 1fr);
   }
   .verdict-grid {
     grid-template-columns: 1fr 1fr;

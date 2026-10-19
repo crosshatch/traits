@@ -140,7 +140,7 @@ export const App = () => {
               FROM{" "}
               <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
                 <img className="crosshatch-logo" src="/crosshatch-logo.svg" alt="" />{" "}
-                <span className="crosshatch-name">CROSSHATCH</span> <span aria-hidden="true">↗&#xfe0e;</span>
+                <span className="crosshatch-name">CROSSHATCH LABS</span> <span aria-hidden="true">↗&#xfe0e;</span>
               </a>
             </p>
           </div>
@@ -256,32 +256,52 @@ export const App = () => {
             </div>
             <div className="instruments">
               <article>
-                <span className="instrument-number">01 / Remember</span>
-                <h3>
-                  <code>derive_trait</code>
-                </h3>
-                <p>
-                  Compare a proposed trait with the collection. A distinct trait can be saved and an existing trait can
-                  be reused or clarified. Confirmed conflicts lead to an explicit reconciliation approval.
-                </p>
-                <p className="small-note">
-                  Creation and changes require approval. Created, Updated, and Resolved include saved traits and their
-                  IDs.
-                </p>
+                <div className="instrument-copy">
+                  <span className="instrument-number">01 / Remember</span>
+                  <h3>
+                    <code>derive_trait</code>
+                  </h3>
+                  <p>
+                    Compare a proposed trait with the collection. A distinct trait can be saved and an existing trait
+                    can be reused or clarified. Confirmed conflicts lead to an explicit reconciliation approval.
+                  </p>
+                  <p className="small-note">
+                    Creation and changes require approval. Created, Updated, and Resolved include saved traits and their
+                    IDs.
+                  </p>
+                </div>
+                <img
+                  className="instrument-graphic"
+                  src="/remember.webp"
+                  width="1536"
+                  height="1024"
+                  loading="lazy"
+                  alt="A brass hand preserves a glowing seed of insight in an ivy-entwined archive of trait cards."
+                />
               </article>
               <article>
-                <span className="instrument-number">02 / Review</span>
-                <h3>
-                  <code>check_traits</code>
-                </h3>
-                <p>
-                  Select files or glob patterns. The tool reviews current contents in 200-line chunks, compares them
-                  with the selected traits, and returns assessments that need attention.
-                </p>
-                <p className="small-note">
-                  Use <code>traitNames</code> for a focused review. Overlapping matches are deduplicated, while
-                  unmatched patterns review nothing.
-                </p>
+                <div className="instrument-copy">
+                  <span className="instrument-number">02 / Review</span>
+                  <h3>
+                    <code>check_traits</code>
+                  </h3>
+                  <p>
+                    Select files or glob patterns. The tool reviews current contents in 200-line chunks, compares them
+                    with the selected traits, and returns assessments that need attention.
+                  </p>
+                  <p className="small-note">
+                    Use <code>traitNames</code> for a focused review. Overlapping matches are deduplicated, while
+                    unmatched patterns review nothing.
+                  </p>
+                </div>
+                <img
+                  className="instrument-graphic"
+                  src="/review.webp"
+                  width="1536"
+                  height="1024"
+                  loading="lazy"
+                  alt="An ornate brass lens examines a manuscript, revealing orderly botanical patterns among tangled threads."
+                />
               </article>
             </div>
           </section>
