@@ -450,11 +450,13 @@ p {
 .anatomy-diagram {
   border: 1px solid var(--rule);
   background: color-mix(in srgb, var(--paper), var(--ink) 3%);
-  padding-bottom: 1.5rem;
 }
 .anatomy-filename {
+  position: sticky;
+  top: var(--contents-height);
+  z-index: 2;
+  background: var(--paper);
   padding: 1.35rem 2rem;
-  margin-bottom: 1rem;
   border-bottom: 1px solid var(--rule);
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -468,6 +470,9 @@ p {
   font-size: 0.65rem;
   letter-spacing: 0.2em;
 }
+.anatomy-filename + .anatomy-delimiter {
+  margin-top: 1rem;
+}
 .anatomy-row {
   --field-color: var(--gold);
   position: relative;
@@ -476,6 +481,9 @@ p {
   margin: 0.65rem 1rem;
   border-left: 2px solid var(--field-color);
   background: color-mix(in srgb, var(--field-color), transparent 94%);
+}
+.anatomy-row:last-child {
+  margin-bottom: 1rem;
 }
 .anatomy-marker {
   align-self: start;
@@ -565,6 +573,9 @@ p {
   .anatomy-row {
     grid-template-columns: 2.75rem minmax(0, 1fr);
     margin-inline: 0.3rem;
+  }
+  .anatomy-row:last-child {
+    margin-bottom: 0.3rem;
   }
   .anatomy-example {
     padding-right: 0.75rem;
