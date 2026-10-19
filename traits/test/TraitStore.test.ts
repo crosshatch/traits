@@ -43,7 +43,7 @@ it.effect(
               cause: { _tag: fixture.tag },
               message: expect.stringContaining(fixture.diagnostic)
             })
-            const message = result.failure.message
+            const { message } = result.failure
             for (const instruction of [
               "Ask the developer:",
               "Do not change files before approval",

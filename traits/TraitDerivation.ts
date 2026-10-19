@@ -40,8 +40,8 @@ const reviewInstructions = (traits: ReadonlyArray<Trait.Trait>) =>
 export const derive = Effect.fn("TraitDerivation.derive")(function* (params: DeriveParams) {
   const store = yield* TraitStore
   const traits = yield* store.ls
-  const proposed = params.proposedTrait
-  const completeProposal = Trait.serialize(proposed)
+  const { proposedTrait } = params
+  const completeProposal = Trait.serialize(proposedTrait)
   const results = yield* Effect.forEach(traits, (trait) => check(trait, completeProposal), { concurrency: "unbounded" })
   const failures = Array.filter(results, TraitConflict.guards.Fail)
   if (Array.some(failures, (failure) => failure.reason === "inconclusive")) {
@@ -50,7 +50,7 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
   if (failures.length > 0) {
     return yield* reconcile({
       traits: Array.map(failures, (failure) => failure.existing),
-      proposal: proposed,
+      proposal: proposedTrait,
       approved: params.approved
     })
   }
@@ -68,7 +68,7 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
   if (clarifications.length === 1) {
     const target = Array.getUnsafe(clarifications, 0).trait
     const trait = Trait.Trait.make({
-      ...proposed,
+      ...proposedTrait,
       name: target.name
     })
     const approval = yield* Approval.request({
@@ -88,15 +88,15 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
     yield* store.update(trait)
     return TraitDerivation.cases.Updated.make({ trait, instructions: reviewInstructions([trait]) })
   }
-  if (Array.some(traits, (trait) => trait.name === proposed.name)) {
-    return yield* TraitAlreadyExistsError.make({ name: proposed.name })
+  if (Array.some(traits, (trait) => trait.name === proposedTrait.name)) {
+    return yield* TraitAlreadyExistsError.make({ name: proposedTrait.name })
   }
   const approval = yield* Approval.request({
-    message: `Save trait ${proposed.name}?\n\n${Trait.serialize(proposed)}`,
+    message: `Save trait ${proposedTrait.name}?\n\n${Trait.serialize(proposedTrait)}`,
     approved: params.approved
   })
   if (!Approval.Approval.guards.Approved(approval)) return approval
-  const trait = yield* store.add(proposed)
+  const trait = yield* store.add(proposedTrait)
   return TraitDerivation.cases.Created.make({ trait, instructions: reviewInstructions([trait]) })
 })
 
