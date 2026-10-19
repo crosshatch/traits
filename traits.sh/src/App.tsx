@@ -313,11 +313,6 @@ export const App = () => {
 
           <div className="closing">
             <img className="hero-emblem" src="/traits-emblem.svg" width="360" height="420" alt="" />
-            <p>
-              <a href="https://twitter.com/CrosshatchDev" target="_blank" rel="noreferrer">
-                FROM CROSSHATCH LABS <span aria-hidden="true">↗&#xfe0e;</span>
-              </a>
-            </p>
             <a className="read-link" href="#top">
               Back to top ↑
             </a>

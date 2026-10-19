@@ -1481,8 +1481,13 @@ h3 {
   padding: 0 1.25rem 4rem;
   text-align: center;
 }
-.closing > p {
-  font-size: 1rem;
+.closing .read-link {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.closing .read-link:hover {
+  color: var(--ink);
 }
 .docked-header {
   height: var(--dock-height);
@@ -1755,9 +1760,6 @@ h3 {
   .setup-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
-  }
-  .closing > p {
-    font-size: 0.85rem;
   }
 }
 
