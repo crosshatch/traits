@@ -188,15 +188,20 @@ p {
   border-left: 7px solid var(--green);
 }
 
+.opening {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: calc(100svh - var(--contents-height));
+}
 .hero {
   position: relative;
   isolation: isolate;
   display: grid;
   align-items: center;
-  min-height: calc(100svh - 8rem);
+  min-height: 0;
   text-align: center;
   padding: 2.5rem 1.5rem;
-  margin-top: 1.5rem;
+  margin-top: 0;
 }
 .hero::before {
   content: "";
@@ -359,12 +364,13 @@ p {
   flex-wrap: wrap;
   gap: 1.5rem 2.5rem;
   border-block: 1px solid light-dark(#e7dcc0, var(--rule));
-  margin-top: 3rem;
-  font-size: 0.76rem;
+  margin-top: 0;
+  font-size: 0.9rem;
 }
 .contents-band .eyebrow {
   color: var(--muted);
-  font-size: 0.57rem;
+  opacity: 0.65;
+  font-size: 0.7rem;
 }
 .contents-band a {
   position: relative;
@@ -1292,8 +1298,6 @@ h3 {
 
 @media (min-width: 901px) {
   .opening {
-    display: grid;
-    grid-template-rows: auto 1fr;
     min-height: calc(max(100svh, 52rem) - var(--contents-height));
   }
   .opening .hero {
@@ -1306,9 +1310,6 @@ h3 {
   .hero-content {
     display: flow-root;
     width: 100%;
-  }
-  .contents-band {
-    margin-top: 0;
   }
 }
 
@@ -1324,7 +1325,6 @@ h3 {
     padding-left: 0.85rem;
   }
   .hero {
-    margin-top: 1rem;
     padding-block: 1.5rem;
   }
   .chapter {
@@ -1408,11 +1408,6 @@ h3 {
     padding: clamp(0.75rem, 2svh, 1.5rem) 1.25rem;
     margin-top: 0;
   }
-  .opening {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    min-height: calc(100svh - var(--contents-height));
-  }
   .hero .hero-content {
     display: flex;
     flex-direction: column;
@@ -1454,7 +1449,7 @@ h3 {
   .contents-band {
     gap: 0.85rem 1.25rem;
     padding: 0.75rem 1rem;
-    font-size: 0.62rem;
+    font-size: 0.75rem;
     margin-top: 0;
   }
   .contents-band > .eyebrow {
