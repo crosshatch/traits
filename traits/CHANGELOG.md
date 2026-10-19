@@ -1,5 +1,18 @@
 # traits
 
+## 0.5.9
+
+### Patch Changes
+
+- [#80](https://github.com/crosshatch/traits/pull/80)
+  [`e7bbd5a`](https://github.com/crosshatch/traits/commit/e7bbd5aa7a872116a276fae7053ead2c1b2aeb41) -
+  Recommend OpenRouter as the default provider for decisions and language
+  generation, with separate TypeSafe and OpenAI providers as an advanced option.
+
+- [#79](https://github.com/crosshatch/traits/pull/79)
+  [`699c4f7`](https://github.com/crosshatch/traits/commit/699c4f7f190390656e83c3e36683584a8cb7c696) -
+  Include the README in the published package.
+
 ## 0.5.8
 
 ### Patch Changes
