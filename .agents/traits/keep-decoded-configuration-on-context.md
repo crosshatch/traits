@@ -1,5 +1,6 @@
 ---
 name: keep-decoded-configuration-on-context
+purpose: Preserve a clear source of configuration truth and distinguish decoded settings from derived runtime state.
 subject: Decoded configuration and derived runtime values exposed through an
   Effect context.
 requirement: When an Effect context exposes decoded configuration, keep the

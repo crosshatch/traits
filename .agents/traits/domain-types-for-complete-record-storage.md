@@ -1,5 +1,6 @@
 ---
 name: domain-types-for-complete-record-storage
+purpose: Prevent storage contracts from drifting from domain models or silently dropping record content.
 subject: Storage operations creating or replacing complete domain records.
 requirement: For storage operations that create or replace complete domain
   records, accept the existing domain type instead of separate per-field

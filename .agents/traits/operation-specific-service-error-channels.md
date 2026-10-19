@@ -1,5 +1,6 @@
 ---
 name: operation-specific-service-error-channels
+purpose: Let callers reason about and recover from only the failures an operation can actually produce.
 subject: Error channels in explicit Effect service contracts.
 requirement: In explicit Effect service contracts, give each operation only the
   errors it can actually produce instead of assigning every method a shared

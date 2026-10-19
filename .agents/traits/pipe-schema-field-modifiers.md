@@ -1,5 +1,6 @@
 ---
 name: pipe-schema-field-modifiers
+purpose: Keep a field's base schema and its presence or nullability policy readable in a consistent order.
 subject: Optional, nullable, and similar modifiers on Effect Schema fields.
 requirement: "For optional or nullable Effect Schema fields, apply the field
   modifier using the schema’s own .pipe method, even for a single modifier:

@@ -116,7 +116,12 @@ for (const fixture of [
             : {
                 name: "derive_trait",
                 arguments: {
-                  proposedTrait: { name: "example", subject: "An artifact.", requirement: "Example requirement." }
+                  proposedTrait: {
+                    name: "example",
+                    subject: "An artifact.",
+                    requirement: "Example requirement.",
+                    purpose: "Preserve consistency."
+                  }
                 }
               }
         const result = yield* request(index, "tools/call", tool)
@@ -140,7 +145,7 @@ for (const fixture of [
         expect(unchanged).toBe(fixture.trait)
         yield* fs.writeFileString(
           traitPath,
-          "---\nname: outdated-trait\nsubject: An artifact.\nrequirement: Keep this rule.\n---\n"
+          "---\nname: outdated-trait\nsubject: An artifact.\nrequirement: Keep this rule.\npurpose: Preserve consistency.\n---\n"
         )
         const recovered = yield* request(6, "tools/call", { name: "check_traits", arguments: { include: [] } })
         expect(recovered).toMatchObject({ isError: false })

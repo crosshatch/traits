@@ -50,7 +50,8 @@ const callbacks = Trait.Trait.make({
   subject: "Callbacks.",
   requirement:
     "Pass compatible functions directly as callbacks instead of wrapping them in forwarding arrows. Retain wrappers needed to preserve the receiver or control forwarded arguments.",
-  applicability: "In TypeScript."
+  applicability: "In TypeScript.",
+  purpose: "Expose callback behavior without redundant forwarding wrappers."
 })
 const broaderProposal =
   "Pass compatible functions directly instead of wrapping them in forwarding arrows, both for callbacks and service method definitions. Use a curried library overload directly when it produces the required function. Retain wrappers needed to preserve the receiver or control forwarded arguments."

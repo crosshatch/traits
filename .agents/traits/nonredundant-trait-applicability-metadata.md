@@ -1,5 +1,6 @@
 ---
 name: nonredundant-trait-applicability-metadata
+purpose: Make applicability decisions easier by separating the subject from genuinely additional scope and exceptions.
 subject: Trait subject and applicability descriptions.
 requirement: >
   Keep trait subject and applicability descriptions complementary. Subject

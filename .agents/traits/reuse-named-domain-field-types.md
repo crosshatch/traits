@@ -1,5 +1,6 @@
 ---
 name: reuse-named-domain-field-types
+purpose: Preserve domain meaning and reuse existing validation contracts instead of coupling field types to record structure.
 subject: Model field types and schemas with existing dedicated domain types.
 requirement: 'When an existing named domain type represents a model field,
   reference that type directly rather than extracting it with indexed access:

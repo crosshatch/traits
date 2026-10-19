@@ -1,5 +1,6 @@
 ---
 name: layer-boundary-initialization-recovery
+purpose: Keep recoverable startup failures localized without spreading initialization machinery across operations.
 subject: Recoverable Effect application initialization failures.
 requirement: For recoverable Effect application initialization failures, prefer
   recovery at the existing Layer boundary with a minimal degraded service over

@@ -1,5 +1,6 @@
 ---
 name: inline-effect-service-shapes
+purpose: Keep a service contract beside its identity without introducing redundant shape names.
 subject: Effect service shapes used only to support Context.Service.
 requirement: For an Effect service whose shape exists only to support
   Context.Service, inline the shape in a class named after the service and use

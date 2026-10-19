@@ -1,5 +1,6 @@
 ---
 name: minimal-test-grouping
+purpose: Keep test navigation focused on meaningful behavior rather than redundant nesting.
 subject: Test-file organization and describe blocks.
 requirement: "Keep test files minimally structured: write tests at the top level
   and omit outer describe blocks that merely repeat the filename or subject. Add

@@ -1,5 +1,6 @@
 ---
 name: filter-or-fail-for-effect-validation
+purpose: Keep predicate validation and its failure path visible in the Effect pipeline.
 subject: Validation of Effect results solely to fail on a predicate and otherwise continue.
 requirement: When validating an Effect result only to fail on a predicate and
   otherwise continue, prefer Effect.filterOrFail in the effect’s pipe over

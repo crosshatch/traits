@@ -1,5 +1,6 @@
 ---
 name: effect-aware-tests
+purpose: Keep Effect execution, failures, and resource cleanup under the test framework's lifecycle.
 subject: Tests executing Effects or acquiring scoped resources.
 requirement: Use @effect/vitest wherever tests execute Effects, yielding Effects
   directly through its Effect-aware test APIs instead of manually calling

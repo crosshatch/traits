@@ -1,5 +1,6 @@
 ---
 name: terminology-in-site-copy
+purpose: Give users consistent terminology that distinguishes a captured preference from the insight that prompted it.
 subject: traits.sh user-facing copy and accessibility descriptions.
 requirement: In traits.sh user-facing copy, including accessibility
   descriptions, call a saved or proposed reusable preference a “trait,” not a

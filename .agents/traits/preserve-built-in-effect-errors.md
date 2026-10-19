@@ -1,5 +1,6 @@
 ---
 name: preserve-built-in-effect-errors
+purpose: Preserve established error information and interoperability without unnecessary custom error layers.
 subject: Wrapping and mapping built-in Effect errors.
 requirement: "Preserve Effect’s built-in error types and let errors propagate
   naturally: prefer `fs.readFileString(file)` over

@@ -1,5 +1,6 @@
 ---
 name: fixed-error-messages-on-error-types
+purpose: Keep invariant diagnostics consistent and avoid duplicating fixed messages at construction sites.
 subject: Messages intrinsic to an error type.
 requirement: Define messages intrinsic to an error type on that error type
   rather than requiring callers to repeat them in constructor props. Use a class

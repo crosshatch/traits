@@ -1,5 +1,6 @@
 ---
 name: minimal-high-value-tests-and-type-first-verification
+purpose: Preserve development speed while concentrating verification on important risks that static types cannot establish.
 subject: Test coverage and verification choices during development.
 requirement: Prioritize development velocity and strong static types. Keep only
   concise tests that protect important behavior types cannot establish; avoid

@@ -1,5 +1,6 @@
 ---
 name: explicit-undefined-in-optional-properties
+purpose: Make optional-property assignment semantics explicit and convenient for callers passing possibly undefined values.
 subject: Optional TypeScript property declarations.
 requirement: "For TypeScript optional properties, explicitly include undefined
   in the property type by default: readonly copyable?: boolean | undefined, not

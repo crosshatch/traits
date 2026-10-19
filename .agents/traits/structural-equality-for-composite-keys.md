@@ -1,5 +1,6 @@
 ---
 name: structural-equality-for-composite-keys
+purpose: Ensure logically equal composite inputs share collection entries or cached state across independently created instances.
 subject: Composite keys in Effect collections, caches, and Atom.family.
 requirement: When a composite value is used as a key in an Effect collection,
   cache, or Atom.family and should match by its contents across independently

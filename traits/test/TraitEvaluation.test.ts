@@ -13,6 +13,7 @@ const traits = Array.makeBy(20, (index) =>
     name: Trait.TraitName.make(`example-trait-${index}`),
     subject: "Binding declarations.",
     requirement: "Prefer const declarations.",
+    purpose: "Make immutable bindings explicit.",
     applicability: "In TypeScript, except when mutation is required."
   })
 )

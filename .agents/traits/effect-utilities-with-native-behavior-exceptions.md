@@ -1,5 +1,6 @@
 ---
 name: effect-utilities-with-native-behavior-exceptions
+purpose: Keep transformations consistent with Effect APIs without sacrificing required behavior or efficient local mutation.
 subject: Collection, string, numeric, and other utility choices beyond inline comparisons and simple runtime checks.
 requirement: "Except for inline comparisons and simple runtime checks, prefer
   equivalent Effect utilities over JavaScript built-in methods and functions,

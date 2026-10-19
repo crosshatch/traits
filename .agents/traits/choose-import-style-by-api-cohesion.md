@@ -1,5 +1,6 @@
 ---
 name: choose-import-style-by-api-cohesion
+purpose: Clarify API ownership without adding namespace noise to unrelated exports.
 subject: Import style for related module exports.
 requirement: Prefer namespace imports when multiple members form a cohesive
   module API and qualification clarifies their origin or replaces module-name

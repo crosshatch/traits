@@ -1,5 +1,6 @@
 ---
 name: direct-schema-construction-with-explicit-ids
+purpose: Make record construction and identity creation explicit while avoiding forwarding abstractions.
 subject: Construction of schema-backed domain records.
 requirement: Construct domain records directly with their schema constructors
   instead of adding a wrapper whose only behavior is generating an identifier

@@ -1,5 +1,6 @@
 ---
 name: static-imports-first
+purpose: Make module dependencies easy to discover before reading declarations and executable behavior.
 subject: Static module import declarations.
 requirement: 'Place all static import declarations at the top of a module,
   before executable statements and other declarations: import { Layer } from

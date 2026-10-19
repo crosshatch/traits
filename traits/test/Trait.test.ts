@@ -10,7 +10,8 @@ const name = Trait.TraitName.make("delegated-spending")
 const minimal = Trait.Trait.make({
   name,
   subject: "A payment an agent is considering authorizing.",
-  requirement: "The payment must fall within delegated spending authority."
+  requirement: "The payment must fall within delegated spending authority.",
+  purpose: "Prevent unauthorized spending."
 })
 
 it.effect(
@@ -106,7 +107,7 @@ it.effect(
   "parses literal and folded YAML while leaving Markdown context untouched",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\nname: ${name}\nsubject: A payment.\nrequirement: >\n  Stay within\n  delegated authority.\napplicability: |-\n  Before payment.\n  Except test transactions.\n---\n\n# Context\n\n---\nNot frontmatter.\n`,
+      `---\nname: ${name}\nsubject: A payment.\nrequirement: >\n  Stay within\n  delegated authority.\npurpose: Protect funds.\napplicability: |-\n  Before payment.\n  Except test transactions.\n---\n\n# Context\n\n---\nNot frontmatter.\n`,
       "/traits/test.md"
     )
     expect(trait.requirement).toBe("Stay within delegated authority.\n")
@@ -118,7 +119,7 @@ it.effect(
 it.effect(
   "rejects old-format traits and unsupported frontmatter rather than discarding content",
   Effect.fnUntraced(function* () {
-    const header = `name: ${name}\nsubject: A payment.\nrequirement: Stay within authority.\n`
+    const header = `name: ${name}\nsubject: A payment.\nrequirement: Stay within authority.\npurpose: Protect funds.\n`
     for (const text of [
       `---\nname: ${name}\n---\nAn old body-only requirement.`,
       ...Array.map(
@@ -152,9 +153,10 @@ it.effect(
       }
     }
     for (const header of [
-      `name: ${name}\nsubject: A payment.`,
-      `name: ${name}\nrequirement: Stay within authority.`,
-      "subject: A payment.\nrequirement: Stay within authority."
+      `name: ${name}\nsubject: A payment.\nrequirement: Stay within authority.`,
+      `name: ${name}\nsubject: A payment.\npurpose: Protect funds.`,
+      `name: ${name}\nrequirement: Stay within authority.\npurpose: Protect funds.`,
+      "subject: A payment.\nrequirement: Stay within authority.\npurpose: Protect funds."
     ]) {
       const result = yield* Trait.parse(`---\n${header}\n---`, "/traits/test.md").pipe(Effect.result)
       expect(Result.isFailure(result)).toBe(true)

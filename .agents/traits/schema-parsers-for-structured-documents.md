@@ -1,5 +1,6 @@
 ---
 name: schema-parsers-for-structured-documents
+purpose: Make document structure declarative and validated while preserving boundaries and meaningful diagnostics.
 subject: Parsing of structured domain documents.
 requirement: Prefer Effect Schema parsers for structured domain documents when
   their string segments can be modeled declaratively. Decode typed segments with

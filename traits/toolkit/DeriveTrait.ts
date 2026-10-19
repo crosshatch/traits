@@ -18,7 +18,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | If Revise supplies no concrete feedback, ask for revision details with the interactive question UI and free text. Do not guess or set approved: true.
   | Keep the proposal pending through related work and return to it afterward unless cancelled; obtain fresh approval of the complete revised body.
   | First decide whether the feedback generalizes beyond the current task and inspect existing trait files for coverage.
-  | Supply proposedTrait as a complete structured trait: name, subject, requirement, and optional applicability, purpose, guidance, and Markdown context.
+  | Supply proposedTrait as a complete structured trait: name, subject, requirement, purpose, and optional applicability, guidance, and Markdown context.
   | Subject identifies what to assess; requirement is authoritative. Applicability is natural-language scope and exceptions. Purpose explains intent; guidance advises without granting authority.
   | Put examples, code diffs, references, and domain details in context. Context is available during assessment, but must not hide essential obligations.
   | Supply a unique descriptive kebab-case name without a redundant trait- prefix for a newly created trait; it is the canonical identity, frontmatter name, and Markdown filename stem. Duplicate names are rejected.
@@ -48,7 +48,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   parameters: S.Struct({
     proposedTrait: Trait.Trait.annotate({
       description:
-        "The complete proposed trait, including its name, subject, authoritative requirement, optional applicability, purpose, guidance, and Markdown context. Replaces all content on clarification while preserving the existing name."
+        "The complete proposed trait, including required name, subject, authoritative requirement, and purpose; optional applicability, guidance, and Markdown context. Replaces all content on clarification while preserving the existing name."
     }),
     approved: S.Boolean.pipe(S.optional).annotate({
       description:

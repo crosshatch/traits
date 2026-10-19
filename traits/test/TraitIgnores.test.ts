@@ -7,12 +7,14 @@ import { excludeIgnored, traitIgnores } from "../traitIgnores.ts"
 const first = Trait.Trait.make({
   name: Trait.TraitName.make("direct-callbacks"),
   subject: "Callbacks.",
-  requirement: "Pass callbacks directly."
+  requirement: "Pass callbacks directly.",
+  purpose: "Avoid redundant forwarding wrappers."
 })
 const second = Trait.Trait.make({
   name: Trait.TraitName.make("use-arrow-functions"),
   subject: "Ordinary functions.",
-  requirement: "Use arrow functions."
+  requirement: "Use arrow functions.",
+  purpose: "Keep function syntax consistent."
 })
 
 it("reads repeated directives from the leading header", () => {

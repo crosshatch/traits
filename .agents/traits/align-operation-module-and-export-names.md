@@ -1,5 +1,6 @@
 ---
 name: align-operation-module-and-export-names
+purpose: Make operations easy to locate and recognize without tracing aliases across modules.
 subject: Operation-focused modules and their primary exports.
 requirement: For operation-focused modules, keep the filename and primary export
   aligned with the operation's canonical name. When improving that name, rename

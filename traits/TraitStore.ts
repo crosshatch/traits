@@ -21,7 +21,7 @@ export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitPars
   cause: S.Defect()
 }) {
   override get message() {
-    return `Unable to parse trait ${this.path}.\n${Cause.pretty(Cause.fail(this.cause))}\n\nUpdate all stored traits to the current format: name, subject, and requirement in YAML frontmatter; optional applicability, purpose, and guidance as text; optional Markdown context after the header. Move old body requirements into requirement, when/mime/skip into applicability prose, and diffs or additional metadata into context. Preserve identity, intent, scope, and exceptions. Old formats are not automatically migrated. Retry after repair; do not treat this failed operation as a successful check.`
+    return `Unable to parse trait ${this.path}.\n${Cause.pretty(Cause.fail(this.cause))}\n\nUpdate all stored traits to the current format: required name, subject, requirement, and purpose in YAML frontmatter; optional applicability and guidance as text; optional Markdown context after the header. Purpose explains the intended benefit, not additional obligations. Move old body requirements into requirement, when/mime/skip into applicability prose, and diffs or additional metadata into context. Preserve identity, intent, scope, and exceptions. Old formats are not automatically migrated. Retry after repair; do not treat this failed operation as a successful check.`
   }
 }
 

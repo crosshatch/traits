@@ -1,5 +1,6 @@
 ---
 name: defects-for-internal-invariants
+purpose: Keep public error channels focused on actionable failures while exposing internal invariant violations as defects.
 subject: Library error channels for internal validation and encoding invariants.
 requirement: "In library code, distinguish internal invariant violations from
   expected operational failures. Treat validation or encoding failures of

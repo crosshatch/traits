@@ -1,5 +1,6 @@
 ---
 name: schema-validated-configuration
+purpose: Reject invalid configuration and numeric domain values at their boundaries before they reach consumers.
 subject: Configuration and numeric domain validation with Effect Schema.
 requirement: "Validate configuration through Config.schema with appropriate
   schemas and checks, not Config.Number followed by manual conditions. For

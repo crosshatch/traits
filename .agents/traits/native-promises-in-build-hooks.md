@@ -1,5 +1,6 @@
 ---
 name: native-promises-in-build-hooks
+purpose: Match build-tool execution contracts directly without immediately running unnecessary Effect wrappers or unused spans.
 subject: Build-tool plugin hooks and framework callbacks.
 requirement: "In build-tool configuration files such as vite.config.ts, write
   plugin hooks and other framework callbacks with plain async/await and

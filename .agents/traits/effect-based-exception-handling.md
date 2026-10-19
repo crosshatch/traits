@@ -1,5 +1,6 @@
 ---
 name: effect-based-exception-handling
+purpose: Keep throwable failures in composable Effect error channels with explicit recovery and propagation.
 subject: Throwable synchronous operations and Promise failures in application code.
 requirement: "Do not use JavaScript try/catch in application code. Model
   throwable synchronous operations with Effect.try and Promise failures with the

@@ -1,5 +1,6 @@
 ---
 name: pass-compatible-callbacks-directly
+purpose: Expose the actual operation being forwarded without redundant wrappers or accidental argument changes.
 subject: Callbacks, forwarding functions, and service method definitions.
 requirement: "Prefer passing a function directly as a callback when its
   signature and behavior are compatible with the caller:

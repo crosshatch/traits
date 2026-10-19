@@ -1,5 +1,6 @@
 ---
 name: flow-for-forwarding-pipeline-callbacks
+purpose: Make pure forwarding composition explicit without unnecessary parameters and callback scaffolding.
 subject: Callbacks and functions that only forward input through transformations.
 requirement: Use flow to compose callbacks and function definitions that only
   forward their input through successive transformations, whether expressed as a

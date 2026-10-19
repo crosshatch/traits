@@ -1,5 +1,6 @@
 ---
 name: effect-retry-and-schedules
+purpose: Keep retries bounded and composable while avoiding bespoke timing and attempt-management logic.
 subject: Retry and backoff behavior in Effect programs.
 requirement: 'Never manually implement retry or backoff logic. Use Effect’s
   built-in retry and scheduling APIs when retries are warranted:

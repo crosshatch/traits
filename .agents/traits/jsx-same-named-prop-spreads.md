@@ -1,5 +1,6 @@
 ---
 name: jsx-same-named-prop-spreads
+purpose: Reduce repetitive JSX prop forwarding while keeping special and computed props explicit.
 subject: Ordinary React JSX props receiving same-named variables.
 requirement: "In React JSX, prefer object-spread shorthand for ordinary props
   whose values are same-named variables: {...{ step, index }} instead of

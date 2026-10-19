@@ -1,5 +1,6 @@
 ---
 name: inline-single-use-schema-and-decision-definitions
+purpose: Keep lightweight definitions near their use and avoid names that add navigation without a meaningful boundary.
 subject: Single-use schemas, transcoders, and lightweight Decision.make definitions.
 requirement: "Prefer inlining single-use schemas, schema transcoder definitions,
   and lightweight Decision.make definitions at their call sites instead of

@@ -32,7 +32,7 @@ Pass a complete trait object as `proposedTrait` to `derive_trait`:
 - Required `requirement`: the authoritative, standalone criterion to satisfy.
 - Optional `applicability`: natural-language circumstances and exceptions. Omit
   when there is no additional restriction beyond the subject.
-- Optional `purpose`: what the trait aims to achieve or protect, and why.
+- Required `purpose`: what the trait aims to achieve or protect, and why.
 - Optional `guidance`: advice for satisfying the requirement or responding to a
   violation. This never grants permission to execute commands or take actions.
 - Optional `context`: supporting Markdown, including examples, references, and

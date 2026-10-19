@@ -1,5 +1,6 @@
 ---
 name: inline-small-single-use-helpers
+purpose: Keep local behavior easy to follow without unnecessary helper indirection.
 subject: Small single-use helpers, including React atom logic.
 requirement: Prefer inlining small single-use helper logic into the operation
   that consumes it instead of introducing a separately named helper, such as

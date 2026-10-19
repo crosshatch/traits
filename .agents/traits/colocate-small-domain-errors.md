@@ -1,5 +1,6 @@
 ---
 name: colocate-small-domain-errors
+purpose: Keep small error definitions close to their meaning and avoid unnecessary module fragmentation.
 subject: Small domain-specific error types.
 requirement: Define small domain-specific error types alongside the domain
   operations that produce them rather than creating standalone error modules,

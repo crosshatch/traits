@@ -1,5 +1,6 @@
 ---
 name: describe-model-visible-tool-parameters
+purpose: Help models supply valid tool arguments and understand constraints that field names alone cannot convey.
 subject: Model-visible parameter schemas for effect/ai tools.
 requirement: 'For tools defined with `effect/ai`, every model-visible tool
   parameter field must have a concise schema description explaining its purpose

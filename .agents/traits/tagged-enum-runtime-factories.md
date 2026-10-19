@@ -1,5 +1,6 @@
 ---
 name: tagged-enum-runtime-factories
+purpose: Provide consistent runtime construction and matching support alongside tagged-enum type declarations.
 subject: Effect Data.TaggedEnum type aliases.
 requirement: "Every Effect Data.TaggedEnum type alias must be paired with a
   same-named runtime Data.taggedEnum factory, exposing both the type and value

@@ -1,5 +1,6 @@
 ---
 name: css-first-scroll-layout
+purpose: Keep scroll-dependent presentation reliable through native layout rather than synchronizing JavaScript with scrolling.
 subject: Scroll-dependent UI layout, positioning, and visibility.
 requirement: Prefer DOM placement, appropriate containing blocks, and CSS
   positioning for scroll-dependent UI layout such as sticky bars. Do not add

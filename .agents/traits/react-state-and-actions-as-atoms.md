@@ -1,5 +1,6 @@
 ---
 name: react-state-and-actions-as-atoms
+purpose: Keep React state and actions composable under Effect reactivity with explicit ownership and lifecycle management.
 subject: React component state, event handlers, and asynchronous actions.
 requirement: In React code, use Effect reactivity atoms instead of useState and
   component-local state/action functions. Define state and action atoms outside

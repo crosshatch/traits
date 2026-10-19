@@ -1,5 +1,6 @@
 ---
 name: map-final-effect-transformations-in-pipeline
+purpose: Keep a final result transformation attached to the effect that produces its input.
 subject: Final pure transformations of Effect results.
 requirement: When an Effect result is bound only to apply a final pure
   transformation and immediately return it, keep that transformation in the

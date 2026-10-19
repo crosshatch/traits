@@ -1,5 +1,6 @@
 ---
 name: shared-layers-at-program-boundaries
+purpose: Make dependency ownership and sharing explicit while avoiding repeated construction of program-wide services.
 subject: Shared Effect service layer provisioning and dependency scopes.
 requirement: "Provide shared, program-wide Effect layers at the outermost
   program boundary, such as the CLI entry point: use

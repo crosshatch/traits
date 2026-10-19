@@ -1,5 +1,6 @@
 ---
 name: avoid-empty-jsx-branches
+purpose: Reduce rendering noise while preserving intentional layout, accessibility, and visible behavior.
 subject: Conditional content in React JSX.
 requirement: 'In React JSX, avoid unnecessary empty-content branches: render
   text directly when CSS already preserves its layout, and use a boolean

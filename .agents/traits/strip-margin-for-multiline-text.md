@@ -1,5 +1,6 @@
 ---
 name: strip-margin-for-multiline-text
+purpose: Keep multiline text readable in source without leaking incidental code indentation into its content.
 subject: Large multiline text literals using Effect String.stripMargin.
 requirement: |-
   Write large text strings as multiline template literals using Effect’s String.stripMargin, with a leading | on each text line. Align every | and the closing backtick with the containing statement or property when it directly calls stripMargin, without an extra indentation level: instructions: String.stripMargin(`

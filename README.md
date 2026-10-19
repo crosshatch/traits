@@ -22,14 +22,15 @@ subject: Callbacks passed to functions.
 requirement: >
   Pass compatible functions directly instead of wrapping them in forwarding
   arrows.
+purpose: Expose callback behavior without redundant wrappers.
 ---
 ```
 
 Review them, edit them, and share them with your team. You approve what gets
 remembered—including changes to existing preferences.
 
-Traits use a fixed, domain-neutral vocabulary: required `name`, `subject`, and
-`requirement`; optional natural-language `applicability`, `purpose`, and
+Traits use a fixed, domain-neutral vocabulary: required `name`, `subject`,
+`requirement`, and `purpose`; optional natural-language `applicability` and
 `guidance`. The optional Markdown body provides supporting `context`, including
 examples and references. Additional frontmatter keys are rejected. Guidance
 never grants permission to act. Older traits require explicit migration to these

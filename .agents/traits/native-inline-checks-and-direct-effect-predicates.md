@@ -1,5 +1,6 @@
 ---
 name: native-inline-checks-and-direct-effect-predicates
+purpose: Keep simple checks immediately readable while preserving concise predicate composition and required semantics.
 subject: Inline runtime checks and predicate stages in existing pipelines.
 requirement: Prefer native syntax for inline comparisons and simple runtime
   checks, such as `bounds.top <= readingLine` and `value === 0`. Prefer suitable

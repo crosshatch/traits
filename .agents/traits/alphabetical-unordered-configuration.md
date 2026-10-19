@@ -1,5 +1,6 @@
 ---
 name: alphabetical-unordered-configuration
+purpose: Make unordered configuration easy to scan and reduce incidental diff churn without changing execution semantics.
 subject: Configuration lists and fields whose ordering has no semantic significance.
 requirement: 'Prefer alphabetical ordering for miscellaneous configuration lists
   and fields when their order has no semantic significance: projects:

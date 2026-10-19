@@ -1,5 +1,6 @@
 ---
 name: predefined-constant-effects
+purpose: Express common constant outcomes with recognizable Effect values rather than redundant constructions.
 subject: Successful constant Effects with predefined equivalents.
 requirement: "Use Effect’s predefined constant effects rather than constructing
   equivalent successful effects: Effect.undefined, not

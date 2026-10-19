@@ -1,5 +1,6 @@
 ---
 name: effect-platform-services
+purpose: Make platform dependencies injectable, testable, and portable without breaking synchronous tooling contracts.
 subject: Filesystem, path, working-directory, and child-process access.
 requirement: "Use the Effect alternative for Node APIs in ordinary application
   code: node:fs and node:fs/promises use the FileSystem service; node:path uses

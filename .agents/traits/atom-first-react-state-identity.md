@@ -1,5 +1,6 @@
 ---
 name: atom-first-react-state-identity
+purpose: Keep state identity stable under atom lifecycle management without relying on React memoization.
 subject: Ownership and identity of Effect reactivity atoms in React.
 requirement: In React code using Effect reactivity atoms, prefer atom-first
   ownership and identity rather than React useMemo to keep atom state stable.

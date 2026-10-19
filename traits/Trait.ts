@@ -30,7 +30,7 @@ const fields = variants.Struct({
     description:
       "Circumstances and exceptions determining when the requirement applies. Omit when there is no additional restriction beyond the subject."
   }),
-  purpose: S.String.check(S.isPattern(/\S/)).pipe(S.optional).annotate({
+  purpose: S.String.check(S.isPattern(/\S/)).annotate({
     description: "What the trait aims to achieve or protect, and why that matters; not additional obligations."
   }),
   guidance: S.String.check(S.isPattern(/\S/)).pipe(S.optional).annotate({

@@ -1,5 +1,6 @@
 ---
 name: direct-property-access-in-parameters
+purpose: Keep parameter identity and property provenance visible throughout function bodies.
 subject: Function, callback, and generator parameters receiving objects.
 requirement: "Use direct property access rather than object destructuring in
   function parameters, including arrow callbacks, ordinary functions, and

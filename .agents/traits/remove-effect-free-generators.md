@@ -1,5 +1,6 @@
 ---
 name: remove-effect-free-generators
+purpose: Make genuine effect sequencing stand out by removing generator scaffolding that adds no sequencing behavior.
 subject: Effect.gen and Effect.fn generator wrappers and Layer construction.
 requirement: "Remove unnecessary Effect.gen and Effect.fn generator wrappers:
   return an existing value, Effect, or Layer directly when the generator merely

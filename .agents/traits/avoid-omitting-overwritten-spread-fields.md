@@ -1,5 +1,6 @@
 ---
 name: avoid-omitting-overwritten-spread-fields
+purpose: Make object merge precedence clear without redundant filtering or intermediate allocations.
 subject: Object construction using record spreads and authoritative field assignments.
 requirement: When building an object by spreading an existing record and
   explicitly assigning authoritative fields afterward, do not first omit fields

@@ -1,5 +1,6 @@
 ---
 name: domain-specific-parsing-errors
+purpose: Give callers meaningful recovery choices and actionable diagnostics without losing the original failure cause.
 subject: Recoverable domain errors at parsing boundaries.
 requirement: At parsing boundaries with recoverable domain-specific failures,
   use schema-backed tagged errors rather than Effect.try's generic UnknownError.

@@ -1,5 +1,6 @@
 ---
 name: schema-decoding-defaults-for-configuration
+purpose: Establish configuration defaults once at decoding so consumers can rely on a consistent resolved value.
 subject: Schema-backed configuration with optional defaults.
 requirement: For schema-decoded configuration, express optional-field defaults
   with Effect Schema decoding defaults rather than fallback expressions at

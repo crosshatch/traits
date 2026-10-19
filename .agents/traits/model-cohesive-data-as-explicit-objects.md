@@ -1,5 +1,6 @@
 ---
 name: model-cohesive-data-as-explicit-objects
+purpose: Keep related domain data together and reduce repeated field bookkeeping across operations.
 subject: Domain models whose related fields are repeatedly extracted or assembled.
 requirement: When domain operations repeatedly pick, omit, or filter fields to
   assemble related values, prefer reshaping the domain types into cohesive

@@ -1,5 +1,6 @@
 ---
 name: centralized-domain-schema-variants
+purpose: Prevent related boundary schemas from drifting apart as shared domain fields evolve.
 subject: Domain models with multiple related boundary shapes.
 requirement: When a domain model needs multiple related boundary shapes, declare
   shared fields and per-variant availability or encoding policies once with

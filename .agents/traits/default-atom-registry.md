@@ -1,5 +1,6 @@
 ---
 name: default-atom-registry
+purpose: Preserve expected atom sharing and avoid accidental isolation or unnecessary registry boundaries.
 subject: Registry boundaries for Effect reactivity atoms in React.
 requirement: When using Effect atom hooks in React, prefer the default registry
   rather than adding RegistryProvider wrappers. Isolate component-local state

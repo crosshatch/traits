@@ -1,5 +1,6 @@
 ---
 name: pipe-immediate-curried-applications
+purpose: Make the transformed value and curried operation readable in forward execution order.
 subject: Immediate application of functions returned by curried calls.
 requirement: "When a function call returns a function that is immediately
   applied to a value, use `pipe(value, fn(args))`, never `fn(args)(value)`.

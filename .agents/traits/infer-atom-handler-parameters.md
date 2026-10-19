@@ -1,5 +1,6 @@
 ---
 name: infer-atom-handler-parameters
+purpose: Preserve the outer atom API's contextual typing and avoid annotations that obscure useful inferred types.
 subject: Effect.fn handlers passed to Atom.fn.
 requirement: When passing an Effect.fn handler to Atom.fn, let the outer Atom.fn
   contextually infer the handler parameters rather than explicitly annotating

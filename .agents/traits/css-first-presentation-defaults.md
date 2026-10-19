@@ -1,5 +1,6 @@
 ---
 name: css-first-presentation-defaults
+purpose: Render preference-aware presentation before JavaScript loads and avoid unnecessary startup scripting.
 subject: Presentation defaults derived from user or device preferences.
 requirement: "Derive presentation defaults that CSS can detect from user or
   device preferences in CSS, so the page renders correctly before or without

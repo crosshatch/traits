@@ -1,5 +1,6 @@
 ---
 name: effect-values-for-parameterless-operations
+purpose: Expose parameterless effects directly without meaningless invocation wrappers or lost tracing.
 subject: Exported parameterless Effect operations.
 requirement: For parameterless Effect operations, export an Effect value instead
   of a zero-argument Effect.fn or Effect.fnUntraced function. Use Effect.gen

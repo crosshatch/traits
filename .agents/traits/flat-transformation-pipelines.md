@@ -1,5 +1,6 @@
 ---
 name: flat-transformation-pipelines
+purpose: Make transformation order readable without mentally unwinding nested calls.
 subject: Successive transformations and Effect.fn transformation arguments.
 requirement: Use `.pipe(...)` to keep successive transformations flat and
   readable in execution order, rather than nesting transformation calls around

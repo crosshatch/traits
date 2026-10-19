@@ -1,5 +1,6 @@
 ---
 name: colocate-domain-types-and-operations
+purpose: Make domain behavior discoverable beside its data model and keep adapters from owning domain logic.
 subject: Core domain types and the operations that act on them.
 requirement: "Keep each core domain type in its own module and export the
   functions that operate on that type from the same module: TraitExpression.ts

@@ -1,5 +1,6 @@
 ---
 name: namespace-imports-for-local-modules
+purpose: Make related local exports visibly belong to their module without repetitive aliases or crowded named imports.
 subject: Imports of multiple related exports from local project modules.
 requirement: For local project modules, prefer namespace imports and qualified
   member access when importing more than two exports or when multiple exports

@@ -14,7 +14,8 @@ it.effect(
     const trait = Trait.Trait.make({
       name: Trait.TraitName.make("old-format"),
       subject: "Stored policies.",
-      requirement: "Preserve this rule."
+      requirement: "Preserve this rule.",
+      purpose: "Preserve stored intent."
     })
     const file = path.join(dir, "old-format.md")
     const original = "---\nname: [\n---\nPreserve this rule."
@@ -108,7 +109,8 @@ it.effect(
     const actual = Trait.Trait.make({
       name: Trait.TraitName.make("actual-name"),
       subject: "An artifact.",
-      requirement: "Preserve its identity."
+      requirement: "Preserve its identity.",
+      purpose: "Avoid identity mismatches."
     })
     const wrongName = Trait.TraitName.make("wrong-name")
     const file = path.join(dir, `${wrongName}.md`)

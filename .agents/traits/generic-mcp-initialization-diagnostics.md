@@ -1,5 +1,6 @@
 ---
 name: generic-mcp-initialization-diagnostics
+purpose: Preserve useful startup diagnostics for arbitrary failures rather than only anticipated error classes.
 subject: Final MCP startup-failure diagnostics.
 requirement: For final MCP startup-failure reporting, use generic Effect cause
   formatting instead of error-class-specific extraction, so the coding agent

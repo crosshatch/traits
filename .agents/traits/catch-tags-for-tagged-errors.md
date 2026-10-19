@@ -1,5 +1,6 @@
 ---
 name: catch-tags-for-tagged-errors
+purpose: Keep tagged-error recovery consistent and make related handlers easy to extend together.
 subject: Tagged-error recovery in Effect programs.
 requirement: 'Always prefer Effect.catchTags over Effect.catchTag for
   tagged-error recovery, including when handling only one error tag:

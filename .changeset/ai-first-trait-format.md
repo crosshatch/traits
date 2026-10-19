@@ -2,8 +2,8 @@
 "traits": patch
 ---
 
-Replace body-centric traits with required subject and requirement fields,
-optional natural-language applicability, purpose, and guidance, and optional
+Replace body-centric traits with required subject, requirement, and purpose
+fields, optional natural-language applicability and guidance, and optional
 Markdown context. Reject unsupported frontmatter instead of silently discarding
 it.
 

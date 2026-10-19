@@ -12,7 +12,8 @@ const name = Trait.TraitName.make("indentation")
 const original = Trait.Trait.make({
   name,
   subject: "Code indentation.",
-  requirement: "Use tabs for indentation."
+  requirement: "Use tabs for indentation.",
+  purpose: "Keep indentation consistent."
 })
 const proposedTrait = Trait.Trait.make({ ...original, requirement: "Use two spaces for indentation." })
 
@@ -261,7 +262,8 @@ it.effect(
     const unaffected = Trait.Trait.make({
       name: Trait.TraitName.make("unrelated"),
       subject: "Other artifacts.",
-      requirement: "Keep unrelated requirements."
+      requirement: "Keep unrelated requirements.",
+      purpose: "Preserve independent conventions."
     })
     for (const names of [
       ["replacement", "replacement"],
