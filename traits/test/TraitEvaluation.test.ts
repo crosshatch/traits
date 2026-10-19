@@ -11,20 +11,17 @@ const source = Source.Source.make({ text: "const value = 1", location: Source.So
 const traits = Array.makeBy(20, (index) =>
   Trait.Trait.make({
     name: Trait.TraitName.make(`example-trait-${index}`),
-    body: "Prefer const declarations.",
-    applicability: {
-      when: "declaring bindings.",
-      mime: "text/typescript",
-      skip: "When mutation is required."
-    },
-    extensionMetadata: {}
+    subject: "Binding declarations.",
+    requirement: "Prefer const declarations.",
+    applicability: "In TypeScript, except when mutation is required."
   })
 )
 
 const run = Effect.fnUntraced(function* (
   selected: ReadonlyArray<Trait.Trait>,
   input: Source.Source = source,
-  omitAnswers: boolean = false
+  omitAnswers: boolean = false,
+  circumstances?: string
 ) {
   const calls: Array<DecisionModel.ProviderOptions> = []
   const model = yield* DecisionModel.make({
@@ -54,7 +51,7 @@ const run = Effect.fnUntraced(function* (
       })
   })
   const semaphore = yield* Semaphore.make(1)
-  const result = yield* Evaluation.evaluateAll(selected, input).pipe(
+  const result = yield* Evaluation.evaluateAll(selected, input, circumstances).pipe(
     Effect.provideService(DecisionModel.DecisionModel, model),
     Effect.provideService(TraitsContext, {
       configRoot: ".",
@@ -75,6 +72,16 @@ const run = Effect.fnUntraced(function* (
   )
   return { calls, result }
 })
+
+it.effect(
+  "passes invocation circumstances once alongside the source",
+  Effect.fnUntraced(function* () {
+    const circumstances = "Precommit verification of authored code."
+    const result = yield* run(Array.take(traits, 1), source, false, circumstances)
+    expect(result.calls[0]?.state).toEqual({ source, circumstances })
+    expect(Result.isSuccess(result.result)).toBe(true)
+  })
+)
 
 it.effect(
   "shares source once and maps name-keyed answers back to each trait in order",
@@ -115,7 +122,7 @@ it.effect(
   "splits UTF-8 request sizes without truncating trait text",
   Effect.fnUntraced(function* () {
     const selected = Array.map(Array.take(traits, 6), (trait) =>
-      Trait.Trait.make({ ...trait, body: pipe("語", String.repeat(2000)) })
+      Trait.Trait.make({ ...trait, context: pipe("語", String.repeat(2000)) })
     )
     const { calls, result } = yield* run(selected)
     expect(calls.length).toBeGreaterThan(1)

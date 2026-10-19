@@ -14,97 +14,51 @@ export const TraitName = S.String.check(S.isPattern(/^(?!trait-)[a-z0-9]+(?:-[a-
   })
 
 const variants = VariantSchema.make({
-  variants: ["stored", "generated"],
+  variants: ["stored", "frontmatter"],
   defaultVariant: "stored"
 })
 
-export type TraitDiff = typeof TraitDiff.Type
-export const TraitDiff = S.String.check(
-  S.isPattern(/^-[^\n]*\S/m),
-  S.isPattern(/^\+[^\n]*\S/m),
-  S.isPattern(/^(?:(?!```)[^\n]*(?:\n|$))+$/)
-).annotate({
-  description:
-    "A concise unified diff showing removed BAD (-) and added GOOD (+) code, without Markdown fences. Include whenever the trait admits a useful code example; omit otherwise."
-})
-
-export type Applicability = typeof Applicability.Type
-export const Applicability = S.Struct({
-  mime: S.Union([S.String, S.Array(S.String)])
-    .pipe(S.optional)
-    .annotate({
-      description: "Applicable MIME types, file types, or languages; do not repeat these restrictions in when or skip."
-    }),
-  skip: S.String.pipe(S.optional).annotate({
-    description:
-      "An additional exception within when's scope that overrides applicability. Omit when no independent exception exists; never restate or negate when or mime."
-  }),
-  when: S.String.pipe(S.optional).annotate({
-    description:
-      "Positive semantic conditions for applying the trait, written without a leading 'When' (for example, 'editing React state'). Do not repeat file types already specified by mime."
-  })
-})
-
-export type ExtensionMetadata = typeof ExtensionMetadata.Type
-export const ExtensionMetadata = S.JsonObject
-
 const fields = variants.Struct({
   name: TraitName,
-  body: S.String.annotate({
-    description: "One concise, standalone trait preserving essential scope and exceptions."
+  subject: S.String.check(S.isPattern(/\S/)).annotate({
+    description: "The kind of artifact, action, transaction, relationship, or situation to identify and assess."
   }),
-  diff: TraitDiff.pipe(S.optional),
-  applicability: Applicability.annotate({
+  requirement: S.String.check(S.isPattern(/\S/)).annotate({
+    description: "What should be true about the subject. The authoritative, standalone assessment criterion."
+  }),
+  applicability: S.String.check(S.isPattern(/\S/)).pipe(S.optional).annotate({
     description:
-      "Complete applicability conditions: file types, semantic scope, and independent exceptions. Use {} for an unrestricted trait."
+      "Circumstances and exceptions determining when the requirement applies. Omit when there is no additional restriction beyond the subject."
   }),
-  extensionMetadata: variants.Field({
-    stored: ExtensionMetadata,
-    generated: ExtensionMetadata.pipe(S.fromJsonString).annotate({
-      description: "JSON-encoded object containing preserved extension metadata only, or {} when there is none."
+  purpose: S.String.check(S.isPattern(/\S/)).pipe(S.optional).annotate({
+    description: "What the trait aims to achieve or protect, and why that matters; not additional obligations."
+  }),
+  guidance: S.String.check(S.isPattern(/\S/)).pipe(S.optional).annotate({
+    description:
+      "Advisory approach to satisfying the requirement or responding to a violation; never grants authority to act."
+  }),
+  context: S.String.pipe(S.optional)
+    .annotate({
+      description:
+        "Optional supporting Markdown context, examples, diffs, references, or procedural detail; not hidden requirements."
     })
-  })
+    .pipe(variants.FieldOnly(["stored"]))
 })
-
-export type TraitFrontmatter = typeof TraitFrontmatter.Type
-export const TraitFrontmatter = S.Struct({ name: TraitName, ...Applicability.fields })
-
-export type Generated = typeof Generated.Type
-export const Generated = variants.extract(fields, "generated")
 
 export type Trait = typeof Trait.Type
 export const Trait = variants.extract(fields, "stored")
 
-const ExampleParts = S.String.pipe(
-  S.decodeTo(
-    S.TemplateLiteralParser([
-      S.Literals(["```diff\n", "```diff\r\n", "\n```diff\n", "\r\n```diff\r\n"]),
-      S.String.check(S.isPattern(/^(?:(?!```)[^\n]*\n)*$/)),
-      S.Literals(["```\n\n---\n", "```\r\n\r\n---\r\n"]),
-      S.String
-    ])
-  )
-)
+export type TraitFrontmatter = typeof TraitFrontmatter.Type
+export const TraitFrontmatter = variants.extract(fields, "frontmatter")
 
 export const parse = Effect.fn("Trait.parse")((text: string, path: string) =>
   pipe(
     { text, path },
-    Frontmatter.parse(S.StructWithRest(TraitFrontmatter, [S.JsonObject])),
-    Effect.flatMap(
-      Effect.fn("Trait.parseBody")(function* (document) {
-        const metadata = {
-          name: document.frontmatter.name,
-          applicability: Struct.pick(document.frontmatter, ["when", "mime", "skip"]),
-          extensionMetadata: Struct.omit(document.frontmatter, ["name", "when", "mime", "skip", "body", "diff"])
-        }
-        if (!/^\s*```diff(?:\r?\n|$)/.test(document.body)) {
-          return Trait.make({
-            ...metadata,
-            body: document.body
-          })
-        }
-        const [, diff, , body] = yield* pipe(document.body, S.decodeEffect(ExampleParts))
-        return yield* pipe({ ...metadata, diff: String.trimEnd(diff), body }, S.decodeEffect(Trait))
+    Frontmatter.parse(TraitFrontmatter),
+    Effect.map((document) =>
+      Trait.make({
+        ...document.frontmatter,
+        ...(document.body === "" ? {} : { context: document.body })
       })
     )
   )
@@ -112,11 +66,8 @@ export const parse = Effect.fn("Trait.parse")((text: string, path: string) =>
 
 export const serialize = (trait: Trait): string =>
   Frontmatter.serialize({
-    frontmatter: { ...trait.extensionMetadata, ...trait.applicability, name: trait.name },
-    body:
-      trait.diff === undefined
-        ? trait.body
-        : `\n\`\`\`diff\n${String.trimEnd(trait.diff)}\n\`\`\`\n\n---\n${trait.body}`
+    frontmatter: Struct.omit(trait, ["context"]),
+    body: trait.context ?? ""
   })
 
 export const checkDecomposability = Effect.fn("Trait.checkDecomposability")(function* (proposedTrait: string) {

@@ -1,13 +1,15 @@
 ---
 name: domain-types-for-complete-record-storage
-when: designing or implementing storage operations that create or replace complete domain records.
-mime: [text/typescript, text/tsx]
+subject: Storage operations creating or replacing complete domain records.
+requirement: For storage operations that create or replace complete domain
+  records, accept the existing domain type instead of separate per-field
+  parameters or a manually duplicated object type. Persist the complete record
+  without dropping optional metadata or extension fields.
+applicability: |-
+  Applies when designing or implementing storage operations that create or replace complete domain records.
+  File types or languages: text/typescript, text/tsx.
 ---
-
 ```diff
 -const add = (name: TraitName, body: string) => persist({ name, body })
 +const add = (trait: Trait) => persist(trait)
 ```
-
----
-For storage operations that create or replace complete domain records, accept the existing domain type instead of separate per-field parameters or a manually duplicated object type. Persist the complete record without dropping optional metadata or extension fields.

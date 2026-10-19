@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, Layer, pipe, Predicate, Record, Schema as S, Semaphore, Stream } from "effect"
+import { Array, Effect, Layer, pipe, Predicate, Record, Schema as S, Semaphore, Stream, String } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
 
@@ -10,12 +10,11 @@ import * as TraitStore from "../TraitStore.ts"
 
 const name = Trait.TraitName.make("indentation")
 const original = Trait.Trait.make({
-  applicability: {},
-  extensionMetadata: {},
   name,
-  body: "Use tabs for indentation."
+  subject: "Code indentation.",
+  requirement: "Use tabs for indentation."
 })
-const proposedTrait = "Use two spaces for indentation."
+const proposedTrait = Trait.Trait.make({ ...original, requirement: "Use two spaces for indentation." })
 
 const harness = Effect.fn("test.harness")(function* (options: {
   readonly responseText?: string | undefined
@@ -57,9 +56,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
       return Effect.succeed([
         {
           type: "text",
-          text:
-            options.responseText ??
-            JSON.stringify({ traits: [{ name, body: proposedTrait, applicability: {}, extensionMetadata: "{}" }] })
+          text: options.responseText ?? JSON.stringify({ traits: [proposedTrait] })
         }
       ])
     },
@@ -113,41 +110,48 @@ const harness = Effect.fn("test.harness")(function* (options: {
 })
 
 it.effect(
-  "persists caller applicability without generation for creation and clarification",
+  "approves and persists the complete caller trait without generation for creation and clarification",
   Effect.fnUntraced(function* () {
-    const applicability = { when: "editing state", mime: "text/tsx", skip: "generated components" }
+    const proposal = Trait.Trait.make({
+      ...proposedTrait,
+      name: Trait.TraitName.make("state-updates"),
+      applicability: "Editing state in TSX, except generated components.",
+      purpose: "Keep state updates consistent.",
+      guidance: "Update the state operation.",
+      context: "A supporting example.\n"
+    })
     for (const relationship of ["distinct", "clarification"] as const) {
       const test = yield* harness({ relationships: { [name]: relationship } })
       const pending = yield* derive({
-        name: Trait.TraitName.make("state-updates"),
-        proposedTrait,
-        applicability
+        proposedTrait: proposal
       }).pipe(Effect.provide(test.layer))
       expect(pending).toMatchObject({
         _tag: "ApprovalRequired",
-        message: expect.stringContaining("when: editing state")
+        message: expect.stringContaining(
+          pipe(
+            Trait.serialize(proposal),
+            String.replace("name: state-updates", `name: ${relationship === "distinct" ? "state-updates" : name}`)
+          )
+        )
       })
       expect(test.mutations).toEqual([])
       const result = yield* derive({
-        name: Trait.TraitName.make("state-updates"),
-        proposedTrait,
-        applicability,
+        proposedTrait: proposal,
         approved: true
       }).pipe(Effect.provide(test.layer))
       expect(result).toMatchObject({
         _tag: relationship === "distinct" ? "Created" : "Updated",
         instructions: expect.stringContaining(`Saved traits: ${relationship === "distinct" ? "state-updates" : name}.`),
-        trait: { applicability, body: proposedTrait, name: relationship === "distinct" ? "state-updates" : name }
+        trait: { ...proposal, name: relationship === "distinct" ? "state-updates" : name }
       })
-      expect(
-        test.stored.get(relationship === "distinct" ? Trait.TraitName.make("state-updates") : name)?.applicability
-      ).toEqual(applicability)
+      expect(test.stored.get(relationship === "distinct" ? proposal.name : name)).toEqual({
+        ...proposal,
+        name: relationship === "distinct" ? proposal.name : name
+      })
       if (relationship === "clarification") {
-        const cleared = yield* derive({ name, proposedTrait, applicability: {}, approved: true }).pipe(
-          Effect.provide(test.layer)
-        )
-        expect(cleared).toMatchObject({ _tag: "Updated", trait: { applicability: {} } })
-        expect(test.stored.get(name)?.applicability).toEqual({})
+        const cleared = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
+        expect(cleared).toMatchObject({ _tag: "Updated", trait: proposedTrait })
+        expect(test.stored.get(name)).toEqual(proposedTrait)
       }
       expect(test.requests).toEqual([])
     }
@@ -160,9 +164,7 @@ it.effect(
     for (const relationship of ["distinct", "clarification", "conflict"] as const) {
       const test = yield* harness({ relationships: { [name]: relationship } })
       const result = yield* derive({
-        name: Trait.TraitName.make("state-updates"),
-        proposedTrait,
-        applicability: {},
+        proposedTrait: Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("state-updates") }),
         approved: true
       }).pipe(Effect.provide(test.layer))
       expect(result._tag).toBe(
@@ -193,7 +195,7 @@ it.effect(
   "does not generate replacements or mutate traits before approval",
   Effect.fnUntraced(function* () {
     const test = yield* harness({ relationships: { [name]: "conflict" } })
-    const result = yield* derive({ name, proposedTrait, applicability: {} }).pipe(Effect.provide(test.layer))
+    const result = yield* derive({ proposedTrait }).pipe(Effect.provide(test.layer))
     expect(result._tag).toBe("ApprovalRequired")
     expect(test.requests).toEqual([])
     expect(test.mutations).toEqual([])
@@ -208,13 +210,11 @@ it.effect(
       name,
       Trait.Trait.make({
         ...original,
-        applicability: { mime: "text/typescript", skip: "generated files" },
-        extensionMetadata: { priority: 2 }
+        applicability: "TypeScript, except generated files.",
+        context: "Original context."
       })
     )
-    const result = yield* derive({ name, proposedTrait, applicability: {}, approved: true }).pipe(
-      Effect.provide(test.layer)
-    )
+    const result = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
     expect(result._tag).toBe("Resolved")
     expect(result).toMatchObject({
       instructions: expect.stringContaining(
@@ -222,15 +222,14 @@ it.effect(
       )
     })
     expect(test.mutations).toEqual(["update", "rm"])
-    expect(test.stored.get(name)?.applicability).toEqual({})
-    expect(test.stored.get(name)?.extensionMetadata).toEqual({})
+    expect(test.stored.get(name)).toEqual(proposedTrait)
     expect(
       pipe(
         test.stored.values(),
         Array.fromIterable,
-        Array.map((trait) => trait.body)
+        Array.map((trait) => trait.requirement)
       )
-    ).toEqual([proposedTrait])
+    ).toEqual([proposedTrait.requirement])
     expect(test.requests).toHaveLength(1)
     expect(test.requests[0]?.prompt.content[0]).toMatchObject({
       role: "system",
@@ -244,10 +243,7 @@ it.effect(
   Effect.fnUntraced(function* () {
     for (const responseText of ["Use two spaces for indentation.", '{"traits":[]}']) {
       const test = yield* harness({ responseText, relationships: { [name]: "conflict" } })
-      const error = yield* derive({ name, proposedTrait, applicability: {}, approved: true }).pipe(
-        Effect.provide(test.layer),
-        Effect.flip
-      )
+      const error = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer), Effect.flip)
       expect(error).toMatchObject({
         module: "LanguageModel",
         method: "generateObject",
@@ -263,10 +259,9 @@ it.effect(
   "rejects duplicate replacement names and unaffected-name collisions before any writes",
   Effect.fnUntraced(function* () {
     const unaffected = Trait.Trait.make({
-      applicability: {},
-      extensionMetadata: {},
       name: Trait.TraitName.make("unrelated"),
-      body: "Keep unrelated requirements."
+      subject: "Other artifacts.",
+      requirement: "Keep unrelated requirements."
     })
     for (const names of [
       ["replacement", "replacement"],
@@ -277,17 +272,12 @@ it.effect(
         unaffected,
         responseText: JSON.stringify({
           traits: Array.map(names, (name) => ({
-            name,
-            body: proposedTrait,
-            applicability: {},
-            extensionMetadata: "{}"
+            ...proposedTrait,
+            name
           }))
         })
       })
-      const error = yield* derive({ name, proposedTrait, applicability: {}, approved: true }).pipe(
-        Effect.provide(test.layer),
-        Effect.flip
-      )
+      const error = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer), Effect.flip)
       expect(error).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
       expect(test.mutations).toEqual([])
       expect([...test.stored.values()]).toEqual([original, unaffected])
@@ -302,12 +292,10 @@ it.effect(
     const test = yield* harness({
       relationships: { [name]: "conflict" },
       responseText: JSON.stringify({
-        traits: [{ name: replacementName, body: proposedTrait, applicability: {}, extensionMetadata: "{}" }]
+        traits: [{ ...proposedTrait, name: replacementName }]
       })
     })
-    const result = yield* derive({ name, proposedTrait, applicability: {}, approved: true }).pipe(
-      Effect.provide(test.layer)
-    )
+    const result = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
     expect(result._tag).toBe("Resolved")
     expect(test.mutations).toEqual(["add", "rm"])
     expect([...test.stored.keys()]).toEqual([replacementName])

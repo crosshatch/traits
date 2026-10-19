@@ -1,17 +1,19 @@
 ---
 name: remove-effect-free-generators
-when: introducing or reviewing Effect.gen wrappers and Layer construction.
-mime:
-  - text/typescript
-  - text/tsx
-skip: When every Effect.gen wrapper under assessment sequences effectful work
-  rather than merely returning an existing value, Effect, or Layer.
+subject: Effect.gen and Effect.fn generator wrappers and Layer construction.
+requirement: "Remove unnecessary Effect.gen and Effect.fn generator wrappers:
+  return an existing value, Effect, or Layer directly when the generator merely
+  returns it or only yields a single existing Effect pipeline. A lone yield or
+  return yield does not justify a generator. Retain generators that sequence
+  multiple effectful steps. This rule concerns whether a generator is necessary;
+  Promise adapters, parameterless operation exports, tracing, and
+  transformation-chain layout are separate concerns."
+applicability: |-
+  Applies when introducing or reviewing Effect.gen wrappers and Layer construction.
+  File types or languages: text/typescript, text/tsx.
+  Exception: When every Effect.gen wrapper under assessment sequences effectful work rather than merely returning an existing value, Effect, or Layer.
 ---
-
 ```diff
 -const load = Effect.gen(function* () { return yield* read })
 +const load = read
 ```
-
----
-Remove unnecessary Effect.gen and Effect.fn generator wrappers: return an existing value, Effect, or Layer directly when the generator merely returns it or only yields a single existing Effect pipeline. A lone yield or return yield does not justify a generator. Retain generators that sequence multiple effectful steps. This rule concerns whether a generator is necessary; Promise adapters, parameterless operation exports, tracing, and transformation-chain layout are separate concerns.

@@ -39,8 +39,8 @@ for (const fixture of [
     name: "outdated stored trait",
     source: `import { Layer } from ${JSON.stringify(effectUrl)};
       export default { layerDecisionModel: Layer.empty, layerLanguageModel: Layer.empty }`,
-    trait: "---\nname: legacy_name\n---\nKeep this rule.\n",
-    diagnostic: "Update all stored traits to the format/schema of the currently installed traits package"
+    trait: "---\nname: outdated-trait\n---\nKeep this rule.\n",
+    diagnostic: "Update all stored traits to the current format"
   }
 ]) {
   it.effect(
@@ -115,7 +115,9 @@ for (const fixture of [
             ? { name: "check_traits", arguments: { include: [] } }
             : {
                 name: "derive_trait",
-                arguments: { name: "example", proposedTrait: "Example rule", applicability: {} }
+                arguments: {
+                  proposedTrait: { name: "example", subject: "An artifact.", requirement: "Example requirement." }
+                }
               }
         const result = yield* request(index, "tools/call", tool)
         expect(result).toMatchObject({
@@ -136,7 +138,10 @@ for (const fixture of [
       if ("trait" in fixture) {
         const unchanged = yield* fs.readFileString(traitPath)
         expect(unchanged).toBe(fixture.trait)
-        yield* fs.writeFileString(traitPath, "---\nname: outdated-trait\n---\nKeep this rule.\n")
+        yield* fs.writeFileString(
+          traitPath,
+          "---\nname: outdated-trait\nsubject: An artifact.\nrequirement: Keep this rule.\n---\n"
+        )
         const recovered = yield* request(6, "tools/call", { name: "check_traits", arguments: { include: [] } })
         expect(recovered).toMatchObject({ isError: false })
       }

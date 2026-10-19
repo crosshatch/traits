@@ -45,6 +45,10 @@ export const CheckTraits = Tool.make("check_traits", {
       description:
         "Project-owned source, configuration, or documentation paths/globs, absolute or relative to the MCP working directory. Exclude third-party/generated files, secrets, and binaries. Overlapping matches are deduplicated; unmatched patterns select no files."
     }),
+    circumstances: S.String.pipe(S.optional).annotate({
+      description:
+        "Optional circumstances triggering this assessment, such as the workflow stage, task, or relevant surrounding facts. Does not grant authority to execute trait guidance."
+    }),
     traitNames: S.Array(Trait.TraitName).pipe(S.optional).annotate({
       description:
         "Optional unique trait names for a focused review. Omit for all stored traits; an empty array selects none."
@@ -121,11 +125,11 @@ export const layer = toolkit.toLayer({
             location: SourceLocation.cases.File.make({ path: file, startLine: index * 200 + 1 })
           })
         )
-        return yield* pipe(
+        return yield* Effect.forEach(
           sources,
-          Effect.forEach((source) => Evaluation.evaluateAll(activeTraits, source), { concurrency: "unbounded" }),
-          Effect.map(flow(Array.flatten, Array.filter(Evaluation.requiresReview)))
-        )
+          (source) => Evaluation.evaluateAll(activeTraits, source, params.circumstances),
+          { concurrency: "unbounded" }
+        ).pipe(Effect.map(flow(Array.flatten, Array.filter(Evaluation.requiresReview))))
       }),
       { concurrency: "unbounded" }
     ).pipe(Effect.map(Array.flatten))

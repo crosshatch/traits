@@ -13,9 +13,8 @@ it.effect(
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-parse-" })
     const trait = Trait.Trait.make({
       name: Trait.TraitName.make("old-format"),
-      body: "Preserve this rule.",
-      applicability: {},
-      extensionMetadata: {}
+      subject: "Stored policies.",
+      requirement: "Preserve this rule."
     })
     const file = path.join(dir, "old-format.md")
     const original = "---\nname: [\n---\nPreserve this rule."
@@ -48,13 +47,12 @@ it.effect(
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-names-" })
     const initial = Trait.Trait.make({
       name: Trait.TraitName.make("test-trait"),
-      body: "Original",
-      applicability: {
-        when: "testing asynchronous operations.",
-        mime: ["text/typescript", "text/tsx"],
-        skip: "When a synchronous framework contract must be preserved."
-      },
-      extensionMetadata: { priority: 2 }
+      subject: "Asynchronous tests.",
+      requirement: "Original",
+      applicability: "In TypeScript and TSX, except when a synchronous framework contract must be preserved.",
+      purpose: "Preserve test lifecycle behavior.",
+      guidance: "Use the Effect-aware test APIs.",
+      context: "Supporting context.\n\n---\nExample.\n"
     })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
@@ -62,7 +60,7 @@ it.effect(
       expect(added).toEqual(initial)
       const loaded = yield* store.get(initial.name)
       expect(loaded).toEqual(initial)
-      const updated = Trait.Trait.make({ ...initial, body: "Replacement", extensionMetadata: { priority: 3 } })
+      const updated = Trait.Trait.make({ ...initial, requirement: "Replacement", context: "Updated context.\n" })
       yield* store.update(updated)
       const reloaded = yield* store.get(initial.name)
       expect(reloaded).toEqual(updated)
@@ -109,9 +107,8 @@ it.effect(
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-mismatch-" })
     const actual = Trait.Trait.make({
       name: Trait.TraitName.make("actual-name"),
-      body: "Body",
-      applicability: {},
-      extensionMetadata: {}
+      subject: "An artifact.",
+      requirement: "Preserve its identity."
     })
     const wrongName = Trait.TraitName.make("wrong-name")
     const file = path.join(dir, `${wrongName}.md`)

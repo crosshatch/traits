@@ -1,9 +1,15 @@
 ---
 name: atom-first-react-state-identity
-when: defining Effect reactivity atom ownership, identity, or Atom.family factories in React.
-mime: text/tsx
+subject: Ownership and identity of Effect reactivity atoms in React.
+requirement: In React code using Effect reactivity atoms, prefer atom-first
+  ownership and identity rather than React useMemo to keep atom state stable.
+  Have Atom.family factories return atoms directly instead of ephemeral wrapper
+  objects containing atoms, so atom hooks retain the cached values without React
+  memoization.
+applicability: |-
+  Applies when defining Effect reactivity atom ownership, identity, or Atom.family factories in React.
+  File types or languages: text/tsx.
 ---
-
 ```diff
 -import { useMemo } from "react"
  import { useAtomValue } from "@effect/atom-react"
@@ -17,6 +23,3 @@ mime: text/tsx
 +  return useAtomValue(countAtom(counterId))
  }
 ```
-
----
-In React code using Effect reactivity atoms, prefer atom-first ownership and identity rather than React useMemo to keep atom state stable. Have Atom.family factories return atoms directly instead of ephemeral wrapper objects containing atoms, so atom hooks retain the cached values without React memoization.

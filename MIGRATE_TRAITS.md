@@ -1,136 +1,109 @@
 # Migrate Traits
 
-One-time instructions for migrating older Traits collections. This is not an
-automatic package-upgrade step or a packaged agent skill. Give your agent:
-
-> Follow MIGRATE_TRAITS.md to migrate this project's existing collection.
-> Preserve bodies and metadata, and show me the migration plan before changing
-> files.
+This is a one-time, explicit migration guide, not an automatic package-upgrade
+step. Old-format traits fail with `TraitParseError` and actionable guidance. No
+files are rewritten by a failed read or check.
 
 ## Target format
 
-Each trait has a unique descriptive kebab-case name as its canonical identity.
-Store it in `.agents/traits/<name>.md` with `name` in leading YAML frontmatter.
-There is no separate `id` field or identifier suffix in the filename.
-
-For example, an older file named
-`prefer-arrow-functions-2535ceab-5702-4ab4-932a-f87362adf8c6.md` becomes
-`prefer-arrow-functions.md`:
+Each `.agents/traits/<name>.md` contains fixed YAML frontmatter and optional
+Markdown context:
 
 ```markdown
 ---
 name: prefer-arrow-functions
+subject: Ordinary function declarations.
+requirement: Prefer arrow functions for ordinary functions.
+applicability: Except Effect generator functions.
+purpose: Keep ordinary function syntax consistent.
+guidance: Replace ordinary function declarations with arrow functions.
 ---
 
-Prefer arrow functions for ordinary functions.
+Optional examples, references, and additional context.
 ```
 
-Names must match `^(?!trait-)[a-z0-9]+(?:-[a-z0-9]+)*$`, be at most 80
-characters, and describe the trait. Names must be unique across the collection.
-Renaming changes identity; update references too.
+Only `name`, `subject`, and `requirement` are required. Optional frontmatter
+fields are `applicability`, `purpose`, and `guidance`, all natural-language
+strings. Supporting `context` is the Markdown body, never a frontmatter key.
+Unknown keys are rejected. Use multiline YAML literal blocks for multiline text.
 
-## 1. Establish scope and protect existing work
+Names remain unique descriptive kebab-case identities, at most 80 characters,
+matching `^(?!trait-)[a-z0-9]+(?:-[a-z0-9]+)*$`. Preserve existing valid names
+and filenames. Renaming changes identity and requires updating references.
 
-- Read project instructions, inspect Git status, and confirm the worktree,
-  configured MCP working directory, installed Traits version, and package
-  manager. Default to this project's `.agents/traits`; ask before touching other
-  collections. Do not follow symlinks outside the agreed scope or discard
-  existing work.
-- Verify the installed SDK supports name-only records and `traitNames`
-  selections. Follow the [setup guide] for any needed package update, respecting
-  consumer dependency policies. Do not change providers, credentials, or models.
-- Pause trait writes and disconnect the Traits server during migration. Do not
-  run checks against a mixed-format collection. Leave unrelated MCP servers
-  alone.
-- Back up originals and reference-bearing files privately outside
-  `.agents/traits` and version control. Backup Markdown inside the collection
-  would be read as traits.
+## 1. Establish scope and preserve originals
 
-## 2. Inventory and approve the plan
+- Read project instructions and inspect Git status. Confirm the collection,
+  installed package, and MCP working directory. Default to `.agents/traits`.
+- Do not discard unrelated work, follow symlinks outside the agreed scope, or
+  change providers, credentials, or models.
+- Pause trait writes and checks while the collection contains mixed formats.
+- Keep a private backup and inventory outside the collection and version
+  control. Backup Markdown inside the collection would itself be read as traits.
+- Inventory each original identity, requirement body, applicability, diff
+  example, and additional metadata. Identify collisions and ambiguous content.
+  Obtain approval of the migration scope and any semantic changes before
+  editing.
 
-Read each file directly. Record its old path, filename stem, legacy ID if any,
-descriptive name, original body, metadata, and target path. Build an explicit
-mapping from old IDs, names, and paths to the new unique names and paths.
+## 2. Convert content explicitly
 
-- Preserve existing valid descriptive names. For legacy random-word filenames,
-  read the body and propose an appropriate descriptive name instead.
-- Convert older snake_case names to kebab-case and remove redundant leading
-  `trait-` prefixes. Leave already valid name-only records unchanged.
-- Flag duplicate names, target collisions, conflicting legacy identities,
-  malformed frontmatter, ambiguous delimiters, or unsupported metadata. Ask how
-  to resolve them; do not overwrite, silently merge, or delete traits.
-- Show the complete rename/reference mapping and unresolved cases. Obtain
-  approval before changing files. Do not unnecessarily expose private trait
-  bodies.
+Use a YAML parser and the installed SDK, not substitutions across arbitrary
+YAML.
 
-## 3. Migrate without changing preferences
+- Preserve `name` and its matching filename. For older IDs or invalid names,
+  propose explicit identity/reference mappings before changing them.
+- Identify the subject described by the original trait and write it as
+  `subject`. Do not invent a narrower or broader scope.
+- Move the original authoritative body into `requirement`, preserving intent,
+  requirements, and exceptions. Separate supporting examples or explanation into
+  context only when that does not hide essential obligations.
+- Convert old `when`/`activation`, `mime`, and `skip` fields into
+  natural-language `applicability`, retaining every language restriction and
+  independent exception. Omit applicability if there is no restriction beyond
+  the subject.
+- Move old `diff` examples into fenced Markdown diffs in context. For older
+  formats with a leading fenced example and separator, preserve the example as
+  context and the standalone rule as requirement.
+- Review all extension metadata individually. Preserve meaningful domain facts
+  as readable context. Flag unsupported or ambiguous values; do not silently
+  discard them or carry them into arbitrary new frontmatter keys.
+- Add `purpose` and `guidance` only when supported by existing content. Do not
+  manufacture rationale or action instructions just to fill optional fields.
+- Construct complete records with `Trait.Trait.make` and serialize with
+  `Trait.serialize`. Do not call `derive_trait` to migrate unchanged
+  preferences.
 
-Use a YAML parser/serializer and installed Traits schemas where available. Do
-not substitute text across arbitrary YAML or add a runtime schema dependency
-solely for the migration.
+Do not keep old `body`, `diff`, `when`, `mime`, `skip`, or extension metadata
+keys in the target frontmatter. Requirement is authoritative; purpose explains
+intent, guidance advises without granting permissions, and context supports
+interpretation.
 
-- Remove the legacy frontmatter `id` and filename identifier suffix. Set `name`
-  to the approved unique name and use exactly `<name>.md` as the filename.
-- Preserve the Markdown body exactly, including whitespace and line endings. Do
-  not summarize, split, merge, reconcile, or derive replacement preferences.
-- Preserve all other valid JSON-compatible metadata and extension fields. `when`
-  and `skip` are optional strings; `mime` is a string or array of strings. Flag
-  unsupported values rather than coercing or dropping them.
-- If legacy `activation` exists, migrate it to `when`. Remove only a redundant
-  leading "When " (case insensitive). Compare normalized values if both fields
-  exist and ask before resolving disagreements. Do not change bodies or `skip`.
-- Do not invent applicability metadata: `when` defines positive scope, `mime`
-  restricts file types, and `skip` is only an independent exception in that
-  scope.
-- Construct complete records with
-  `Trait.Trait.make({ name, body, ...metadata })` and serialize them. Do not
-  generate identifiers or call `derive_trait`.
-- Verify replacements against the inventory before removing old files. Never
-  overwrite an unrelated destination. Retain the external backup for recovery.
+## 3. Update consumers and references
 
-## 4. Update active references
+- `derive_trait` now accepts `{ proposedTrait, approved? }`, where
+  `proposedTrait` is the complete trait object, not a string. Name,
+  applicability, and examples are no longer separate tool parameters.
+- Domain records contain `name`, `subject`, `requirement`, optional text
+  `applicability`, `purpose`, `guidance`, and optional Markdown `context`.
+- Storage still accepts complete records and selects by name. Clarifications
+  replace the complete record while retaining its existing name; omitted
+  optional fields are removed.
+- Update links, focused `traitNames` selections, and leading-header ignore
+  directives only when names change. Preserve directive reasons.
+- Refresh skill instructions without overwriting local customizations. Reconnect
+  the MCP server after changing the installed package so its tool contracts
+  match.
 
-Search project-owned source, documentation, agent instructions, and
-configuration. Exclude secrets, dependencies, generated output, lockfiles, Git
-metadata, and backups. Do not rewrite Git history or unrelated identifiers.
+## 4. Verify
 
-- Change links to `.agents/traits/<name>.md`.
-- Replace `check_traits({ traitIds: [...] })` with
-  `check_traits({ traitNames: [...] })`, mapping legacy IDs to exact unique
-  names.
-- Map old ID/full-stem ignore directives to unique names while preserving their
-  reasons and leading-header locations:
+Parse and roundtrip every migrated record with the new SDK. Compare
+requirements, scope, exceptions, context, and examples against the inventory.
+Verify unchanged record counts, unique names, filename agreement, and active
+references. A repeat migration should do nothing to already-current records.
 
-  ```ts
-  // traits-ignore-file prefer-arrow-functions: Required by this integration.
-  ```
-
-- Preserve exact-name directives when the name is unchanged; update them after
-  renaming. Partial names and filenames are not selectors. Ask about unknown or
-  ambiguous references rather than guessing.
-- Update SDK consumers to complete name-only records. `add(trait)` rejects
-  duplicate names, `get(name)` and `rm(names)` select names, and `update(trait)`
-  replaces the record at `trait.name`. To rename, add the new record before
-  removing the old name; do not use update to rename or overwrite an existing
-  trait.
-
-## 5. Validate and reconnect
-
-Parse every record with the new schema. Verify unique names,
-filename/frontmatter agreement, no legacy `id` fields, and exact preservation of
-bodies and other metadata against the inventory. Confirm record counts and all
-active references. A repeated migration should make no changes.
-
-Review the diff and report changed paths, reference updates, and blockers. A
-partial migration is not success: keep the server paused and use the inventory
-and backup to recover only migration changes if needed.
-
-Refresh the installed `traits` skill without overwriting customizations, then
-reconnect the Traits MCP server to load the updated package and instructions.
-Verify tool availability and, when credentials allow, run a small `check_traits`
-smoke check on project-owned source. Review changed TypeScript against all
-traits, fix confirmed violations, and run relevant formatting, type, and
-behavior checks. Missing credentials or model failures are incomplete
-verification, not a pass.
-
-[setup guide]: https://github.com/crosshatch/traits/blob/main/SETUP.md
+Review changes before resuming writes. Run relevant formatting, type, build, and
+behavior checks for consumer changes. Use real-model checks for material
+semantic changes when credentials permit, and distinguish those results from
+deterministic parser and protocol tests. Missing credentials or model failures
+are incomplete verification, not passes. See [SETUP.md](SETUP.md) for
+configuration.

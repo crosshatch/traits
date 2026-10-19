@@ -6,15 +6,13 @@ import { excludeIgnored, traitIgnores } from "../traitIgnores.ts"
 
 const first = Trait.Trait.make({
   name: Trait.TraitName.make("direct-callbacks"),
-  body: "Pass callbacks directly.",
-  applicability: {},
-  extensionMetadata: {}
+  subject: "Callbacks.",
+  requirement: "Pass callbacks directly."
 })
 const second = Trait.Trait.make({
   name: Trait.TraitName.make("use-arrow-functions"),
-  body: "Use arrow functions.",
-  applicability: {},
-  extensionMetadata: {}
+  subject: "Ordinary functions.",
+  requirement: "Use arrow functions."
 })
 
 it("reads repeated directives from the leading header", () => {

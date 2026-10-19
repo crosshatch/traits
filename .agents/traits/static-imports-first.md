@@ -1,14 +1,16 @@
 ---
 name: static-imports-first
-when: adding or reorganizing static module imports.
-mime: [text/typescript, text/tsx, text/javascript, text/jsx]
+subject: Static module import declarations.
+requirement: 'Place all static import declarations at the top of a module,
+  before executable statements and other declarations: import { Layer } from
+  "effect" before export default ..., never after it. Dynamic import()
+  expressions may remain where needed.'
+applicability: |-
+  Applies when adding or reorganizing static module imports.
+  File types or languages: text/typescript, text/tsx, text/javascript, text/jsx.
 ---
-
 ```diff
 -export const value = 1
  import { Layer } from "effect"
 +export const value = 1
 ```
-
----
-Place all static import declarations at the top of a module, before executable statements and other declarations: import { Layer } from "effect" before export default ..., never after it. Dynamic import() expressions may remain where needed.

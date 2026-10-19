@@ -18,23 +18,36 @@ project. Each descriptive name is unique and identifies the trait:
 ```markdown
 ---
 name: direct-callbacks
-when: passing callbacks.
+subject: Callbacks passed to functions.
+requirement: >
+  Pass compatible functions directly instead of wrapping them in forwarding
+  arrows.
 ---
-
-Pass compatible functions directly instead of wrapping them in forwarding
-arrows.
 ```
 
 Review them, edit them, and share them with your team. You approve what gets
 remembered—including changes to existing preferences.
+
+Traits use a fixed, domain-neutral vocabulary: required `name`, `subject`, and
+`requirement`; optional natural-language `applicability`, `purpose`, and
+`guidance`. The optional Markdown body provides supporting `context`, including
+examples and references. Additional frontmatter keys are rejected. Guidance
+never grants permission to act. See [migration instructions](MIGRATE_TRAITS.md)
+for older traits.
 
 ## Two tools
 
 Traits connects to your coding agent through MCP:
 
 - **`derive_trait`** proposes, compares, and saves preferences with your
-  approval.
+  approval. Pass a complete trait object as `proposedTrait`.
 - **`check_traits`** reviews code against the saved traits.
+
+`check_traits` remains a file-based adapter. Its optional `circumstances` text
+supplies the triggering task, workflow stage, or surrounding facts to
+assessment. The SDK's `evaluateAll` also accepts arbitrary text through
+`Source`, with optional circumstances; the trait format itself is not restricted
+to code.
 
 Model assessments are guidance, not guarantees. The agent reviews findings,
 fixes confirmed violations, and checks again.
