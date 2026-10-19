@@ -22,8 +22,7 @@
   "devDependencies": {
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
-    "@effect/ai-openai": "catalog:",
-    "@effect/ai-typesafe": "catalog:",
+    "@effect/ai-openrouter": "catalog:",
     "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",

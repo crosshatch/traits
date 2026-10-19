@@ -1,15 +1,14 @@
-import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
-import { TypeSafeClient, TypeSafeDecisionModel } from "@effect/ai-typesafe"
+import { OpenRouterClient, OpenRouterDecisionModel, OpenRouterLanguageModel } from "@effect/ai-openrouter"
 import { Config, Layer } from "effect"
 import type { TraitsConfig } from "traits"
 
+const layerClient = OpenRouterClient.layerConfig({ apiKey: Config.Redacted("OPENROUTER_API_KEY") })
+
 export default {
   excludes: ["repos/**"],
-  layerDecisionModel: TypeSafeDecisionModel.layer({ model: "jev-latest" }).pipe(
-    Layer.provide(TypeSafeClient.layerConfig())
-  ),
-  layerLanguageModel: OpenAiLanguageModel.layer({
-    model: "gpt-6.1-sol",
-    config: { reasoning: { effort: "low" } }
-  }).pipe(Layer.provide(OpenAiClient.layerConfig({ apiKey: Config.Redacted("OPENAI_API_KEY") })))
+  layerDecisionModel: OpenRouterDecisionModel.layer({ model: "~typesafe/jev-latest" }).pipe(Layer.provide(layerClient)),
+  layerLanguageModel: OpenRouterLanguageModel.layer({
+    model: "openai/gpt-6.1-sol",
+    config: { strictJsonSchema: true, reasoning: { effort: "low" } }
+  }).pipe(Layer.provide(layerClient))
 } satisfies TraitsConfig
