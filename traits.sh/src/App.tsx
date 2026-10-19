@@ -1,7 +1,7 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Array, Option } from "effect"
 import { Atom } from "effect/reactivity"
-import type { AnimationEvent, KeyboardEvent } from "react"
+import type { AnimationEvent, KeyboardEvent, MouseEvent } from "react"
 
 import { ActionBar } from "./ActionBar.tsx"
 import { InstallCommand } from "./InstallCommand.tsx"
@@ -75,7 +75,10 @@ const advanceStepAtom = Atom.fnSync((event: AnimationEvent<HTMLDivElement>, ctx)
   ctx.set(directionAtom, "forward")
   ctx.set(activeAtom, (ctx(activeAtom) + 1) % steps.length)
 })
-const togglePlayingAtom = Atom.fnSync((_event: unknown, ctx) => ctx.set(playingAtom, !ctx(playingAtom)))
+const togglePlayingAtom = Atom.fnSync((event: MouseEvent<HTMLButtonElement>, ctx) => {
+  ctx.set(playingAtom, !ctx(playingAtom))
+  event.currentTarget.closest(".walkthrough")?.scrollIntoView({ block: "start" })
+})
 
 const StepTab = (props: { readonly step: LifecycleStep; readonly index: number }) => {
   const active = useAtomValue(activeAtom)
