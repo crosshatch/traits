@@ -7,16 +7,21 @@ import { ActionBar } from "./ActionBar.tsx"
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps, type LifecycleStep } from "./LifecycleStep.ts"
 import { LifecycleVisual } from "./LifecycleVisual.tsx"
+import { TraitAnatomy } from "./TraitAnatomy.tsx"
 
 const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii"] as const
 const activeAtom = Atom.make(0)
 const chapterAtom = Atom.make<string | undefined>(undefined)
 const observeChaptersAtom = Atom.make((ctx) => {
   const updateChapter = () => {
-    const readingLine = window.innerHeight * 0.3
+    const contents = document.querySelector<HTMLElement>(".contents-band")
+    const readingLine =
+      (contents?.getBoundingClientRect().height ?? 0) +
+      Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) +
+      1
     const chapter = Array.findLast(document.querySelectorAll<HTMLElement>(".chapter"), (element) => {
-      const bounds = element.getBoundingClientRect()
-      return bounds.top <= readingLine && bounds.bottom > readingLine
+      const heading = element.querySelector<HTMLElement>(".chapter-heading")
+      return heading !== null && heading.getBoundingClientRect().top <= readingLine
     }).pipe(Option.getOrUndefined)
     ctx.set(chapterAtom, chapter?.id)
   }
@@ -145,18 +150,22 @@ export const App = () => {
       <main id="guide">
         <div className="contents-band">
           <span className="eyebrow">Table of contents</span>
+          <a href="#anatomy" aria-current={chapter === "anatomy" ? "location" : undefined}>
+            <span>I.</span> Anatomy of a trait
+          </a>
           <a href="#lifecycle" aria-current={chapter === "lifecycle" ? "location" : undefined}>
-            <span>I.</span> The loop
+            <span>II.</span> The loop
           </a>
           <a href="#tools" aria-current={chapter === "tools" ? "location" : undefined}>
-            <span>II.</span> Two tools
+            <span>III.</span> Two tools
           </a>
         </div>
 
         <div className="reading-area">
+          <TraitAnatomy />
           <section className="chapter margin-blue" id="lifecycle" aria-labelledby="lifecycle-title">
             <div className="chapter-heading">
-              <p className="eyebrow">Chapter I</p>
+              <p className="eyebrow">Chapter II</p>
               <h2 id="lifecycle-title">The loop</h2>
             </div>
             <div className="prose lead">
@@ -240,7 +249,7 @@ export const App = () => {
 
           <section className="chapter margin-gold" id="tools" aria-labelledby="tools-title">
             <div className="chapter-heading">
-              <p className="eyebrow">Chapter II</p>
+              <p className="eyebrow">Chapter III</p>
               <h2 id="tools-title">Two tools</h2>
             </div>
             <div className="prose lead">
