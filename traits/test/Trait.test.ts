@@ -14,6 +14,38 @@ const minimal = Trait.Trait.make({
   purpose: "Prevent unauthorized spending."
 })
 
+const multilineContext = String.stripMargin(`
+|Supporting context.
+|
+|---
+|
+|\`\`\`diff
+| const value = {
+|-  bad: true,
+|+  good: true,
+| }
+|\`\`\`
+`)
+
+const foldedDocument = String.stripMargin(`
+|---
+|name: ${name}
+|subject: A payment.
+|requirement: >
+|  Stay within
+|  delegated authority.
+|purpose: Protect funds.
+|applicability: |-
+|  Before payment.
+|  Except test transactions.
+|---
+|
+|# Context
+|
+|---
+|Not frontmatter.
+`)
+
 it.effect(
   "requests the distinct JSON shape required for decomposition",
   Effect.fnUntraced(function* () {
@@ -91,7 +123,7 @@ it.effect(
         applicability: `Before committing funds.\nExcept explicitly authorized test transactions.${suffix}`,
         purpose: `Protect funds.\nEnable autonomous purchases.${suffix}`,
         guidance: `Negotiate, decline, or escalate.\nDo not assume permission.${suffix}`,
-        context: `Supporting context.\n\n---\n\n\`\`\`diff\n const value = {\n-  bad: true,\n+  good: true,\n }\n\`\`\`${suffix}`
+        context: `${String.trim(multilineContext)}${suffix}`
       })
       const text = Trait.serialize(trait)
       expect(text).toContain("requirement: |")
@@ -106,10 +138,7 @@ it.effect(
 it.effect(
   "parses literal and folded YAML while leaving Markdown context untouched",
   Effect.fnUntraced(function* () {
-    const trait = yield* Trait.parse(
-      `---\nname: ${name}\nsubject: A payment.\nrequirement: >\n  Stay within\n  delegated authority.\npurpose: Protect funds.\napplicability: |-\n  Before payment.\n  Except test transactions.\n---\n\n# Context\n\n---\nNot frontmatter.\n`,
-      "/traits/test.md"
-    )
+    const trait = yield* Trait.parse(String.trimStart(foldedDocument), "/traits/test.md")
     expect(trait.requirement).toBe("Stay within delegated authority.\n")
     expect(trait.applicability).toBe("Before payment.\nExcept test transactions.")
     expect(trait.context).toBe("\n# Context\n\n---\nNot frontmatter.\n")

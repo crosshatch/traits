@@ -1,6 +1,8 @@
+import { fileURLToPath } from "node:url"
+
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, Layer } from "effect"
+import { Effect, FileSystem, Layer, String } from "effect"
 import { FetchHttpClient } from "effect/http"
 
 import * as TraitsConfigProvider from "../_util/TraitsConfigProvider.ts"
@@ -14,6 +16,45 @@ const layer = TraitsConfig.layer.pipe(
   Layer.provideMerge(FetchHttpClient.layer),
   Layer.provide(TraitsConfigProvider.layer),
   Layer.provideMerge(NodeServices.layer)
+)
+
+const rawMultilineExample = String.stripMargin(`
+|type TraitField = { readonly value: string }
+|const field: TraitField = {
+|  value: \`---
+|
+|\\\`\\\`\\\`diff
+|-import { InvalidDocument } from "./InvalidDocument.ts"
+|+export class InvalidDocument
+|+  extends S.TaggedError<InvalidDocument>()("InvalidDocument", {
+|+    path: S.String,
+|+  }) {}
+|\\\`\\\`\\\`\`
+|}
+`)
+
+it.effect(
+  "detects missing stripMargin in raw multiline text and accepts the corrected real component",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const traitPath = fileURLToPath(new URL("../../.agents/traits/strip-margin-for-multiline-text.md", import.meta.url))
+    const traitText = yield* fs.readFileString(traitPath)
+    const trait = yield* Trait.parse(traitText, traitPath)
+    const componentPath = fileURLToPath(new URL("../../traits.sh/src/TraitAnatomy.tsx", import.meta.url))
+    const component = yield* fs.readFileString(componentPath)
+    for (const example of [
+      { text: rawMultilineExample, classification: "violation" },
+      { text: component, classification: "compliant" }
+    ]) {
+      const result = yield* TraitEvaluation.evaluateAll(
+        [trait],
+        Source.make({ text: example.text }),
+        "Reviewing a TypeScript/TSX component containing a large embedded Markdown diff. Assess the complete source."
+      )
+      expect(result[0]?.assessment.classification).toBe(example.classification)
+    }
+  }, Effect.provide(layer)),
+  { timeout: 120000 }
 )
 
 it.effect(

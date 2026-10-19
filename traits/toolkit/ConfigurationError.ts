@@ -1,4 +1,4 @@
-import { Cause, Effect, Layer, Schema as S } from "effect"
+import { Cause, Effect, Layer, Schema as S, String } from "effect"
 import { McpServer, Tool, Toolkit } from "effect/ai"
 
 import { CheckTraits } from "./CheckTraits.ts"
@@ -21,20 +21,21 @@ const toolkit = Toolkit.make(
   }).annotate(Tool.Readonly, true)
 )
 
+const derivationInstructions = String.stripMargin(`
+|Surface this configuration failure to the user. Fix the reported error, then restart the Traits MCP server and retry the same trait derivation with the identical arguments. No trait was saved; keep the proposal pending until the error is resolved. Do not paste credentials into chat.
+`)
+const reviewInstructions = String.stripMargin(`
+|Surface this configuration failure to the user. Fix the reported error, then restart the Traits MCP server and retry the same check. No trait review was performed. Do not paste credentials into chat.
+`)
+
 export const layer = (cause: Cause.Cause<unknown>) =>
   Cause.hasInterruptsOnly(cause)
     ? Layer.effectDiscard(Effect.interrupt)
     : McpServer.toolkit(toolkit).pipe(
         Layer.provide(
           toolkit.toLayer({
-            derive_trait: () =>
-              Effect.fail(
-                `${Cause.pretty(cause)}\n\nSurface this configuration failure to the user. Fix the reported error, then restart the Traits MCP server and retry the same trait derivation with the identical arguments. No trait was saved; keep the proposal pending until the error is resolved. Do not paste credentials into chat.`
-              ),
-            check_traits: () =>
-              Effect.fail(
-                `${Cause.pretty(cause)}\n\nSurface this configuration failure to the user. Fix the reported error, then restart the Traits MCP server and retry the same check. No trait review was performed. Do not paste credentials into chat.`
-              )
+            derive_trait: () => Effect.fail(`${Cause.pretty(cause)}\n\n${String.trim(derivationInstructions)}`),
+            check_traits: () => Effect.fail(`${Cause.pretty(cause)}\n\n${String.trim(reviewInstructions)}`)
           })
         )
       )
