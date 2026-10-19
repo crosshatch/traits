@@ -27,6 +27,7 @@
     "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
     "@types/node": "catalog:",
+    "pkg-pr-new": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   },

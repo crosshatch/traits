@@ -6,7 +6,13 @@ import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
 import * as Trait from "../Trait.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 
-const name = Trait.TraitName.make("test-trait")
+const name = Trait.TraitName.make("delegated-spending")
+const minimal = Trait.Trait.make({
+  name,
+  subject: "A payment an agent is considering authorizing.",
+  requirement: "The payment must fall within delegated spending authority.",
+  purpose: "Prevent unauthorized spending."
+})
 
 it.effect(
   "requests the distinct JSON shape required for decomposition",
@@ -62,107 +68,73 @@ it.effect(
 )
 
 it.effect(
-  "roundtrips a dedicated BAD-to-GOOD diff separately from metadata and body",
+  "roundtrips a minimal trait without optional fields or context",
   Effect.fnUntraced(function* () {
-    const diff = "-const value = bad()\n+const value = good()"
-    const body = "Prefer good().\n\n---\nKeep this separator.\n"
-    const trait = Trait.Trait.make({ name, diff, body, applicability: {}, extensionMetadata: { priority: 2 } })
-    const text = Trait.serialize(trait)
-    expect(text).toContain(`---\n\n\`\`\`diff\n${diff}\n\`\`\`\n\n---\n${body}`)
-    expect(text).not.toContain("diff:")
+    const text = Trait.serialize(minimal)
     const parsed = yield* Trait.parse(text, "/traits/test.md")
-    expect(parsed).toEqual(trait)
-    const crlf = yield* Trait.parse(pipe(text, String.replaceAll("\n", "\r\n")), "/traits/test.md")
-    expect(crlf.diff).toBe(pipe(diff, String.replaceAll("\n", "\r\n")))
-    expect(crlf.body).toBe(pipe(body, String.replaceAll("\n", "\r\n")))
+    expect(parsed).toEqual(minimal)
+    expect(text).not.toContain("context:")
+    expect(text).not.toContain("applicability:")
+    const atEnd = yield* Trait.parse(pipe(text, String.trimEnd), "/traits/test.md")
+    expect(atEnd).toEqual(minimal)
   })
 )
 
 it.effect(
-  "rejects incomplete leading examples and examples without both sides",
+  "preserves complete multiline traits and Markdown context through YAML roundtrips",
   Effect.fnUntraced(function* () {
-    for (const example of [
-      "```diff\n-bad()\n+good()\n```\nBody",
-      "```diff\n+good()\n```\n\n---\nBody",
-      "```diff\n-bad()\n"
-    ]) {
-      const result = yield* Trait.parse(`---\nname: ${name}\n---\n${example}`, "/traits/test.md").pipe(Effect.result)
-      expect(Result.isFailure(result)).toBe(true)
+    for (const suffix of ["", "\n", "\n\n"]) {
+      const trait = Trait.Trait.make({
+        ...minimal,
+        subject: ` A payment proposal\nwith indented context.${suffix}`,
+        requirement: `Require delegated authority.\n---\nDo not exceed the budget.${suffix}`,
+        applicability: `Before committing funds.\nExcept explicitly authorized test transactions.${suffix}`,
+        purpose: `Protect funds.\nEnable autonomous purchases.${suffix}`,
+        guidance: `Negotiate, decline, or escalate.\nDo not assume permission.${suffix}`,
+        context: `Supporting context.\n\n---\n\n\`\`\`diff\n const value = {\n-  bad: true,\n+  good: true,\n }\n\`\`\`${suffix}`
+      })
+      const text = Trait.serialize(trait)
+      expect(text).toContain("requirement: |")
+      const parsed = yield* Trait.parse(text, "/traits/test.md")
+      expect(parsed).toEqual(trait)
+      const crlf = yield* Trait.parse(pipe(text, String.replaceAll("\n", "\r\n")), "/traits/test.md")
+      expect(crlf).toEqual({ ...trait, context: pipe(trait.context!, String.replaceAll("\n", "\r\n")) })
     }
   })
 )
 
 it.effect(
-  "loads frontmatter without changing the Markdown body",
-  Effect.fnUntraced(function* () {
-    const body = "Keep this body.\n\n---\nNot a header.\n"
-    const trait = yield* Trait.parse(`---\nname: ${name}\n---\n${body}`, "/traits/test.md")
-    expect(trait).toEqual({ name, body, applicability: {}, extensionMetadata: {} })
-    expect(Trait.serialize(trait)).toBe(`---\nname: ${name}\n---\n${body}`)
-  })
-)
-
-it.effect(
-  "parses YAML metadata separately from the body and preserves additional fields",
+  "parses literal and folded YAML while leaving Markdown context untouched",
   Effect.fnUntraced(function* () {
     const trait = yield* Trait.parse(
-      `---\nname: ${name}\nwhen: editing schemas.\nmime:\n  - text/typescript\npriority: 2\n---\nBody.\n`,
+      `---\nname: ${name}\nsubject: A payment.\nrequirement: >\n  Stay within\n  delegated authority.\npurpose: Protect funds.\napplicability: |-\n  Before payment.\n  Except test transactions.\n---\n\n# Context\n\n---\nNot frontmatter.\n`,
       "/traits/test.md"
     )
-    expect(trait).toEqual({
-      name,
-      body: "Body.\n",
-      applicability: { when: "editing schemas.", mime: ["text/typescript"] },
-      extensionMetadata: { priority: 2 }
-    })
-    const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
-    expect(roundtrip).toEqual(trait)
-    expect(Trait.serialize(trait)).toContain("when: editing schemas.")
-    expect(Trait.serialize(trait)).not.toContain("activation:")
+    expect(trait.requirement).toBe("Stay within delegated authority.\n")
+    expect(trait.applicability).toBe("Before payment.\nExcept test transactions.")
+    expect(trait.context).toBe("\n# Context\n\n---\nNot frontmatter.\n")
   })
 )
 
 it.effect(
-  "supports scalar MIME values, multiline when, and CRLF headers",
+  "rejects old-format traits and unsupported frontmatter rather than discarding content",
   Effect.fnUntraced(function* () {
-    const trait = yield* Trait.parse(
-      `---\r\nname: ${name}\r\nwhen: |\r\n  editing\r\n  React components.\r\nmime: text/tsx\r\n---\r\nBody.\r\n`,
-      "/traits/test.md"
-    )
-    expect(trait.applicability.when).toBe("editing\nReact components.\n")
-    expect(trait.applicability.mime).toBe("text/tsx")
-    expect(trait.body).toBe("Body.\r\n")
-  })
-)
-
-it.effect(
-  "supports minimal frontmatter and a closing delimiter at end of file",
-  Effect.fnUntraced(function* () {
-    const empty = yield* Trait.parse(`---\nname: ${name}\n---\nBody`, "/traits/test.md")
-    expect(empty).toEqual({ name, body: "Body", applicability: {}, extensionMetadata: {} })
-    const atEnd = yield* Trait.parse(`---\nname: ${name}\nmime: text/typescript\n---`, "/traits/test.md")
-    expect(atEnd).toEqual({
-      name,
-      body: "",
-      applicability: { mime: "text/typescript" },
-      extensionMetadata: {}
-    })
-  })
-)
-
-it.effect(
-  "rejects malformed, unterminated, and incorrectly typed metadata",
-  Effect.fnUntraced(function* () {
+    const header = `name: ${name}\nsubject: A payment.\nrequirement: Stay within authority.\npurpose: Protect funds.\n`
     for (const text of [
-      "---\nmime: [\n---\nBody",
-      "---\nmime: text/typescript\nBody",
-      "---\n- not an object\n---\nBody",
-      `---\nname: ${name}\nwhen: false\n---\nBody`,
-      `---\nname: ${name}\nmime: 123\n---\nBody`,
-      "---\nname: invalid_name\n---\nBody",
-      "---\nwhen: Missing name\n---\nBody",
-      "Body without frontmatter",
-      `Body before frontmatter\n---\nname: ${name}\n---\nBody`
+      `---\nname: ${name}\n---\nAn old body-only requirement.`,
+      ...Array.map(
+        [
+          "mime: text/typescript",
+          "when: editing",
+          "skip: tests",
+          "diff: example",
+          "body: hidden",
+          "context: hidden",
+          "priority: 2",
+          "extensionMetadata: {}"
+        ],
+        (field) => `---\n${header}${field}\n---\nContext`
+      )
     ]) {
       const result = yield* Trait.parse(text, "/traits/test.md").pipe(Effect.result)
       expect(Result.isFailure(result)).toBe(true)
@@ -171,59 +143,40 @@ it.effect(
 )
 
 it.effect(
-  "serializes updated bodies without dropping metadata",
+  "rejects missing, empty, and incorrectly typed core fields",
   Effect.fnUntraced(function* () {
-    const trait = Trait.Trait.make({
-      name,
-      body: "Replacement\n",
-      applicability: { when: "editing.", mime: "text/tsx" },
-      extensionMetadata: {}
-    })
-    const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
-    expect(roundtrip).toEqual(trait)
+    for (const field of ["name", "subject", "requirement", "applicability", "purpose", "guidance"]) {
+      for (const value of ["", "   ", false, {}, []]) {
+        const input: unknown = { ...minimal, [field]: value }
+        const result = yield* pipe(input, S.decodeUnknownEffect(Trait.Trait), Effect.result)
+        expect(Result.isFailure(result)).toBe(true)
+      }
+    }
+    for (const header of [
+      `name: ${name}\nsubject: A payment.\nrequirement: Stay within authority.`,
+      `name: ${name}\nsubject: A payment.\npurpose: Protect funds.`,
+      `name: ${name}\nrequirement: Stay within authority.\npurpose: Protect funds.`,
+      "subject: A payment.\nrequirement: Stay within authority.\npurpose: Protect funds."
+    ]) {
+      const result = yield* Trait.parse(`---\n${header}\n---`, "/traits/test.md").pipe(Effect.result)
+      expect(Result.isFailure(result)).toBe(true)
+    }
   })
 )
 
 it.effect(
-  "preserves skip conditions alongside when without changing the body",
+  "rejects malformed YAML, missing delimiters, and unsafe names",
   Effect.fnUntraced(function* () {
-    const trait = yield* Trait.parse(
-      `---\nname: ${name}\nwhen: editing React state.\nskip: When a custom registry is required.\n---\nBody`,
-      "/traits/test.md"
-    )
-    expect(trait.applicability.skip).toBe("When a custom registry is required.")
-    expect(trait.applicability.when).toBe("editing React state.")
-    expect(trait.body).toBe("Body")
-    const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
-    expect(roundtrip).toEqual(trait)
-  })
-)
-
-it.effect(
-  "rejects non-string skip conditions",
-  Effect.fnUntraced(function* () {
-    const result = yield* Trait.parse(`---\nname: ${name}\nskip: true\n---\nBody`, "/traits/test.md").pipe(
-      Effect.result
-    )
-    expect(Result.isFailure(result)).toBe(true)
-  })
-)
-
-it.effect(
-  "preserves frontmatter identity while keeping the Markdown body authoritative",
-  Effect.fnUntraced(function* () {
-    const trait = yield* Trait.parse(
-      `---\nname: ${name}\nbody: Other body\nmime: text/typescript\n---\nBody`,
-      "/traits/test.md"
-    )
-    expect(trait).toEqual({ name, body: "Body", applicability: { mime: "text/typescript" }, extensionMetadata: {} })
-    expect(Trait.serialize(trait)).toBe(`---\nmime: text/typescript\nname: ${name}\n---\nBody`)
-  })
-)
-
-it.effect(
-  "requires a safe descriptive name",
-  Effect.fnUntraced(function* () {
+    for (const text of [
+      "---\nsubject: [\n---\nContext",
+      "---\nsubject: A payment.\nContext",
+      "---\n- not an object\n---",
+      "Context without frontmatter",
+      "Context before frontmatter\n---\nname: test\n---"
+    ]) {
+      const result = yield* Trait.parse(text, "/traits/test.md").pipe(Effect.result)
+      expect(Result.isFailure(result)).toBe(true)
+    }
     for (const invalid of [
       "",
       "../escape",
@@ -235,45 +188,7 @@ it.effect(
       "trait-example",
       pipe("a", String.repeat(81))
     ]) {
-      const result = yield* Trait.parse(`---\nname: ${JSON.stringify(invalid)}\n---\nBody`, "/traits/test.md").pipe(
-        Effect.result
-      )
-      expect(Result.isFailure(result)).toBe(true)
-    }
-    const missing = yield* Trait.parse("---\nmime: text/typescript\n---\nBody", "/traits/test.md").pipe(Effect.result)
-    expect(Result.isFailure(missing)).toBe(true)
-  })
-)
-
-it.effect(
-  "roundtrips nested JSON-compatible extension metadata",
-  Effect.fnUntraced(function* () {
-    const trait = Trait.Trait.make({
-      name,
-      body: "Body",
-      applicability: {},
-      extensionMetadata: { metadata: { values: [null, true, 2, "text", { nested: false }] } }
-    })
-    const roundtrip = yield* Trait.parse(Trait.serialize(trait), "/traits/test.md")
-    expect(roundtrip).toEqual(trait)
-  })
-)
-
-it.effect(
-  "rejects non-JSON extension values in frontmatter and domain records",
-  Effect.fnUntraced(function* () {
-    for (const value of [".nan", ".inf", "-.inf", "{ nested: [.nan] }"]) {
-      const result = yield* Trait.parse(`---\nname: ${name}\nmetadata: ${value}\n---\nBody`, "/traits/test.md").pipe(
-        Effect.result
-      )
-      expect(Result.isFailure(result)).toBe(true)
-    }
-    for (const metadata of [undefined, NaN, Infinity, { nested: [undefined] }]) {
-      const result = yield* pipe(
-        { name, body: "Body", applicability: {}, extensionMetadata: { metadata } },
-        S.decodeUnknownEffect(Trait.Trait),
-        Effect.result
-      )
+      const result = yield* pipe({ ...minimal, name: invalid }, S.decodeEffect(Trait.Trait), Effect.result)
       expect(Result.isFailure(result)).toBe(true)
     }
   })

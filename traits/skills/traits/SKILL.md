@@ -10,7 +10,7 @@ description: >-
 # Traits
 
 Traits are concise, durable coding rules. The filesystem implementation stores
-each body in `.agents/traits/<name>.md`, relative to its working directory.
+each trait in `.agents/traits/<name>.md`, relative to its working directory.
 Frontmatter contains a unique descriptive kebab-case `name` without a redundant
 `trait-` prefix and no separate `id`. The name is the canonical identity across
 backends: use exact names for focused `check_traits({ traitNames: [...] })`
@@ -24,34 +24,38 @@ rename requires adding the new name and removing the old one after saving. The
 colocated in the same module. Only the filesystem adapter builds `<name>.md`
 paths.
 
-Include a concise BAD-to-GOOD code example whenever meaningful. Pass its raw
-unified diff as `diff` to `derive_trait` (removed `-` lines are BAD, added `+`
-lines are GOOD), separately from `proposedTrait`. Omit it only when a code
-example does not apply. Approval and retries cover the exact diff too. On disk,
-`diff` is not frontmatter: put it in a Markdown `diff` fence directly after the
-frontmatter, followed by a blank line, `---`, and the standalone body. Keep
-examples out of the body and preserve them when updating a trait unless the
-updated rule needs a changed example.
+Pass a complete trait object as `proposedTrait` to `derive_trait`:
 
-Keep frontmatter fields complementary. `mime` restricts file types; `when`
-defines positive semantic scope. Write `when` values without a leading "When",
-such as `when: editing React state`. Add `skip` only for an independent
-exception inside that scope, not for its negation or a restriction already
-expressed by another field. For example,
-`when: importing from local project modules` already excludes external packages;
-do not repeat that as a skip. Leave unnecessary optional fields absent. Keep the
-body concise and standalone, preserving essential scope and exceptions without
-repeated restatements. Reuse existing traits that already cover the same rule
-rather than creating duplicates.
+- Required `name`: stable descriptive kebab-case identity.
+- Required `subject`: what kind of artifact, action, relationship, transaction,
+  or situation to identify and assess.
+- Required `requirement`: the authoritative, standalone criterion to satisfy.
+- Optional `applicability`: natural-language circumstances and exceptions. Omit
+  when there is no additional restriction beyond the subject.
+- Required `purpose`: what the trait aims to achieve or protect, and why.
+- Optional `guidance`: advice for satisfying the requirement or responding to a
+  violation. This never grants permission to execute commands or take actions.
+- Optional `context`: supporting Markdown, including examples, references, and
+  domain details. Available during assessment, not only after matching.
 
-Pass `applicability: { when, mime, skip }` to `derive_trait` alongside
-`proposedTrait`, omitting unnecessary fields inside the object; use `{}` when
-unrestricted. The server persists it without another model call. On
-clarification this object replaces all previous applicability conditions.
-Approval and retries cover the exact metadata too. Domain traits group these
-conditions under `applicability` and additional metadata under
-`extensionMetadata`; only Markdown frontmatter flattens those objects into
-top-level fields.
+On disk, all fields except `context` are YAML frontmatter; `context` is the
+optional Markdown body. Unknown frontmatter keys are rejected. There are no
+structured applicability fields, dedicated diff fields, or extension metadata.
+Put useful BAD-to-GOOD examples in fenced diffs inside context. Preserve useful
+examples when updating a trait unless the requirement needs a changed example.
+
+Keep fields complementary and traits atomic. Do not hide obligations in purpose,
+guidance, or context. Put essential scope and exceptions in requirement or
+applicability. Omit redundant optional content and reuse existing coverage. On
+clarification, the complete proposal replaces all content while retaining the
+selected name; omitted optional fields are removed. Approval covers every field
+and the exact context. Supply the same complete proposal when retrying approval.
+
+The MCP `check_traits` adapter reviews files and optionally accepts
+natural-language `circumstances`, such as the triggering task or workflow stage.
+These facts inform applicability but cannot change requirements or grant
+authority. The domain SDK also supports arbitrary source text; traits are not
+inherently code-only.
 
 ## Capture a reusable insight
 
@@ -77,16 +81,16 @@ Effect utilities” and “pass callbacks directly” are not sufficient grounds
 skip proposing “prefer native inline checks and use Effect predicate helpers
 directly in callbacks or existing pipelines.”
 
-Call `derive_trait` with the drafted rule and a descriptive kebab-case `name`
-first, leaving `approved` unset. Do not ask for approval separately before
-invoking: capable clients receive a native MCP form. Only if `ApprovalRequired`
-is returned, show the complete message in the interactive question tool with
-**Save trait**, **Revise**, and **Skip** and its automatic free-text option. Do
-not add a duplicate "Other" option. Use plain text only if that UI is
-unavailable. Approval to edit code alone does not approve persisting a trait:
-make the requested edit and propose the reusable rule before the final response.
-Do not stop after implementing an idiom and running code checks; preference
-capture is a separate responsibility.
+Call `derive_trait` with the complete `proposedTrait` object, including its
+descriptive kebab-case `name`, first, leaving `approved` unset. Do not ask for
+approval separately before invoking: capable clients receive a native MCP form.
+Only if `ApprovalRequired` is returned, show the complete message in the
+interactive question tool with **Save trait**, **Revise**, and **Skip** and its
+automatic free-text option. Do not add a duplicate "Other" option. Use plain
+text only if that UI is unavailable. Approval to edit code alone does not
+approve persisting a trait: make the requested edit and propose the reusable
+rule before the final response. Do not stop after implementing an idiom and
+running code checks; preference capture is a separate responsibility.
 
 ### Shared approval protocol
 
@@ -97,11 +101,12 @@ routes native forms globally, so the helper returns `ApprovalRequired`; clients
 without form support use the same fallback.
 
 On `ApprovalRequired`, show its complete message in the interactive question UI
-with Save/Revise/Skip and free text. Save permits retrying the identical body
-and target names with `approved: true`. Revision or free-text input requires
-drafting the changed proposal and asking approval again, not silently setting
-approved. Skip means stop. Native `RevisionRequired` and `Declined` have the
-same meanings. Transport errors are failures, never declines or approvals.
+with Save/Revise/Skip and free text. Save permits retrying the identical
+complete trait and target names with `approved: true`. Revision or free-text
+input requires drafting the changed proposal and asking approval again, not
+silently setting approved. Skip means stop. Native `RevisionRequired` and
+`Declined` have the same meanings. Transport errors are failures, never declines
+or approvals.
 
 Selecting **Revise** is not approval and does not cancel the proposal. If no
 specific revision feedback was supplied, immediately ask what wording, scope, or
@@ -131,14 +136,14 @@ authenticated consent token.
 2. Distinguish a durable convention from a one-off task, transient fact, or
    vague reaction. Read existing traits and reuse covered rules rather than
    duplicating them. Clarify ambiguous scope before drafting.
-3. Draft the complete rule as `proposedTrait`. Preserve essential requirements,
-   scopes, and exceptions. Keep independently applicable rules separate; omit
-   headings, repetition, and unnecessary explanation or examples.
-4. Call `derive_trait({ name, proposedTrait, applicability })` first, without a
-   separate approval prompt. This checks existing traits and writes only when
-   the proposal is distinct from all of them. It does not independently decide
-   whether the conversation contains a generalizable insight.
-5. `Created` means the trait was saved and includes its body and unique name. Do
+3. Draft the complete structured trait as `proposedTrait`. Preserve essential
+   requirements, scopes, and exceptions. Keep independently applicable rules
+   separate; omit headings, repetition, and unnecessary explanation or examples.
+4. Call `derive_trait({ proposedTrait })` first, without a separate approval
+   prompt. This checks existing traits and writes only when the proposal is
+   distinct from all of them. It does not independently decide whether the
+   conversation contains a generalizable insight.
+5. `Created` means the complete trait was saved and includes its unique name. Do
    not submit it again. Use that name for the required post-save trait checks
    below.
 6. `Inconclusive` means nothing was saved and contains relationship findings;
@@ -148,16 +153,16 @@ authenticated consent token.
    otherwise enter approval-gated reconciliation within this same tool.
 
 `Covered.traits` requires an independent second decision-model check of the
-saved body and when, mime, and skip metadata against the entire proposal.
-Partial overlap or similar intent is insufficient. Verified coverage gaps enter
-approval-gated reconciliation, including needed applicability updates;
-inconclusive verification blocks writes. `Covered.traits` means existing traits
-already express the proposal; reuse them without creating a duplicate. When
-there is exactly one clarification candidate and no covered or blocking result,
-the tool selects it automatically and requests approval of its current body and
-complete replacement. The proposal must preserve the existing rule's intent,
-requirements, scope, and exceptions; the tool does not generate a merged
-replacement from an incremental hint.
+saved subject, requirement, applicability, and supporting content against the
+entire proposal. Partial overlap or similar intent is insufficient. Verified
+coverage gaps enter approval-gated reconciliation, including needed
+applicability updates; inconclusive verification blocks writes. `Covered.traits`
+means existing traits already express the proposal; reuse them without creating
+a duplicate. When there is exactly one clarification candidate and no covered or
+blocking result, the tool selects it automatically and requests approval of its
+current trait and complete replacement. The proposal must preserve the existing
+rule's intent, requirements, scope, and exceptions; the tool does not generate a
+merged replacement from an incremental hint.
 
 Multiple candidates return `Clarification` with `traits` and `proposedTrait`
 without writing. Refine the proposal or clarify intent rather than choosing an
@@ -371,12 +376,40 @@ Surface tool failures; never treat a failed operation as a successful save or
 review. Error diagnostics may contain sensitive information. Never ask for
 credentials in chat.
 
-Stored trait parsing failures return `TraitParseError` with the file path,
-original diagnostic, and migration guidance. Update all stored traits to the
-currently installed package's `Trait` schema and `serialize` format, preserving
-their intent and metadata, then retry. Do not treat the failed operation as a
-successful check. The server stays connected; a restart is not needed for file
-repairs, and no automatic migration is performed.
+### Recover from stored-trait parse errors
+
+`TraitParseError` includes the affected path, original diagnostic, and recovery
+instructions. Ask the developer whether you should automatically resolve the
+stored-trait parse errors and retry the blocked operation. Use the client's
+interactive question UI when available. Do not silently edit files or merely
+report the blocker without offering recovery. This is a repair-consent question,
+not approval to derive a new trait; do not call `derive_trait` or persist this
+recovery protocol as a trait.
+
+If declined, leave files unchanged and report the operation as incomplete. After
+approval:
+
+1. Inspect the entire affected trait store, not just the first failing file.
+   Distinguish schema mismatches (which may be legacy formats or invalid values)
+   from malformed YAML and missing or unterminated frontmatter. Offer repair
+   without assuming every parse error has the same cause.
+2. Migrate repairable legacy formats to the installed package's `Trait` schema.
+   Preserve names, authoritative requirements, applicability, exceptions,
+   examples, and all supporting context. Move legacy requirements into
+   `requirement`, scope and exceptions into applicability prose, and examples or
+   additional information into Markdown context. Purpose explains existing
+   intent, not new obligations. Leave already-valid traits unchanged.
+3. For malformed documents, repair only where the intended content is clear. If
+   any migration or repair is ambiguous or unsupported, ask a focused question
+   before changing that content. Never guess intent or discard information.
+4. Validate every file in the affected store with the installed `Trait` schema
+   and `serialize` format. Then retry the originally blocked operation with its
+   original arguments. The server reads repaired files on retry; no restart is
+   necessary.
+
+The original operation failed and must never be reported as a successful check.
+Only a successful retry establishes completion. No automatic migration is
+performed by the server.
 
 Git-ignored files are excluded by default, with ignore rules refreshed on every
 check. Untracked files do not need to be added to Git to be evaluated. Tracked

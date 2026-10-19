@@ -1,13 +1,16 @@
 ---
 name: nonredundant-trait-applicability-metadata
-when: authoring or reviewing trait applicability metadata.
+purpose: Make applicability decisions easier by separating the subject from genuinely additional scope and exceptions.
+subject: Trait subject and applicability descriptions.
+requirement: >
+  Keep trait subject and applicability descriptions complementary. Subject
+  identifies what to assess; applicability adds circumstances, language or file
+  restrictions, and independent exceptions without repeating the subject or
+  restating its negation. Omit applicability when it adds no restriction.
+applicability: Authoring or reviewing trait subject and applicability descriptions.
 ---
-
 ```diff
--when: importing from local project modules
--skip: importing from external packages
-+when: importing from local project modules
+-subject: Imports from local project modules.
+-applicability: Not imports from external packages.
++subject: Imports from local project modules.
 ```
-
----
-Keep trait applicability metadata nonredundant: when defines positive semantic scope, and mime restricts file types or languages. Include skip only for an independent exception inside that scope; omit it when it merely negates or repeats when or mime. Leave unnecessary optional metadata fields absent.

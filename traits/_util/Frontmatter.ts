@@ -69,10 +69,10 @@ export const parse = <Schema extends S.Top>(schema: Schema) =>
     })
     return yield* pipe(
       parsed,
-      S.decodeUnknownEffect(schema),
+      S.decodeUnknownEffect(schema, { onExcessProperty: "error" }),
       Effect.map((frontmatter) => ({ frontmatter, body }))
     )
   })
 
 export const serialize = (document: { readonly frontmatter: unknown; readonly body: string }): string =>
-  `---\n${Yaml.stringify(document.frontmatter)}---\n${document.body}`
+  `---\n${Yaml.stringify(document.frontmatter, { blockQuote: "literal" })}---\n${document.body}`

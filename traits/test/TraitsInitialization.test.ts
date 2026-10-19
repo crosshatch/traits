@@ -39,8 +39,8 @@ for (const fixture of [
     name: "outdated stored trait",
     source: `import { Layer } from ${JSON.stringify(effectUrl)};
       export default { layerDecisionModel: Layer.empty, layerLanguageModel: Layer.empty }`,
-    trait: "---\nname: legacy_name\n---\nKeep this rule.\n",
-    diagnostic: "Update all stored traits to the format/schema of the currently installed traits package"
+    trait: "---\nname: outdated-trait\n---\nKeep this rule.\n",
+    diagnostic: "Recovery requires developer consent"
   }
 ]) {
   it.effect(
@@ -115,7 +115,14 @@ for (const fixture of [
             ? { name: "check_traits", arguments: { include: [] } }
             : {
                 name: "derive_trait",
-                arguments: { name: "example", proposedTrait: "Example rule", applicability: {} }
+                arguments: {
+                  proposedTrait: {
+                    name: "example",
+                    subject: "An artifact.",
+                    requirement: "Example requirement.",
+                    purpose: "Preserve consistency."
+                  }
+                }
               }
         const result = yield* request(index, "tools/call", tool)
         expect(result).toMatchObject({
@@ -125,6 +132,9 @@ for (const fixture of [
         if ("trait" in fixture) {
           expect(JSON.stringify(result)).toContain(traitPath)
           expect(JSON.stringify(result)).toContain("TraitParseError")
+          expect(JSON.stringify(result)).toContain("Ask the developer:")
+          expect(JSON.stringify(result)).toContain("original arguments")
+          expect(JSON.stringify(result)).toContain("A server restart is not necessary")
         } else {
           expect(JSON.stringify(result)).toContain("restart the Traits MCP server")
           if (tool.name === "derive_trait") {
@@ -136,7 +146,10 @@ for (const fixture of [
       if ("trait" in fixture) {
         const unchanged = yield* fs.readFileString(traitPath)
         expect(unchanged).toBe(fixture.trait)
-        yield* fs.writeFileString(traitPath, "---\nname: outdated-trait\n---\nKeep this rule.\n")
+        yield* fs.writeFileString(
+          traitPath,
+          "---\nname: outdated-trait\nsubject: An artifact.\nrequirement: Keep this rule.\npurpose: Preserve consistency.\n---\n"
+        )
         const recovered = yield* request(6, "tools/call", { name: "check_traits", arguments: { include: [] } })
         expect(recovered).toMatchObject({ isError: false })
       }

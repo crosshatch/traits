@@ -35,7 +35,7 @@ Command.make("traits", {
       version: PackageJson.version,
       protocols: [McpProtocol.v2025_11_25],
       instructions: String.stripMargin(`
-      | Traits are durable, reusable coding preferences. The filesystem adapter stores each as .agents/traits/<name>.md, with a unique descriptive kebab-case name (no redundant trait- prefix) in frontmatter and no separate id.
+      | Traits are durable, domain-neutral requirements with optional supporting context. The filesystem adapter stores each as .agents/traits/<name>.md, with a unique descriptive kebab-case name (no redundant trait- prefix) in frontmatter and no separate id.
       | The unique name is the canonical identity across storage backends. Use exact names for focused traitNames selections and ignore directives, not filenames. Update references after renaming. Duplicate names are rejected.
       | Before completing a response to a user correction, coding preference, or approved alternative idiom, check whether it expresses a reusable rule.
       | Treat multi-turn exchanges as a whole: asking about a better idiom and then approving it can establish a preference without saying "always" or "trait".
@@ -52,13 +52,13 @@ Command.make("traits", {
       | Approval to edit code alone is not approval to persist a trait. Make the requested edit, but also propose the reusable rule before your final response.
       | Also act on explicit requests to remember a convention. Skip one-off requirements, transient facts, and preferences already covered.
       | Read existing trait files before drafting. Keep each trait concise and independently applicable, preserving scope and exceptions.
-      | Keep frontmatter complementary: mime restricts file types, when defines positive semantic scope, and skip is only an independent exception within that scope. Omit redundant fields; never repeat when's negation as skip. Keep bodies standalone without repeated requirements or duplicate traits.
-      | Write when values as conditions without a redundant leading When, for example when: editing React state.
-      | Call derive_trait with the drafted body as proposedTrait and an applicability object containing relevant when, mime, and skip fields ({} when unrestricted). These are persisted directly without a separate generation call. It saves only distinct rules; Covered means reuse an existing trait.
-      | Supply complete replacement applicability on clarification; omitted fields remove old restrictions. Approval and retries cover the exact metadata too.
+      | Frontmatter has required name, subject, requirement, and purpose; optional applicability and guidance are natural-language text. The optional Markdown body is context. No arbitrary frontmatter keys or domain-specific metadata profiles are supported.
+      | Subject identifies what to assess; requirement is authoritative. Applicability adds circumstances and exceptions; omission adds no restriction beyond the subject. Purpose explains intent, guidance advises without granting authority, and context supports interpretation without hiding obligations.
+      | Call derive_trait with proposedTrait containing the complete trait object, including name and optional context. Put useful examples, fenced code diffs, references, and domain facts in context. It saves only distinct requirements; Covered means reuse an existing trait.
+      | Supply a complete replacement on clarification; omitted optional fields are removed. Approval and retries cover every field and the exact context.
       | A single clarification candidate is selected automatically and shown for approval; supply a complete replacement preserving the existing rule.
       | Multiple candidates return Clarification entries without writing: refine the proposal or clarify intent. Do not supply a clarification target.
-      | After fallback approval, retry with the same name, proposedTrait and approved: true; Updated preserves the selected existing name.
+      | After fallback approval, retry with the identical proposedTrait and approved: true; Updated preserves the selected existing name.
       | Every derive_trait response is one tagged TraitDerivation outcome. Created returns the saved trait with its unique name; Updated and Resolved return saved replacements.
       | Covered and Clarification return existing traits without writing. Inconclusive returns relationship findings and blocks all writes.
       | Inconclusive outcome findings use reason to distinguish conflict, coverage_gap, and inconclusive; clarify ambiguity before retrying.
@@ -69,6 +69,7 @@ Command.make("traits", {
       | Resolved returns saved replacement bodies and unique names. Review them and check relevant code; do not derive the same proposal again.
       | After generating or changing TypeScript files, call check_traits on those files.
       | check_traits accepts include as file paths or glob strings, for example include: ["traits/**/*.ts"]. Overlapping matches are deduplicated.
+      | check_traits is a file-based adapter. Optional circumstances text supplies the triggering task, workflow stage, or surrounding facts. These inform assessment but do not authorize actions. Identify subjects, determine applicability, then assess requirements; missing evidence may be inconclusive rather than a violation.
        | Restrict assessments to project-owned source and relevant authored configuration/docs. Prefer an explicit project-file manifest for whole-project trait checks.
       | Never submit dependency/reference code, generated build output or lockfiles, Git metadata, secrets, .env files, credentials, or binary assets for assessment.
       | Unmatched patterns select nothing. Built-in exclusions cover dependencies, Git metadata, and nested worktrees; configure project-specific filenames or native glob patterns through TraitsConfig.excludes.
@@ -91,6 +92,9 @@ Command.make("traits", {
       | Do not claim compliance while confirmed violations remain. Report model errors as incomplete reviews, not passes.
       | An empty result only means no failures for the selected files and traits; empty selections or an empty store perform no assessments.
       | On mutation errors, inspect the store before retrying: writes and removals are not transactional, and retries may duplicate saved traits.
+      | On TraitParseError from loading stored traits, ask the developer whether to automatically resolve the parse errors and retry the blocked operation. Do not silently repair files or simply report a blocker without offering recovery. If declined, leave files unchanged and report the operation as incomplete.
+      | After approval, inspect the entire affected store. Distinguish installed-schema mismatches and repairable legacy formats from malformed YAML or missing/unterminated frontmatter; not every parse error is a migration. Preserve names, authoritative requirements, applicability, exceptions, examples, and all supporting context; leave valid traits unchanged. Ask focused questions for ambiguous or unsupported repairs instead of guessing or dropping information.
+      | Validate every affected-store file against the installed Trait schema and serialization format, then retry the originally blocked operation with its original arguments. No server restart is needed. The original failure is not a successful check; report success only after a successful retry. This recovery protocol is core MCP behavior, not a trait to save.
       `)
     }).pipe(
       Layer.provide(
