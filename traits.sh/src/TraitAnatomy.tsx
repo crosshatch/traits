@@ -1,4 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { String } from "effect"
 import { Atom } from "effect/reactivity"
 import type { MouseEvent } from "react"
 
@@ -8,6 +9,20 @@ type TraitField = {
   readonly value: string
   readonly description: string
 }
+
+const context = String.stripMargin(`
+|---
+|
+|\`\`\`diff
+|-// Parse.ts
+|-import { InvalidDocument } from "./InvalidDocument.ts"
+|+// Parse.ts: the small error belongs to this operation.
+|+export class InvalidDocument
+|+  extends S.TaggedError<InvalidDocument>()("InvalidDocument", {
+|+    path: S.String,
+|+  }) {}
+|\`\`\`
+`)
 
 const fields: ReadonlyArray<TraitField> = [
   {
@@ -38,17 +53,7 @@ const fields: ReadonlyArray<TraitField> = [
   {
     name: "context",
     number: "05",
-    value: `---
-
-\`\`\`diff
--// Parse.ts
--import { InvalidDocument } from "./InvalidDocument.ts"
-+// Parse.ts: the small error belongs to this operation.
-+export class InvalidDocument
-+  extends S.TaggedError<InvalidDocument>()("InvalidDocument", {
-+    path: S.String,
-+  }) {}
-\`\`\``,
+    value: String.trim(context),
     description: "Any additional context with which the agent should interpret the current trait."
   }
 ]
