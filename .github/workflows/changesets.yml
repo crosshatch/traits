@@ -27,13 +27,12 @@ jobs:
       - run: npm install --global npm@11
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - uses: changesets/action@v1
+      - uses: changesets/action@d0ee272882939fa35f22d979828acb7e61e0bd47 # v2.0.0-next.4
         with:
-          setupGitUser: false
-          version: bash -c "pnpm changeset version && pnpm format"
-          publish: pnpm changeset publish
-          commit: version packages
-          title: version packages
-          prDraft: create
-        env:
-          GITHUB_TOKEN: ${{ secrets.MADHATCHER_PAT }}
+          github-token: ${{ secrets.MADHATCHER_PAT }}
+          push-with-git-cli: true
+          version-script: bash -c "pnpm changeset version && pnpm format"
+          publish-script: pnpm changeset publish
+          commit-message: version packages
+          pr-title: version packages
+          pr-draft: create
