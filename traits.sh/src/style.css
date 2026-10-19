@@ -1,5 +1,6 @@
 :root {
   --contents-height: 5rem;
+  --dock-height: calc(6rem + env(safe-area-inset-bottom, 0px));
   font-family: "Libre Baskerville", Georgia, serif;
   color: var(--ink);
   background: var(--paper);
@@ -459,6 +460,7 @@ h3 {
   line-height: 1.8;
 }
 .walkthrough {
+  --step-controls-height: 3.5rem;
   scroll-margin-top: var(--contents-height);
   border: 1px solid var(--rule);
   margin-top: 3.5rem;
@@ -467,6 +469,7 @@ h3 {
 .step-tabs {
   position: sticky;
   top: var(--contents-height);
+  margin-bottom: var(--step-controls-height);
   z-index: 4;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -571,7 +574,14 @@ h3 {
   font-style: italic;
   font-size: 0.85rem !important;
 }
+.step-body {
+  margin-top: calc(-1 * var(--step-controls-height));
+}
 .step-controls {
+  min-height: var(--step-controls-height);
+  position: sticky;
+  bottom: var(--dock-height);
+  z-index: 4;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -1230,6 +1240,7 @@ h3 {
   font-size: 1rem;
 }
 .docked-header {
+  height: var(--dock-height);
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   position: sticky;
@@ -1327,6 +1338,7 @@ h3 {
 @media (max-width: 640px) {
   :root {
     --contents-height: 6rem;
+    --dock-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
   .masthead.docked-header {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
