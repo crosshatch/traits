@@ -389,9 +389,10 @@ p {
 }
 
 .chapter {
+  background: linear-gradient(to bottom, var(--paper), color-mix(in srgb, var(--paper), var(--ink) 5%));
   position: relative;
   scroll-margin-top: 6rem;
-  padding: 6.5rem max(1rem, calc((100vw - 1280px) / 2)) 5rem;
+  padding: 7rem max(2rem, calc((100vw - 1200px) / 2)) 6rem;
 }
 .chapter-heading {
   text-align: center;
@@ -411,7 +412,6 @@ p {
 }
 .chapter.margin-gold {
   --chapter-accent: var(--gold);
-  background: linear-gradient(110deg, color-mix(in srgb, var(--gold) 4%, transparent), transparent 60%);
 }
 .chapter.margin-green {
   --chapter-accent: var(--green);
@@ -1219,6 +1219,7 @@ h3 {
 }
 .closing {
   margin-top: 4rem;
+  padding: 0 1.25rem 4rem;
   text-align: center;
 }
 .closing > p {
@@ -1297,7 +1298,7 @@ h3 {
     padding-block: 1.5rem;
   }
   .chapter {
-    padding: 4.5rem 1.25rem;
+    padding: 5rem 2rem;
   }
   .step-panel {
     padding: 1.5rem;
@@ -1403,7 +1404,7 @@ h3 {
     text-align: center;
   }
   .chapter {
-    padding: 3.5rem 0.85rem;
+    padding: 4rem 1.25rem;
   }
   .chapter-heading {
     margin-bottom: 2rem;

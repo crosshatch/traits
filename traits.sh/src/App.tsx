@@ -4,14 +4,10 @@ import { Atom } from "effect/reactivity"
 import type { AnimationEvent, KeyboardEvent } from "react"
 
 import { ActionBar } from "./ActionBar.tsx"
-import { CodeSample } from "./CodeSample.tsx"
-import * as Illustrations from "./Illustrations.tsx"
 import { InstallCommand } from "./InstallCommand.tsx"
 import { steps, type LifecycleStep } from "./LifecycleStep.ts"
 import { LifecycleVisual } from "./LifecycleVisual.tsx"
-import { setupPrompt } from "./SetupPrompt.ts"
 
-const repository = "https://github.com/crosshatch/traits"
 const stepNumerals = ["i", "ii", "iii", "iv", "v", "vi", "vii"] as const
 const activeAtom = Atom.make(0)
 const chapterAtom = Atom.make<string | undefined>(undefined)
@@ -153,15 +149,12 @@ export const App = () => {
 
       <main id="guide">
         <div className="contents-band">
-          <span className="eyebrow">Contents of this little volume</span>
+          <span className="eyebrow">Table of contents</span>
           <a href="#lifecycle" aria-current={chapter === "lifecycle" ? "location" : undefined}>
             <span>I.</span> The loop
           </a>
           <a href="#tools" aria-current={chapter === "tools" ? "location" : undefined}>
             <span>II.</span> Two tools
-          </a>
-          <a href="#begin" aria-current={chapter === "begin" ? "location" : undefined}>
-            <span>III.</span> Manual
           </a>
         </div>
 
@@ -170,7 +163,6 @@ export const App = () => {
             <div className="chapter-heading">
               <p className="eyebrow">Chapter I</p>
               <h2 id="lifecycle-title">The loop</h2>
-              <Illustrations.Flourish />
             </div>
             <div className="prose lead">
               <p>
@@ -253,7 +245,6 @@ export const App = () => {
             <div className="chapter-heading">
               <p className="eyebrow">Chapter II</p>
               <h2 id="tools-title">Two tools</h2>
-              <Illustrations.Flourish />
             </div>
             <div className="prose lead">
               <p>
@@ -291,102 +282,15 @@ export const App = () => {
                 </p>
               </article>
             </div>
-
-            <div className="judgment">
-              <span className="eyebrow">Reading an assessment</span>
-              <h3>The LLM proposes traits. Decision models ensure the traits are followed.</h3>
-              <p className="assessment-intro">
-                Keep the review moving in both directions: decision models check newly generated code against all
-                existing traits, and check the existing codebase against each newly saved trait. The agent selects the
-                files and traits for each review. By revisiting the new code or the new trait, we keep decision-model
-                token costs down while maintaining coverage as the work grows.
-              </p>
-              <div className="verdict-grid">
-                <div>
-                  <Illustrations.LaurelSeal />
-                  <h4>Compliant</h4>
-                  <p>The trait applies and the supplied code follows it.</p>
-                </div>
-                <div>
-                  <Illustrations.DriftingLeaf />
-                  <h4>Not applicable</h4>
-                  <p>This excerpt does not contain behavior governed by the trait.</p>
-                </div>
-                <div>
-                  <Illustrations.BrokenQuill />
-                  <h4>Violation</h4>
-                  <p>Inspect the evidence. Fix confirmed issues and review the changed file again.</p>
-                </div>
-                <div>
-                  <Illustrations.MistLantern />
-                  <h4>Inconclusive</h4>
-                  <p>Something is missing or ambiguous. This is not a confirmed violation.</p>
-                </div>
-              </div>
-            </div>
           </section>
 
-          <section className="chapter margin-green" id="begin" aria-labelledby="begin-title">
-            <div className="chapter-heading">
-              <p className="eyebrow">Chapter III</p>
-              <h2 id="begin-title">Manual</h2>
-              <Illustrations.Flourish />
-            </div>
-            <div className="prose lead">
-              <p>
-                <span className="drop-cap">Y</span>our agent handles the setup. Just start from your existing Git
-                checkout. There aren’t any new package manager habits to learn or config files to copy over by hand.
-              </p>
-            </div>
-            <div className="setup-grid">
-              <div>
-                <span className="eyebrow">01 / Paste the prompt</span>
-                <h3>Let your agent handle the details.</h3>
-                <p>
-                  Copy this prompt into your coding agent. The setup guide covers dependencies, configuration, the
-                  Traits skill, and the MCP connection while respecting your workspace and existing settings.
-                </p>
-                <p>
-                  Choose your providers and models when asked, then supply their credentials privately. Your agent
-                  verifies the connection and tells you if anything still needs your attention.
-                </p>
-                <a className="text-link" href={`${repository}/blob/main/SETUP.md`}>
-                  Setup guide &amp; troubleshooting <span aria-hidden="true">↗&#xfe0e;</span>
-                </a>
-              </div>
-              <CodeSample title="agent prompt · set up Traits" code={setupPrompt} />
-            </div>
-            <div className="practice-list">
-              <div>
-                <span>i.</span>
-                <p>
-                  <strong>Paste the prompt.</strong> Your agent reads the guide and follows your project’s conventions.
-                </p>
-              </div>
-              <div>
-                <span>ii.</span>
-                <p>
-                  <strong>Choose your models.</strong> Tell your agent which providers to use for decisions and language
-                  generation.
-                </p>
-              </div>
-              <div>
-                <span>iii.</span>
-                <p>
-                  <strong>Supply credentials privately.</strong> Keep keys out of chat and source control. Your agent
-                  explains where to put them and verifies what it can.
-                </p>
-              </div>
-            </div>
-            <div className="closing">
-              <Illustrations.Flourish />
-              <img className="hero-emblem" src="/traits-emblem.svg" width="360" height="420" alt="" />
-              <p>GLOBAL DESLOPPIFICATION</p>
-              <a className="read-link" href="#top">
-                Back to top ↑
-              </a>
-            </div>
-          </section>
+          <div className="closing">
+            <img className="hero-emblem" src="/traits-emblem.svg" width="360" height="420" alt="" />
+            <p>GLOBAL DESLOPPIFICATION</p>
+            <a className="read-link" href="#top">
+              Back to top ↑
+            </a>
+          </div>
           <ActionBar docked />
         </div>
       </main>
