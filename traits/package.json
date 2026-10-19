@@ -51,7 +51,7 @@
     "effect": "catalog:"
   },
   "peerDependencies": {
-    "@effect/platform-node": "catalog:",
-    "effect": "catalog:"
+    "@effect/platform-node": "^4.0.0",
+    "effect": "^4.0.0"
   }
 }
