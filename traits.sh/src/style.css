@@ -1,4 +1,6 @@
 :root {
+  --contents-height: 5rem;
+  --dock-height: calc(6rem + env(safe-area-inset-bottom, 0px));
   font-family: "Libre Baskerville", Georgia, serif;
   color: var(--ink);
   background: var(--paper);
@@ -189,9 +191,11 @@ p {
 .hero {
   position: relative;
   isolation: isolate;
+  display: grid;
+  align-items: center;
   min-height: calc(100svh - 8rem);
   text-align: center;
-  padding: 2rem 1.5rem 3rem;
+  padding: 2.5rem 1.5rem;
   margin-top: 1.5rem;
 }
 .hero::before {
@@ -214,23 +218,37 @@ p {
   mask-image: linear-gradient(to bottom, #000, transparent 28%, transparent 72%, #000);
 }
 .hero .eyebrow {
+  margin-bottom: 0;
   font-size: 0.86rem;
   line-height: 2;
   letter-spacing: 0.1em;
 }
 .hero h1 {
-  font-size: clamp(4.25rem, 11vw, 8.7rem);
+  font-size: clamp(4rem, 10vw, 8rem);
   text-transform: uppercase;
   line-height: 1;
-  letter-spacing: -0.06em;
-  margin: 1.7rem 0 2rem;
+  letter-spacing: 0.045em;
+  margin: 2.2rem 0 1rem;
   font-weight: 400;
 }
 .hero-description {
-  font-size: clamp(1rem, 1.9vw, 1.28rem);
-  line-height: 1.9;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  line-height: 1.4;
   max-width: 850px;
-  margin: 0 auto 1.8rem;
+  margin: 0 auto 1.75rem;
+}
+.hero .hero-description::after {
+  content: "✧";
+  display: block;
+  margin-top: 1.5rem;
+  color: var(--gold);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.hero .install-command {
+  width: min(320px, 100%);
+  min-height: 104px;
+  padding: 1.25rem;
 }
 .install-command {
   position: relative;
@@ -246,24 +264,15 @@ p {
   background: transparent;
   color: var(--ink);
 }
-.ivy-frame {
+.command-frame {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  stroke: var(--green);
-  stroke-width: 0.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke: var(--rule);
+  stroke-width: 0.75;
   pointer-events: none;
-}
-.ivy-stem {
-  stroke: var(--gold);
-  stroke-width: 0.65;
-  fill: color-mix(in srgb, var(--paper), var(--green) 10%);
-  transition:
-    fill 160ms ease,
-    stroke 160ms ease;
+  transition: stroke 160ms ease;
 }
 .install-command code {
   position: relative;
@@ -275,11 +284,11 @@ p {
 .install-status {
   position: relative;
   margin-top: 0.4rem;
-  font-size: 0.55rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
   color: var(--muted);
 }
-.install-command:is(:hover, :focus-visible) .ivy-stem {
-  fill: color-mix(in srgb, var(--paper), var(--gold) 18%);
+.install-command:is(:hover, :focus-visible) .command-frame {
   stroke: var(--gold);
 }
 .install-command:is(:hover, :focus-visible) code {
@@ -301,10 +310,26 @@ p {
 .hero-byline {
   font-size: 0.8rem;
   color: var(--muted);
-  margin: 1.6rem 0 0.5rem;
+  margin: 0.6rem 0 0.5rem;
+}
+.hero .hero-byline {
+  margin-top: 0.85rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
 }
 .hero-byline a {
   color: var(--ink);
+  text-decoration: none;
+}
+.crosshatch-name {
+  text-decoration: underline;
+}
+.crosshatch-logo {
+  display: inline-block;
+  width: 1.1cap;
+  height: 1.1cap;
+  vertical-align: baseline;
+  object-fit: contain;
 }
 .hero-emblem {
   width: min(120px, 90%);
@@ -314,6 +339,7 @@ p {
   filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--gold) 12%, transparent));
 }
 .read-link {
+  text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   gap: 1rem;
@@ -325,7 +351,8 @@ p {
   top: 0;
   z-index: 5;
   background: light-dark(#f2e9cb, #302535);
-  padding: 1.7rem 2rem;
+  height: var(--contents-height);
+  padding: 0 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -367,9 +394,10 @@ p {
 }
 
 .chapter {
+  background: linear-gradient(to bottom, var(--paper), color-mix(in srgb, var(--paper), var(--ink) 5%));
   position: relative;
   scroll-margin-top: 6rem;
-  padding: 6.5rem max(1.5rem, calc((100vw - 1160px) / 2)) 5rem;
+  padding: 7rem max(2rem, calc((100vw - 1200px) / 2)) 6rem;
 }
 .chapter-heading {
   text-align: center;
@@ -389,7 +417,6 @@ p {
 }
 .chapter.margin-gold {
   --chapter-accent: var(--gold);
-  background: linear-gradient(110deg, color-mix(in srgb, var(--gold) 4%, transparent), transparent 60%);
 }
 .chapter.margin-green {
   --chapter-accent: var(--green);
@@ -433,17 +460,24 @@ h3 {
   line-height: 1.8;
 }
 .walkthrough {
+  --step-controls-height: 3.5rem;
+  scroll-margin-top: var(--contents-height);
   border: 1px solid var(--rule);
   margin-top: 3.5rem;
   box-shadow: 0 5px 20px color-mix(in srgb, var(--ink) 4%, transparent);
 }
 .step-tabs {
+  position: sticky;
+  top: var(--contents-height);
+  margin-bottom: var(--step-controls-height);
+  z-index: 4;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   background: light-dark(#f3ecd6, #302535);
   border-bottom: 1px solid var(--rule);
 }
-.step-tabs button {
+.step-tabs [role="tab"] {
+  text-decoration: none;
   position: relative;
   border: 0;
   border-right: 1px solid var(--rule);
@@ -457,17 +491,17 @@ h3 {
   font-size: 0.7rem;
   transition: background 0.18s;
 }
-.step-tabs button:last-child {
+.step-tabs [role="tab"]:last-child {
   border-right: 0;
 }
-.step-tabs button:hover {
+.step-tabs [role="tab"]:hover {
   background: light-dark(#ebe2c4, #47364d);
 }
-.step-tabs button[aria-selected="true"] {
+.step-tabs [role="tab"][aria-selected="true"] {
   background: color-mix(in srgb, var(--paper), var(--gold) 14%);
   color: var(--ink);
 }
-.step-tabs button::before {
+.step-tabs [role="tab"]::before {
   content: "";
   position: absolute;
   inset: auto 0 0;
@@ -476,14 +510,16 @@ h3 {
   transform: scaleX(0);
   transform-origin: left;
 }
-.walkthrough[data-playing] .step-tabs button[aria-selected="true"]::before {
+.walkthrough[data-playing][data-visible] .step-tabs [role="tab"][aria-selected="true"]::before {
   animation-name: step-progress;
   animation-duration: 9s;
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
-.walkthrough:not([data-visible]) .step-tabs button::before,
-.walkthrough:has(.step-details:hover, .lifecycle-visual:hover, .step-tabs :focus-visible) .step-tabs button::before {
+.walkthrough:not([data-visible]) .step-tabs [role="tab"]::before,
+.walkthrough:has(.step-details:hover, .lifecycle-visual:hover, .step-tabs :focus-visible)
+  .step-tabs
+  [role="tab"]::before {
   animation-play-state: paused;
 }
 @keyframes step-progress {
@@ -538,7 +574,14 @@ h3 {
   font-style: italic;
   font-size: 0.85rem !important;
 }
+.step-body {
+  margin-top: calc(-1 * var(--step-controls-height));
+}
 .step-controls {
+  min-height: var(--step-controls-height);
+  position: sticky;
+  bottom: var(--dock-height);
+  z-index: 4;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -562,7 +605,6 @@ h3 {
 }
 .step-controls .step-autoplay {
   border: 1px solid var(--rule);
-  border-radius: 999px;
   padding: 0.35rem 0.9rem;
   background: var(--paper);
 }
@@ -578,33 +620,6 @@ h3 {
   align-self: center;
   border: 1px solid var(--rule);
   background: color-mix(in srgb, var(--paper), var(--blue) 5%);
-}
-.visual-story-heading {
-  padding: 1rem 1.4rem 0.85rem;
-  border-bottom: 1px solid var(--rule);
-  background: color-mix(in srgb, var(--paper), var(--gold) 5%);
-}
-.visual-story-heading > strong {
-  display: block;
-  margin: 0.25rem 0 0.8rem;
-  font-size: 1rem;
-  font-weight: 400;
-  font-style: italic;
-}
-.visual-story-progress {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.35rem;
-}
-.visual-story-progress > span {
-  height: 2px;
-  background: var(--rule);
-}
-.visual-story-progress > .is-reached {
-  background: var(--gold);
-}
-.visual-story-progress > .is-reached:last-of-type {
-  background: var(--blue);
 }
 @keyframes story-piece-arrives {
   from {
@@ -646,7 +661,6 @@ h3 {
 .visual-stage {
   display: grid;
   align-items: center;
-  min-height: 340px;
   padding: 1.4rem;
 }
 .visual-stage p {
@@ -1005,7 +1019,8 @@ h3 {
 }
 .lifecycle-visual figcaption {
   padding: 0.65rem 1rem;
-  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  text-align: center;
   font-size: 0.63rem;
   color: var(--muted);
 }
@@ -1218,12 +1233,14 @@ h3 {
 }
 .closing {
   margin-top: 4rem;
+  padding: 0 1.25rem 4rem;
   text-align: center;
 }
 .closing > p {
-  font-size: 1.25rem;
+  font-size: 1rem;
 }
 .docked-header {
+  height: var(--dock-height);
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   position: sticky;
@@ -1245,9 +1262,10 @@ h3 {
   border-radius: 3px;
 }
 .compact-install-command code {
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--ink);
+  font-size: 0.8rem;
+}
+.compact-install-command .install-status {
+  font-size: 0.625rem;
 }
 .compact-install-command .install-status {
   margin-top: 0.15rem;
@@ -1258,13 +1276,10 @@ h3 {
 }
 
 @media (min-width: 901px) {
-  :root {
-    --opening-contents-height: 5rem;
-  }
   .opening {
     display: grid;
     grid-template-rows: auto 1fr;
-    min-height: calc(max(100svh, 52rem) - var(--opening-contents-height));
+    min-height: calc(max(100svh, 52rem) - var(--contents-height));
   }
   .opening .hero {
     display: grid;
@@ -1278,7 +1293,6 @@ h3 {
     width: 100%;
   }
   .contents-band {
-    min-height: var(--opening-contents-height);
     margin-top: 0;
   }
 }
@@ -1296,10 +1310,10 @@ h3 {
   }
   .hero {
     margin-top: 1rem;
-    padding-top: 1.5rem;
+    padding-block: 1.5rem;
   }
   .chapter {
-    padding: 4.5rem 2rem;
+    padding: 5rem 2rem;
   }
   .step-panel {
     padding: 1.5rem;
@@ -1308,7 +1322,7 @@ h3 {
   .step-controls {
     padding-inline: 1.5rem;
   }
-  .step-tabs button {
+  .step-tabs [role="tab"] {
     gap: 0.4rem;
     font-size: 0.62rem;
   }
@@ -1322,6 +1336,10 @@ h3 {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --contents-height: 6rem;
+    --dock-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
   .masthead.docked-header {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 0.4rem;
@@ -1341,7 +1359,6 @@ h3 {
     padding: 0.45rem 0.6rem;
   }
   .docked-header .compact-install-command code {
-    font-size: 0.7rem;
     white-space: nowrap;
   }
   .docked-header .install-status {
@@ -1373,8 +1390,37 @@ h3 {
     display: none;
   }
   .hero {
-    padding: 1rem 1.25rem 2rem;
-    margin-top: 0.75rem;
+    min-height: 0;
+    padding: clamp(0.75rem, 2svh, 1.5rem) 1.25rem;
+    margin-top: 0;
+  }
+  .opening {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: calc(100svh - var(--contents-height));
+  }
+  .hero .hero-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(0.65rem, 1.8svh, 1.15rem);
+    width: 100%;
+  }
+  .hero .hero-content > * {
+    margin: 0;
+  }
+  .hero .hero-emblem {
+    width: clamp(56px, 10svh, 90px);
+  }
+  .hero .hero-coda {
+    margin-top: 0;
+  }
+  .hero .hero-description::after {
+    margin-top: clamp(0.65rem, 1.8svh, 1.15rem);
+  }
+  .hero .install-command {
+    min-height: 88px;
+    padding: 1rem;
   }
   .hero::after {
     inset: 0.65rem;
@@ -1383,27 +1429,26 @@ h3 {
     font-size: 0.65rem;
   }
   .hero h1 {
-    font-size: clamp(3rem, 12.75vw, 5.1rem);
-    margin-block: 1.5rem;
+    font-size: clamp(2.8rem, min(12vw, 9svh), 4.25rem);
   }
   .hero-description {
-    font-size: 0.87rem;
+    font-size: clamp(1.1rem, 4vw, 1.4rem);
   }
   .hero-byline {
     font-size: 0.65rem;
   }
   .contents-band {
     gap: 0.85rem 1.25rem;
-    padding: 1.4rem 1rem;
+    padding: 0.75rem 1rem;
     font-size: 0.62rem;
-    margin-top: 1.5rem;
+    margin-top: 0;
   }
   .contents-band > .eyebrow {
     width: 100%;
     text-align: center;
   }
   .chapter {
-    padding: 3.5rem 1.3rem;
+    padding: 4rem 1.25rem;
   }
   .chapter-heading {
     margin-bottom: 2rem;
@@ -1415,17 +1460,16 @@ h3 {
     font-size: 4rem;
   }
   .step-tabs {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
-  .step-tabs button {
+  .step-tabs [role="tab"] {
     border-bottom: 1px solid var(--rule);
     padding: 0.9rem 0.5rem;
   }
-  .step-tabs button:nth-child(3n) {
+  .step-tabs [role="tab"]:nth-child(2n) {
     border-right: 0;
   }
-  .step-tabs button:last-child {
-    grid-column: 1 / -1;
+  .step-tabs [role="tab"]:nth-last-child(-n + 2) {
     border-bottom: 0;
   }
   .step-panel {
@@ -1434,7 +1478,6 @@ h3 {
     min-height: 0;
   }
   .visual-stage {
-    min-height: 0;
     padding: 0.85rem;
   }
   .step-details h3 {
@@ -1475,7 +1518,7 @@ h3 {
     gap: 1.5rem;
   }
   .closing > p {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 }
 
