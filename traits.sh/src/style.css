@@ -171,10 +171,6 @@ p {
   border-left: 1px solid light-dark(#cfc2a0, var(--rule));
   padding-left: 2rem;
 }
-.source-link svg {
-  width: 22px;
-  height: 22px;
-}
 .social-link {
   display: flex;
   align-items: center;
@@ -1544,6 +1540,9 @@ h3 {
 }
 
 @media (max-width: 900px) {
+  .source-link {
+    padding-left: 1.35rem;
+  }
   .masthead {
     padding: 1rem 1.5rem;
     padding-right: 2rem;
@@ -1551,9 +1550,6 @@ h3 {
   .masthead nav {
     gap: 0.85rem;
     font-size: 0.68rem;
-  }
-  .source-link {
-    padding-left: 1.35rem;
   }
   .hero {
     padding-block: 1.5rem;
@@ -1582,6 +1578,10 @@ h3 {
 }
 
 @media (max-width: 640px) {
+  .source-link {
+    border-left: 0;
+    padding-left: 0;
+  }
   :root {
     --contents-height: 6rem;
     --dock-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
@@ -1634,10 +1634,6 @@ h3 {
   .masthead nav {
     gap: 0.65rem;
     font-size: 0.59rem;
-  }
-  .source-link {
-    border-left: 0;
-    padding-left: 0;
   }
   .hero {
     min-height: 0;
