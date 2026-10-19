@@ -135,14 +135,6 @@ export const App = () => {
               <em className="hero-coda">Teach your agent to code like you</em>
             </p>
             <InstallCommand />
-            <p className="eyebrow">Global desloppification</p>
-            <p className="hero-byline">
-              FROM{" "}
-              <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
-                <img className="crosshatch-logo" src="/crosshatch-logo.svg" alt="" />{" "}
-                <span className="crosshatch-name">CROSSHATCH LABS</span> <span aria-hidden="true">↗&#xfe0e;</span>
-              </a>
-            </p>
           </div>
         </section>
       </div>
