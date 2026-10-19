@@ -171,10 +171,6 @@ p {
   border-left: 1px solid light-dark(#cfc2a0, var(--rule));
   padding-left: 2rem;
 }
-.source-link svg {
-  width: 22px;
-  height: 22px;
-}
 .social-link {
   display: flex;
   align-items: center;
@@ -266,6 +262,7 @@ p {
   content: "✧";
   display: block;
   margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
   color: var(--gold);
   font-size: 0.9rem;
   line-height: 1;
@@ -1543,6 +1540,9 @@ h3 {
 }
 
 @media (max-width: 900px) {
+  .source-link {
+    padding-left: 1.35rem;
+  }
   .masthead {
     padding: 1rem 1.5rem;
     padding-right: 2rem;
@@ -1550,9 +1550,6 @@ h3 {
   .masthead nav {
     gap: 0.85rem;
     font-size: 0.68rem;
-  }
-  .source-link {
-    padding-left: 1.35rem;
   }
   .hero {
     padding-block: 1.5rem;
@@ -1581,12 +1578,19 @@ h3 {
 }
 
 @media (max-width: 640px) {
+  .source-link {
+    border-left: 0;
+    padding-left: 0;
+    font-size: 0.8rem;
+  }
   :root {
     --contents-height: 6rem;
     --dock-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
   .masthead.docked-header {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    display: flex;
+    height: auto;
+    min-height: var(--dock-height);
     gap: 0.4rem;
     padding: 0.55rem 0.75rem;
     padding-bottom: max(0.55rem, env(safe-area-inset-bottom));
@@ -1631,9 +1635,6 @@ h3 {
   .masthead nav {
     gap: 0.65rem;
     font-size: 0.59rem;
-  }
-  .source-link {
-    display: none;
   }
   .hero {
     min-height: 0;
