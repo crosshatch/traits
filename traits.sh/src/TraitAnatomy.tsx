@@ -1,7 +1,4 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { String } from "effect"
-import { Atom } from "effect/reactivity"
-import type { MouseEvent } from "react"
 
 type TraitField = {
   readonly name: string
@@ -11,8 +8,6 @@ type TraitField = {
 }
 
 const context = String.stripMargin(`
-|---
-|
 |\`\`\`diff
 |-// Parse.ts
 |-import { InvalidDocument } from "./InvalidDocument.ts"
@@ -58,49 +53,43 @@ const fields: ReadonlyArray<TraitField> = [
   }
 ]
 
-const selectedFieldAtom = Atom.make<string | undefined>(undefined)
-const toggleFieldAtom = Atom.family((name: string) =>
-  Atom.fnSync((_event: MouseEvent<HTMLButtonElement>, ctx) => {
-    ctx.set(selectedFieldAtom, ctx(selectedFieldAtom) === name ? undefined : name)
-  })
-)
-
 const TraitFieldRow = (props: { readonly field: TraitField }) => {
-  const selected = useAtomValue(selectedFieldAtom) === props.field.name
-  const toggle = useAtomSet(toggleFieldAtom(props.field.name))
   const field = props.field
   return (
-    <div className="anatomy-row" data-field={field.name} data-selected={selected ? "" : undefined}>
-      <pre className="anatomy-example" id={`anatomy-field-${field.name}`}>
-        <code>
-          {field.name === "name" && <span className="anatomy-fence">{"---\n"}</span>}
-          {field.name !== "context" && <span className="anatomy-key">{field.name}: </span>}
-          {field.name === "context"
-            ? field.value.split("\n").map((line, index) => (
-                <span
-                  className="anatomy-diff-line"
-                  data-change={
-                    line.startsWith("+") ? "added" : line.startsWith("-") && line !== "---" ? "removed" : "context"
-                  }
-                  key={line}
-                >
-                  {index > 0 && "\n"}
-                  {line}
-                </span>
-              ))
-            : field.value}
-        </code>
-      </pre>
-      <div className="anatomy-description">
-        <h3>
-          <button type="button" aria-pressed={selected} aria-controls={`anatomy-field-${field.name}`} onClick={toggle}>
-            <span>{field.number} · </span>
-            {field.name}
-          </button>
-        </h3>
-        <p>{field.description}</p>
+    <>
+      {field.name === "context" && (
+        <pre className="anatomy-delimiter">
+          <code>---</code>
+        </pre>
+      )}
+      <div className="anatomy-row" data-field={field.name}>
+        <span className="anatomy-marker" aria-hidden="true">
+          {field.number}
+        </span>
+        <div className="anatomy-field-content">
+          <pre className="anatomy-example" id={`anatomy-field-${field.name}`}>
+            <code>
+              {field.name !== "context" && <span className="anatomy-key">{field.name}: </span>}
+              {field.name === "context"
+                ? field.value.split("\n").map((line, index) => (
+                    <span
+                      className="anatomy-diff-line"
+                      data-change={
+                        line.startsWith("+") ? "added" : line.startsWith("-") && line !== "---" ? "removed" : "context"
+                      }
+                      key={line}
+                    >
+                      {index > 0 && "\n"}
+                      {line}
+                    </span>
+                  ))
+                : field.value}
+            </code>
+          </pre>
+          <p className="anatomy-field-description">{field.description}</p>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -123,16 +112,25 @@ export const TraitAnatomy = () => (
         them.”
       </blockquote>
       <p className="anatomy-transformation">
-        <span aria-hidden="true">↓</span> Your agent proposes a trait. You decide what to keep.
+        <span aria-hidden="true">↓</span> Your agent proposes a trait.
       </p>
     </figure>
-    <div className="anatomy-diagram" aria-label="A complete trait with explanations of its five parts">
-      <div className="anatomy-filename">
-        <code>.agents/traits/colocate-small-domain-errors.md</code>
+    <div className="anatomy-specimen">
+      <div
+        className="anatomy-diagram"
+        aria-label="A complete trait with explanations alongside each of its five fields"
+      >
+        <div className="anatomy-filename">
+          <span className="anatomy-document-label">A TRAIT, IN FULL</span>
+          <code>.agents/traits/colocate-small-domain-errors.md</code>
+        </div>
+        <pre className="anatomy-delimiter">
+          <code>---</code>
+        </pre>
+        {fields.map((field) => (
+          <TraitFieldRow key={field.name} {...{ field }} />
+        ))}
       </div>
-      {fields.map((field) => (
-        <TraitFieldRow key={field.name} {...{ field }} />
-      ))}
     </div>
     <p className="anatomy-payoff">
       One correction. <span aria-hidden="true">→</span>{" "}
