@@ -431,8 +431,9 @@ from repository-root `traits.ts`. Import the `TraitsConfig` type from `traits`
 and use `export default { ... } satisfies TraitsConfig`. Specify
 `layerDecisionModel` and `layerLanguageModel`; `excludes` is optional. The CLI
 supplies platform/HTTP services. Storage remains local and has no source
-configuration. The current configuration uses TypeSafe for decisions and OpenAI
-for generation, requiring `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration
+configuration. The recommended configuration uses OpenRouter for both decisions
+and generation, requiring only `OPENROUTER_API_KEY`; separate TypeSafe and
+OpenAI providers use `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Configuration
 precedence is process environment, worktree-root `.env`, then main-checkout
 `.env`. Reconnect the MCP server after changing credentials. A failed model
 request is an incomplete review, not a pass.

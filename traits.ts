@@ -9,6 +9,6 @@ export default {
   layerDecisionModel: OpenRouterDecisionModel.layer({ model: "~typesafe/jev-latest" }).pipe(Layer.provide(layerClient)),
   layerLanguageModel: OpenRouterLanguageModel.layer({
     model: "openai/gpt-6.1-sol",
-    config: { reasoning: { effort: "low" } }
+    config: { strictJsonSchema: true, reasoning: { effort: "low" } }
   }).pipe(Layer.provide(layerClient))
 } satisfies TraitsConfig

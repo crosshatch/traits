@@ -39,11 +39,44 @@ and ask before any compatibility migration.
 
 Before installing provider packages or writing `traits.ts`, ask the user which
 providers and models to use for decisions and language generation. Offer
-`@effect/ai-typesafe` for decisions and `@effect/ai-openai` for language
-generation as defaults, not requirements. Consult current Effect provider
-documentation for alternatives and check that each choice supplies the required
-`DecisionModel` or `LanguageModel` service. Install only the selected provider
-packages, using the project's dependency conventions and compatible versions.
+`@effect/ai-openrouter` as the default: one package and one API key supply both
+services. Install only the selected provider packages, using the project's
+dependency conventions and compatible versions.
+
+```ts
+import {
+  OpenRouterClient,
+  OpenRouterDecisionModel,
+  OpenRouterLanguageModel
+} from "@effect/ai-openrouter"
+import { Config, Layer } from "effect"
+import type { TraitsConfig } from "traits"
+
+const layerClient = OpenRouterClient.layerConfig({
+  apiKey: Config.Redacted("OPENROUTER_API_KEY")
+})
+
+export default {
+  layerDecisionModel: OpenRouterDecisionModel.layer({
+    model: "~typesafe/jev-latest"
+  }).pipe(Layer.provide(layerClient)),
+  layerLanguageModel: OpenRouterLanguageModel.layer({
+    model: "openai/gpt-6.1-sol",
+    config: { strictJsonSchema: true, reasoning: { effort: "low" } }
+  }).pipe(Layer.provide(layerClient))
+} satisfies TraitsConfig
+```
+
+Decision models run on OpenRouter's Decisions API, not chat completions, so
+choose them from
+`https://openrouter.ai/api/v1/models?output_modalities=decisions`. Choose
+language models that support structured output.
+
+**Advanced: separate providers.** Users who already hold provider keys or want
+direct provider access can use `@effect/ai-typesafe` for decisions and
+`@effect/ai-openai` for language generation, or other Effect providers. Consult
+current Effect provider documentation and check that each choice supplies the
+required `DecisionModel` or `LanguageModel` service.
 
 ### 3. Configure the current checkout
 
@@ -60,7 +93,8 @@ Git filter unless the user requests otherwise.
 
 ### 4. Keep credentials private
 
-Explain which credentials the selected providers require. The defaults use
+Explain which credentials the selected providers require. The OpenRouter default
+uses `OPENROUTER_API_KEY`; the separate TypeSafe and OpenAI providers use
 `TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Use the MCP process environment or a
 Git-ignored `.env` at the checkout root. Check that the file is ignored before
 writing secrets; never request secret values in chat, print them, or commit
@@ -174,8 +208,8 @@ returned plain text instead of JSON; it does not necessarily indicate an
 approval-form failure. Generation completes before replacements are written or
 originals are removed.
 
-When using `@effect/ai-openrouter`, enable strict structured output in the
-language-model configuration, alongside any existing options:
+When using `@effect/ai-openrouter`, check that strict structured output is
+enabled in the language-model configuration, alongside any existing options:
 
 ```ts
 OpenRouterLanguageModel.layer({
