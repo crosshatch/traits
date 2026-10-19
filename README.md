@@ -32,8 +32,8 @@ Traits use a fixed, domain-neutral vocabulary: required `name`, `subject`, and
 `requirement`; optional natural-language `applicability`, `purpose`, and
 `guidance`. The optional Markdown body provides supporting `context`, including
 examples and references. Additional frontmatter keys are rejected. Guidance
-never grants permission to act. See [migration instructions](MIGRATE_TRAITS.md)
-for older traits.
+never grants permission to act. Older traits require explicit migration to these
+fields; parse errors provide guidance and never rewrite files automatically.
 
 ## Two tools
 
