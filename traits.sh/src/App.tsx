@@ -139,8 +139,8 @@ export const App = () => {
             <p className="hero-byline">
               FROM{" "}
               <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
-                <img className="crosshatch-logo" src="/crosshatch-logo.svg" alt="" /> CROSSHATCH LABS{" "}
-                <span aria-hidden="true">↗&#xfe0e;</span>
+                <img className="crosshatch-logo" src="/crosshatch-logo.svg" alt="" />{" "}
+                <span className="crosshatch-name">CROSSHATCH</span> <span aria-hidden="true">↗&#xfe0e;</span>
               </a>
             </p>
           </div>

@@ -318,6 +318,10 @@ p {
 }
 .hero-byline a {
   color: var(--ink);
+  text-decoration: none;
+}
+.crosshatch-name {
+  text-decoration: underline;
 }
 .crosshatch-logo {
   display: inline-block;
