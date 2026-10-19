@@ -151,7 +151,7 @@ export const App = () => {
         <div className="contents-band">
           <span className="eyebrow">Table of contents</span>
           <a href="#anatomy" aria-current={chapter === "anatomy" ? "location" : undefined}>
-            <span>I.</span> Anatomy of a trait
+            <span>I.</span> A &quot;Trait&quot;
           </a>
           <a href="#lifecycle" aria-current={chapter === "lifecycle" ? "location" : undefined}>
             <span>II.</span> The loop
@@ -218,16 +218,20 @@ export const App = () => {
                     type="button"
                     disabled={active === 0}
                     onClick={previousStep}
-                    aria-label="Previous lifecycle step"
+                    aria-label={`Previous: ${Array.getUnsafe(steps, Math.max(0, active - 1)).title}`}
                   >
-                    ← Previous
+                    ← {Array.getUnsafe(steps, Math.max(0, active - 1)).title}
                   </button>
                   <button type="button" className="step-autoplay" onClick={togglePlaying}>
                     <span aria-hidden="true">{playing ? "❚❚" : "▶"}</span> {playing ? "Pause" : "Play"}
                   </button>
                   {active < steps.length - 1 ? (
-                    <button type="button" onClick={nextStep} aria-label="Next lifecycle step">
-                      Next <span className="step-controls-detail">observation</span> →
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      aria-label={`Next: ${Array.getUnsafe(steps, active + 1).title}`}
+                    >
+                      {Array.getUnsafe(steps, active + 1).title} →
                     </button>
                   ) : (
                     <a href="#tools">Meet the instruments →</a>
@@ -273,11 +277,11 @@ export const App = () => {
                 </div>
                 <img
                   className="instrument-graphic"
-                  src="/remember.webp"
-                  width="1536"
-                  height="1024"
+                  src="/remember-no-ivy.png"
+                  width="1264"
+                  height="843"
                   loading="lazy"
-                  alt="A brass hand preserves a glowing seed of insight in an ivy-entwined archive of trait cards."
+                  alt="A brass hand preserves a glowing seed of insight above an archive of trait scrolls."
                 />
               </article>
               <article>
@@ -297,9 +301,9 @@ export const App = () => {
                 </div>
                 <img
                   className="instrument-graphic"
-                  src="/review.webp"
-                  width="1536"
-                  height="1024"
+                  src="/review-no-ivy.png"
+                  width="1264"
+                  height="843"
                   loading="lazy"
                   alt="An ornate brass lens examines a manuscript, revealing orderly botanical patterns among tangled threads."
                 />
