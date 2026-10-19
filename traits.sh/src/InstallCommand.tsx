@@ -7,7 +7,7 @@ import { setupPrompt } from "./SetupPrompt.ts"
 const statusAtom = Atom.family((_compact: boolean) => Atom.make("Paste into your coding agent"))
 const copyAtom = Atom.family((compact: boolean) =>
   Atom.fn(
-    Effect.fn("InstallCommand.copy")(function* (_event: unknown, ctx: Atom.FnContext) {
+    Effect.fn("InstallCommand.copy")(function* (_event, ctx) {
       const status = yield* Effect.promise(() => navigator.clipboard.writeText(setupPrompt)).pipe(
         Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
       )
@@ -80,8 +80,8 @@ export const InstallCommand = (props: { readonly compact?: boolean | undefined }
           <use className="ivy-stem" href="#command-ivy-outline" />
         </svg>
       )}
-      <code>{status === "Paste into your coding agent" ? "Copy setup prompt" : status}</code>
-      <span className="install-status">Paste into your coding agent</span>
+      <code>{status === "Paste into your coding agent" ? "COPY SETUP PROMPT" : status}</code>
+      <span className="install-status">Paste into your agent</span>
       <span className="sr-only" role="status">
         {status !== "Paste into your coding agent" && status}
       </span>

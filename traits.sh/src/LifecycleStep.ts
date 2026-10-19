@@ -3,7 +3,7 @@ export interface LifecycleStep {
   readonly heading: string
   readonly description: string
   readonly note: string
-  readonly visual: "feedback" | "draft" | "compare" | "approve" | "save" | "review" | "correct"
+  readonly visual: "feedback" | "remember" | "review" | "correct"
 }
 
 export const steps: ReadonlyArray<LifecycleStep> = [
@@ -15,35 +15,12 @@ export const steps: ReadonlyArray<LifecycleStep> = [
     visual: "feedback"
   },
   {
-    title: "Draft",
-    heading: "The agent turns your feedback into a clearly-articulated insight.",
-    description: "Your agent’s insight is presented to you as a prompt or elicitation.",
-    note: "A trait says what you prefer and when it applies.",
-    visual: "draft"
-  },
-  {
-    title: "Reconcile",
-    heading: "Resolve any inconsistencies",
-    description:
-      "If the new trait conflicts with any existing traits, the agent decomposes the two and proposes a path for reconciliation.",
-    note: "No duplicate traits. No changes without your approval.",
-    visual: "compare"
-  },
-  {
-    title: "Approve",
+    title: "Remember",
     heading: "You decide what the agent should remember.",
     description:
-      "Read the proposed trait. Approve it, ask for different wording, or skip it. If it replaces an existing trait, you see what will change.",
-    note: "You can accept a code fix without saving a preference.",
-    visual: "approve"
-  },
-  {
-    title: "Save",
-    heading: "Carry the lesson into your next session.",
-    description:
-      "Your approved trait stays with the project, so future agent sessions can follow it without you repeating the correction.",
-    note: "Traits are readable Markdown files you can review and version.",
-    visual: "save"
+      "The agent proposes a trait and reconciles conflicts if needed. Approve it, edit it, or skip it. Only approved traits are saved with your project for future sessions.",
+    note: "Traits are readable, versionable Markdown. You approve any changes to existing traits.",
+    visual: "remember"
   },
   {
     title: "Review",

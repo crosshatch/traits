@@ -134,17 +134,17 @@ export const App = () => {
               height="420"
               alt="An ornamental T surrounded by an ivy flourish and a returning feedback loop."
             />
-            <p className="eyebrow">Global desloppification</p>
             <h1 id="hero-title">Traits</h1>
-            <InstallCommand />
             <p className="hero-description">
-              Your agent learns from your feedback.
-              <em className="hero-coda">And corrects itself with subsequent generations.</em>
+              <em className="hero-coda">Teach your agent to code like you</em>
             </p>
+            <InstallCommand />
+            <p className="eyebrow">Global desloppification</p>
             <p className="hero-byline">
-              BY{" "}
+              FROM{" "}
               <a href="https://x.com/CrosshatchDev" target="_blank" rel="noopener noreferrer">
-                CROSSHATCH LABS <span aria-hidden="true">↗&#xfe0e;</span>
+                <img className="crosshatch-logo" src="/crosshatch-logo.svg" alt="" /> CROSSHATCH LABS{" "}
+                <span aria-hidden="true">↗&#xfe0e;</span>
               </a>
             </p>
           </div>
