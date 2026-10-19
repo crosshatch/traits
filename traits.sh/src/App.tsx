@@ -170,12 +170,9 @@ export const App = () => {
             </div>
             <div className="prose lead">
               <p>
-                <span className="drop-cap">W</span>ork with your agent. Context emerges from each conversation and
-                correction.
-              </p>
-              <p>
-                As you work, your agent asks which insights to keep as traits. The traits that you approve become the
-                context that guards the quality of your future work.
+                <span className="drop-cap">A</span>s you converse with your agent, your agent asks which insights to
+                keep as traits. The traits that you approve become the context that guards the quality of your future
+                work.
               </p>
               <p>
                 Decision models check subsequent code generation against all your traits, flagging ignored traits and
@@ -312,7 +309,11 @@ export const App = () => {
 
           <div className="closing">
             <img className="hero-emblem" src="/traits-emblem.svg" width="360" height="420" alt="" />
-            <p>GLOBAL DESLOPPIFICATION</p>
+            <p>
+              <a href="https://twitter.com/CrosshatchDev" target="_blank" rel="noreferrer">
+                FROM CROSSHATCH LABS <span aria-hidden="true">↗&#xfe0e;</span>
+              </a>
+            </p>
             <a className="read-link" href="#top">
               Back to top ↑
             </a>

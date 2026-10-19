@@ -1,3 +1,7 @@
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { Atom } from "effect/reactivity"
+import type { MouseEvent } from "react"
+
 type TraitField = {
   readonly name: string
   readonly number: string
@@ -49,6 +53,52 @@ const fields: ReadonlyArray<TraitField> = [
   }
 ]
 
+const selectedFieldAtom = Atom.make<string | undefined>(undefined)
+const toggleFieldAtom = Atom.family((name: string) =>
+  Atom.fnSync((_event: MouseEvent<HTMLButtonElement>, ctx) => {
+    ctx.set(selectedFieldAtom, ctx(selectedFieldAtom) === name ? undefined : name)
+  })
+)
+
+const TraitFieldRow = (props: { readonly field: TraitField }) => {
+  const selected = useAtomValue(selectedFieldAtom) === props.field.name
+  const toggle = useAtomSet(toggleFieldAtom(props.field.name))
+  const field = props.field
+  return (
+    <div className="anatomy-row" data-field={field.name} data-selected={selected ? "" : undefined}>
+      <pre className="anatomy-example" id={`anatomy-field-${field.name}`}>
+        <code>
+          {field.name === "name" && <span className="anatomy-fence">{"---\n"}</span>}
+          {field.name !== "context" && <span className="anatomy-key">{field.name}: </span>}
+          {field.name === "context"
+            ? field.value.split("\n").map((line, index) => (
+                <span
+                  className="anatomy-diff-line"
+                  data-change={
+                    line.startsWith("+") ? "added" : line.startsWith("-") && line !== "---" ? "removed" : "context"
+                  }
+                  key={line}
+                >
+                  {index > 0 && "\n"}
+                  {line}
+                </span>
+              ))
+            : field.value}
+        </code>
+      </pre>
+      <div className="anatomy-description">
+        <h3>
+          <button type="button" aria-pressed={selected} aria-controls={`anatomy-field-${field.name}`} onClick={toggle}>
+            <span>{field.number} · </span>
+            {field.name}
+          </button>
+        </h3>
+        <p>{field.description}</p>
+      </div>
+    </div>
+  )
+}
+
 export const TraitAnatomy = () => (
   <section className="chapter margin-green trait-anatomy" id="anatomy" aria-labelledby="anatomy-title">
     <div className="chapter-heading">
@@ -61,41 +111,27 @@ export const TraitAnatomy = () => (
         describes what matters to you and gives future work context that takes judgment to apply.
       </p>
     </div>
+    <figure className="anatomy-feedback">
+      <figcaption className="eyebrow">It starts with your feedback</figcaption>
+      <blockquote>
+        “Keep small errors beside the operations that produce them, unless ownership or dependencies justify separating
+        them.”
+      </blockquote>
+      <p className="anatomy-transformation">
+        <span aria-hidden="true">↓</span> Your agent proposes a trait. You decide what to keep.
+      </p>
+    </figure>
     <div className="anatomy-diagram" aria-label="A complete trait with explanations of its five parts">
       <div className="anatomy-filename">
         <code>.agents/traits/colocate-small-domain-errors.md</code>
       </div>
       {fields.map((field) => (
-        <div className="anatomy-row" data-field={field.name} key={field.name}>
-          <pre className="anatomy-example">
-            <code>
-              {field.name === "name" && <span className="anatomy-fence">{"---\n"}</span>}
-              {field.name !== "context" && <span className="anatomy-key">{field.name}: </span>}
-              {field.name === "context"
-                ? field.value.split("\n").map((line, index) => (
-                    <span
-                      className="anatomy-diff-line"
-                      data-change={
-                        line.startsWith("+") ? "added" : line.startsWith("-") && line !== "---" ? "removed" : "context"
-                      }
-                      key={line}
-                    >
-                      {index > 0 && "\n"}
-                      {line}
-                    </span>
-                  ))
-                : field.value}
-            </code>
-          </pre>
-          <div className="anatomy-description">
-            <h3>
-              <span>{field.number} · </span>
-              {field.name}
-            </h3>
-            <p>{field.description}</p>
-          </div>
-        </div>
+        <TraitFieldRow key={field.name} {...{ field }} />
       ))}
     </div>
+    <p className="anatomy-payoff">
+      One correction. <span aria-hidden="true">→</span>{" "}
+      <em>A preference your agent can carry into every future task.</em>
+    </p>
   </section>
 )

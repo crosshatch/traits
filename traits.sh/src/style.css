@@ -408,16 +408,65 @@ p {
 }
 .anatomy-diagram {
   --specimen-width: 60%;
-  --connector-space: 3rem;
-  max-width: 1200px;
+  --connector-space: 4rem;
+  position: relative;
+  isolation: isolate;
+  max-width: 1120px;
   margin-inline: auto;
+}
+.anatomy-feedback {
+  max-width: 46rem;
+  margin: 3.5rem auto 2.5rem;
+  text-align: center;
+}
+.anatomy-feedback figcaption {
+  color: var(--gold);
+}
+.anatomy-feedback blockquote {
+  margin: 1.2rem 0 1.5rem;
+  font-size: clamp(1.15rem, 2.4vw, 1.65rem);
+  line-height: 1.8;
+  font-style: italic;
+  text-wrap: pretty;
+}
+.anatomy-transformation {
+  color: var(--muted);
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.8;
+}
+.anatomy-transformation span {
+  display: block;
+  color: var(--gold);
+  font-size: 1.6rem;
+  margin-bottom: 0.6rem;
+}
+.anatomy-payoff {
+  max-width: 40rem;
+  margin: 3rem auto 0;
+  text-align: center;
+  line-height: 1.9;
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  text-wrap: balance;
+}
+.anatomy-payoff em {
+  color: var(--gold);
+}
+.anatomy-diagram::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 auto;
+  width: var(--specimen-width);
+  box-sizing: border-box;
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--paper), var(--ink) 3%);
 }
 .anatomy-filename {
   width: var(--specimen-width);
   margin-left: auto;
   padding: 0.9rem 1.1rem;
   box-sizing: border-box;
-  border: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
   color: var(--muted);
   overflow-wrap: anywhere;
   font-size: 0.85rem;
@@ -427,6 +476,26 @@ p {
   --connector-y: 1.2rem;
   display: grid;
   grid-template-columns: 1fr var(--specimen-width);
+  transition: opacity 180ms ease;
+}
+.anatomy-diagram:has(.anatomy-row[data-selected]) .anatomy-row:not([data-selected]):not(:focus-within),
+.anatomy-diagram:has(.anatomy-row:focus-within) .anatomy-row:not(:focus-within):not([data-selected]) {
+  opacity: 0.6;
+}
+.anatomy-row[data-selected] .anatomy-example,
+.anatomy-row:focus-within .anatomy-example {
+  background: color-mix(in srgb, var(--field-color), transparent 94%);
+}
+@media (hover: hover) {
+  .anatomy-diagram:has(.anatomy-row:hover) .anatomy-row:not(:hover):not([data-selected]):not(:focus-within) {
+    opacity: 0.6;
+  }
+  .anatomy-diagram .anatomy-row:hover {
+    opacity: 1;
+  }
+  .anatomy-row:hover .anatomy-example {
+    background: color-mix(in srgb, var(--field-color), transparent 94%);
+  }
 }
 .anatomy-row[data-field="subject"] {
   --field-color: var(--blue);
@@ -446,8 +515,6 @@ p {
   grid-row: 1;
   margin: 0;
   padding: 0.4rem 1.1rem;
-  border-inline: 1px solid var(--rule);
-  background: color-mix(in srgb, var(--paper), var(--ink) 3%);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: clamp(0.9rem, 1.15vw, 0.95rem);
@@ -455,7 +522,7 @@ p {
   min-width: 0;
 }
 .anatomy-row:last-child .anatomy-example {
-  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1.4rem;
 }
 .anatomy-key {
   color: var(--field-color);
@@ -465,21 +532,22 @@ p {
 }
 .anatomy-diff-line {
   color: var(--muted);
+  font-size: 0.9em;
 }
 .anatomy-diff-line[data-change="added"] {
   color: light-dark(#42572e, #b9c7a5);
-  background: color-mix(in srgb, var(--green), transparent 90%);
+  background: color-mix(in srgb, var(--green), transparent 95%);
   box-decoration-break: clone;
 }
 .anatomy-diff-line[data-change="removed"] {
   color: light-dark(#94462f, #d99a90);
-  background: color-mix(in srgb, var(--coral), transparent 90%);
+  background: color-mix(in srgb, var(--coral), transparent 95%);
   box-decoration-break: clone;
 }
 .anatomy-description {
   grid-column: 1;
   grid-row: 1;
-  padding: 0.3rem var(--connector-space) 0.3rem 0;
+  padding: 0.4rem var(--connector-space) 0.4rem 0;
   align-self: start;
 }
 .anatomy-example::after {
@@ -491,32 +559,53 @@ p {
   height: 0.35rem;
   border: 1px solid var(--field-color);
   border-radius: 50%;
-  background: var(--paper);
+  background: var(--field-color);
   transform: translate(-50%, -50%);
-  opacity: 0.55;
+  opacity: 0.4;
 }
 .anatomy-row[data-field="name"] {
   --connector-y: 2.8rem;
 }
 .anatomy-row[data-field="name"] .anatomy-description {
-  padding-top: 1.9rem;
+  padding-top: 2rem;
 }
 .anatomy-row[data-field="context"] {
   --connector-y: 4.4rem;
 }
 .anatomy-row[data-field="context"] .anatomy-description {
-  padding-top: 3.5rem;
+  padding-top: 3.6rem;
 }
 .anatomy-description h3 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.25rem;
   color: var(--field-color);
   text-transform: uppercase;
-  font-size: 1rem;
-  letter-spacing: 0.04em;
-  line-height: 1.8rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  line-height: 1.6rem;
+}
+.anatomy-description h3 span {
+  opacity: 0.7;
+}
+.anatomy-description h3 button {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.anatomy-description h3 button:focus-visible {
+  outline: 1px solid var(--field-color);
+  outline-offset: 5px;
 }
 .anatomy-description h3::after {
   content: "";
@@ -524,12 +613,12 @@ p {
   min-width: 0.5rem;
   margin-right: calc(0px - var(--connector-space) - 0.6rem);
   border-top: 1px solid var(--field-color);
-  opacity: 0.55;
+  opacity: 0.4;
 }
 .anatomy-description p {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  line-height: 1.65;
   color: var(--muted);
 }
 @media (max-width: 760px) {
@@ -538,7 +627,6 @@ p {
   }
   .anatomy-row {
     grid-template-columns: 1fr;
-    border-inline: 1px solid var(--rule);
   }
   .anatomy-example {
     grid-column: 1;
@@ -546,9 +634,6 @@ p {
     border: 0;
     padding: 1rem;
     font-size: 1rem;
-  }
-  .anatomy-row:last-child .anatomy-example {
-    border: 0;
   }
   .anatomy-description {
     grid-row: 1;
@@ -564,8 +649,16 @@ p {
   .anatomy-description h3::after {
     content: none;
   }
-  .anatomy-row:last-child {
-    border-bottom: 1px solid var(--rule);
+  .anatomy-description h3 {
+    font-size: 0.9rem;
+  }
+  .anatomy-description p {
+    font-size: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anatomy-row {
+    transition: none;
   }
 }
 .chapter-heading {
