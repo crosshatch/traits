@@ -47,9 +47,9 @@ const observeWalkthroughAtom = Atom.make((ctx) => {
     (entries) =>
       ctx.set(
         walkthroughVisibleAtom,
-        Array.some(entries, (entry) => entry.isIntersecting)
+        Array.some(entries, (entry) => entry.isIntersecting && entry.intersectionRatio >= 0.15)
       ),
-    { rootMargin: "-30% 0px" }
+    { threshold: 0.15 }
   )
   observer.observe(walkthrough)
   ctx.addFinalizer(() => observer.disconnect())
@@ -323,9 +323,6 @@ export const App = () => {
                   <p>Something is missing or ambiguous. This is not a confirmed violation.</p>
                 </div>
               </div>
-              <p className="small-note">
-                Probabilities from decision models expose uncertainty, but judgments can still be wrong.
-              </p>
             </div>
           </section>
 

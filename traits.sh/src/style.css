@@ -503,7 +503,7 @@ h3 {
   transform: scaleX(0);
   transform-origin: left;
 }
-.walkthrough[data-playing] .step-tabs [role="tab"][aria-selected="true"]::before {
+.walkthrough[data-playing][data-visible] .step-tabs [role="tab"][aria-selected="true"]::before {
   animation-name: step-progress;
   animation-duration: 9s;
   animation-timing-function: linear;
