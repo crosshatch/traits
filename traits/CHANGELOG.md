@@ -1,5 +1,32 @@
 # traits
 
+## 0.5.8
+
+### Patch Changes
+
+- [#72](https://github.com/crosshatch/traits/pull/72)
+  [`e6fdfb9`](https://github.com/crosshatch/traits/commit/e6fdfb90a4d673211ccb2a578ee3365ebfe3bdbb) -
+  Replace body-centric traits with required subject, requirement, and purpose
+  fields, optional natural-language applicability and guidance, and optional
+  Markdown context. Reject unsupported frontmatter instead of silently
+  discarding it.
+
+  This changes the stored format and SDK/MCP contracts. Explicitly migrate older
+  collections to the new fields and reconnect the MCP server. Parse errors
+  provide migration guidance without rewriting files. `derive_trait` now accepts
+  a complete trait object as `proposedTrait`; `check_traits` optionally accepts
+  invocation circumstances.
+
+  Stored-trait parse errors now direct clients to request developer consent
+  before repairing the affected store, validate repaired traits, and retry the
+  blocked operation without restarting the server. Diagnostics distinguish
+  schema mismatches from malformed documents and require clarification for
+  ambiguous repairs.
+
+- [#73](https://github.com/crosshatch/traits/pull/73)
+  [`5365a85`](https://github.com/crosshatch/traits/commit/5365a85f5e47e90444aa7cd46c254143ff822f22) -
+  Allow compatible Effect 4.x releases in peer dependencies.
+
 ## 0.5.7
 
 ### Patch Changes
