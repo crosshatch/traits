@@ -92,6 +92,9 @@ Command.make("traits", {
       | Do not claim compliance while confirmed violations remain. Report model errors as incomplete reviews, not passes.
       | An empty result only means no failures for the selected files and traits; empty selections or an empty store perform no assessments.
       | On mutation errors, inspect the store before retrying: writes and removals are not transactional, and retries may duplicate saved traits.
+      | On TraitParseError from loading stored traits, ask the developer whether to automatically resolve the parse errors and retry the blocked operation. Do not silently repair files or simply report a blocker without offering recovery. If declined, leave files unchanged and report the operation as incomplete.
+      | After approval, inspect the entire affected store. Distinguish installed-schema mismatches and repairable legacy formats from malformed YAML or missing/unterminated frontmatter; not every parse error is a migration. Preserve names, authoritative requirements, applicability, exceptions, examples, and all supporting context; leave valid traits unchanged. Ask focused questions for ambiguous or unsupported repairs instead of guessing or dropping information.
+      | Validate every affected-store file against the installed Trait schema and serialization format, then retry the originally blocked operation with its original arguments. No server restart is needed. The original failure is not a successful check; report success only after a successful retry. This recovery protocol is core MCP behavior, not a trait to save.
       `)
     }).pipe(
       Layer.provide(

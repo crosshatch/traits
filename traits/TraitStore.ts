@@ -21,7 +21,22 @@ export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitPars
   cause: S.Defect()
 }) {
   override get message() {
-    return `Unable to parse trait ${this.path}.\n${Cause.pretty(Cause.fail(this.cause))}\n\nUpdate all stored traits to the current format: required name, subject, requirement, and purpose in YAML frontmatter; optional applicability and guidance as text; optional Markdown context after the header. Purpose explains the intended benefit, not additional obligations. Move old body requirements into requirement, when/mime/skip into applicability prose, and diffs or additional metadata into context. Preserve identity, intent, scope, and exceptions. Old formats are not automatically migrated. Retry after repair; do not treat this failed operation as a successful check.`
+    const diagnosis = S.isSchemaError(this.cause)
+      ? "The document does not match the installed Trait schema. This may be a legacy format or invalid field values; inspect it before deciding migration is appropriate."
+      : "The document could not be parsed. Inspect the original diagnostic for malformed YAML or missing/unterminated frontmatter; do not assume this is a schema migration."
+    return String.stripMargin(`
+    | Unable to parse trait ${this.path}.
+    | ${Cause.pretty(Cause.fail(this.cause))}
+    |
+    | ${diagnosis}
+    | Recovery requires developer consent. Ask the developer: "May I automatically resolve the stored-trait parse errors and retry the blocked operation?"
+    | Do not change files before approval. Do not merely report the blocker and stop without offering this recovery choice. If declined, leave files unchanged and report the operation as incomplete.
+    | After approval, inspect the entire affected trait store, not just the first failing file. Classify each failure and migrate repairable legacy formats to the installed Trait schema; repair malformed documents only where the intended content is clear.
+    | Preserve names, authoritative requirements, applicability, exceptions, examples, and all other supporting context. If a repair is ambiguous or unsupported, ask a focused question rather than guessing, inventing intent, or dropping information. Leave already-valid traits unchanged.
+    | The current format requires name, subject, requirement, and purpose in YAML frontmatter; applicability and guidance are optional text, and the Markdown body is optional context. Purpose explains intended benefit, not additional obligations. Legacy body requirements belong in requirement; when/mime/skip become applicability prose; diffs and additional information belong in context.
+    | Validate all files in the affected store with the installed Trait schema and serialize format before retrying the originally blocked operation with its original arguments. A server restart is not necessary: repaired files are read on retry.
+    | No automatic migration has occurred. The original operation failed; do not treat it as successful or claim a completed check until the retry succeeds.
+    `)
   }
 }
 

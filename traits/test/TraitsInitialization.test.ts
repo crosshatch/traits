@@ -40,7 +40,7 @@ for (const fixture of [
     source: `import { Layer } from ${JSON.stringify(effectUrl)};
       export default { layerDecisionModel: Layer.empty, layerLanguageModel: Layer.empty }`,
     trait: "---\nname: outdated-trait\n---\nKeep this rule.\n",
-    diagnostic: "Update all stored traits to the current format"
+    diagnostic: "Recovery requires developer consent"
   }
 ]) {
   it.effect(
@@ -132,6 +132,9 @@ for (const fixture of [
         if ("trait" in fixture) {
           expect(JSON.stringify(result)).toContain(traitPath)
           expect(JSON.stringify(result)).toContain("TraitParseError")
+          expect(JSON.stringify(result)).toContain("Ask the developer:")
+          expect(JSON.stringify(result)).toContain("original arguments")
+          expect(JSON.stringify(result)).toContain("A server restart is not necessary")
         } else {
           expect(JSON.stringify(result)).toContain("restart the Traits MCP server")
           if (tool.name === "derive_trait") {

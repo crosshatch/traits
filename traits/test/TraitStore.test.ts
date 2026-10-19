@@ -6,7 +6,7 @@ import * as Trait from "../Trait.ts"
 import * as TraitStore from "../TraitStore.ts"
 
 it.effect(
-  "reports migration guidance without changing an unparseable stored trait",
+  "offers consent-based recovery with distinct schema and malformed-document diagnostics without writing",
   Effect.fn("test.TraitStore.parseError")(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -18,24 +18,50 @@ it.effect(
       purpose: "Preserve stored intent."
     })
     const file = path.join(dir, "old-format.md")
-    const original = "---\nname: [\n---\nPreserve this rule."
-    yield* fs.writeFileString(file, original)
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      for (const operation of [store.get(trait.name), store.update(trait), store.rm([trait.name])]) {
-        const result = yield* operation.pipe(Effect.result)
-        expect(Result.isFailure(result)).toBe(true)
-        if (Result.isFailure(result)) {
-          expect(result.failure).toMatchObject({
-            _tag: "TraitParseError",
-            path: file,
-            cause: { _tag: "InvalidYamlError" },
-            message: expect.stringContaining("Update all stored traits")
-          })
+      for (const fixture of [
+        {
+          text: "---\nname: old-format\n---\nPreserve this rule.",
+          tag: "SchemaError",
+          diagnostic: "does not match the installed Trait schema"
+        },
+        {
+          text: "---\nname: [\n---\nPreserve this rule.",
+          tag: "InvalidYamlError",
+          diagnostic: "do not assume this is a schema migration"
         }
+      ]) {
+        yield* fs.writeFileString(file, fixture.text)
+        for (const operation of [store.ls, store.get(trait.name), store.update(trait), store.rm([trait.name])]) {
+          const result = yield* operation.pipe(Effect.result)
+          expect(Result.isFailure(result)).toBe(true)
+          if (Result.isFailure(result)) {
+            expect(result.failure).toMatchObject({
+              _tag: "TraitParseError",
+              path: file,
+              cause: { _tag: fixture.tag },
+              message: expect.stringContaining(fixture.diagnostic)
+            })
+            const message = result.failure.message
+            for (const instruction of [
+              "Ask the developer:",
+              "Do not change files before approval",
+              "If declined, leave files unchanged",
+              "inspect the entire affected trait store",
+              "authoritative requirements, applicability, exceptions, examples",
+              "ask a focused question",
+              "Validate all files",
+              "original arguments",
+              "A server restart is not necessary",
+              "original operation failed"
+            ])
+              expect(message).toContain(instruction)
+          }
+        }
+        const text = yield* fs.readFileString(file)
+        expect(text).toBe(fixture.text)
       }
-      const text = yield* fs.readFileString(file)
-      expect(text).toBe(original)
     }).pipe(Effect.provide(TraitStore.layerFileSystem(dir)))
   }, Effect.provide(NodeServices.layer))
 )

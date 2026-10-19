@@ -376,12 +376,40 @@ Surface tool failures; never treat a failed operation as a successful save or
 review. Error diagnostics may contain sensitive information. Never ask for
 credentials in chat.
 
-Stored trait parsing failures return `TraitParseError` with the file path,
-original diagnostic, and migration guidance. Update all stored traits to the
-currently installed package's `Trait` schema and `serialize` format, preserving
-their intent and metadata, then retry. Do not treat the failed operation as a
-successful check. The server stays connected; a restart is not needed for file
-repairs, and no automatic migration is performed.
+### Recover from stored-trait parse errors
+
+`TraitParseError` includes the affected path, original diagnostic, and recovery
+instructions. Ask the developer whether you should automatically resolve the
+stored-trait parse errors and retry the blocked operation. Use the client's
+interactive question UI when available. Do not silently edit files or merely
+report the blocker without offering recovery. This is a repair-consent question,
+not approval to derive a new trait; do not call `derive_trait` or persist this
+recovery protocol as a trait.
+
+If declined, leave files unchanged and report the operation as incomplete. After
+approval:
+
+1. Inspect the entire affected trait store, not just the first failing file.
+   Distinguish schema mismatches (which may be legacy formats or invalid values)
+   from malformed YAML and missing or unterminated frontmatter. Offer repair
+   without assuming every parse error has the same cause.
+2. Migrate repairable legacy formats to the installed package's `Trait` schema.
+   Preserve names, authoritative requirements, applicability, exceptions,
+   examples, and all supporting context. Move legacy requirements into
+   `requirement`, scope and exceptions into applicability prose, and examples or
+   additional information into Markdown context. Purpose explains existing
+   intent, not new obligations. Leave already-valid traits unchanged.
+3. For malformed documents, repair only where the intended content is clear. If
+   any migration or repair is ambiguous or unsupported, ask a focused question
+   before changing that content. Never guess intent or discard information.
+4. Validate every file in the affected store with the installed `Trait` schema
+   and `serialize` format. Then retry the originally blocked operation with its
+   original arguments. The server reads repaired files on retry; no restart is
+   necessary.
+
+The original operation failed and must never be reported as a successful check.
+Only a successful retry establishes completion. No automatic migration is
+performed by the server.
 
 Git-ignored files are excluded by default, with ignore rules refreshed on every
 check. Untracked files do not need to be added to Git to be evaluated. Tracked
