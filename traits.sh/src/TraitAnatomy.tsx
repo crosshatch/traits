@@ -111,9 +111,6 @@ export const TraitAnatomy = () => (
         “Keep small errors beside the operations that produce them, unless ownership or dependencies justify separating
         them.”
       </blockquote>
-      <p className="anatomy-transformation">
-        <span aria-hidden="true">↓</span> Your agent proposes a trait.
-      </p>
     </figure>
     <div className="anatomy-specimen">
       <div
