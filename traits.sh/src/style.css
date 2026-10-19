@@ -334,6 +334,7 @@ p {
   filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--gold) 12%, transparent));
 }
 .read-link {
+  text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   gap: 1rem;
@@ -454,6 +455,7 @@ h3 {
   line-height: 1.8;
 }
 .walkthrough {
+  scroll-margin-top: var(--contents-height);
   border: 1px solid var(--rule);
   margin-top: 3.5rem;
   box-shadow: 0 5px 20px color-mix(in srgb, var(--ink) 4%, transparent);
@@ -467,7 +469,8 @@ h3 {
   background: light-dark(#f3ecd6, #302535);
   border-bottom: 1px solid var(--rule);
 }
-.step-tabs button {
+.step-tabs [role="tab"] {
+  text-decoration: none;
   position: relative;
   border: 0;
   border-right: 1px solid var(--rule);
@@ -481,17 +484,17 @@ h3 {
   font-size: 0.7rem;
   transition: background 0.18s;
 }
-.step-tabs button:last-child {
+.step-tabs [role="tab"]:last-child {
   border-right: 0;
 }
-.step-tabs button:hover {
+.step-tabs [role="tab"]:hover {
   background: light-dark(#ebe2c4, #47364d);
 }
-.step-tabs button[aria-selected="true"] {
+.step-tabs [role="tab"][aria-selected="true"] {
   background: color-mix(in srgb, var(--paper), var(--gold) 14%);
   color: var(--ink);
 }
-.step-tabs button::before {
+.step-tabs [role="tab"]::before {
   content: "";
   position: absolute;
   inset: auto 0 0;
@@ -500,14 +503,16 @@ h3 {
   transform: scaleX(0);
   transform-origin: left;
 }
-.walkthrough[data-playing] .step-tabs button[aria-selected="true"]::before {
+.walkthrough[data-playing] .step-tabs [role="tab"][aria-selected="true"]::before {
   animation-name: step-progress;
   animation-duration: 9s;
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
-.walkthrough:not([data-visible]) .step-tabs button::before,
-.walkthrough:has(.step-details:hover, .lifecycle-visual:hover, .step-tabs :focus-visible) .step-tabs button::before {
+.walkthrough:not([data-visible]) .step-tabs [role="tab"]::before,
+.walkthrough:has(.step-details:hover, .lifecycle-visual:hover, .step-tabs :focus-visible)
+  .step-tabs
+  [role="tab"]::before {
   animation-play-state: paused;
 }
 @keyframes step-progress {
@@ -586,7 +591,6 @@ h3 {
 }
 .step-controls .step-autoplay {
   border: 1px solid var(--rule);
-  border-radius: 999px;
   padding: 0.35rem 0.9rem;
   background: var(--paper);
 }
@@ -1218,7 +1222,7 @@ h3 {
   text-align: center;
 }
 .closing > p {
-  font-size: 1.25rem;
+  font-size: 1rem;
 }
 .docked-header {
   display: grid;
@@ -1242,9 +1246,10 @@ h3 {
   border-radius: 3px;
 }
 .compact-install-command code {
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--ink);
+  font-size: 0.8rem;
+}
+.compact-install-command .install-status {
+  font-size: 0.625rem;
 }
 .compact-install-command .install-status {
   margin-top: 0.15rem;
@@ -1301,7 +1306,7 @@ h3 {
   .step-controls {
     padding-inline: 1.5rem;
   }
-  .step-tabs button {
+  .step-tabs [role="tab"] {
     gap: 0.4rem;
     font-size: 0.62rem;
   }
@@ -1337,7 +1342,6 @@ h3 {
     padding: 0.45rem 0.6rem;
   }
   .docked-header .compact-install-command code {
-    font-size: 0.7rem;
     white-space: nowrap;
   }
   .docked-header .install-status {
@@ -1413,14 +1417,14 @@ h3 {
   .step-tabs {
     grid-template-columns: repeat(2, 1fr);
   }
-  .step-tabs button {
+  .step-tabs [role="tab"] {
     border-bottom: 1px solid var(--rule);
     padding: 0.9rem 0.5rem;
   }
-  .step-tabs button:nth-child(2n) {
+  .step-tabs [role="tab"]:nth-child(2n) {
     border-right: 0;
   }
-  .step-tabs button:nth-last-child(-n + 2) {
+  .step-tabs [role="tab"]:nth-last-child(-n + 2) {
     border-bottom: 0;
   }
   .step-panel {
@@ -1469,7 +1473,7 @@ h3 {
     gap: 1.5rem;
   }
   .closing > p {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
 }
 

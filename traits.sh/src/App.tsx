@@ -72,7 +72,7 @@ const navigateStepsAtom = Atom.fnSync((event: KeyboardEvent<HTMLDivElement>, ctx
   else return
   event.preventDefault()
   selectStep(ctx, next)
-  event.currentTarget.querySelector<HTMLButtonElement>(`#step-${next}`)?.focus()
+  event.currentTarget.querySelector<HTMLAnchorElement>(`#step-${next}`)?.focus()
 })
 const advanceStepAtom = Atom.fnSync((event: AnimationEvent<HTMLDivElement>, ctx) => {
   if (event.animationName !== "step-progress") return
@@ -85,8 +85,8 @@ const StepTab = (props: { readonly step: LifecycleStep; readonly index: number }
   const active = useAtomValue(activeAtom)
   const select = useAtomSet(selectStepAtom(props.index))
   return (
-    <button
-      type="button"
+    <a
+      href="#walkthrough"
       role="tab"
       id={`step-${props.index}`}
       aria-selected={active === props.index}
@@ -98,7 +98,7 @@ const StepTab = (props: { readonly step: LifecycleStep; readonly index: number }
         {Array.getUnsafe(stepNumerals, props.index)}.
       </span>
       <span>{props.step.title}</span>
-    </button>
+    </a>
   )
 }
 const renderStep = (step: LifecycleStep, index: number) => <StepTab key={step.title} {...{ step, index }} />
@@ -189,6 +189,7 @@ export const App = () => {
 
             <div
               className="walkthrough"
+              id="walkthrough"
               data-playing={playing ? "" : undefined}
               data-visible={walkthroughVisible ? "" : undefined}
             >
@@ -383,7 +384,7 @@ export const App = () => {
             <div className="closing">
               <Illustrations.Flourish />
               <img className="hero-emblem" src="/traits-emblem.svg" width="360" height="420" alt="" />
-              <p>Global desloppification.</p>
+              <p>GLOBAL DESLOPPIFICATION</p>
               <a className="read-link" href="#top">
                 Back to top ↑
               </a>
