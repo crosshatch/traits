@@ -1374,8 +1374,37 @@ h3 {
     display: none;
   }
   .hero {
-    padding: 1.5rem 1.25rem;
-    margin-top: 0.75rem;
+    min-height: 0;
+    padding: clamp(0.75rem, 2svh, 1.5rem) 1.25rem;
+    margin-top: 0;
+  }
+  .opening {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: calc(100svh - var(--contents-height));
+  }
+  .hero .hero-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(0.65rem, 1.8svh, 1.15rem);
+    width: 100%;
+  }
+  .hero .hero-content > * {
+    margin: 0;
+  }
+  .hero .hero-emblem {
+    width: clamp(56px, 10svh, 90px);
+  }
+  .hero .hero-coda {
+    margin-top: 0;
+  }
+  .hero .hero-description::after {
+    margin-top: clamp(0.65rem, 1.8svh, 1.15rem);
+  }
+  .hero .install-command {
+    min-height: 88px;
+    padding: 1rem;
   }
   .hero::after {
     inset: 0.65rem;
@@ -1384,8 +1413,7 @@ h3 {
     font-size: 0.65rem;
   }
   .hero h1 {
-    font-size: clamp(2.8rem, 12vw, 4.8rem);
-    margin-block: 2rem 0.5rem;
+    font-size: clamp(2.8rem, min(12vw, 9svh), 4.25rem);
   }
   .hero-description {
     font-size: clamp(1.1rem, 4vw, 1.4rem);
@@ -1397,7 +1425,7 @@ h3 {
     gap: 0.85rem 1.25rem;
     padding: 0.75rem 1rem;
     font-size: 0.62rem;
-    margin-top: 1.5rem;
+    margin-top: 0;
   }
   .contents-band > .eyebrow {
     width: 100%;
