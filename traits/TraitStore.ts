@@ -20,10 +20,10 @@ import {
 import { Hex } from "effect/encoding"
 import type { SqlError } from "effect/sql"
 
-import * as TraitDatabase from "./_util/TraitDatabase.ts"
 import { ProjectPaths } from "./ProjectPaths.ts"
 import { T } from "./tables/index.ts"
 import * as Trait from "./Trait.ts"
+import * as TraitDatabase from "./TraitDatabase.ts"
 
 export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitParseError", {
   path: S.String,

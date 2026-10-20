@@ -2,9 +2,9 @@ import { Array, Effect, FileSystem, flow, Path, pipe, Schema as S, String } from
 import { DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
-import * as ToolExecutionError from "../_util/ToolExecutionError.ts"
 import { getIncludedFiles } from "../getIncludedFiles.ts"
 import { Source, SourceLocation } from "../Source.ts"
+import * as ToolExecutionError from "../ToolExecutionError.ts"
 import * as Trait from "../Trait.ts"
 import * as Evaluation from "../TraitEvaluation.ts"
 import { excludeIgnored } from "../traitIgnores.ts"
@@ -131,5 +131,5 @@ export const layer = toolkit.toLayer({
       }),
       { concurrency: "unbounded" }
     ).pipe(Effect.map(Array.flatten))
-  }, Effect.catchCause(ToolExecutionError.boundary))
+  }, Effect.catchCause(ToolExecutionError.fromCause))
 })

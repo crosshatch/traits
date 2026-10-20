@@ -8,10 +8,5 @@ export class ToolExecutionError extends S.TaggedError<ToolExecutionError>()("Too
   }
 }
 
-export const boundary = (cause: Cause.Cause<unknown>) =>
-  Cause.hasInterruptsOnly(cause)
-    ? Effect.interrupt
-    : Effect.try(() => Cause.pretty(cause)).pipe(
-        Effect.catchTags({ UnknownError: () => Effect.succeed("Unable to format the failure diagnostics.") }),
-        Effect.flatMap((details) => ToolExecutionError.make({ details }))
-      )
+export const fromCause = (cause: Cause.Cause<unknown>) =>
+  Cause.hasInterruptsOnly(cause) ? Effect.interrupt : ToolExecutionError.make({ details: Cause.pretty(cause) })

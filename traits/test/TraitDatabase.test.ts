@@ -5,10 +5,10 @@ import { and, like } from "drizzle-orm"
 import { Effect, FileSystem, Layer, Path, Result } from "effect"
 import { Reactivity } from "effect/reactivity"
 
-import * as TraitDatabase from "../_util/TraitDatabase.ts"
-import * as TraitDatabaseClient from "../_util/TraitDatabaseClient.ts"
 import { T } from "../tables/index.ts"
 import * as Trait from "../Trait.ts"
+import * as TraitDatabase from "../TraitDatabase.ts"
+import * as TraitDatabaseClient from "../TraitDatabaseClient.ts"
 
 it.effect(
   "preserves table metadata for typed relational queries",

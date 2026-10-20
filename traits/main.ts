@@ -6,17 +6,17 @@ import { Command, Flag } from "effect/cli"
 import { FetchHttpClient } from "effect/http"
 import { Reactivity } from "effect/reactivity"
 
-import * as TraitDatabase from "./_util/TraitDatabase.ts"
-import * as TraitDatabaseClient from "./_util/TraitDatabaseClient.ts"
-import * as TraitProjectLock from "./_util/TraitProjectLock.ts"
-import * as TraitsConfigProvider from "./_util/TraitsConfigProvider.ts"
-import * as TraitsHttpClient from "./_util/TraitsHttpClient.ts"
 import * as TraitsTelemetry from "./_util/TraitsTelemetry.ts"
 import PackageJson from "./package.json" with { type: "json" }
 import * as ProjectPaths from "./ProjectPaths.ts"
 import * as ConfigurationError from "./toolkit/ConfigurationError.ts"
 import { toolkit } from "./toolkit/toolkit.ts"
+import * as TraitDatabase from "./TraitDatabase.ts"
+import * as TraitDatabaseClient from "./TraitDatabaseClient.ts"
+import * as TraitProjectLock from "./TraitProjectLock.ts"
 import * as TraitsConfig from "./TraitsConfig.ts"
+import * as TraitsConfigProvider from "./TraitsConfigProvider.ts"
+import * as TraitsHttpClient from "./TraitsHttpClient.ts"
 import * as TraitStore from "./TraitStore.ts"
 
 Command.make("traits", {

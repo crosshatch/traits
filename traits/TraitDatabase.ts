@@ -3,12 +3,12 @@ import { pushSchema } from "drizzle-kit/payload/sqlite"
 import * as LibsqlDrizzle from "drizzle-orm/effect-libsql"
 import { Array, Context, Effect, Layer } from "effect"
 
-import { relations, T } from "../tables/index.ts"
+import { relations, T } from "./tables/index.ts"
 
 export class TraitDatabase extends Context.Service<
   TraitDatabase,
   LibsqlDrizzle.EffectLibsqlDatabase<typeof relations> & { readonly $client: LibsqlClient.LibsqlClient }
->()("traits/_util/TraitDatabase") {}
+>()("traits/TraitDatabase") {}
 
 export const layer = Layer.effect(
   TraitDatabase,

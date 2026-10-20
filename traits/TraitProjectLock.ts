@@ -2,7 +2,7 @@ import { LibsqlClient } from "@effect/sql-libsql"
 import { Deferred, Effect, FileSystem, Path, Schema as S } from "effect"
 import type { SqlError } from "effect/sql"
 
-import { ProjectPaths } from "../ProjectPaths.ts"
+import { ProjectPaths } from "./ProjectPaths.ts"
 
 export class TraitProjectInUseError extends S.TaggedError<TraitProjectInUseError>()("TraitProjectInUseError", {
   directory: S.String

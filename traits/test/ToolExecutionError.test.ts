@@ -1,10 +1,10 @@
 import { expect, it } from "@effect/vitest"
 import { Cause, Effect, Exit, pipe, Redacted, Result, Schema as S } from "effect"
 
-import * as ToolExecutionError from "../_util/ToolExecutionError.ts"
+import * as ToolExecutionError from "../ToolExecutionError.ts"
 import * as TraitStore from "../TraitStore.ts"
 
-const protect = Effect.catchCause(ToolExecutionError.boundary)
+const protect = Effect.catchCause(ToolExecutionError.fromCause)
 
 it.effect(
   "returns domain recovery diagnostics in the shared envelope and preserves pure interruptions",
@@ -54,11 +54,8 @@ it.effect(
         throw new Error("broken diagnostic getter")
       }
     }
-    const fallback = yield* Effect.fail(broken).pipe(protect, Effect.result)
-    if (Result.isFailure(fallback))
-      expect(fallback.failure).toMatchObject({
-        _tag: "ToolExecutionError",
-        details: "Unable to format the failure diagnostics."
-      })
+    const failedFormatting = yield* Effect.fail(broken).pipe(protect, Effect.exit)
+    expect(Exit.isFailure(failedFormatting)).toBe(true)
+    if (Exit.isFailure(failedFormatting)) expect(Cause.hasDies(failedFormatting.cause)).toBe(true)
   })
 )

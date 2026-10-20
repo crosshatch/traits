@@ -1,7 +1,7 @@
 import { Array, ConfigProvider, Effect, FileSystem, Path } from "effect"
 
-import { ProjectPaths } from "../ProjectPaths.ts"
-import { getGitRoot } from "./Git.ts"
+import { getGitRoot } from "./_util/Git.ts"
+import { ProjectPaths } from "./ProjectPaths.ts"
 
 export const layer = ConfigProvider.layerAdd(
   Effect.gen(function* () {

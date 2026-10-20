@@ -4,8 +4,8 @@ import { Effect, FileSystem, Path, Result, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
-import * as TraitProjectLock from "../_util/TraitProjectLock.ts"
 import { ProjectPaths } from "../ProjectPaths.ts"
+import * as TraitProjectLock from "../TraitProjectLock.ts"
 
 const acquire = (directory: string) =>
   TraitProjectLock.acquire.pipe(

@@ -1,7 +1,7 @@
 import { Effect, flow, Schema as S, String } from "effect"
 import { DecisionModel, LanguageModel, Tool, Toolkit } from "effect/ai"
 
-import * as ToolExecutionError from "../_util/ToolExecutionError.ts"
+import * as ToolExecutionError from "../ToolExecutionError.ts"
 import * as Trait from "../Trait.ts"
 import * as Derivation from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
@@ -70,5 +70,5 @@ export const DeriveTrait = Tool.make("derive_trait", {
 export const toolkit = Toolkit.make(DeriveTrait)
 
 export const layer = toolkit.toLayer({
-  derive_trait: flow(Derivation.derive, Effect.catchCause(ToolExecutionError.boundary))
+  derive_trait: flow(Derivation.derive, Effect.catchCause(ToolExecutionError.fromCause))
 })

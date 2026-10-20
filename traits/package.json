@@ -33,7 +33,13 @@
     "./tables/*": null,
     "./*": "./*.ts",
     "./_util/*": null,
-    "./index": null
+    "./index": null,
+    "./ToolExecutionError": null,
+    "./TraitDatabase": null,
+    "./TraitDatabaseClient": null,
+    "./TraitProjectLock": null,
+    "./TraitsConfigProvider": null,
+    "./TraitsHttpClient": null
   },
   "publishConfig": {
     "exports": {
@@ -43,7 +49,13 @@
       "./tables/*": null,
       "./*": "./dist/*.js",
       "./_util/*": null,
-      "./index": null
+      "./index": null,
+      "./ToolExecutionError": null,
+      "./TraitDatabase": null,
+      "./TraitDatabaseClient": null,
+      "./TraitProjectLock": null,
+      "./TraitsConfigProvider": null,
+      "./TraitsHttpClient": null
     },
     "access": "public"
   },

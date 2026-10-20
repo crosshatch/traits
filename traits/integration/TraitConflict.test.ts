@@ -3,13 +3,13 @@ import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Layer, Path, String } from "effect"
 import { FetchHttpClient } from "effect/http"
 
-import * as TraitsConfigProvider from "../_util/TraitsConfigProvider.ts"
 import * as ProjectPaths from "../ProjectPaths.ts"
 import { Source } from "../Source.ts"
 import * as Trait from "../Trait.ts"
 import * as TraitConflict from "../TraitConflict.ts"
 import * as TraitEvaluation from "../TraitEvaluation.ts"
 import * as TraitsConfig from "../TraitsConfig.ts"
+import * as TraitsConfigProvider from "../TraitsConfigProvider.ts"
 
 const layer = TraitsConfig.layer.pipe(
   Layer.provideMerge(FetchHttpClient.layer),

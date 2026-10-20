@@ -3,7 +3,7 @@ import { expect, it } from "@effect/vitest"
 import { Effect, Layer, Redacted, Result } from "effect"
 import { HttpClient, HttpClientError, HttpClientRequest } from "effect/http"
 
-import * as TraitsHttpClient from "../_util/TraitsHttpClient.ts"
+import * as TraitsHttpClient from "../TraitsHttpClient.ts"
 
 it.effect(
   "preserves native connection codes and messages without copying request data through OpenRouter's conversion",

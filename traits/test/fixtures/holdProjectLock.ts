@@ -2,8 +2,8 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Console, Effect, Layer } from "effect"
 import { Reactivity } from "effect/reactivity"
 
-import * as TraitProjectLock from "../../_util/TraitProjectLock.ts"
 import { ProjectPaths } from "../../ProjectPaths.ts"
+import * as TraitProjectLock from "../../TraitProjectLock.ts"
 
 Effect.gen(function* () {
   yield* TraitProjectLock.acquire
