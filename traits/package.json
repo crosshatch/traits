@@ -60,10 +60,10 @@
     "access": "public"
   },
   "dependencies": {
-    "@effect/sql-libsql": "4.0.0",
-    "drizzle-kit": "1.0.0-rc.4",
-    "drizzle-orm": "1.0.0-rc.5-5935859",
-    "yaml": "^2.9.1"
+    "@effect/sql-libsql": "catalog:",
+    "drizzle-kit": "catalog:",
+    "drizzle-orm": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

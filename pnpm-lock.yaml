@@ -179,6 +179,9 @@ catalogs:
     '@effect/platform-node':
       specifier: 4.0.0
       version: 4.0.0
+    '@effect/sql-libsql':
+      specifier: ^4.0.0
+      version: 4.0.0
     '@effect/tsgo':
       specifier: 0.47.2
       version: 0.47.2
@@ -200,6 +203,12 @@ catalogs:
     alchemy:
       specifier: 2.0.0-beta.80
       version: 2.0.0-beta.80
+    drizzle-kit:
+      specifier: 1.0.0-rc.4
+      version: 1.0.0-rc.4
+    drizzle-orm:
+      specifier: 1.0.0-rc.5-5935859
+      version: 1.0.0-rc.5-5935859
     effect:
       specifier: 4.0.0
       version: 4.0.0
@@ -218,6 +227,9 @@ catalogs:
     vite-plus:
       specifier: 1.0.0
       version: 1.0.0
+    yaml:
+      specifier: ^2.9.1
+      version: 2.9.1
 
 overrides:
   '@effect/sql-d1': 4.0.0
@@ -270,16 +282,16 @@ importers:
   traits:
     dependencies:
       '@effect/sql-libsql':
-        specifier: 4.0.0
+        specifier: 'catalog:'
         version: 4.0.0(effect@4.0.0)
       drizzle-kit:
-        specifier: 1.0.0-rc.4
+        specifier: 'catalog:'
         version: 1.0.0-rc.4
       drizzle-orm:
-        specifier: 1.0.0-rc.5-5935859
+        specifier: 'catalog:'
         version: 1.0.0-rc.5-5935859(@cloudflare/workers-types@5.20260930.2)(@effect/sql-d1@4.0.0(effect@4.0.0))(@effect/sql-libsql@4.0.0(effect@4.0.0))(@effect/sql-sqlite-do@4.0.0(effect@4.0.0))(@electric-sql/pglite@0.3.15)(@libsql/client@0.18.0)(@opentelemetry/api@1.9.1)(effect@4.0.0)(valibot@1.2.0(typescript@7.0.2))
       yaml:
-        specifier: ^2.9.1
+        specifier: 'catalog:'
         version: 2.9.1
     devDependencies:
       '@effect/platform-node':
