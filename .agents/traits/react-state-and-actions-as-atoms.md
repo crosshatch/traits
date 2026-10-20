@@ -10,7 +10,6 @@ requirement: In React code, use Effect reactivity atoms instead of useState and
   from component handlers. Preserve appropriate per-instance state isolation and
   lifecycle cleanup.
 applicability: |-
-  Applies when defining React component state, event handlers, or asynchronous actions.
   File types or languages: text/tsx.
 ---
 ```diff

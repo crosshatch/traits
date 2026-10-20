@@ -10,7 +10,6 @@ requirement: "When an Option is used only to check presence and access its
   Retain Option when its combinators or distinction between Some(undefined) and
   None are needed."
 applicability: |-
-  Applies when using Option only to test presence and access the contained value.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

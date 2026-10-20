@@ -9,7 +9,6 @@ requirement: "Every Effect Data.TaggedEnum type alias must be paired with a
   applies to Data.TaggedEnum declarations, independently of Schema.TaggedUnion
   construction rules."
 applicability: |-
-  Applies when declaring an Effect Data.TaggedEnum type alias.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

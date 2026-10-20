@@ -10,7 +10,6 @@ requirement: "Use direct property access rather than object destructuring in
   not only to property selectors. Local destructuring inside a function body is
   unaffected."
 applicability: |-
-  Applies when declaring function, callback, or generator parameters that receive objects.
   File types or languages: text/typescript, text/tsx, text/javascript, text/jsx.
 ---
 ```diff

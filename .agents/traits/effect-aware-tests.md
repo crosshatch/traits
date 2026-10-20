@@ -10,7 +10,6 @@ requirement: Use @effect/vitest wherever tests execute Effects, yielding Effects
   APIs for pure synchronous tests or framework-specific harnesses that do not
   execute Effects.
 applicability: |-
-  Applies when writing or updating tests that execute Effects or acquire scoped resources.
   File types or languages: text/typescript, text/tsx, text/javascript, text/jsx.
 ---
 ```diff

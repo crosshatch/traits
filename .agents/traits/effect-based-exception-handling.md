@@ -11,7 +11,6 @@ requirement: "Do not use JavaScript try/catch in application code. Model
   named Effect.fn, not inline component handlers or Atom.fnSync. Preserve
   intentional fallback behavior and let unhandled operational errors propagate."
 applicability: |-
-  Applies when handling throwable synchronous operations or Promise failures in application code.
   File types or languages: text/typescript, text/tsx, text/javascript, text/jsx.
 ---
 ```diff

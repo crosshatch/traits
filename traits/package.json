@@ -15,6 +15,7 @@
     "!vite.config.ts",
     "_util/**/*.ts",
     "skills/**/*.md",
+    "tables/**/*.ts",
     "toolkit/**/*.ts",
     "dist/package.json",
     "dist/**/*.js",
@@ -28,6 +29,8 @@
   "exports": {
     "./package.json": "./package.json",
     ".": "./index.ts",
+    "./tables": null,
+    "./tables/*": null,
     "./*": "./*.ts",
     "./_util/*": null,
     "./index": null
@@ -36,6 +39,8 @@
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
+      "./tables": null,
+      "./tables/*": null,
       "./*": "./dist/*.js",
       "./_util/*": null,
       "./index": null
@@ -43,6 +48,9 @@
     "access": "public"
   },
   "dependencies": {
+    "@effect/sql-libsql": "4.0.0",
+    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.5-5935859",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

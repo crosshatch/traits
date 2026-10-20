@@ -8,7 +8,6 @@ requirement: For parameterless Effect operations, export an Effect value instead
   generator is needed. Consumers should yield the Effect directly rather than
   invoke it. Preserve tracing with Effect.withSpan when appropriate.
 applicability: |-
-  Applies when exporting parameterless Effect operations.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

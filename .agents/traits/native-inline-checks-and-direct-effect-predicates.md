@@ -12,7 +12,6 @@ requirement: Prefer native syntax for inline comparisons and simple runtime
   use native expressions when no suitable helper exists or a helper would change
   required semantics.
 applicability: |-
-  Applies when writing inline comparisons, simple runtime checks, or predicate stages in existing pipelines.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

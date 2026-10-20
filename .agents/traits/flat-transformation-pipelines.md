@@ -11,7 +11,6 @@ requirement: Use `.pipe(...)` to keep successive transformations flat and
   and `Effect.fnUntraced`, use their transformation arguments as the equivalent
   flat composition style.
 applicability: |-
-  Applies when composing successive transformations or Effect.fn transformation arguments.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

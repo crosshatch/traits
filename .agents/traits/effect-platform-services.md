@@ -13,7 +13,6 @@ requirement: "Use the Effect alternative for Node APIs in ordinary application
   Keep this exception confined to the tooling boundary rather than using it to
   bypass Effect in application code."
 applicability: |-
-  Applies when accessing filesystem, paths, working directories, or child processes in application code or synchronous tooling boundaries.
   File types or languages: text/typescript, text/tsx, text/javascript, text/jsx.
   Exception: When all native Node API usage under assessment is confined to synchronous tooling boundaries and is needed to preserve the framework's synchronous execution contract.
 ---

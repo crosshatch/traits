@@ -1,17 +1,33 @@
-import { Array, flow, String } from "effect"
+import { Array, flow, Option, pipe, Schema as S, String } from "effect"
 
 import type { Trait } from "./Trait.ts"
 
-/** File-scoped exceptions must appear in the leading line-comment header and include a reason. */
+const decodeComment = S.String.pipe(
+  S.decodeTo(S.Union([S.TemplateLiteralParser(["//", S.String]), S.TemplateLiteralParser(["<!--", S.String, "-->"])])),
+  S.decodeUnknownOption
+)
+const decodeDirective = S.String.pipe(
+  S.decodeTo(
+    S.TemplateLiteralParser([
+      "traits-ignore-file",
+      S.String.check(S.isPattern(/^\s+\S+\s*$/)),
+      ":",
+      S.String.check(S.isPattern(/^\s*\S[\s\S]*$/))
+    ])
+  ),
+  S.decodeUnknownOption
+)
+
+/** File-scoped exceptions require a reason in a leading // or single-line HTML comment header. */
 export const traitIgnores = (text: string): ReadonlySet<string> => {
   const references = new Set<string>()
   for (const line of String.split(text, "\n")) {
     const trimmed = String.trim(line)
     if (trimmed === "" || trimmed.startsWith("#!")) continue
-    if (!trimmed.startsWith("//")) break
-    const match = /^\/\/\s*traits-ignore-file\s+(\S+)\s*:\s*(\S.*)$/.exec(trimmed)
-    const reference = match?.[1]
-    if (reference !== undefined) references.add(reference)
+    const comment = pipe(trimmed, decodeComment, Option.getOrUndefined)
+    if (comment === undefined) break
+    const directive = pipe(comment[1], String.trim, decodeDirective, Option.getOrUndefined)
+    if (directive !== undefined) references.add(String.trim(directive[1]))
   }
   return references
 }

@@ -8,7 +8,6 @@ requirement: "Keep final value construction inside a transformation pipeline
   This also applies to other constructors when the construction is the final
   transformation."
 applicability: |-
-  Applies when constructing a final value from a transformation pipeline.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

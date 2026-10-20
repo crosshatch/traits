@@ -4,8 +4,8 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev": "vp dev",
     "build": "vp build",
+    "dev": "vp dev",
     "preview": "vp preview"
   },
   "dependencies": {

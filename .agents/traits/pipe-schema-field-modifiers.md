@@ -9,7 +9,6 @@ requirement: "For optional or nullable Effect Schema fields, apply the field
   S.UndefinedOr, and similar field modifiers. This schema-field convention
   requires .pipe even when there is no chain of successive transformations."
 applicability: |-
-  Applies when applying optional, nullable, or similar modifiers to Effect Schema fields.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

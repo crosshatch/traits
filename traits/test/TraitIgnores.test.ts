@@ -32,6 +32,19 @@ it("requires a reason and exactly one reference", () => {
   ]).toEqual([])
 })
 
+it("supports leading single-line HTML comments without accepting malformed or late directives", () => {
+  expect([
+    ...traitIgnores("<!-- header -->\n<!-- traits-ignore-file first: pre-paint boundary -->\n<!doctype html>")
+  ]).toEqual(["first"])
+  for (const text of [
+    "<!-- traits-ignore-file first: -->\n<!doctype html>",
+    "<!-- traits-ignore-file first second: invalid -->\n<!doctype html>",
+    "<!-- traits-ignore-file first: unterminated\n<!doctype html>",
+    "<!doctype html>\n<!-- traits-ignore-file first: too late -->"
+  ])
+    expect([...traitIgnores(text)]).toEqual([])
+})
+
 it("does not interpret strings or comments after code", () => {
   expect([
     ...traitIgnores("const text = `\n// traits-ignore-file first: reason\n`\n// traits-ignore-file second: reason")

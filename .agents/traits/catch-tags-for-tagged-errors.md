@@ -8,7 +8,6 @@ requirement: 'Always prefer Effect.catchTags over Effect.catchTag for
   Effect.catchTag("UnknownError", handler). Preserve the existing handlers and
   error propagation behavior.'
 applicability: |-
-  Applies when recovering from tagged Effect errors.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

@@ -40,7 +40,7 @@ const question = (trait: Trait) =>
     | state.source.location identifies the file and 1-based starting line of this excerpt when available; it is context, not proof of a violation.
     | Identify the subject, then determine applicability from the natural-language conditions and exceptions. Omitted applicability adds no restriction beyond the subject.
     | Choose not-applicable when the excerpt contains no subject governed by the trait. Choose inconclusive if applicability itself cannot be determined.
-    | Assess the authoritative requirement. Purpose explains intent; guidance advises but grants no permission to act. Neither introduces additional obligations.
+    | Assess the authoritative requirement. Purpose explains intent; advisory guidance in context grants no permission to act. Neither introduces additional obligations.
     | Consult Markdown context, including examples and references, during assessment, but do not treat it as hidden requirements.
     | Missing evidence is not automatically a violation or permission to proceed. A retrieval match is not proof of applicability or violation.
     | Assess all relevant subjects in the supplied text, not just presumed recent changes. It may be an excerpt of a larger artifact.

@@ -1,7 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, pipe, Result, Schema as S, Semaphore, Stream, String } from "effect"
-import { DecisionModel, LanguageModel } from "effect/ai"
-import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
+import { DecisionModel, LanguageModel, OpenAiStructuredOutput } from "effect/ai"
 
 import * as Trait from "../Trait.ts"
 import { TraitsContext } from "../TraitsContext.ts"
@@ -66,30 +65,28 @@ it.effect(
         return Effect.succeed([{ type: "text", text: JSON.stringify({ traits: bodies }) }])
       },
       streamText: () => Stream.empty,
-      codecTransformer: toCodecOpenAI
+      codecTransformer: OpenAiStructuredOutput.toCodecOpenAI
     })
     const semaphore = yield* Semaphore.make(1)
     const layerDecisionModel = Layer.succeed(DecisionModel.DecisionModel, decisionModel)
     const layerLanguageModel = Layer.succeed(LanguageModel.LanguageModel, languageModel)
     const result = yield* Trait.checkDecomposability(Array.join(bodies, " ")).pipe(
-      Effect.provide(
-        Layer.mergeAll(
-          layerDecisionModel,
-          layerLanguageModel,
-          Layer.succeed(TraitsContext, {
-            configRoot: "/test",
+      Effect.provide([
+        layerDecisionModel,
+        layerLanguageModel,
+        Layer.succeed(TraitsContext, {
+          configRoot: "/test",
+          excludes: [],
+          semaphore,
+          config: {
+            decisionConcurrency: 1,
+            excludeGitignored: true,
             excludes: [],
-            semaphore,
-            config: {
-              decisionConcurrency: 1,
-              excludeGitignored: true,
-              excludes: [],
-              layerDecisionModel,
-              layerLanguageModel
-            }
-          })
-        )
-      )
+            layerDecisionModel,
+            layerLanguageModel
+          }
+        })
+      ])
     )
     expect(result).toEqual(bodies)
     expect(requests[0]?.prompt.content[0]).toMatchObject({
@@ -122,8 +119,7 @@ it.effect(
         requirement: `Require delegated authority.\n---\nDo not exceed the budget.${suffix}`,
         applicability: `Before committing funds.\nExcept explicitly authorized test transactions.${suffix}`,
         purpose: `Protect funds.\nEnable autonomous purchases.${suffix}`,
-        guidance: `Negotiate, decline, or escalate.\nDo not assume permission.${suffix}`,
-        context: `${String.trim(multilineContext)}${suffix}`
+        context: `Negotiate, decline, or escalate.\nDo not assume permission.\n\n${String.trim(multilineContext)}${suffix}`
       })
       const text = Trait.serialize(trait)
       expect(text).toContain("requirement: |")
@@ -174,7 +170,7 @@ it.effect(
 it.effect(
   "rejects missing, empty, and incorrectly typed core fields",
   Effect.fnUntraced(function* () {
-    for (const field of ["name", "subject", "requirement", "applicability", "purpose", "guidance"]) {
+    for (const field of ["name", "subject", "requirement", "applicability", "purpose"]) {
       for (const value of ["", "   ", false, {}, []]) {
         const input: unknown = { ...minimal, [field]: value }
         const result = yield* pipe(input, S.decodeUnknownEffect(Trait.Trait), Effect.result)
@@ -190,6 +186,24 @@ it.effect(
       const result = yield* Trait.parse(`---\n${header}\n---`, "/traits/test.md").pipe(Effect.result)
       expect(Result.isFailure(result)).toBe(true)
     }
+  })
+)
+
+it.effect(
+  "rejects legacy guidance rather than silently migrating it",
+  Effect.fn("test.Trait.legacyGuidance")(function* () {
+    const advice = "Negotiate or decline.\nDo not assume permission.\n"
+    for (const body of ["", "# Existing context\n\n```diff\n-old\n+new\n```\n"]) {
+      const text = `---\nname: ${name}\nsubject: A payment.\nrequirement: Stay within authority.\npurpose: Protect funds.\nguidance: |\n  Negotiate or decline.\n  Do not assume permission.\n---\n${body}`
+      const result = yield* Trait.parse(text, "/traits/legacy.md").pipe(Effect.result)
+      expect(result).toMatchObject({ _tag: "Failure", failure: { _tag: "SchemaError" } })
+    }
+    const rejected = yield* pipe(
+      { ...minimal, guidance: advice },
+      S.decodeUnknownEffect(Trait.Trait, { onExcessProperty: "error" }),
+      Effect.result
+    )
+    expect(Result.isFailure(rejected)).toBe(true)
   })
 )
 

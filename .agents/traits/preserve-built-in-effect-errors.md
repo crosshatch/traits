@@ -8,7 +8,6 @@ requirement: "Preserve Effect’s built-in error types and let errors propagate
   types or error mapping unless needed for recovery or a meaningful external
   boundary."
 applicability: |-
-  Applies when deciding whether to wrap or remap built-in Effect errors.
   File types or languages: text/typescript, text/tsx.
   Exception: When every custom error or error mapping under assessment is needed for recovery or a meaningful external boundary rather than merely wrapping a built-in Effect error.
 ---

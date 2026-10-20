@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // traits-ignore-file effect-utilities-with-native-behavior-exceptions: Effect utilities are unavailable until this launcher installs dependencies.
-// traits-ignore-file 121f5624-31b3-41d6-a63c-30c040743ef8: Native Node APIs must install project dependencies before Effect platform services are available.
-// traits-ignore-file a0e777e3-a8e0-4feb-9d8b-aa6d6f9eaa91: Dependency installation must finish before Effect error-handling APIs are available.
+// traits-ignore-file effect-platform-services: Native Node APIs must install project dependencies before Effect platform services are available.
+// traits-ignore-file effect-based-exception-handling: Dependency installation must finish before Effect error-handling APIs are available.
 import { spawn } from "node:child_process"
 import { once } from "node:events"
 import { existsSync, readFileSync } from "node:fs"
@@ -14,12 +14,7 @@ const candidates = [
   ["bun", ["bun.lock", "bun.lockb"]]
 ] as const
 
-const [command, args] = installCommand(process.cwd())
-process.stderr.write(`[traits] Installing dependencies in ${process.cwd()} using ${command}\n`)
-await install(command, args)
-await import("./main.ts")
-
-function installCommand(root: string): [string, string[]] {
+const installCommand = (root: string): [string, string[]] => {
   const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
   const declared =
     typeof manifest === "object" && manifest !== null && "packageManager" in manifest
@@ -44,7 +39,7 @@ function installCommand(root: string): [string, string[]] {
   return [manager, ["install", ...(locked ? ["--frozen-lockfile"] : [])]]
 }
 
-function install(command: string, args: string[]) {
+const install = (command: string, args: string[]) => {
   const child = spawn(command, args, {
     stdio: ["ignore", process.stderr, process.stderr]
   })
@@ -65,3 +60,8 @@ function install(command: string, args: string[]) {
       process.off("SIGTERM", terminate)
     })
 }
+
+const [command, args] = installCommand(process.cwd())
+process.stderr.write(`[traits] Installing dependencies in ${process.cwd()} using ${command}\n`)
+await install(command, args)
+await import("./main.ts")

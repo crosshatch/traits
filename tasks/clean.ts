@@ -22,7 +22,7 @@ export const clean = Command.make("clean", {
 
           yield* Console.log(`Cleaning "${dir}"`)
           yield* Effect.forEach(
-            ["tsconfig.tsbuildinfo", "dist", "node_modules"],
+            ["dist", "node_modules", "tsconfig.tsbuildinfo"],
             (entry) => fs.remove(path.join(dir, entry), { recursive: true, force: true }),
             { concurrency: "unbounded" }
           )

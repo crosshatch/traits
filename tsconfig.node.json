@@ -1,7 +1,7 @@
 {
-  "extends": "./tsconfig.base.json",
-  "include": ["*.ts", "tasks/**/*.ts", "rules/**/*.ts"],
   "compilerOptions": {
     "types": ["node"]
-  }
+  },
+  "extends": "./tsconfig.base.json",
+  "include": ["*.ts", "rules/**/*.ts", "tasks/**/*.ts"]
 }

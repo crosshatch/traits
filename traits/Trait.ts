@@ -33,14 +33,10 @@ const fields = variants.Struct({
   purpose: S.String.check(S.isPattern(/\S/)).annotate({
     description: "What the trait aims to achieve or protect, and why that matters; not additional obligations."
   }),
-  guidance: S.String.check(S.isPattern(/\S/)).pipe(S.optional).annotate({
-    description:
-      "Advisory approach to satisfying the requirement or responding to a violation; never grants authority to act."
-  }),
   context: S.String.pipe(S.optional)
     .annotate({
       description:
-        "Optional supporting Markdown context, examples, diffs, references, or procedural detail; not hidden requirements."
+        "Optional supporting Markdown context, guidance, examples, diffs, references, or procedural detail; not hidden requirements or authority to act."
     })
     .pipe(variants.FieldOnly(["stored"]))
 })

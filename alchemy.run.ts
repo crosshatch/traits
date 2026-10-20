@@ -2,7 +2,6 @@ import * as Alchemy from "alchemy"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as GitHub from "alchemy/GitHub"
 import * as Output from "alchemy/Output"
-import { Stage } from "alchemy/Stage"
 import { Effect, Layer, String } from "effect"
 
 export default Alchemy.Stack(
@@ -12,7 +11,7 @@ export default Alchemy.Stack(
     state: Cloudflare.state()
   },
   Effect.gen(function* () {
-    const stage = yield* Stage
+    const stage = yield* Alchemy.Stage
     const env = yield* GitHub.GitHubEnv
     const site = yield* Cloudflare.Website.Vite("Website", {
       ...(stage === "prod"

@@ -1,11 +1,10 @@
-import { fileURLToPath } from "node:url"
-
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Layer, String } from "effect"
+import { Effect, FileSystem, Layer, Path, String } from "effect"
 import { FetchHttpClient } from "effect/http"
 
 import * as TraitsConfigProvider from "../_util/TraitsConfigProvider.ts"
+import * as ProjectPaths from "../ProjectPaths.ts"
 import { Source } from "../Source.ts"
 import * as Trait from "../Trait.ts"
 import * as TraitConflict from "../TraitConflict.ts"
@@ -15,6 +14,7 @@ import * as TraitsConfig from "../TraitsConfig.ts"
 const layer = TraitsConfig.layer.pipe(
   Layer.provideMerge(FetchHttpClient.layer),
   Layer.provide(TraitsConfigProvider.layer),
+  Layer.provide(ProjectPaths.layer),
   Layer.provideMerge(NodeServices.layer)
 )
 
@@ -37,10 +37,13 @@ it.effect(
   "detects missing stripMargin in raw multiline text and accepts the corrected real component",
   Effect.fnUntraced(function* () {
     const fs = yield* FileSystem.FileSystem
-    const traitPath = fileURLToPath(new URL("../../.agents/traits/strip-margin-for-multiline-text.md", import.meta.url))
+    const path = yield* Path.Path
+    const traitPath = yield* path.fromFileUrl(
+      new URL("../../.agents/traits/strip-margin-for-multiline-text.md", import.meta.url)
+    )
     const traitText = yield* fs.readFileString(traitPath)
     const trait = yield* Trait.parse(traitText, traitPath)
-    const componentPath = fileURLToPath(new URL("../../traits.sh/src/TraitAnatomy.tsx", import.meta.url))
+    const componentPath = yield* path.fromFileUrl(new URL("../../traits.sh/src/TraitAnatomy.tsx", import.meta.url))
     const component = yield* fs.readFileString(componentPath)
     for (const example of [
       { text: rawMultilineExample, classification: "violation" },
@@ -66,8 +69,8 @@ it.effect(
       requirement: "The payment amount must not exceed the remaining delegated budget.",
       applicability: "Before committing funds on behalf of another party.",
       purpose: "Prevent unauthorized spending.",
-      guidance: "Negotiate, decline, or escalate when the budget is insufficient.",
-      context: "A payment exactly equal to the remaining budget satisfies this requirement."
+      context:
+        "Negotiate, decline, or escalate when the budget is insufficient. A payment exactly equal to the remaining budget satisfies this requirement."
     })
     for (const example of [
       { text: "Proposed autonomous payment: USD 12.", classification: "violation" },
