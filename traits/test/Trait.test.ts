@@ -77,7 +77,7 @@ it.effect(
         Layer.succeed(TraitsContext, {
           configRoot: "/test",
           excludes: [],
-          semaphore,
+          asDecision: semaphore.withPermits(1),
           config: {
             decisionConcurrency: 1,
             excludeGitignored: true,

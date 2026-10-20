@@ -57,7 +57,7 @@ const run = Effect.fnUntraced(function* (
     Effect.provideService(TraitsContext, {
       configRoot: ".",
       excludes: [],
-      semaphore,
+      asDecision: semaphore.withPermits(1),
       config: {
         decisionConcurrency: 1,
         excludeGitignored: true,

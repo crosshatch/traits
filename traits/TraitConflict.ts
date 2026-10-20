@@ -43,7 +43,7 @@ export const check = Effect.fn("TraitConflict.check")(function* (trait: Trait, p
       }
     }),
     { input: { trait, proposedTrait } }
-  ).pipe(context.semaphore.withPermits(1))
+  ).pipe(context.asDecision)
   const { label } = result.answers.assessment
   yield* Effect.annotateCurrentSpan("trait.relationship", label)
   if (label === "conflict" || label === "inconclusive")
@@ -80,7 +80,7 @@ const verifyCoverage = Effect.fn("TraitConflict.verifyCoverage")(function* (trai
       }
     }),
     { input: { trait, proposedTrait } }
-  ).pipe(context.semaphore.withPermits(1))
+  ).pipe(context.asDecision)
   const { label } = result.answers.coverage
   yield* Effect.annotateCurrentSpan("trait.coverage", label)
   if (label === "complete") return TraitConflict.cases.Covered.make({ trait })

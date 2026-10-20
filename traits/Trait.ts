@@ -88,7 +88,7 @@ export const checkDecomposability = Effect.fn("Trait.checkDecomposability")(func
       }
     }),
     { input: { proposedTrait } }
-  ).pipe(context.semaphore.withPermits(1))
+  ).pipe(context.asDecision)
   if (result.answers.assessment.label === "atomic") return [proposedTrait]
   const response = yield* LanguageModel.generateObject({
     prompt: [

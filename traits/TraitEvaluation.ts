@@ -110,7 +110,7 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
         }),
         { input }
       ).pipe(
-        context.semaphore.withPermits(1),
+        context.asDecision,
         Effect.map((result) =>
           Array.map(entries, (entry) => {
             const answer = result.answers[entry.trait.name]!

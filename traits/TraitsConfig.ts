@@ -1,5 +1,5 @@
 import type { NodeServices } from "@effect/platform-node"
-import { Array, Effect, Layer, Path, pipe, Schema as S, Semaphore } from "effect"
+import { Array, Effect, identity, Layer, Path, pipe, Schema as S, Semaphore } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { HttpClient } from "effect/http"
 
@@ -57,10 +57,13 @@ export const layer = Effect.gen(function* () {
             path.isAbsolute(pattern) ? path.relative(configRoot, pattern) : pattern
           )
         )
-        const semaphore = yield* Semaphore.make(
-          config.decisionConcurrency === "unbounded" ? Infinity : config.decisionConcurrency
-        )
-        return { config, configRoot, excludes, semaphore }
+        const asDecision =
+          config.decisionConcurrency === "unbounded"
+            ? identity
+            : yield* Semaphore.make(config.decisionConcurrency).pipe(
+                Effect.map((semaphore) => semaphore.withPermits(1))
+              )
+        return { config, configRoot, excludes, asDecision }
       })
     )
   )
