@@ -205,6 +205,8 @@ p {
 }
 
 .opening {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-rows: auto 1fr;
   min-height: calc(100svh - var(--contents-height));
@@ -417,6 +419,7 @@ p {
 }
 
 .chapter {
+  z-index: 1;
   --chapter-padding-top: 7rem;
   background: linear-gradient(to bottom, var(--paper), color-mix(in srgb, var(--paper), var(--ink) 5%));
   position: relative;
@@ -1487,18 +1490,74 @@ h3 {
 .practice-list strong {
   font-weight: 700;
 }
+#tools::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  height: 1px;
+  background: var(--gold);
+  opacity: 0.25;
+}
 .closing {
+  position: sticky;
+  bottom: var(--dock-height);
+  z-index: 0;
   margin-top: 4rem;
-  padding: 0 1.25rem 4rem;
+  padding: 0 1.25rem 4.25rem;
   text-align: center;
 }
+.closing .hero-emblem {
+  margin-bottom: 0;
+}
+.closing::before {
+  content: "";
+  position: absolute;
+  inset: -5rem 0 0;
+  z-index: -1;
+  background: url("/footer-crosshatch.svg") center / cover no-repeat;
+  opacity: 0.22;
+  pointer-events: none;
+}
 .closing .read-link {
+  margin-top: 1rem;
   font-size: 0.75rem;
   color: var(--muted);
   text-decoration: none;
 }
 .closing .read-link:hover {
   color: var(--ink);
+}
+@supports (animation-timeline: scroll(root block)) {
+  .closing::before,
+  .closing .hero-emblem,
+  .closing .read-link {
+    animation: footer-rise linear both;
+    animation-timeline: scroll(root block);
+    animation-range: calc(100% - 100svh) 100%;
+  }
+  .closing::before {
+    --footer-rise-distance: 2rem;
+  }
+  .closing .hero-emblem,
+  .closing .read-link {
+    --footer-rise-distance: 25rem;
+  }
+}
+@keyframes footer-rise {
+  from {
+    translate: 0 var(--footer-rise-distance);
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .closing::before,
+  .closing .hero-emblem,
+  .closing .read-link {
+    animation: none;
+  }
 }
 .docked-header {
   height: var(--dock-height);

@@ -281,7 +281,7 @@ export const App = () => {
                   width="1264"
                   height="843"
                   loading="lazy"
-                  alt="A brass hand preserves a glowing seed of insight above an archive of trait scrolls."
+                  alt="A brass hand releases a small handwritten parchment above an archive of trait scrolls."
                 />
               </article>
               <article>
