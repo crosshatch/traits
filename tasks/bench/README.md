@@ -8,6 +8,19 @@ involved.
 pnpm tasks bench --base main --rounds 7 --sizes real,1000
 ```
 
+To compare file-read concurrency during hydration and full refresh:
+
+```sh
+pnpm tasks bench --refresh-only --file-read-concurrency 16 --rounds 3 --sizes 100,1000
+```
+
+Repeat with `1`, `8`, `32`, and `unbounded`. The setting applies to the indexed
+head implementation; the baseline retains main's own behavior. `--refresh-only`
+measures startup and `full-refresh` only: head rescans Markdown and rebuilds its
+index, while main lists/parses the collection. All refreshed contents are
+validated against the fixture. This mode isolates collection scanning from warm
+reads and mutation workloads. Concurrency and mode are recorded in results.
+
 Runs directly as TypeScript on Node 24; no build or loader is needed.
 `pnpm bench` is an alias for the same tasks command.
 
@@ -106,5 +119,6 @@ Failed fixture assertions or workers fail the command; regressions remain
 reported results rather than making the command fail.
 
 Options: `--base`, `--rounds`, `--sizes`, `--time`, `--warmup`, `--iterations`,
-and `--output`. Keep other heavy local jobs idle while measuring. Do not compare
-absolute timings across machines or treat a short pilot as authoritative.
+`--file-read-concurrency` (default `16`), `--refresh-only`, and `--output`. Keep
+other heavy local jobs idle while measuring. Do not compare absolute timings
+across machines or treat a short pilot as authoritative.

@@ -192,6 +192,13 @@ result.
 
 ### External trait edits
 
+`fileReadConcurrency` in `traits.ts` controls the maximum number of trait-file
+reads in flight during startup, full refresh, and incremental reconciliation. It
+defaults to `16`; set a positive integer to tune it for your environment.
+`"unbounded"` explicitly opts out of the limit. Smaller collections naturally
+use fewer concurrent reads. SQL writes and store-state synchronization remain
+serialized, and clean indexed reads do not touch Markdown files.
+
 The server watches the trait directory and automatically synchronizes Markdown
 changes into SQLite. Clean reads query SQLite only; invalidated reads wait for
 synchronization before querying. Changes are coalesced briefly, so filesystem

@@ -102,6 +102,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
       asDecision: semaphore.withPermits(1),
       config: {
         decisionConcurrency: 4,
+        fileReadConcurrency: 16,
         excludeGitignored: true,
         excludes: [],
         layerDecisionModel: Layer.succeed(DecisionModel.DecisionModel, decisionModel),

@@ -17,16 +17,17 @@ import {
 } from "effect"
 import { Reactivity } from "effect/reactivity"
 
+import { FileReadConcurrency } from "../_util/FileReadConcurrency.ts"
 import { ProjectPaths } from "../ProjectPaths.ts"
 import { T } from "../tables/index.ts"
 import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
 import * as TraitDatabaseClient from "../TraitDatabaseClient.ts"
 import * as TraitStore from "../TraitStore.ts"
-import * as TraitStoreLibsql from "../TraitStoreLibsql.ts"
 
-const layerStoreLibsql = (dir: string, watchChanges = false) =>
-  TraitStoreLibsql.layer.pipe(
+const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16) =>
+  TraitStore.TraitStore.layer.pipe(
+    Layer.provide(Layer.succeed(FileReadConcurrency, fileReadConcurrency)),
     Layer.provideMerge(TraitDatabase.layer),
     Layer.provide(TraitDatabaseClient.layer),
     Layer.provide(Reactivity.layer),
@@ -45,7 +46,7 @@ const layerStoreLibsql = (dir: string, watchChanges = false) =>
 const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: ReadonlyArray<Trait.Trait>) => boolean) {
   const store = yield* TraitStore.TraitStore
   return yield* store.ls.pipe(
-    Effect.filterOrFail(matches, () => "Waiting for trait synchronization"),
+    Effect.filterOrFail(matches, (traits) => `Waiting for trait synchronization; observed ${JSON.stringify(traits)}`),
     Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
   )
 })
@@ -326,6 +327,91 @@ it.live(
 )
 
 it.live(
+  "bounds concurrent file reads during hydration, refresh and incremental reconciliation",
+  Effect.fn("test.TraitStore.fileReadConcurrency")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    for (const concurrency of [1, 3]) {
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-read-limit-" })
+      const events = yield* Queue.unbounded<FileSystem.WatchEvent>()
+      const documents = Array.map(Array.range(0, 11), (index) =>
+        Trait.Trait.make({
+          name: Trait.TraitName.make(`bounded-${index}`),
+          subject: "File reads.",
+          requirement: "Bound in-flight reads.",
+          purpose: "Protect resources."
+        })
+      )
+      yield* Effect.forEach(
+        documents,
+        (trait) => fs.writeFileString(path.join(dir, `${trait.name}.md`), Trait.serialize(trait)),
+        { discard: true }
+      )
+      let active = 0
+      let peak = 0
+      let delivered = 0
+      const observed = FileSystem.FileSystem.of({
+        ...fs,
+        watch: () =>
+          Stream.fromQueue(events).pipe(
+            Stream.tap(() =>
+              Effect.sync(() => {
+                delivered++
+              })
+            )
+          ),
+        readFileString: (file, encoding) =>
+          path.dirname(file) !== dir
+            ? fs.readFileString(file, encoding)
+            : Effect.acquireUseRelease(
+                Effect.sync(() => {
+                  active++
+                  peak = Math.max(peak, active)
+                }),
+                () => fs.readFileString(file, encoding).pipe(Effect.delay("5 millis")),
+                () =>
+                  Effect.sync(() => {
+                    active--
+                  })
+              )
+      })
+      yield* Effect.gen(function* () {
+        const store = yield* TraitStore.TraitStore
+        expect(peak).toBe(concurrency)
+        expect(active).toBe(0)
+        peak = 0
+        yield* store.refresh
+        expect(peak).toBe(concurrency)
+        expect(active).toBe(0)
+        peak = 0
+        yield* Queue.offerAll(
+          events,
+          Array.map(documents, (trait): FileSystem.WatchEvent => ({
+            _tag: "Update",
+            path: path.join(dir, `${trait.name}.md`)
+          }))
+        )
+        yield* Effect.sync(() => delivered).pipe(
+          Effect.filterOrFail(
+            (count) => count === documents.length,
+            () => "Waiting for file events"
+          ),
+          Effect.retry({ schedule: Schedule.spaced("1 millis"), times: 1000 })
+        )
+        yield* Effect.yieldNow
+        const traits = yield* store.ls
+        expect(traits).toHaveLength(documents.length)
+        expect(peak).toBe(concurrency)
+        expect(active).toBe(0)
+      }).pipe(
+        Effect.provide(layerStoreLibsql(dir, true, concurrency)),
+        Effect.provideService(FileSystem.FileSystem, observed)
+      )
+    }
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.live(
   "reconciles only notified files, skips self-write SQL, and retains events arriving during reconciliation",
   Effect.fn("test.TraitStore.incremental")(function* () {
     const fs = yield* FileSystem.FileSystem
@@ -420,7 +506,10 @@ it.live(
       // One invalid file blocks the whole pending batch, preserving all previously indexed rows.
       yield* fs.writeFileString(file, Trait.serialize(original))
       yield* fs.writeFileString(otherFile, "---\nname: [\n---\n")
-      yield* notify(file)
+      yield* Queue.offerAll(events, [
+        { _tag: "Update", path: file },
+        { _tag: "Update", path: otherFile }
+      ])
       yield* notify(otherFile)
       const invalid = yield* store.ls.pipe(Effect.result)
       expect(Result.isFailure(invalid)).toBe(true)
@@ -439,7 +528,10 @@ it.live(
         otherFile,
         Trait.serialize(Trait.Trait.make({ ...other, requirement: "Updated batch." }))
       )
-      yield* notify(file)
+      yield* Queue.offerAll(events, [
+        { _tag: "Update", path: file },
+        { _tag: "Update", path: otherFile }
+      ])
       yield* notify(otherFile)
       const failedBatch = yield* store.ls.pipe(Effect.result)
       expect(Result.isFailure(failedBatch)).toBe(true)

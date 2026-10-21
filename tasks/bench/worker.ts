@@ -24,7 +24,9 @@ import type { TraitStore } from "traits/TraitStore"
 
 import * as Model from "./model.ts"
 
-type StoreApi = Pick<TraitStore["Service"], "ls" | "get" | "add" | "update" | "rm">
+type StoreApi = Pick<TraitStore["Service"], "ls" | "get" | "add" | "update" | "rm"> & {
+  readonly refresh?: TraitStore["Service"]["refresh"] | undefined
+}
 interface MainStoreModule {
   readonly TraitStore: Context.Key<TraitStore, StoreApi>
   readonly layerFileSystem: (
@@ -93,8 +95,8 @@ const output = await Effect.runPromise(
       const Paths = yield* Effect.promise(() =>
         importModule<typeof import("traits/ProjectPaths")>("traits/ProjectPaths.ts")
       )
-      const IndexedStore = yield* Effect.promise(() =>
-        importModule<typeof import("../../traits/TraitStoreLibsql.ts")>("traits/TraitStoreLibsql.ts")
+      const ReadConcurrency = yield* Effect.promise(() =>
+        importModule<typeof import("../../traits/_util/FileReadConcurrency.ts")>("traits/_util/FileReadConcurrency.ts")
       )
       Database = yield* Effect.promise(() =>
         importModule<typeof import("traits").TraitDatabase>("traits/TraitDatabase.ts")
@@ -102,7 +104,8 @@ const output = await Effect.runPromise(
       const Client = yield* Effect.promise(() =>
         importModule<typeof import("traits").TraitDatabaseClient>("traits/TraitDatabaseClient.ts")
       )
-      layer = IndexedStore.layer.pipe(
+      layer = Store.TraitStore.layer.pipe(
+        Layer.provide(Layer.succeed(ReadConcurrency.FileReadConcurrency, options.fileReadConcurrency)),
         Layer.provideMerge(Database.layer),
         Layer.provideMerge(Client.layer),
         Layer.provide(Layer.succeed(Paths.ProjectPaths, { projectRoot: directory, traitsDirectory: directory })),
@@ -230,145 +233,166 @@ const output = await Effect.runPromise(
         }
       } satisfies Model.Measurement
     })
-    const results = yield* Effect.forEach(tasks, measure)
-    let version = 0
-    const updateResult = yield* measure(
-      task(
-        "update",
-        () =>
-          run(
-            store.update(
-              Trait.Trait.make({
-                ...original,
-                requirement: `${original.requirement}\nBenchmark revision ${++version}.`
-              })
-            )
-          ),
-        (result) => assert.equal(result, undefined)
+    const results: Array<Model.Measurement> = []
+    if (options.refreshOnly) {
+      const measured = yield* measure(
+        task(
+          "full-refresh",
+          () => run(store.refresh ?? store.ls),
+          (result) => {
+            if (result !== undefined) assert.deepEqual(JSON.parse(JSON.stringify(result)), fixture.records)
+          }
+        )
       )
-    )
-    results.push(updateResult)
-    const updated = yield* Effect.promise(() => run(store.get(key)))
-    assert.equal(updated.requirement, `${original.requirement}\nBenchmark revision ${version}.`)
-    const cycle = Trait.Trait.make({ ...original, name: Trait.TraitName.make("benchmark-write-cycle") })
-    const cycleResult = yield* measure(
-      task(
-        "add-remove-cycle",
-        () =>
-          run(
-            Effect.gen(function* () {
-              yield* store.add(cycle)
-              yield* store.rm([cycle.name])
-            })
-          ),
-        (result) => assert.equal(result, undefined)
-      )
-    )
-    results.push(cycleResult)
-    let externalVersion = 0
-    const externalResult = yield* measure(
-      task(
-        "external-replace-visible",
-        () =>
-          run(
-            Effect.gen(function* () {
-              const replacement = Trait.Trait.make({
-                ...original,
-                requirement: `${original.requirement}\nExternal revision ${++externalVersion}.`
-              })
-              const temporary = path.join(directory, ".benchmark-replacement")
-              yield* fs.writeFileString(temporary, Trait.serialize(replacement))
-              yield* fs.rename(temporary, path.join(directory, `${original.name}.md`))
-              return yield* store.get(key).pipe(
-                Effect.filterOrFail(
-                  (value) => value.requirement === replacement.requirement,
-                  () => "Waiting for synchronization"
-                ),
-                Effect.retry({ schedule: Schedule.spaced("1 millis"), times: 10_000 })
+      results.push(measured)
+      const refreshed = yield* Effect.promise(() => run(store.ls))
+      assert.deepEqual(JSON.parse(JSON.stringify(refreshed)), fixture.records)
+    } else {
+      const reads = yield* Effect.forEach(tasks, measure)
+      results.push(...reads)
+      let version = 0
+      const updateResult = yield* measure(
+        task(
+          "update",
+          () =>
+            run(
+              store.update(
+                Trait.Trait.make({
+                  ...original,
+                  requirement: `${original.requirement}\nBenchmark revision ${++version}.`
+                })
               )
-            })
-          ),
-        (result) => assert.equal(result.requirement, `${original.requirement}\nExternal revision ${externalVersion}.`)
+            ),
+          (result) => assert.equal(result, undefined)
+        )
       )
-    )
-    results.push(externalResult)
-    const updateRead = yield* measure(
-      task(
-        "update-read",
-        () =>
-          run(
-            Effect.gen(function* () {
-              const replacement = Trait.Trait.make({
-                ...original,
-                requirement: `${original.requirement}\nBenchmark revision ${++version}.`
+      results.push(updateResult)
+      const updated = yield* Effect.promise(() => run(store.get(key)))
+      assert.equal(updated.requirement, `${original.requirement}\nBenchmark revision ${version}.`)
+      const cycle = Trait.Trait.make({ ...original, name: Trait.TraitName.make("benchmark-write-cycle") })
+      const cycleResult = yield* measure(
+        task(
+          "add-remove-cycle",
+          () =>
+            run(
+              Effect.gen(function* () {
+                yield* store.add(cycle)
+                yield* store.rm([cycle.name])
               })
-              yield* store.update(replacement)
-              return yield* store.get(key)
-            })
-          ),
-        (result) => assert.equal(result.requirement, `${original.requirement}\nBenchmark revision ${version}.`)
+            ),
+          (result) => assert.equal(result, undefined)
+        )
       )
-    )
-    results.push(updateRead)
-    const updateBurst = yield* measure(
-      task(
-        "update-burst-16",
-        () =>
-          run(
-            Effect.forEach(
-              parallelNames,
-              (name) =>
-                store.update(
-                  Trait.Trait.make({
-                    ...original,
-                    name: Trait.TraitName.make(name),
-                    requirement: `${original.requirement}\nBenchmark revision ${++version}.`
-                  })
-                ),
-              { discard: true }
-            )
-          ),
-        (result) => assert.equal(result, undefined)
+      results.push(cycleResult)
+      let externalVersion = 0
+      const externalResult = yield* measure(
+        task(
+          "external-replace-visible",
+          () =>
+            run(
+              Effect.gen(function* () {
+                const replacement = Trait.Trait.make({
+                  ...original,
+                  requirement: `${original.requirement}\nExternal revision ${++externalVersion}.`
+                })
+                const temporary = path.join(directory, ".benchmark-replacement")
+                yield* fs.writeFileString(temporary, Trait.serialize(replacement))
+                yield* fs.rename(temporary, path.join(directory, `${original.name}.md`))
+                return yield* store.get(key).pipe(
+                  Effect.filterOrFail(
+                    (value) => value.requirement === replacement.requirement,
+                    () => "Waiting for synchronization"
+                  ),
+                  Effect.retry({ schedule: Schedule.spaced("1 millis"), times: 10_000 })
+                )
+              })
+            ),
+          (result) => assert.equal(result.requirement, `${original.requirement}\nExternal revision ${externalVersion}.`)
+        )
       )
-    )
-    results.push(updateBurst)
-    const externalBurst = yield* measure(
-      task(
-        "external-burst-16-visible",
-        () =>
-          run(
-            Effect.gen(function* () {
-              const requirement = `${original.requirement}\nExternal burst ${++externalVersion}.`
-              yield* Effect.forEach(
+      results.push(externalResult)
+      const updateRead = yield* measure(
+        task(
+          "update-read",
+          () =>
+            run(
+              Effect.gen(function* () {
+                const replacement = Trait.Trait.make({
+                  ...original,
+                  requirement: `${original.requirement}\nBenchmark revision ${++version}.`
+                })
+                yield* store.update(replacement)
+                return yield* store.get(key)
+              })
+            ),
+          (result) => assert.equal(result.requirement, `${original.requirement}\nBenchmark revision ${version}.`)
+        )
+      )
+      results.push(updateRead)
+      const updateBurst = yield* measure(
+        task(
+          "update-burst-16",
+          () =>
+            run(
+              Effect.forEach(
                 parallelNames,
                 (name) =>
-                  Effect.gen(function* () {
-                    const replacement = Trait.Trait.make({ ...original, name: Trait.TraitName.make(name), requirement })
-                    const temporary = path.join(directory, ".benchmark-replacement")
-                    yield* fs.writeFileString(temporary, Trait.serialize(replacement))
-                    yield* fs.rename(temporary, path.join(directory, `${name}.md`))
-                  }),
+                  store.update(
+                    Trait.Trait.make({
+                      ...original,
+                      name: Trait.TraitName.make(name),
+                      requirement: `${original.requirement}\nBenchmark revision ${++version}.`
+                    })
+                  ),
                 { discard: true }
               )
-              return yield* Effect.forEach(parallelNames, (name) => store.get(Trait.TraitName.make(name))).pipe(
-                Effect.filterOrFail(
-                  (traits) => Array.every(traits, (trait) => trait.requirement === requirement),
-                  () => "Waiting for burst synchronization"
-                ),
-                Effect.retry({ schedule: Schedule.spaced("1 millis"), times: 10_000 })
-              )
-            })
-          ),
-        (traits) =>
-          assert.ok(
-            Array.every(
-              traits,
-              (trait) => trait.requirement === `${original.requirement}\nExternal burst ${externalVersion}.`
-            )
-          )
+            ),
+          (result) => assert.equal(result, undefined)
+        )
       )
-    )
-    results.push(externalBurst)
+      results.push(updateBurst)
+      const externalBurst = yield* measure(
+        task(
+          "external-burst-16-visible",
+          () =>
+            run(
+              Effect.gen(function* () {
+                const requirement = `${original.requirement}\nExternal burst ${++externalVersion}.`
+                yield* Effect.forEach(
+                  parallelNames,
+                  (name) =>
+                    Effect.gen(function* () {
+                      const replacement = Trait.Trait.make({
+                        ...original,
+                        name: Trait.TraitName.make(name),
+                        requirement
+                      })
+                      const temporary = path.join(directory, ".benchmark-replacement")
+                      yield* fs.writeFileString(temporary, Trait.serialize(replacement))
+                      yield* fs.rename(temporary, path.join(directory, `${name}.md`))
+                    }),
+                  { discard: true }
+                )
+                return yield* Effect.forEach(parallelNames, (name) => store.get(Trait.TraitName.make(name))).pipe(
+                  Effect.filterOrFail(
+                    (traits) => Array.every(traits, (trait) => trait.requirement === requirement),
+                    () => "Waiting for burst synchronization"
+                  ),
+                  Effect.retry({ schedule: Schedule.spaced("1 millis"), times: 10_000 })
+                )
+              })
+            ),
+          (traits) =>
+            assert.ok(
+              Array.every(
+                traits,
+                (trait) => trait.requirement === `${original.requirement}\nExternal burst ${externalVersion}.`
+              )
+            )
+        )
+      )
+      results.push(externalBurst)
+    }
     let databaseBytes = 0
     if (Database !== undefined) {
       // The runtime context retains the concrete database through provideMerge; only the public store is used in timings.

@@ -13,15 +13,18 @@ export const workloads = [
   "update-burst-16",
   "external-burst-16-visible",
   "add-remove-cycle",
-  "external-replace-visible"
+  "external-replace-visible",
+  "full-refresh"
 ] as const
 export type Workload = typeof Workload.Type
 export const Workload = S.Literals(workloads)
 
 export type WorkerOptions = typeof WorkerOptions.Type
 export const WorkerOptions = S.Struct({
+  fileReadConcurrency: S.Union([S.Int.check(S.isGreaterThan(0)), S.Literal("unbounded")]),
   fixture: S.NonEmptyString,
   iterations: S.Int.check(S.isGreaterThan(0)),
+  refreshOnly: S.Boolean,
   round: S.Int.check(S.isGreaterThanOrEqualTo(0)),
   source: S.NonEmptyString,
   timeMs: S.Int.check(S.isGreaterThan(0)),
@@ -75,6 +78,8 @@ export const WorkerResult = S.Struct({
 
 export interface CompareOptions {
   readonly base: string
+  readonly fileReadConcurrency: number | "unbounded"
+  readonly refreshOnly: boolean
   readonly rounds: number
   readonly time: number
   readonly warmup: number

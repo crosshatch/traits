@@ -60,6 +60,7 @@ const run = Effect.fnUntraced(function* (
       asDecision: semaphore.withPermits(1),
       config: {
         decisionConcurrency: 1,
+        fileReadConcurrency: 16,
         excludeGitignored: true,
         excludes: [],
         layerDecisionModel: Layer.succeed(DecisionModel.DecisionModel, model),

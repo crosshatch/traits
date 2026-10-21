@@ -3,6 +3,7 @@ import { Array, Effect, identity, Layer, Path, pipe, Schema as S, Semaphore } fr
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { HttpClient } from "effect/http"
 
+import { FileReadConcurrency } from "./_util/FileReadConcurrency.ts"
 import { ProjectPaths } from "./ProjectPaths.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
@@ -21,6 +22,12 @@ export const TraitsConfig = S.Struct({
     .annotate({
       description:
         "Filenames or native filesystem glob patterns excluded from trait checks, relative to traits.ts or absolute. Use directory/** to exclude a subtree. Bare directories are not expanded; escape glob characters in literal filenames using native glob syntax."
+    }),
+  fileReadConcurrency: S.Union([S.Int.check(S.isGreaterThan(0)), S.Literal("unbounded")])
+    .pipe(S.withDecodingDefault(Effect.succeed(16)))
+    .annotate({
+      description:
+        "Maximum concurrent trait-file reads during scans and reconciliation. Defaults to 16. Unbounded explicitly removes the limit."
     }),
   layerDecisionModel: S.declare(
     (
@@ -44,6 +51,7 @@ export const layer = Effect.gen(function* () {
   const module = yield* Effect.promise(() => import(url.href))
   const config = yield* pipe(module.default, S.decodeUnknownEffect(TraitsConfig))
   return Layer.mergeAll(
+    Layer.succeed(FileReadConcurrency, config.fileReadConcurrency),
     // oxlint-disable-next-line effecttsgo/any-unknown-in-error-context
     config.layerDecisionModel.pipe(Layer.orDie),
     // oxlint-disable-next-line effecttsgo/any-unknown-in-error-context

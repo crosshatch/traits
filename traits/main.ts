@@ -17,7 +17,7 @@ import * as TraitProjectLock from "./TraitProjectLock.ts"
 import * as TraitsConfig from "./TraitsConfig.ts"
 import * as TraitsConfigProvider from "./TraitsConfigProvider.ts"
 import * as TraitsHttpClient from "./TraitsHttpClient.ts"
-import * as TraitStoreLibsql from "./TraitStoreLibsql.ts"
+import * as TraitStore from "./TraitStore.ts"
 
 Command.make("traits", {
   otlpEndpoint: Flag.String("otlp-endpoint").pipe(
@@ -109,7 +109,10 @@ Command.make("traits", {
       Layer.provide(
         toolkit.pipe(
           Layer.provide(
-            TraitStoreLibsql.layer.pipe(Layer.provide(TraitDatabase.layer), Layer.provide(TraitDatabaseClient.layer))
+            TraitStore.TraitStore.layer.pipe(
+              Layer.provide(TraitDatabase.layer),
+              Layer.provide(TraitDatabaseClient.layer)
+            )
           ),
           Layer.provide(TraitsConfig.layer),
           Layer.provide(TraitsConfigProvider.layer),

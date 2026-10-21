@@ -8,8 +8,13 @@ const positive = (name: string, fallback: number) =>
 
 export const bench = Command.make("bench", {
   base: Flag.String("base").pipe(Flag.withDefault("main")),
+  fileReadConcurrency: Flag.String("file-read-concurrency").pipe(
+    Flag.withSchema(S.Union([S.NumberFromString.check(S.isInt(), S.isGreaterThan(0)), S.Literal("unbounded")])),
+    Flag.withDefault(16)
+  ),
   iterations: positive("iterations", 1),
   output: Flag.String("output").pipe(Flag.optional),
+  refreshOnly: Flag.Boolean("refresh-only").pipe(Flag.withDefault(false)),
   rounds: Flag.Int("rounds").pipe(Flag.withSchema(S.Int.check(S.isGreaterThanOrEqualTo(2))), Flag.withDefault(7)),
   sizes: Flag.String("sizes").pipe(
     Flag.withSchema(S.String.check(S.isPattern(/^(real|[1-9][0-9]*)(,(real|[1-9][0-9]*))*$/))),

@@ -1,5 +1,56 @@
 # Trait-store benchmark results
 
+The measurements below predate the service-colocation cleanup: `TraitStore` now
+defines its constructor through `Context.Service`'s `make` option and exposes
+`TraitStore.layer`. The separate indexed-adapter module was removed. Importing
+`TraitStore` therefore loads SQLite/Drizzle again; the historical
+isolated-contract import observation below no longer describes the current
+module layout.
+
+## File-read concurrency tuning
+
+After inlining the Markdown helpers, a separate sweep compared file-read caps of
+1, 8, 16, 32 and unbounded on 100 and 1,000 traits. Each setting completed three
+rounds with fresh processes and fixture validation (60 workers total, including
+paired main controls). The indexed full-refresh operation includes file
+stat/read, YAML parsing, validation and transactional index replacement.
+
+Median indexed full-refresh time, milliseconds:
+
+| Read concurrency | 100 traits | 1,000 traits |
+| ---------------- | ---------: | -----------: |
+| 1                |      267.2 |      2,383.0 |
+| 8                |      282.1 |      2,009.6 |
+| **16 (default)** |  **233.3** |  **1,996.2** |
+| 32               |      247.7 |      1,978.8 |
+| Unbounded        |      281.7 |      2,106.7 |
+
+At 1,000 traits, cap 16 reduced median full refresh by about 16% versus serial
+reads and was within 1% of cap 32. Median total startup was 3.85 seconds with
+16, versus 4.30 seconds serial and 4.05 seconds unbounded. Approximate startup
+RSS deltas were 144 MiB with 16 and 183 MiB unbounded, without forced GC.
+
+Retain **16** as a practical bounded default, with `fileReadConcurrency` in
+`traits.ts` allowing a positive integer or explicit `"unbounded"` override. Both
+full scans and incremental read batches use the setting; SQL work and
+store-state synchronization remain serialized. It limits in-flight I/O, not CPU
+threads. Parsing remains synchronous, so additional I/O concurrency has
+diminishing returns.
+
+This is exploratory tuning on one Linux machine, not a universal optimality
+claim: only three process observations per setting, mostly one timed refresh per
+process because refresh exceeded the 200 ms measurement window. Settings ran in
+separate sequential groups, so cross-setting differences are unpaired and may
+include time-dependent noise. Warmup was 50 ms. A timed-out partial unbounded
+run was discarded and that setting rerun completely. Results are in
+`/tmp/opencode/traits-read-final-{1,8,16,32}/` and
+`/tmp/opencode/traits-read-final-unbounded-complete/` on the measurement
+machine.
+
+```sh
+pnpm tasks bench --refresh-only --file-read-concurrency 16 --rounds 3 --sizes 100,1000 --time 200 --warmup 50
+```
+
 ## Final implementation: incremental reconciliation
 
 Seven paired rounds completed successfully: 28 fresh workers, each validating

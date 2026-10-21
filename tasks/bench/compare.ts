@@ -120,6 +120,8 @@ export const compare = Effect.fn("benchmarks.compare")(function* (options: Model
   )
   const metadata = {
     baseRef: options.base,
+    fileReadConcurrency: options.fileReadConcurrency,
+    refreshOnly: options.refreshOnly,
     baseSha,
     headSha,
     rounds: options.rounds,
@@ -161,6 +163,8 @@ export const compare = Effect.fn("benchmarks.compare")(function* (options: Model
                     `Round ${round + 1}/${options.rounds} ${fixture.label} (${fixture.count} traits) ${variant}`
                   )
                   const settings: Model.WorkerOptions = {
+                    fileReadConcurrency: options.fileReadConcurrency,
+                    refreshOnly: options.refreshOnly,
                     source: variant === "main-fs" ? baseline : root,
                     variant,
                     fixture: fixture.directory,
@@ -210,21 +214,27 @@ export const compare = Effect.fn("benchmarks.compare")(function* (options: Model
           const head = byVariant(variant)
           const rows = yield* Effect.forEach(
             ["startup", ...Array.map(base[0]!.results, (result) => result.name)],
-            (metric) =>
-              Effect.gen(function* () {
-                const metricValue = (run: Model.WorkerResult) =>
-                  metric === "startup"
-                    ? run.startup.totalMs
-                    : pipe(
-                        run.results,
-                        Array.findFirst((result) => result.name === metric),
-                        Option.getOrThrow
-                      ).meanMs
-                const statistics = yield* Effect.try(() =>
-                  Stats.comparePairs({ base: Array.map(base, metricValue), head: Array.map(head, metricValue) })
-                )
-                return { fixture: fixture.label, count: fixture.count, variant, metric, ...statistics }
-              })
+            (metric) => {
+              const metricValue = (run: Model.WorkerResult) =>
+                metric === "startup"
+                  ? run.startup.totalMs
+                  : pipe(
+                      run.results,
+                      Array.findFirst((result) => result.name === metric),
+                      Option.getOrThrow
+                    ).meanMs
+              return Effect.try(() =>
+                Stats.comparePairs({ base: Array.map(base, metricValue), head: Array.map(head, metricValue) })
+              ).pipe(
+                Effect.map((statistics) => ({
+                  fixture: fixture.label,
+                  count: fixture.count,
+                  variant,
+                  metric,
+                  ...statistics
+                }))
+              )
+            }
           )
           yield* Console.log(
             `${fixture.label} ${variant}: median SQLite bytes ${Stats.median(Array.map(head, (run) => run.databaseBytes))}, RSS delta ${Stats.median(Array.map(head, (run) => run.memory.rssDelta))}`
