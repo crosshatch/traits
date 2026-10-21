@@ -47,7 +47,11 @@ it.effect(
       )
       const code = yield* duplicate.exitCode
       expect(code).not.toBe(0)
-      expect(diagnostic).toContain(`A Traits MCP server already owns ${canonical}`)
+      const gitRoot = yield* spawner.string(
+        ChildProcess.make("git", ["rev-parse", "--show-toplevel"], { cwd: path.join(directory, "project") })
+      )
+      const owned = yield* fs.realPath(path.join(yield* fs.realPath(gitRoot.trim()), ".agents", "traits"))
+      expect(diagnostic).toContain(`A Traits MCP server already owns ${owned}`)
       const alias = path.join(directory, "alias")
       yield* fs.symlink(root, alias)
       for (const contender of [root, alias]) {

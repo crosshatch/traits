@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url"
+
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Path, pipe, Queue, Schema as S, Stream, String } from "effect"
@@ -7,7 +9,7 @@ import * as Trait from "../Trait.ts"
 
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 const aiUrl = new URL("../../node_modules/effect/dist/ai/index.js", import.meta.url).href
-const server = new URL("../main.ts", import.meta.url).pathname
+const server = fileURLToPath(new URL("../main.ts", import.meta.url))
 
 it.effect(
   "returns handler defects as MCP errors and cached trait findings as valid JSON",
