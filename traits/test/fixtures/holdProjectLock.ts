@@ -1,6 +1,5 @@
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Console, Effect, Layer } from "effect"
-import { Reactivity } from "effect/reactivity"
 
 import { ProjectPaths } from "../../ProjectPaths.ts"
 import * as TraitProjectLock from "../../TraitProjectLock.ts"
@@ -13,7 +12,6 @@ Effect.gen(function* () {
   Effect.scoped,
   Effect.provide([
     NodeServices.layer,
-    Reactivity.layer,
     Layer.succeed(ProjectPaths, { projectRoot: process.argv[2]!, traitsDirectory: process.argv[2]! })
   ]),
   NodeRuntime.runMain
