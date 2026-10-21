@@ -5,6 +5,7 @@ import {
   Context,
   Deferred,
   Effect,
+  Fiber,
   FileSystem,
   flow,
   Layer,
@@ -83,6 +84,8 @@ export const TraitStoreError = S.Union([
   S.TaggedStruct("SqlError", { message: S.String }),
   S.TaggedStruct("EffectDrizzleQueryError", { message: S.String })
 ])
+
+const watchProbePrefix = ".traits-watch-"
 
 /** Markdown is authoritative; watch notifications reconcile only affected files. */
 const make = Effect.gen(function* () {
@@ -345,23 +348,36 @@ const make = Effect.gen(function* () {
   const started = yield* Deferred.make<void>()
   yield* Effect.gen(function* () {
     yield* fs.makeDirectory(traitsDirectory, { recursive: true })
-    const pull = yield* Stream.toPull(fs.watch(traitsDirectory))
-    yield* Effect.yieldNow
-    yield* synchronize
-    yield* Deferred.succeed(started, undefined)
-    yield* Stream.fromPull(Effect.succeed(pull)).pipe(
+    let live = false
+    const watcher = yield* fs.watch(traitsDirectory).pipe(
       Stream.tap((event) =>
         Effect.sync(() => {
           watcherFailure = undefined
           const file = path.resolve(traitsDirectory, event.path)
           // Missing/ambiguous filenames require a full rescan, not a guessed incremental update.
-          if (file === traitsDirectory) fullRevision = ++revision
+          // So does the first probe event: changes made before the watcher went live were missed.
+          if (pipe(path.basename(file), String.startsWith(watchProbePrefix))) {
+            if (!live) fullRevision = ++revision
+            live = true
+          } else if (file === traitsDirectory) fullRevision = ++revision
           else if (path.dirname(file) === traitsDirectory && path.extname(file) === ".md") dirty.set(file, ++revision)
         })
       ),
       Stream.debounce("50 millis"),
-      Stream.runForEach(() => synchronize)
+      Stream.runForEach(() => synchronize),
+      Effect.forkScoped
     )
+    yield* synchronize
+    yield* Deferred.succeed(started, undefined)
+    // Watch backends register lazily once the stream is pulled, so touch a probe directory until
+    // its event shows the watcher is live.
+    yield* fs.makeTempDirectory({ directory: traitsDirectory, prefix: watchProbePrefix }).pipe(
+      Effect.flatMap((directory) => fs.remove(directory, { recursive: true })),
+      Effect.ignore,
+      Effect.repeat({ schedule: Schedule.spaced("25 millis"), times: 80, until: () => live }),
+      Effect.forkScoped
+    )
+    yield* Fiber.join(watcher)
     return yield* PlatformError.systemError({
       _tag: "Unknown",
       module: "FileSystem",
