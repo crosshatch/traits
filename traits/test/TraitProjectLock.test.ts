@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Path, Result, Stream, String } from "effect"
+import { Effect, FileSystem, Path, Result, Schedule, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
@@ -23,7 +23,13 @@ it.effect(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-lock-test-" })
+      const directory = yield* fs.makeTempDirectory({ prefix: "traits-lock-test-" })
+      // Windows can release SQLite file handles after their client or process has closed.
+      yield* Effect.addFinalizer(() =>
+        fs
+          .remove(directory, { recursive: true })
+          .pipe(Effect.retry({ schedule: Schedule.spaced("100 millis"), times: 50 }), Effect.orDie)
+      )
       const root = path.join(directory, "project", ".agents", "traits")
       const fixture = yield* path.fromFileUrl(new URL("./fixtures/holdProjectLock.ts", import.meta.url))
       const child = yield* spawner.spawn(ChildProcess.make(process.execPath, [fixture, root], { stderr: "inherit" }))

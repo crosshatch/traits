@@ -135,7 +135,10 @@ for (const fixture of [
           content: [{ type: "text", text: expect.stringContaining(fixture.diagnostic) }]
         })
         if ("trait" in fixture) {
-          expect(JSON.stringify(result)).toContain(traitPath)
+          // The tool text is a JSON document, so Windows path separators appear escaped.
+          expect(result).toMatchObject({
+            content: [{ text: expect.stringContaining(JSON.stringify(traitPath).slice(1, -1)) }]
+          })
           expect(JSON.stringify(result)).toContain("TraitParseError")
           expect(JSON.stringify(result)).toContain("Ask the developer:")
           expect(JSON.stringify(result)).toContain("original arguments")
