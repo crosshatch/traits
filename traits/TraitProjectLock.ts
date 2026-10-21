@@ -16,14 +16,14 @@ export const acquire = Effect.gen(function* () {
   const { traitsDirectory } = yield* ProjectPaths
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
-  yield* fs.makeDirectory(traitsDirectory, { recursive: true })
-  const canonical = yield* fs.realPath(traitsDirectory)
-  const lockDirectory = path.join(canonical, ".mcp-lock")
+  const lockDirectory = path.join(traitsDirectory, ".mcp-lock")
   yield* fs.makeDirectory(lockDirectory, { recursive: true })
   yield* fs.writeFileString(path.join(lockDirectory, ".gitignore"), "*\n")
   const url = yield* path.toFileUrl(path.join(lockDirectory, "owner.db"))
   const client = yield* LibsqlClient.make({ url })
   const ready = yield* Deferred.make<void, SqlError.SqlError>()
+  // Keep ownership separate from the disposable read index: an OS lock releases on process death
+  // without the stale-file detection/removal a create-exclusive lockfile would require.
   // Never unlink this database: all contenders must lock the same file/inode.
   yield* client.withTransaction(Deferred.succeed(ready, undefined).pipe(Effect.andThen(Effect.never))).pipe(
     Effect.catchCause((cause) => Deferred.failCause(ready, cause)),
@@ -32,7 +32,7 @@ export const acquire = Effect.gen(function* () {
   yield* Deferred.await(ready).pipe(
     Effect.catchTags({
       SqlError: (error) =>
-        error.reason._tag === "LockTimeoutError" ? TraitProjectInUseError.make({ directory: canonical }) : error
+        error.reason._tag === "LockTimeoutError" ? TraitProjectInUseError.make({ directory: traitsDirectory }) : error
     })
   )
 }).pipe(Effect.withSpan("TraitProjectLock.acquire"))

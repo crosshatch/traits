@@ -1,11 +1,14 @@
 # Trait-store benchmark results
 
-The measurements below predate the service-colocation cleanup: `TraitStore` now
-defines its constructor through `Context.Service`'s `make` option and exposes
-`TraitStore.layer`. The separate indexed-adapter module was removed. Importing
-`TraitStore` therefore loads SQLite/Drizzle again; the historical
-isolated-contract import observation below no longer describes the current
-module layout.
+The current implementation now uses an in-memory index rather than the temporary
+file-backed index measured below. Watch failures also use a polling fallback.
+These historical timings have not been rerun for those review changes.
+
+The measurements below predate the service-colocation cleanup: `TraitStore.ts`
+now colocates construction with a module-level `layer` export. The separate
+indexed-adapter module was removed. Importing `TraitStore` therefore loads
+SQLite/Drizzle again; the historical isolated-contract import observation below
+no longer describes the current module layout.
 
 ## File-read concurrency tuning
 

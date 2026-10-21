@@ -85,7 +85,7 @@ const output = await Effect.runPromise(
     const importStart = performance.now()
     let storeTag: Context.Key<TraitStore, StoreApi>
     let layer: Layer.Layer<TraitStore, never, NodeServices.NodeServices | Reactivity.Reactivity>
-    let Database: typeof import("traits").TraitDatabase | undefined
+    let Database: typeof import("../../traits/TraitDatabase.ts") | undefined
     if (options.variant === "main-fs") {
       const Store = yield* Effect.promise(() => importModule<MainStoreModule>("traits/TraitStore.ts"))
       storeTag = Store.TraitStore
@@ -102,12 +102,9 @@ const output = await Effect.runPromise(
         importModule<typeof import("traits/TraitsContext")>("traits/TraitsContext.ts")
       )
       Database = yield* Effect.promise(() =>
-        importModule<typeof import("traits").TraitDatabase>("traits/TraitDatabase.ts")
+        importModule<typeof import("../../traits/TraitDatabase.ts")>("traits/TraitDatabase.ts")
       )
-      const Client = yield* Effect.promise(() =>
-        importModule<typeof import("traits").TraitDatabaseClient>("traits/TraitDatabaseClient.ts")
-      )
-      layer = Store.TraitStore.layer.pipe(
+      layer = Store.layer.pipe(
         Layer.provide(
           Layer.effect(
             ContextModule.TraitsContext,
@@ -142,7 +139,6 @@ const output = await Effect.runPromise(
           )
         ),
         Layer.provideMerge(Database.layer),
-        Layer.provideMerge(Client.layer),
         Layer.provide(Layer.succeed(Paths.ProjectPaths, { projectRoot: directory, traitsDirectory: directory })),
         Layer.orDie
       )
@@ -434,12 +430,14 @@ const output = await Effect.runPromise(
       const database = Context.getUnsafe(context, Database.TraitDatabase)
       const config = database.$client.config
       assert.ok("url" in config)
-      const file = yield* path.fromFileUrl(new URL(config.url))
-      for (const suffix of ["", "-wal", "-shm", "-journal"])
-        if (yield* fs.exists(file + suffix)) {
-          const stat = yield* fs.stat(file + suffix)
-          databaseBytes += Number(stat.size)
-        }
+      if (config.url.toString() !== "file::memory:") {
+        const file = yield* path.fromFileUrl(new URL(config.url))
+        for (const suffix of ["", "-wal", "-shm", "-journal"])
+          if (yield* fs.exists(file + suffix)) {
+            const stat = yield* fs.stat(file + suffix)
+            databaseBytes += Number(stat.size)
+          }
+      }
     }
     return {
       variant: options.variant,

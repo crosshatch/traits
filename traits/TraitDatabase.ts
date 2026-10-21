@@ -1,4 +1,6 @@
 import { LibsqlClient } from "@effect/sql-libsql"
+// Drizzle currently exposes programmatic SQLite schema push through this Payload integration entry point.
+// Keep this adapter isolated; revisit when Drizzle offers a stable standalone schema-push API.
 import { pushSchema } from "drizzle-kit/payload/sqlite"
 import * as LibsqlDrizzle from "drizzle-orm/effect-libsql"
 import { Array, Context, Effect, Layer } from "effect"
@@ -13,8 +15,10 @@ export class TraitDatabase extends Context.Service<
 export const layer = Layer.effect(
   TraitDatabase,
   Effect.gen(function* () {
-    const client = yield* LibsqlClient.LibsqlClient
-    const db = yield* LibsqlDrizzle.makeWithDefaults({ relations })
+    const client = yield* LibsqlClient.make({ url: "file::memory:" })
+    const db = yield* LibsqlDrizzle.makeWithDefaults({ relations }).pipe(
+      Effect.provideService(LibsqlClient.LibsqlClient, client)
+    )
     const services = yield* Effect.context<never>()
     const runPromise = Effect.runPromiseWith(services)
     yield* Effect.tryPromise((signal) =>

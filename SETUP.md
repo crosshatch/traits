@@ -202,8 +202,10 @@ serialized, and clean indexed reads do not touch Markdown files.
 The server watches the trait directory and automatically synchronizes Markdown
 changes into SQLite. Clean reads query SQLite only; invalidated reads wait for
 synchronization before querying. Changes are coalesced briefly, so filesystem
-notifications are asynchronous. Watch errors are reported and retried
-automatically. No model-facing refresh tool is required.
+notifications are asynchronous. When a watch fails or is unsupported, the server
+reports it and falls back to a full polling synchronization every second while
+retrying the watcher. Polling failures block reads until repaired. No
+model-facing refresh tool is required.
 
 Ordinary notifications reconcile only affected files, validating each pending
 batch before a transactional database update. Notifications from server writes

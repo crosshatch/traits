@@ -1,14 +1,12 @@
 import { NodeServices } from "@effect/platform-node"
-import { LibsqlClient } from "@effect/sql-libsql"
 import { expect, it } from "@effect/vitest"
 import { and, like } from "drizzle-orm"
-import { Effect, FileSystem, Layer, Path, Result } from "effect"
+import { Effect, Layer, Result } from "effect"
 import { Reactivity } from "effect/reactivity"
 
 import { T } from "../tables/index.ts"
 import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
-import * as TraitDatabaseClient from "../TraitDatabaseClient.ts"
 
 it.effect(
   "preserves table metadata for typed relational queries",
@@ -32,25 +30,24 @@ it.effect(
         .where(and(like(T.traits.subject, "%metadata%"), like(T.traits.context, "%searchable example%")))
       expect(matches).toEqual([{ name: document.name }])
     },
-    Effect.provide(
-      TraitDatabase.layer.pipe(
-        Layer.provide(TraitDatabaseClient.layer),
-        Layer.provide(Layer.mergeAll(NodeServices.layer, Reactivity.layer))
-      )
-    )
+    Effect.provide(TraitDatabase.layer.pipe(Layer.provide(Layer.mergeAll(NodeServices.layer, Reactivity.layer))))
   )
 )
 
 it.effect(
-  "isolates fresh databases and closes connections before removing their temporary directories",
+  "isolates in-memory databases and closes their connections",
   Effect.fn("test.TraitDatabase.lifecycle")(function* () {
-    const fs = yield* FileSystem.FileSystem
-    const path = yield* Path.Path
     const acquire = Effect.gen(function* () {
-      const client = yield* LibsqlClient.LibsqlClient
       const db = yield* TraitDatabase.TraitDatabase
+      const client = db.$client
       const rows = yield* db.select().from(T.traits)
       expect(rows).toEqual([])
+      yield* db.insert(T.traits).values({
+        name: "isolated",
+        subject: "Storage.",
+        requirement: "Isolate connections.",
+        purpose: "Avoid shared state."
+      })
       const config = yield* Effect.succeed(client.config).pipe(
         Effect.filterOrFail(
           (config) => "url" in config,
@@ -59,17 +56,11 @@ it.effect(
         Effect.orDie
       )
       return { client, url: config.url }
-    }).pipe(
-      Effect.provide(
-        TraitDatabase.layer.pipe(Layer.provideMerge(TraitDatabaseClient.layer), Layer.provide(Reactivity.layer))
-      )
-    )
+    }).pipe(Effect.provide(TraitDatabase.layer.pipe(Layer.provide(Reactivity.layer))))
     const first = yield* acquire
     const second = yield* acquire
-    expect(first.url.toString()).not.toBe(second.url.toString())
-    const filename = yield* path.fromFileUrl(new URL(first.url))
-    const exists = yield* fs.exists(path.dirname(filename))
-    expect(exists).toBe(false)
+    expect(first.url.toString()).toBe("file::memory:")
+    expect(second.url.toString()).toBe("file::memory:")
     const closed = yield* first.client.unsafe("SELECT 1").pipe(Effect.result)
     expect(Result.isFailure(closed)).toBe(true)
   }, Effect.provide(NodeServices.layer))

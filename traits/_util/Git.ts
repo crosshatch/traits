@@ -15,9 +15,6 @@ const resolveRoot = Effect.fn("Git.resolveRoot")(function* (command: ChildProces
   )
 })
 
-/** The current checkout root, including when running in a linked worktree. */
-export const getWorktreeRoot = resolveRoot(ChildProcess.make`git rev-parse --show-toplevel`)
-
 /** The main checkout root, shared by its linked worktrees. */
 export const getGitRoot = Effect.gen(function* () {
   const path = yield* Path.Path

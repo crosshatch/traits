@@ -24,12 +24,11 @@ import { ProjectPaths } from "../ProjectPaths.ts"
 import { T } from "../tables/index.ts"
 import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
-import * as TraitDatabaseClient from "../TraitDatabaseClient.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import * as TraitStore from "../TraitStore.ts"
 
 const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16) =>
-  TraitStore.TraitStore.layer.pipe(
+  TraitStore.layer.pipe(
     Layer.provide(
       Layer.effect(
         TraitsContext,
@@ -59,7 +58,6 @@ const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency
       )
     ),
     Layer.provideMerge(TraitDatabase.layer),
-    Layer.provide(TraitDatabaseClient.layer),
     Layer.provide(Reactivity.layer),
     Layer.provide(Layer.succeed(ProjectPaths, { projectRoot: dir, traitsDirectory: dir })),
     Layer.provide(
@@ -312,7 +310,7 @@ it.live(
 )
 
 it.live(
-  "restarts a failed directory watch and rehydrates before serving reads again",
+  "falls back to polling after watch failure and retries the directory watch",
   Effect.fn("test.TraitStore.watchRetry")(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -336,13 +334,6 @@ it.live(
       }
     })
     yield* Effect.gen(function* () {
-      const store = yield* TraitStore.TraitStore
-      const failure = yield* store.ls.pipe(
-        Effect.result,
-        Effect.filterOrFail(Result.isFailure, () => "Waiting for watch failure"),
-        Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 100 })
-      )
-      expect(failure.failure._tag).toBe("PlatformError")
       const trait = Trait.Trait.make({
         name: Trait.TraitName.make("watch-recovery"),
         subject: "Watcher recovery.",
@@ -351,8 +342,51 @@ it.live(
       })
       yield* fs.writeFileString(path.join(dir, `${trait.name}.md`), Trait.serialize(trait))
       yield* awaitTraits((traits) => traits[0]?.name === trait.name)
+      yield* Effect.sync(() => attempts).pipe(
+        Effect.filterOrFail(
+          (count) => count >= 2,
+          () => "Waiting for watch restart"
+        ),
+        Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
+      )
       expect(attempts).toBeGreaterThanOrEqual(2)
     }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, watched))
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.live(
+  "polls external changes and repairs when watching is unsupported",
+  Effect.fn("test.TraitStore.polling")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-poll-" })
+    const unsupported = FileSystem.FileSystem.of({
+      ...fs,
+      watch: () => Stream.die(new Error("Watch backend unsupported"))
+    })
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const trait = Trait.Trait.make({
+        name: Trait.TraitName.make("polled"),
+        subject: "External files.",
+        requirement: "Poll without a watcher.",
+        purpose: "Support unavailable watch backends."
+      })
+      const file = path.join(dir, `${trait.name}.md`)
+      yield* fs.writeFileString(file, Trait.serialize(trait))
+      yield* awaitTraits((traits) => traits[0]?.name === trait.name)
+      yield* fs.writeFileString(file, "---\nname: [\n---\n")
+      const invalid = yield* store.ls.pipe(
+        Effect.result,
+        Effect.filterOrFail(Result.isFailure, () => "Waiting for polling invalidation"),
+        Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
+      )
+      expect(invalid.failure).toBeInstanceOf(TraitStore.TraitParseError)
+      yield* fs.writeFileString(file, Trait.serialize(trait))
+      yield* awaitTraits((traits) => traits[0]?.name === trait.name)
+      yield* fs.remove(file)
+      yield* awaitTraits((traits) => traits.length === 0)
+    }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, unsupported))
   }, Effect.provide(NodeServices.layer))
 )
 

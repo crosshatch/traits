@@ -7,10 +7,14 @@ import { Reactivity } from "effect/reactivity"
 import { ProjectPaths } from "../ProjectPaths.ts"
 import * as TraitProjectLock from "../TraitProjectLock.ts"
 
-const acquire = (directory: string) =>
-  TraitProjectLock.acquire.pipe(
-    Effect.provideService(ProjectPaths, { projectRoot: directory, traitsDirectory: directory })
+const acquire = Effect.fnUntraced(function* (directory: string) {
+  const fs = yield* FileSystem.FileSystem
+  yield* fs.makeDirectory(directory, { recursive: true })
+  const traitsDirectory = yield* fs.realPath(directory)
+  return yield* TraitProjectLock.acquire.pipe(
+    Effect.provideService(ProjectPaths, { projectRoot: directory, traitsDirectory })
   )
+})
 
 it.effect(
   "rejects another process and path aliases, isolates worktrees, and releases on forced exit",

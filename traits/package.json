@@ -36,7 +36,6 @@
     "./index": null,
     "./ToolExecutionError": null,
     "./TraitDatabase": null,
-    "./TraitDatabaseClient": null,
     "./TraitProjectLock": null,
     "./TraitsConfigProvider": null,
     "./TraitsHttpClient": null
@@ -52,7 +51,6 @@
       "./index": null,
       "./ToolExecutionError": null,
       "./TraitDatabase": null,
-      "./TraitDatabaseClient": null,
       "./TraitProjectLock": null,
       "./TraitsConfigProvider": null,
       "./TraitsHttpClient": null

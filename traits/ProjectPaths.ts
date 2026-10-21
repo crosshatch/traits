@@ -1,6 +1,7 @@
-import { Context, Effect, FileSystem, Layer, Path } from "effect"
+import { Context, Effect, FileSystem, Layer, Path, String } from "effect"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { getWorktreeRoot } from "./_util/Git.ts"
+import { GitRootError } from "./_util/Git.ts"
 
 export class ProjectPaths extends Context.Service<
   ProjectPaths,
@@ -15,7 +16,15 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const projectRoot = yield* getWorktreeRoot.pipe(Effect.flatMap(fs.realPath))
-    return { projectRoot, traitsDirectory: path.join(projectRoot, ".agents", "traits") }
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+    const projectRoot = yield* spawner.string(ChildProcess.make`git rev-parse --show-toplevel`).pipe(
+      Effect.map(String.trim),
+      Effect.filterOrFail(String.isNonEmpty, () => new GitRootError()),
+      Effect.flatMap(fs.realPath)
+    )
+    const directory = path.join(projectRoot, ".agents", "traits")
+    yield* fs.makeDirectory(directory, { recursive: true })
+    const traitsDirectory = yield* fs.realPath(directory)
+    return { projectRoot, traitsDirectory }
   })
 )

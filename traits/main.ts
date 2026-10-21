@@ -12,7 +12,6 @@ import * as ProjectPaths from "./ProjectPaths.ts"
 import * as ConfigurationError from "./toolkit/ConfigurationError.ts"
 import { toolkit } from "./toolkit/toolkit.ts"
 import * as TraitDatabase from "./TraitDatabase.ts"
-import * as TraitDatabaseClient from "./TraitDatabaseClient.ts"
 import * as TraitProjectLock from "./TraitProjectLock.ts"
 import * as TraitsConfig from "./TraitsConfig.ts"
 import * as TraitsConfigProvider from "./TraitsConfigProvider.ts"
@@ -108,12 +107,7 @@ Command.make("traits", {
     }).pipe(
       Layer.provide(
         toolkit.pipe(
-          Layer.provide(
-            TraitStore.TraitStore.layer.pipe(
-              Layer.provide(TraitDatabase.layer),
-              Layer.provide(TraitDatabaseClient.layer)
-            )
-          ),
+          Layer.provide(TraitStore.layer.pipe(Layer.provide(TraitDatabase.layer))),
           Layer.provide(TraitsConfig.layer),
           Layer.provide(TraitsConfigProvider.layer),
           Layer.catchCause(ConfigurationError.layer),
