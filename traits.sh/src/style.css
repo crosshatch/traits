@@ -129,7 +129,6 @@ p {
   justify-content: space-between;
   gap: 2rem;
   padding: 1.15rem 3.5%;
-  padding-right: max(2rem, calc((100vw - 1200px) / 2));
   background: light-dark(#f2e9cb, #302535);
   border-bottom: 1px solid light-dark(#e7dcc0, var(--rule));
 }
@@ -164,6 +163,7 @@ p {
 }
 .source-link {
   display: flex;
+  font-size: 0.9rem;
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
@@ -1346,7 +1346,21 @@ h3 {
   position: absolute;
   top: 0;
   inset-inline: calc(-1 * var(--instrument-padding));
-  border-top: 1px solid var(--rule);
+  height: 5px;
+  border-block: 1px solid color-mix(in srgb, var(--gold) 45%, var(--paper));
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold) 12%, var(--paper)), transparent);
+}
+.instruments article + article::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--gold);
+  background: var(--paper);
+  box-shadow: 0 0 0 5px var(--paper);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 .instrument-graphic {
   display: block;
@@ -1545,7 +1559,6 @@ h3 {
   }
   .masthead {
     padding: 1rem 1.5rem;
-    padding-right: 2rem;
   }
   .masthead nav {
     gap: 0.85rem;
@@ -1581,7 +1594,6 @@ h3 {
   .source-link {
     border-left: 0;
     padding-left: 0;
-    font-size: 0.8rem;
   }
   :root {
     --contents-height: 6rem;
@@ -1623,7 +1635,7 @@ h3 {
   .masthead {
     gap: 0.8rem;
     flex-wrap: wrap;
-    padding-right: 1.25rem;
+    padding-inline: 1.25rem;
   }
   .brand {
     font-size: 1.15rem;
