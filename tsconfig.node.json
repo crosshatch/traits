@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["*.ts", "tasks/**/*.ts", "rules/**/*.ts"],
+  "include": ["*.ts", "oxlints/**/*.ts", "tasks/**/*.ts"],
   "compilerOptions": {
     "types": ["node"]
   }
