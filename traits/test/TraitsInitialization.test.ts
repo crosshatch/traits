@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url"
 
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Path, pipe, Queue, Schema as S, Stream } from "effect"
+import { Effect, FileSystem, Path, pipe, Queue, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { CheckTraits } from "../toolkit/CheckTraits.ts"
@@ -58,7 +58,10 @@ for (const fixture of [
       })
       yield* spawner.exitCode(ChildProcess.make("git", ["init", "--quiet"], { cwd }))
       yield* fs.writeFileString(path.join(cwd, "traits.ts"), fixture.source)
-      const traitPath = path.join(cwd, ".agents/traits/outdated-trait.md")
+      const projectRoot = yield* spawner
+        .string(ChildProcess.make("git", ["rev-parse", "--show-toplevel"], { cwd }))
+        .pipe(Effect.map(String.trim), Effect.flatMap(fs.realPath))
+      const traitPath = path.join(projectRoot, ".agents", "traits", "outdated-trait.md")
       if ("trait" in fixture) {
         yield* fs.makeDirectory(path.dirname(traitPath), { recursive: true })
         yield* fs.writeFileString(traitPath, fixture.trait)

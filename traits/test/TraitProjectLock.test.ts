@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Path, Result, Stream } from "effect"
+import { Effect, FileSystem, Path, Result, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
@@ -47,10 +47,10 @@ it.effect(
       )
       const code = yield* duplicate.exitCode
       expect(code).not.toBe(0)
-      const gitRoot = yield* spawner.string(
-        ChildProcess.make("git", ["rev-parse", "--show-toplevel"], { cwd: path.join(directory, "project") })
-      )
-      const owned = yield* fs.realPath(path.join(yield* fs.realPath(gitRoot.trim()), ".agents", "traits"))
+      const projectRoot = yield* spawner
+        .string(ChildProcess.make("git", ["rev-parse", "--show-toplevel"], { cwd: path.join(directory, "project") }))
+        .pipe(Effect.map(String.trim), Effect.flatMap(fs.realPath))
+      const owned = yield* fs.realPath(path.join(projectRoot, ".agents", "traits"))
       expect(diagnostic).toContain(`A Traits MCP server already owns ${owned}`)
       const alias = path.join(directory, "alias")
       yield* fs.symlink(root, alias)
@@ -66,7 +66,8 @@ it.effect(
       yield* acquire(path.join(directory, "other-worktree", ".agents", "traits")).pipe(Effect.scoped)
       yield* child.kill({ killSignal: "SIGKILL" })
       const exit = yield* child.exitCode.pipe(Effect.result)
-      expect(Result.isFailure(exit)).toBe(true)
+      // Windows reports a killed process as an exit code; POSIX reports the signal as a failure.
+      expect(Result.getOrUndefined(exit)).not.toBe(0)
       // The persistent database is reused; no stale lock deletion is necessary.
       yield* acquire(root).pipe(Effect.scoped)
       yield* acquire(alias).pipe(Effect.scoped)
