@@ -114,7 +114,7 @@ export const layer = toolkit.toLayer({
     return yield* Effect.forEach(
       paths,
       Effect.fn("CheckTraits.file")(function* (file) {
-        const text = yield* fs.readFileString(file)
+        const text = yield* fs.readFileString(file).pipe(context.asFileRead)
         const activeTraits = pipe(traits, excludeIgnored(text))
         const chunks = Array.chunksOf(String.split(text, "\n"), 200)
         const sources = Array.map(chunks, (lines, index) =>
