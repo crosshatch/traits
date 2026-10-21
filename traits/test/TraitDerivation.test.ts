@@ -66,6 +66,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
     codecTransformer: OpenAiStructuredOutput.toCodecOpenAI
   })
   const store = TraitStore.TraitStore.of({
+    refresh: Effect.void,
     ls: Effect.sync(() => [...stored.values()]),
     add: (trait) =>
       Effect.suspend(() => {

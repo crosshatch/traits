@@ -1,7 +1,19 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { sql } from "drizzle-orm"
-import { Array, Deferred, Effect, Fiber, FileSystem, Layer, Path, Result } from "effect"
+import {
+  Array,
+  Deferred,
+  Effect,
+  Fiber,
+  FileSystem,
+  Layer,
+  Path,
+  PlatformError,
+  Result,
+  Schedule,
+  Stream
+} from "effect"
 import { Reactivity } from "effect/reactivity"
 
 import { ProjectPaths } from "../ProjectPaths.ts"
@@ -11,13 +23,30 @@ import * as TraitDatabase from "../TraitDatabase.ts"
 import * as TraitDatabaseClient from "../TraitDatabaseClient.ts"
 import * as TraitStore from "../TraitStore.ts"
 
-const layerStoreLibsql = (dir: string) =>
+const layerStoreLibsql = (dir: string, watchChanges = false) =>
   TraitStore.layerLibsql.pipe(
     Layer.provideMerge(TraitDatabase.layer),
     Layer.provide(TraitDatabaseClient.layer),
     Layer.provide(Reactivity.layer),
-    Layer.provide(Layer.succeed(ProjectPaths, { projectRoot: dir, traitsDirectory: dir }))
+    Layer.provide(Layer.succeed(ProjectPaths, { projectRoot: dir, traitsDirectory: dir })),
+    Layer.provide(
+      Layer.effect(
+        FileSystem.FileSystem,
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem
+          return watchChanges ? fs : FileSystem.FileSystem.of({ ...fs, watch: () => Stream.never })
+        })
+      )
+    )
   )
+
+const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: ReadonlyArray<Trait.Trait>) => boolean) {
+  const store = yield* TraitStore.TraitStore
+  return yield* store.ls.pipe(
+    Effect.filterOrFail(matches, () => "Waiting for trait synchronization"),
+    Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
+  )
+})
 
 for (const backend of [
   {
@@ -57,6 +86,7 @@ for (const backend of [
           }
         ]) {
           yield* fs.writeFileString(file, fixture.text)
+          yield* store.refresh.pipe(Effect.result)
           for (const operation of [store.ls, store.get(trait.name), store.update(trait), store.rm([trait.name])]) {
             const result = yield* Effect.result<unknown, Effect.Error<typeof operation>, never>(operation)
             expect(Result.isFailure(result)).toBe(true)
@@ -192,6 +222,8 @@ for (const backend of [
         }
         const text = yield* fs.readFileString(file)
         expect(text).toBe(Trait.serialize(actual))
+        yield* fs.remove(file)
+        yield* store.refresh
         yield* store.add(actual)
         const loaded = yield* store.get(actual.name)
         expect(loaded).toEqual(actual)
@@ -200,8 +232,111 @@ for (const backend of [
   )
 }
 
+it.live(
+  "automatically indexes external create/replace/delete events and repairs, and closes the watcher",
+  Effect.fn("test.TraitStore.watch")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-watch-" })
+    let closed = 0
+    const watched = FileSystem.FileSystem.of({
+      ...fs,
+      watch: (directory, options) =>
+        fs.watch(directory, options).pipe(
+          Stream.ensuring(
+            Effect.sync(() => {
+              closed++
+            })
+          )
+        )
+    })
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const db = yield* TraitDatabase.TraitDatabase
+      const original = Trait.Trait.make({
+        name: Trait.TraitName.make("watched-trait"),
+        subject: "Watched files.",
+        requirement: "Initial requirement.",
+        purpose: "Synchronize automatically."
+      })
+      const file = path.join(dir, `${original.name}.md`)
+      const temporary = path.join(dir, ".editor-temp")
+      yield* fs.writeFileString(temporary, Trait.serialize(original))
+      yield* fs.rename(temporary, file)
+      yield* awaitTraits((traits) => traits.length === 1)
+      const created = yield* store.get(original.name)
+      expect(created).toEqual(original)
+
+      const edited = Trait.Trait.make({ ...original, requirement: "Edited requirement." })
+      yield* fs.writeFileString(file, Trait.serialize(edited))
+      yield* awaitTraits((traits) => traits[0]?.requirement === edited.requirement)
+      yield* fs.writeFileString(file, "---\nname: [\n---\n")
+      const invalid = yield* store.ls.pipe(
+        Effect.result,
+        Effect.filterOrFail(Result.isFailure, () => "Waiting for invalidation"),
+        Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
+      )
+      expect(invalid.failure).toBeInstanceOf(TraitStore.TraitParseError)
+      const retained = yield* db.select().from(T.traits)
+      expect(retained).toMatchObject([{ requirement: edited.requirement }])
+
+      yield* fs.writeFileString(temporary, Trait.serialize(original))
+      yield* fs.rename(temporary, file)
+      yield* awaitTraits((traits) => traits[0]?.requirement === original.requirement)
+      yield* fs.remove(file)
+      yield* awaitTraits((traits) => traits.length === 0)
+    }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, watched))
+    expect(closed).toBe(1)
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.live(
+  "restarts a failed directory watch and rehydrates before serving reads again",
+  Effect.fn("test.TraitStore.watchRetry")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-watch-retry-" })
+    let attempts = 0
+    const watched = FileSystem.FileSystem.of({
+      ...fs,
+      watch: (directory, options) => {
+        attempts++
+        return attempts === 1
+          ? Stream.fail(
+              PlatformError.systemError({
+                _tag: "Unknown",
+                module: "FileSystem",
+                method: "watch",
+                pathOrDescriptor: directory,
+                cause: "Injected watch failure"
+              })
+            )
+          : fs.watch(directory, options)
+      }
+    })
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const failure = yield* store.ls.pipe(
+        Effect.result,
+        Effect.filterOrFail(Result.isFailure, () => "Waiting for watch failure"),
+        Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 100 })
+      )
+      expect(failure.failure._tag).toBe("PlatformError")
+      const trait = Trait.Trait.make({
+        name: Trait.TraitName.make("watch-recovery"),
+        subject: "Watcher recovery.",
+        requirement: "Recover automatically.",
+        purpose: "Avoid stale reads after watch failure."
+      })
+      yield* fs.writeFileString(path.join(dir, `${trait.name}.md`), Trait.serialize(trait))
+      yield* awaitTraits((traits) => traits[0]?.name === trait.name)
+      expect(attempts).toBeGreaterThanOrEqual(2)
+    }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, watched))
+  }, Effect.provide(NodeServices.layer))
+)
+
 it.effect(
-  "indexes on startup and reconciles timestamp-preserving edits, invalid files, and deletions",
+  "hydrates on startup, serves SQLite-only reads, and rebuilds transactionally when invalidated",
   Effect.fn("test.TraitStore.index")(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -234,24 +369,34 @@ it.effect(
       expect(loaded).toEqual(original)
       const unchanged = yield* store.ls
       expect(unchanged).toEqual([original])
-      expect(reads).toBe(4)
+      expect(reads).toBe(1)
 
       const edited = Trait.Trait.make({ ...original, requirement: "Modified requirement." })
       yield* fs.writeFileString(file, Trait.serialize(edited))
       yield* fs.utimes(file, 1000, 1000)
+      const beforeRefresh = yield* store.get(original.name)
+      expect(beforeRefresh).toEqual(original)
+      expect(reads).toBe(1)
+      yield* store.refresh
       const refreshed = yield* store.get(original.name)
       expect(refreshed).toEqual(edited)
-      expect(reads).toBe(5)
+      expect(reads).toBe(2)
 
       yield* fs.writeFileString(file, "---\nname: [\n---\n")
-      const invalid = yield* store.ls.pipe(Effect.result)
+      const invalid = yield* store.refresh.pipe(Effect.result)
       expect(Result.isFailure(invalid)).toBe(true)
       if (Result.isFailure(invalid)) expect(invalid.failure).toBeInstanceOf(TraitStore.TraitParseError)
+      const unchangedRows = yield* db.select().from(T.traits)
+      expect(unchangedRows).toMatchObject([{ requirement: edited.requirement }])
+      const blocked = yield* store.ls.pipe(Effect.result)
+      expect(Result.isFailure(blocked)).toBe(true)
       yield* fs.writeFileString(file, Trait.serialize(edited))
+      yield* store.refresh
       const repaired = yield* store.ls
       expect(repaired).toEqual([edited])
 
       yield* fs.remove(file)
+      yield* store.refresh
       const deleted = yield* store.ls
       expect(deleted).toEqual([])
       const missing = yield* store.get(original.name).pipe(Effect.result)
@@ -291,15 +436,17 @@ it.effect(
       expect(replaced).toMatchObject([{ requirement: updated.requirement, context: null }])
 
       yield* db.run(
-        sql`CREATE TRIGGER reject_trait_insert BEFORE INSERT ON traits BEGIN SELECT RAISE(ABORT, 'injected write failure'); END`
+        sql`CREATE TRIGGER reject_trait_update BEFORE UPDATE ON traits BEGIN SELECT RAISE(ABORT, 'injected write failure'); END`
       )
       const failed = yield* store.update(original).pipe(Effect.result)
       expect(Result.isFailure(failed)).toBe(true)
       const afterFailure = yield* db.select().from(T.traits)
-      expect(afterFailure).toEqual([])
+      expect(afterFailure).toMatchObject([{ requirement: updated.requirement }])
+      const autoRecovered = yield* store.get(original.name)
+      expect(autoRecovered).toEqual(original)
       const markdown = yield* fs.readFileString(path.join(dir, `${original.name}.md`))
       expect(markdown).toBe(Trait.serialize(original))
-      yield* db.run(sql`DROP TRIGGER reject_trait_insert`)
+      yield* db.run(sql`DROP TRIGGER reject_trait_update`)
       const recovered = yield* store.get(original.name)
       expect(recovered).toEqual(original)
       yield* store.rm([original.name])
@@ -308,6 +455,46 @@ it.effect(
       const files = yield* fs.readDirectory(dir)
       expect(files).toEqual([])
     }).pipe(Effect.provide(layerStoreLibsql(dir)))
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.effect(
+  "automatically retries failed insert/delete synchronization without serving stale rows",
+  Effect.fn("test.TraitStore.failedWrites")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    for (const operation of ["INSERT", "DELETE"] as const) {
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-failed-write-" })
+      yield* Effect.gen(function* () {
+        const store = yield* TraitStore.TraitStore
+        const db = yield* TraitDatabase.TraitDatabase
+        const trait = Trait.Trait.make({
+          name: Trait.TraitName.make("failed-write"),
+          subject: "Trait persistence.",
+          requirement: "Keep successful reads synchronized.",
+          purpose: "Require explicit recovery from failed writes."
+        })
+        if (operation === "DELETE") yield* store.add(trait)
+        const before = yield* db.select().from(T.traits)
+        yield* db.run(
+          sql.raw(
+            `CREATE TRIGGER reject_write BEFORE ${operation} ON traits BEGIN SELECT RAISE(ABORT, 'injected failure'); END`
+          )
+        )
+        const write = operation === "INSERT" ? store.add(trait) : store.rm([trait.name])
+        const failed = yield* Effect.result<unknown, Effect.Error<typeof write>, never>(write)
+        expect(Result.isFailure(failed)).toBe(true)
+        const blocked = yield* store.ls.pipe(Effect.result)
+        expect(Result.isFailure(blocked)).toBe(true)
+        const retained = yield* db.select().from(T.traits)
+        expect(retained).toEqual(before)
+        yield* db.run(sql`DROP TRIGGER reject_write`)
+        const recovered = yield* store.ls
+        expect(recovered).toEqual(operation === "INSERT" ? [trait] : [])
+        const exists = yield* fs.exists(path.join(dir, `${trait.name}.md`))
+        expect(exists).toBe(operation === "INSERT")
+      }).pipe(Effect.provide(layerStoreLibsql(dir)))
+    }
   }, Effect.provide(NodeServices.layer))
 )
 

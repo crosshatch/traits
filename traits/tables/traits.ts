@@ -7,6 +7,5 @@ export const traits = sqliteTable("traits", {
   requirement: text().notNull(),
   applicability: text(),
   purpose: text().notNull(),
-  context: text(),
-  fingerprint: text().notNull()
+  context: text()
 })

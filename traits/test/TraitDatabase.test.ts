@@ -23,9 +23,9 @@ it.effect(
         purpose: "Keep relational queries typed and executable.",
         context: "Query individual columns. Markdown body with a searchable example.\n"
       })
-      yield* db.insert(T.traits).values({ ...document, fingerprint: "test" })
+      yield* db.insert(T.traits).values(document)
       const row = yield* db.query.traits.findFirst({ where: { name: document.name } })
-      expect(row).toEqual({ ...document, fingerprint: "test" })
+      expect(row).toEqual(document)
       const matches = yield* db
         .select({ name: T.traits.name })
         .from(T.traits)

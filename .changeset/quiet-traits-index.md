@@ -3,11 +3,15 @@
 ---
 
 Index Markdown traits in a disposable local libSQL database through Drizzle's
-Effect driver, with incremental reconciliation and startup schema push.
+Effect driver, with startup schema push and database-only runtime reads.
 
-Populate the fresh index during project initialization, detect
-timestamp-preserving edits with content hashes, and make trait writes atomic and
-cancellation-safe through database synchronization.
+Populate the fresh index during project initialization and automatically
+synchronize external Markdown edits and approved schema repairs with a scoped,
+debounced directory watcher. Rebuilds validate all files before transactionally
+replacing rows. Mutations perform explicit SQL insert/update/delete alongside
+atomic Markdown publication and finish write-through before returning. Dirty or
+failed synchronization is retried before reads; clean reads use SQLite only.
+Watcher failures are reported and retried without a model-facing refresh tool.
 
 Allow `decisionConcurrency: "unbounded"` to disable the decision request limit.
 

@@ -393,6 +393,12 @@ skipped remediation or lost signal.
 
 ## Operation
 
+Trait definitions are read from SQLite, hydrated from Markdown at startup and
+automatically synchronized by a scoped directory watcher. Clean reads query
+SQLite only; observed edits and failed write-through invalidate the index and
+are synchronized before the next read. Invalid files remain errors until
+repaired with consent. No model-facing refresh operation is needed.
+
 The CLI launcher installs project dependencies in its current directory before
 importing the MCP server. Run it from the checkout/workspace root. It selects
 the package manager from `package.json#packageManager` or an unambiguous
@@ -440,8 +446,8 @@ approval:
    any migration or repair is ambiguous or unsupported, ask a focused question
    before changing that content. Never guess intent or discard information.
 4. Validate every file in the affected store with the installed `Trait` schema
-   and `serialize` format. Then retry the originally blocked operation with its
-   original arguments. The server reads repaired files on retry; no restart is
+   and `serialize` format, then retry the originally blocked operation with its
+   original arguments. Synchronization after repairs is automatic; no restart is
    necessary.
 
 The original operation failed and must never be reported as a successful check.

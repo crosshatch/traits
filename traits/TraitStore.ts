@@ -1,10 +1,10 @@
-import { eq, inArray, notInArray } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core"
 import {
   Array,
   Cause,
   Context,
-  Crypto,
+  Deferred,
   Effect,
   FileSystem,
   flow,
@@ -14,10 +14,11 @@ import {
   PlatformError,
   Predicate,
   Schema as S,
+  Schedule,
   Semaphore,
+  Stream,
   String
 } from "effect"
-import { Hex } from "effect/encoding"
 import type { SqlError } from "effect/sql"
 
 import { ProjectPaths } from "./ProjectPaths.ts"
@@ -43,7 +44,7 @@ export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitPars
     | After approval, inspect the entire affected trait store, not just the first failing file. Classify each failure and migrate repairable legacy formats to the installed Trait schema; repair malformed documents only where the intended content is clear.
     | Preserve names, authoritative requirements, applicability, exceptions, examples, and all other supporting context. If a repair is ambiguous or unsupported, ask a focused question rather than guessing, inventing intent, or dropping information. Leave already-valid traits unchanged.
     | The current format requires name, subject, requirement, and purpose in YAML frontmatter; applicability is optional text, and the Markdown body is optional context. Advisory guidance belongs in context; move legacy guidance there only after migration approval. Purpose explains intended benefit, not additional obligations. Legacy body requirements belong in requirement; when/mime/skip become applicability prose; diffs and additional information belong in context.
-    | Validate all files in the affected store with the installed Trait schema and serialize format before retrying the originally blocked operation with its original arguments. A server restart is not necessary: repaired files are read on retry.
+    | Validate all files in the affected store with the installed Trait schema and serialize format, then retry the originally blocked operation with its original arguments. Synchronization after repairs is automatic. A server restart is not necessary.
     | No automatic migration has occurred. The original operation failed; do not treat it as successful or claim a completed check until the retry succeeds.
     `)
   }
@@ -93,6 +94,7 @@ export class TraitStore extends Context.Service<
       Trait.Trait,
       | PlatformError.PlatformError
       | TraitAlreadyExistsError
+      | SqlError.SqlError
       | TraitParseError
       | TraitFilenameMismatchError
       | EffectDrizzleQueryError
@@ -104,6 +106,7 @@ export class TraitStore extends Context.Service<
       | PlatformError.PlatformError
       | TraitParseError
       | TraitNotFoundError
+      | SqlError.SqlError
       | TraitFilenameMismatchError
       | EffectDrizzleQueryError
     >
@@ -114,6 +117,7 @@ export class TraitStore extends Context.Service<
       | PlatformError.PlatformError
       | TraitParseError
       | TraitNotFoundError
+      | SqlError.SqlError
       | TraitFilenameMismatchError
       | EffectDrizzleQueryError
     >
@@ -132,16 +136,25 @@ export class TraitStore extends Context.Service<
       | PlatformError.PlatformError
       | TraitParseError
       | TraitNotFoundError
+      | SqlError.SqlError
       | TraitFilenameMismatchError
+      | EffectDrizzleQueryError
+    >
+    readonly refresh: Effect.Effect<
+      void,
+      | PlatformError.PlatformError
+      | TraitParseError
+      | TraitFilenameMismatchError
+      | SqlError.SqlError
       | EffectDrizzleQueryError
     >
   }
 >()("traits/TraitStore") {}
 
-const readFile = Effect.fn("TraitStore.readFile")(function* (file: string, content?: string) {
+const readFile = Effect.fn("TraitStore.readFile")(function* (file: string) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
-  const text = content ?? (yield* fs.readFileString(file))
+  const text = yield* fs.readFileString(file)
   return yield* Trait.parse(text, file).pipe(
     Effect.mapError((cause) => TraitParseError.make({ path: file, cause })),
     Effect.filterOrFail(
@@ -172,7 +185,27 @@ const makeFileSystem = Effect.gen(function* () {
     )
   )
 
+  const ls = Effect.gen(function* () {
+    const names = yield* fs.readDirectory(root)
+    return yield* pipe(
+      names,
+      Array.sort(String.Order),
+      Array.filter(String.endsWith(".md")),
+      Effect.forEach(
+        Effect.fn("TraitStore.readEntry")(function* (name) {
+          const file = path.join(root, name)
+          const info = yield* fs.stat(file)
+          if (info.type !== "File") return undefined
+          return yield* read(file)
+        }),
+        { concurrency: 1 }
+      ),
+      Effect.map(Array.filter(Predicate.isNotUndefined))
+    )
+  }).pipe(Effect.withSpan("TraitStore.ls"))
+
   return {
+    refresh: ls.pipe(Effect.asVoid),
     add: Effect.fn("TraitStore.add")(function* (trait) {
       const directory = yield* fs.makeTempDirectoryScoped({ directory: root, prefix: ".traits-write-" })
       const temporary = path.join(directory, `${trait.name}.md`)
@@ -194,24 +227,7 @@ const makeFileSystem = Effect.gen(function* () {
       yield* fs.writeFileString(temporary, Trait.serialize(trait), { mode: info.mode })
       yield* fs.rename(temporary, traitPath(trait.name))
     }, Effect.scoped),
-    ls: Effect.gen(function* () {
-      const names = yield* fs.readDirectory(root)
-      return yield* pipe(
-        names,
-        Array.sort(String.Order),
-        Array.filter(String.endsWith(".md")),
-        Effect.forEach(
-          Effect.fn("TraitStore.readEntry")(function* (name) {
-            const file = path.join(root, name)
-            const info = yield* fs.stat(file)
-            if (info.type !== "File") return undefined
-            return yield* read(file)
-          }),
-          { concurrency: 1 }
-        ),
-        Effect.map(Array.filter(Predicate.isNotUndefined))
-      )
-    }).pipe(Effect.withSpan("TraitStore.ls")),
+    ls,
     rm: Effect.forEach(
       flow(
         get,
@@ -224,103 +240,94 @@ const makeFileSystem = Effect.gen(function* () {
 
 export const layerFileSystem = Layer.effect(TraitStore, makeFileSystem)
 
-/** Markdown remains authoritative; the database caches validated complete traits. */
+/** Keep SQLite synchronized with Markdown; ordinary reads query SQLite while the index is clean. */
 export const layerLibsql = Layer.effect(
   TraitStore,
   Effect.gen(function* () {
     const filesystem = yield* makeFileSystem
-    const { traitsDirectory } = yield* ProjectPaths
-    const services = yield* Effect.context<FileSystem.FileSystem | Path.Path>()
-    const read = flow(readFile, Effect.provideContext(services))
+    const db = yield* TraitDatabase.TraitDatabase
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const db = yield* TraitDatabase.TraitDatabase
-    const crypto = yield* Crypto.Crypto
-    const root = traitsDirectory
+    const { traitsDirectory } = yield* ProjectPaths
     const semaphore = yield* Semaphore.make(1)
     const table = T.traits
-
-    const synchronize = Effect.fn("TraitStore.synchronize")(function* (
-      file: string,
-      cached?: T.traits["$inferSelect"]
-    ) {
-      const info = yield* fs.stat(file)
-      if (info.type !== "File") return undefined
-      const content = yield* fs.readFileString(file)
-      const fingerprint = yield* crypto
-        .digest("SHA-256", new TextEncoder().encode(content))
-        .pipe(Effect.map(Hex.encode))
-      if (cached?.fingerprint === fingerprint) {
-        return Trait.Trait.make({
-          name: Trait.TraitName.make(cached.name),
-          subject: cached.subject,
-          requirement: cached.requirement,
-          ...(cached.applicability === null ? {} : { applicability: cached.applicability }),
-          purpose: cached.purpose,
-          ...(cached.context === null ? {} : { context: cached.context })
-        })
-      }
-      const document = yield* read(file, content)
-      const values = {
-        ...document,
-        applicability: document.applicability ?? null,
-        context: document.context ?? null,
-        fingerprint
-      }
-      yield* db.insert(table).values(values).onConflictDoUpdate({
-        target: table.name,
-        set: values
-      })
-      return document
+    let revision = 0
+    let indexedRevision = -1
+    let watcherFailure: PlatformError.PlatformError | undefined
+    const invalidate = Effect.sync(() => {
+      revision++
     })
+    const values = (trait: Trait.Trait) => ({
+      ...trait,
+      applicability: trait.applicability ?? null,
+      context: trait.context ?? null
+    })
+    const fromRow = (row: T.traits["$inferSelect"]) =>
+      Trait.Trait.make({
+        name: Trait.TraitName.make(row.name),
+        subject: row.subject,
+        requirement: row.requirement,
+        ...(row.applicability === null ? {} : { applicability: row.applicability }),
+        purpose: row.purpose,
+        ...(row.context === null ? {} : { context: row.context })
+      })
+
+    const rebuild = Effect.gen(function* () {
+      const currentRevision = revision
+      const documents = yield* filesystem.ls
+      yield* Effect.gen(function* () {
+        yield* db.delete(table)
+        yield* Effect.forEach(
+          Array.chunksOf(documents, 100),
+          (batch) => db.insert(table).values(Array.map(batch, values)),
+          { discard: true }
+        )
+      }).pipe(db.$client.withTransaction)
+      indexedRevision = currentRevision
+    }).pipe(Effect.withSpan("TraitStore.rebuild"))
+    const ready = Effect.gen(function* () {
+      if (watcherFailure !== undefined) return yield* watcherFailure
+      while (indexedRevision !== revision) yield* rebuild
+    })
+    const refresh = invalidate.pipe(
+      Effect.andThen(ready),
+      Effect.uninterruptible,
+      semaphore.withPermits(1),
+      Effect.withSpan("TraitStore.refresh")
+    )
+    const synchronize = ready.pipe(
+      semaphore.withPermits(1),
+      Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.logWarning(cause)))
+    )
 
     const get = Effect.fn("TraitStore.getIndexed")(function* (name: Trait.TraitName) {
-      const cached = yield* db.select().from(table).where(eq(table.name, name))
-      const document = yield* synchronize(path.join(root, `${name}.md`), cached[0]).pipe(
-        Effect.catchTags({
-          PlatformError: (error) =>
-            error.reason._tag === "NotFound"
-              ? db
-                  .delete(table)
-                  .where(eq(table.name, name))
-                  .pipe(Effect.andThen(TraitNotFoundError.make({ name })))
-              : error
-        })
-      )
-      return document === undefined ? yield* filesystem.get(name) : document
+      yield* ready
+      const rows = yield* db.select().from(table).where(eq(table.name, name))
+      const row = rows[0]
+      return row === undefined ? yield* TraitNotFoundError.make({ name }) : fromRow(row)
     })
 
     const store = TraitStore.of({
+      refresh,
       get: flow(get, semaphore.withPermits(1)),
       ls: Effect.gen(function* () {
-        const entries = yield* fs.readDirectory(root)
-        const cached = yield* db
+        yield* ready
+        return yield* db
           .select()
           .from(table)
-          .pipe(
-            Effect.map(
-              flow(
-                Array.map((row) => [row.name, row] as const),
-                (entries) => new Map(entries)
-              )
-            )
-          )
-        const documents = yield* pipe(
-          entries,
-          Array.filter(String.endsWith(".md")),
-          Array.sort(String.Order),
-          Effect.forEach((entry) => synchronize(path.join(root, entry), cached.get(path.basename(entry, ".md")))),
-          Effect.map(Array.filter(Predicate.isNotUndefined))
-        )
-        const names = Array.map(documents, (document) => document.name)
-        yield* db.delete(table).where(notInArray(table.name, names))
-        return documents
-      }).pipe(db.$client.withTransaction, semaphore.withPermits(1), Effect.withSpan("TraitStore.lsIndexed")),
+          .orderBy(table.name)
+          .pipe(Effect.map(Array.map(fromRow)))
+      }).pipe(semaphore.withPermits(1), Effect.withSpan("TraitStore.lsIndexed")),
       add: Effect.fn("TraitStore.addIndexed")(
         function* (trait) {
-          yield* filesystem.add(trait)
-          yield* db.delete(table).where(eq(table.name, trait.name))
-          yield* synchronize(path.join(root, `${trait.name}.md`))
+          yield* ready
+          const existing = yield* db.select({ name: table.name }).from(table).where(eq(table.name, trait.name))
+          if (existing.length > 0) return yield* TraitAlreadyExistsError.make({ name: trait.name })
+          yield* filesystem.add(trait).pipe(Effect.tapCause(() => invalidate))
+          yield* db
+            .insert(table)
+            .values(values(trait))
+            .pipe(Effect.tapCause(() => invalidate))
           return trait
         },
         Effect.uninterruptible,
@@ -328,29 +335,78 @@ export const layerLibsql = Layer.effect(
       ),
       update: Effect.fn("TraitStore.updateIndexed")(
         function* (trait) {
-          yield* db.delete(table).where(eq(table.name, trait.name))
-          yield* filesystem.update(trait)
-          yield* synchronize(path.join(root, `${trait.name}.md`))
+          yield* get(trait.name)
+          yield* filesystem.update(trait).pipe(Effect.tapCause(() => invalidate))
+          yield* db
+            .update(table)
+            .set(values(trait))
+            .where(eq(table.name, trait.name))
+            .pipe(Effect.tapCause(() => invalidate))
         },
         Effect.uninterruptible,
         semaphore.withPermits(1)
       ),
       rm: Effect.fn("TraitStore.rmIndexed")(
         function* (names) {
-          yield* db.delete(table).where(inArray(table.name, names))
-          yield* filesystem.rm(names)
+          yield* ready
+          yield* Effect.forEach(names, get, { discard: true })
+          yield* filesystem.rm(names).pipe(Effect.tapCause(() => invalidate))
+          yield* db
+            .delete(table)
+            .where(inArray(table.name, names))
+            .pipe(Effect.tapCause(() => invalidate))
         },
         Effect.uninterruptible,
         semaphore.withPermits(1)
       )
     })
-    // Keep malformed files recoverable through the tools after startup indexing fails.
-    yield* store.ls.pipe(
-      Effect.catchTags({
-        TraitParseError: (error) => Effect.logWarning(error.message),
-        TraitFilenameMismatchError: (error) => Effect.logWarning(error.message)
+    const started = yield* Deferred.make<void>()
+    yield* Effect.gen(function* () {
+      yield* fs.makeDirectory(traitsDirectory, { recursive: true })
+      // Materialize the watch before scanning; callback registration runs in a child fiber.
+      const pull = yield* Stream.toPull(fs.watch(traitsDirectory))
+      yield* Effect.yieldNow
+      watcherFailure = undefined
+      yield* synchronize
+      yield* Deferred.succeed(started, undefined)
+      yield* Stream.fromPull(Effect.succeed(pull)).pipe(
+        Stream.filter((event) => {
+          const file = path.resolve(traitsDirectory, event.path)
+          return path.dirname(file) === traitsDirectory && path.extname(file) === ".md"
+        }),
+        Stream.tap(() => invalidate),
+        Stream.debounce("50 millis"),
+        Stream.runForEach(() => synchronize)
+      )
+      return yield* PlatformError.systemError({
+        _tag: "Unknown",
+        module: "FileSystem",
+        method: "watch",
+        pathOrDescriptor: traitsDirectory,
+        cause: "The trait directory watch ended unexpectedly."
       })
+    }).pipe(
+      Effect.scoped,
+      Effect.catchDefect((cause) =>
+        PlatformError.systemError({
+          _tag: "Unknown",
+          module: "FileSystem",
+          method: "watch",
+          pathOrDescriptor: traitsDirectory,
+          cause
+        })
+      ),
+      Effect.tapError((error) =>
+        Effect.gen(function* () {
+          watcherFailure = error
+          yield* invalidate
+          yield* Effect.logWarning(error)
+        })
+      ),
+      Effect.retry(Schedule.spaced("1 second")),
+      Effect.forkScoped
     )
+    yield* Deferred.await(started)
     return store
   })
 )

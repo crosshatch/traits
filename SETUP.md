@@ -181,23 +181,32 @@ apply. Git failures fail the check rather than bypass filtering.
 
 Configuration and providers initialize when the MCP server starts. If setup
 fails, the connection stays alive with fallback `derive_trait` and
-`check_traits` tools using the normal descriptions and parameters. Either tool
+`check_traits` tools using the normal descriptions and parameters. Each tool
 returns the original error diagnostics. Surface the failure, fix the reported
 error, and restart the Traits MCP server to load the corrected setup. Then retry
 the same operation; keep any trait proposal pending and retry its derivation
 with identical arguments. Diagnostics include the full Effect cause and may
 contain sensitive values embedded in errors; do not paste credentials into chat.
-Expected tool failures use MCP error results; unexpected runtime defects receive
-a generic internal error response.
+Handler failures and defects use the declared `ToolExecutionError` MCP error
+result.
+
+### External trait edits
+
+The server watches the trait directory and automatically synchronizes Markdown
+changes into SQLite. Clean reads query SQLite only; invalidated reads wait for
+synchronization before querying. Changes are coalesced briefly, so filesystem
+notifications are asynchronous. Watch errors are reported and retried
+automatically. No model-facing refresh tool is required.
 
 ### Stored trait parsing fails
 
 If a stored trait cannot be parsed, tools return `TraitParseError` with the file
 path and original diagnostic instead of stopping the server. Update all stored
-traits to the format/schema of the currently installed `traits` package: inspect
-its `Trait` schema and `serialize` format, preserving the rules and metadata.
-Retry after fixing the files; no server restart is needed. A failed check is not
-a clean review, and no automatic migration is performed.
+traits only after obtaining repair consent. Inspect the installed package's
+`Trait` schema and `serialize` format, preserving the rules and metadata.
+Validate the repaired files and retry; synchronization is automatic and no
+server restart is needed. A failed check is not a clean review, and no automatic
+migration is performed.
 
 ### Reconciliation fails after approval
 
