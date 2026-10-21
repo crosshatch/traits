@@ -10,6 +10,7 @@ import {
   Layer,
   Path,
   PlatformError,
+  Queue,
   Result,
   Schedule,
   Stream
@@ -22,9 +23,10 @@ import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
 import * as TraitDatabaseClient from "../TraitDatabaseClient.ts"
 import * as TraitStore from "../TraitStore.ts"
+import * as TraitStoreLibsql from "../TraitStoreLibsql.ts"
 
 const layerStoreLibsql = (dir: string, watchChanges = false) =>
-  TraitStore.layerLibsql.pipe(
+  TraitStoreLibsql.layer.pipe(
     Layer.provideMerge(TraitDatabase.layer),
     Layer.provide(TraitDatabaseClient.layer),
     Layer.provide(Reactivity.layer),
@@ -48,190 +50,178 @@ const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: R
   )
 })
 
-for (const backend of [
-  {
-    name: "filesystem",
-    layer: (dir: string) =>
-      TraitStore.layerFileSystem.pipe(
-        Layer.provide(Layer.succeed(ProjectPaths, { projectRoot: dir, traitsDirectory: dir }))
-      )
-  },
-  { name: "libsql", layer: layerStoreLibsql }
-]) {
-  it.effect(
-    `${backend.name}: offers consent-based recovery with distinct schema and malformed-document diagnostics without writing`,
-    Effect.fn("test.TraitStore.parseError")(function* () {
-      const fs = yield* FileSystem.FileSystem
-      const path = yield* Path.Path
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-parse-" })
-      const trait = Trait.Trait.make({
-        name: Trait.TraitName.make("old-format"),
-        subject: "Stored policies.",
-        requirement: "Preserve this rule.",
-        purpose: "Preserve stored intent."
-      })
-      const file = path.join(dir, "old-format.md")
-      yield* Effect.gen(function* () {
-        const store = yield* TraitStore.TraitStore
-        for (const fixture of [
-          {
-            text: "---\nname: old-format\n---\nPreserve this rule.",
-            tag: "SchemaError",
-            diagnostic: "does not match the installed Trait schema"
-          },
-          {
-            text: "---\nname: [\n---\nPreserve this rule.",
-            tag: "InvalidYamlError",
-            diagnostic: "do not assume this is a schema migration"
-          }
-        ]) {
-          yield* fs.writeFileString(file, fixture.text)
-          yield* store.refresh.pipe(Effect.result)
-          for (const operation of [store.ls, store.get(trait.name), store.update(trait), store.rm([trait.name])]) {
-            const result = yield* Effect.result<unknown, Effect.Error<typeof operation>, never>(operation)
-            expect(Result.isFailure(result)).toBe(true)
-            if (Result.isFailure(result)) {
-              expect(result.failure).toMatchObject({
-                _tag: "TraitParseError",
-                path: file,
-                cause: { _tag: fixture.tag },
-                message: expect.stringContaining(fixture.diagnostic)
-              })
-              const { message } = result.failure
-              for (const instruction of [
-                "Ask the developer:",
-                "Do not change files before approval",
-                "If declined, leave files unchanged",
-                "inspect the entire affected trait store",
-                "authoritative requirements, applicability, exceptions, examples",
-                "ask a focused question",
-                "Validate all files",
-                "original arguments",
-                "A server restart is not necessary",
-                "original operation failed"
-              ])
-                expect(message).toContain(instruction)
-            }
-          }
-          const text = yield* fs.readFileString(file)
-          expect(text).toBe(fixture.text)
+it.effect(
+  "offers consent-based recovery with distinct schema and malformed-document diagnostics without writing",
+  Effect.fn("test.TraitStore.parseError")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-parse-" })
+    const trait = Trait.Trait.make({
+      name: Trait.TraitName.make("old-format"),
+      subject: "Stored policies.",
+      requirement: "Preserve this rule.",
+      purpose: "Preserve stored intent."
+    })
+    const file = path.join(dir, "old-format.md")
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      for (const fixture of [
+        {
+          text: "---\nname: old-format\n---\nPreserve this rule.",
+          tag: "SchemaError",
+          diagnostic: "does not match the installed Trait schema"
+        },
+        {
+          text: "---\nname: [\n---\nPreserve this rule.",
+          tag: "InvalidYamlError",
+          diagnostic: "do not assume this is a schema migration"
         }
-      }).pipe(Effect.provide(backend.layer(dir)))
-    }, Effect.provide(NodeServices.layer))
-  )
-
-  it.effect(
-    `${backend.name}: stores complete traits by unique name without overwriting duplicates`,
-    Effect.fn("test.TraitStore")(function* () {
-      const fs = yield* FileSystem.FileSystem
-      const path = yield* Path.Path
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-names-" })
-      const initial = Trait.Trait.make({
-        name: Trait.TraitName.make("test-trait"),
-        subject: "Asynchronous tests.",
-        requirement: "Original",
-        applicability: "In TypeScript and TSX, except when a synchronous framework contract must be preserved.",
-        purpose: "Preserve test lifecycle behavior.",
-        context: "Use the Effect-aware test APIs.\n\nSupporting context.\n\n---\nExample.\n"
-      })
-      yield* Effect.gen(function* () {
-        const store = yield* TraitStore.TraitStore
-        const added = yield* store.add(initial)
-        expect(added).toEqual(initial)
-        const loaded = yield* store.get(initial.name)
-        expect(loaded).toEqual(initial)
-        const updated = Trait.Trait.make({ ...initial, requirement: "Replacement", context: "Updated context.\n" })
-        yield* store.update(updated)
-        const reloaded = yield* store.get(initial.name)
-        expect(reloaded).toEqual(updated)
-        const listed = yield* store.ls
-        expect(listed).toEqual([updated])
-        const file = path.join(dir, `${initial.name}.md`)
-        const text = yield* fs.readFileString(file)
-        expect(text).toContain(`name: ${initial.name}`)
-        expect(text).not.toContain("id:")
-        const files = yield* fs.readDirectory(dir)
-        expect(files).toEqual([`${initial.name}.md`])
-        const collision = yield* store.add(initial).pipe(Effect.result)
-        expect(Result.isFailure(collision)).toBe(true)
-        if (Result.isFailure(collision)) {
-          expect(collision.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
-          expect(collision.failure).toMatchObject({ name: initial.name })
-        }
-        const afterCollision = yield* store.get(initial.name)
-        expect(afterCollision).toEqual(updated)
-        const renamed = Trait.Trait.make({ ...updated, name: Trait.TraitName.make("renamed-trait") })
-        const missingUpdate = yield* store.update(renamed).pipe(Effect.result)
-        expect(Result.isFailure(missingUpdate)).toBe(true)
-        if (Result.isFailure(missingUpdate)) expect(missingUpdate.failure).toBeInstanceOf(TraitStore.TraitNotFoundError)
-        yield* store.add(renamed)
-        yield* store.rm([initial.name])
-        const afterRename = yield* store.ls
-        expect(afterRename).toEqual([renamed])
-        const withoutOptionalFields = Trait.Trait.make({
-          name: renamed.name,
-          subject: renamed.subject,
-          requirement: renamed.requirement,
-          purpose: renamed.purpose
-        })
-        yield* store.update(withoutOptionalFields)
-        const cleared = yield* store.get(renamed.name)
-        expect(cleared).toEqual(withoutOptionalFields)
-        const missing = yield* store.get(initial.name).pipe(Effect.result)
-        expect(Result.isFailure(missing)).toBe(true)
-        if (Result.isFailure(missing))
-          expect(missing.failure).toMatchObject({ _tag: "TraitNotFoundError", name: initial.name })
-        yield* store.rm([renamed.name])
-        const remaining = yield* store.ls
-        expect(remaining).toEqual([])
-      }).pipe(Effect.provide(backend.layer(dir)))
-    }, Effect.provide(NodeServices.layer))
-  )
-
-  it.effect(
-    `${backend.name}: rejects mismatched filenames on reads, updates, removals, and listing`,
-    Effect.fn("test.TraitStore.nameMismatch")(function* () {
-      const fs = yield* FileSystem.FileSystem
-      const path = yield* Path.Path
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-mismatch-" })
-      const actual = Trait.Trait.make({
-        name: Trait.TraitName.make("actual-name"),
-        subject: "An artifact.",
-        requirement: "Preserve its identity.",
-        purpose: "Avoid identity mismatches."
-      })
-      const wrongName = Trait.TraitName.make("wrong-name")
-      const file = path.join(dir, `${wrongName}.md`)
-      yield* fs.writeFileString(file, Trait.serialize(actual))
-      yield* Effect.gen(function* () {
-        const store = yield* TraitStore.TraitStore
-        for (const operation of [
-          store.get(wrongName),
-          store.update(Trait.Trait.make({ ...actual, name: wrongName })),
-          store.rm([wrongName]),
-          store.ls
-        ]) {
+      ]) {
+        yield* fs.writeFileString(file, fixture.text)
+        yield* store.refresh.pipe(Effect.result)
+        for (const operation of [store.ls, store.get(trait.name), store.update(trait), store.rm([trait.name])]) {
           const result = yield* Effect.result<unknown, Effect.Error<typeof operation>, never>(operation)
           expect(Result.isFailure(result)).toBe(true)
-          if (Result.isFailure(result))
+          if (Result.isFailure(result)) {
             expect(result.failure).toMatchObject({
-              _tag: "TraitFilenameMismatchError",
+              _tag: "TraitParseError",
               path: file,
-              expectedFilename: `${actual.name}.md`
+              cause: { _tag: fixture.tag },
+              message: expect.stringContaining(fixture.diagnostic)
             })
+            const { message } = result.failure
+            for (const instruction of [
+              "Ask the developer:",
+              "Do not change files before approval",
+              "If declined, leave files unchanged",
+              "inspect the entire affected trait store",
+              "authoritative requirements, applicability, exceptions, examples",
+              "ask a focused question",
+              "Validate all files",
+              "original arguments",
+              "A server restart is not necessary",
+              "original operation failed"
+            ])
+              expect(message).toContain(instruction)
+          }
         }
         const text = yield* fs.readFileString(file)
-        expect(text).toBe(Trait.serialize(actual))
-        yield* fs.remove(file)
-        yield* store.refresh
-        yield* store.add(actual)
-        const loaded = yield* store.get(actual.name)
-        expect(loaded).toEqual(actual)
-      }).pipe(Effect.provide(backend.layer(dir)))
-    }, Effect.provide(NodeServices.layer))
-  )
-}
+        expect(text).toBe(fixture.text)
+      }
+    }).pipe(Effect.provide(layerStoreLibsql(dir)))
+  }, Effect.provide(NodeServices.layer))
+)
 
+it.effect(
+  "stores complete traits by unique name without overwriting duplicates",
+  Effect.fn("test.TraitStore")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-names-" })
+    const initial = Trait.Trait.make({
+      name: Trait.TraitName.make("test-trait"),
+      subject: "Asynchronous tests.",
+      requirement: "Original",
+      applicability: "In TypeScript and TSX, except when a synchronous framework contract must be preserved.",
+      purpose: "Preserve test lifecycle behavior.",
+      context: "Use the Effect-aware test APIs.\n\nSupporting context.\n\n---\nExample.\n"
+    })
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const added = yield* store.add(initial)
+      expect(added).toEqual(initial)
+      const loaded = yield* store.get(initial.name)
+      expect(loaded).toEqual(initial)
+      const updated = Trait.Trait.make({ ...initial, requirement: "Replacement", context: "Updated context.\n" })
+      yield* store.update(updated)
+      const reloaded = yield* store.get(initial.name)
+      expect(reloaded).toEqual(updated)
+      const listed = yield* store.ls
+      expect(listed).toEqual([updated])
+      const file = path.join(dir, `${initial.name}.md`)
+      const text = yield* fs.readFileString(file)
+      expect(text).toContain(`name: ${initial.name}`)
+      expect(text).not.toContain("id:")
+      const files = yield* fs.readDirectory(dir)
+      expect(files).toEqual([`${initial.name}.md`])
+      const collision = yield* store.add(initial).pipe(Effect.result)
+      expect(Result.isFailure(collision)).toBe(true)
+      if (Result.isFailure(collision)) {
+        expect(collision.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
+        expect(collision.failure).toMatchObject({ name: initial.name })
+      }
+      const afterCollision = yield* store.get(initial.name)
+      expect(afterCollision).toEqual(updated)
+      const renamed = Trait.Trait.make({ ...updated, name: Trait.TraitName.make("renamed-trait") })
+      const missingUpdate = yield* store.update(renamed).pipe(Effect.result)
+      expect(Result.isFailure(missingUpdate)).toBe(true)
+      if (Result.isFailure(missingUpdate)) expect(missingUpdate.failure).toBeInstanceOf(TraitStore.TraitNotFoundError)
+      yield* store.add(renamed)
+      yield* store.rm([initial.name])
+      const afterRename = yield* store.ls
+      expect(afterRename).toEqual([renamed])
+      const withoutOptionalFields = Trait.Trait.make({
+        name: renamed.name,
+        subject: renamed.subject,
+        requirement: renamed.requirement,
+        purpose: renamed.purpose
+      })
+      yield* store.update(withoutOptionalFields)
+      const cleared = yield* store.get(renamed.name)
+      expect(cleared).toEqual(withoutOptionalFields)
+      const missing = yield* store.get(initial.name).pipe(Effect.result)
+      expect(Result.isFailure(missing)).toBe(true)
+      if (Result.isFailure(missing))
+        expect(missing.failure).toMatchObject({ _tag: "TraitNotFoundError", name: initial.name })
+      yield* store.rm([renamed.name])
+      const remaining = yield* store.ls
+      expect(remaining).toEqual([])
+    }).pipe(Effect.provide(layerStoreLibsql(dir)))
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.effect(
+  "rejects mismatched filenames on reads, updates, removals, and listing",
+  Effect.fn("test.TraitStore.nameMismatch")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-mismatch-" })
+    const actual = Trait.Trait.make({
+      name: Trait.TraitName.make("actual-name"),
+      subject: "An artifact.",
+      requirement: "Preserve its identity.",
+      purpose: "Avoid identity mismatches."
+    })
+    const wrongName = Trait.TraitName.make("wrong-name")
+    const file = path.join(dir, `${wrongName}.md`)
+    yield* fs.writeFileString(file, Trait.serialize(actual))
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      for (const operation of [
+        store.get(wrongName),
+        store.update(Trait.Trait.make({ ...actual, name: wrongName })),
+        store.rm([wrongName]),
+        store.ls
+      ]) {
+        const result = yield* Effect.result<unknown, Effect.Error<typeof operation>, never>(operation)
+        expect(Result.isFailure(result)).toBe(true)
+        if (Result.isFailure(result))
+          expect(result.failure).toMatchObject({
+            _tag: "TraitFilenameMismatchError",
+            path: file,
+            expectedFilename: `${actual.name}.md`
+          })
+      }
+      const text = yield* fs.readFileString(file)
+      expect(text).toBe(Trait.serialize(actual))
+      yield* fs.remove(file)
+      yield* store.refresh
+      yield* store.add(actual)
+      const loaded = yield* store.get(actual.name)
+      expect(loaded).toEqual(actual)
+    }).pipe(Effect.provide(layerStoreLibsql(dir)))
+  }, Effect.provide(NodeServices.layer))
+)
 it.live(
   "automatically indexes external create/replace/delete events and repairs, and closes the watcher",
   Effect.fn("test.TraitStore.watch")(function* () {
@@ -331,6 +321,141 @@ it.live(
       yield* fs.writeFileString(path.join(dir, `${trait.name}.md`), Trait.serialize(trait))
       yield* awaitTraits((traits) => traits[0]?.name === trait.name)
       expect(attempts).toBeGreaterThanOrEqual(2)
+    }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, watched))
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.live(
+  "reconciles only notified files, skips self-write SQL, and retains events arriving during reconciliation",
+  Effect.fn("test.TraitStore.incremental")(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-incremental-" })
+    const events = yield* Queue.unbounded<FileSystem.WatchEvent>()
+    const original = Trait.Trait.make({
+      name: Trait.TraitName.make("incremental"),
+      subject: "Changes.",
+      requirement: "Original.",
+      purpose: "Bound reconciliation work."
+    })
+    const other = Trait.Trait.make({ ...original, name: Trait.TraitName.make("untouched") })
+    const file = path.join(dir, `${original.name}.md`)
+    const otherFile = path.join(dir, `${other.name}.md`)
+    yield* fs.writeFileString(file, Trait.serialize(original))
+    yield* fs.writeFileString(otherFile, Trait.serialize(other))
+    let scans = 0
+    let otherReads = 0
+    let captured: Deferred.Deferred<void> | undefined
+    let resume: Deferred.Deferred<void> | undefined
+    let delivered = 0
+    const watched = FileSystem.FileSystem.of({
+      ...fs,
+      watch: () =>
+        Stream.fromQueue(events).pipe(
+          Stream.tap(() =>
+            Effect.sync(() => {
+              delivered++
+            })
+          )
+        ),
+      readDirectory: (directory) => {
+        if (directory === dir) scans++
+        return fs.readDirectory(directory)
+      },
+      readFileString: Effect.fnUntraced(function* (entry, encoding) {
+        if (entry === otherFile) otherReads++
+        const text = yield* fs.readFileString(entry, encoding)
+        if (entry === file && captured !== undefined && resume !== undefined) {
+          const latch = captured
+          const release = resume
+          captured = undefined
+          yield* Deferred.succeed(latch, undefined)
+          yield* Deferred.await(release)
+        }
+        return text
+      })
+    })
+    const notify = Effect.fnUntraced(function* (entry: string) {
+      const count = delivered
+      yield* Queue.offer(events, { _tag: "Update", path: entry })
+      yield* Effect.sync(() => delivered).pipe(
+        Effect.filterOrFail(
+          (value) => value > count,
+          () => "Waiting for event delivery"
+        ),
+        Effect.retry({ schedule: Schedule.spaced("1 millis"), times: 1000 })
+      )
+      yield* Effect.yieldNow
+    })
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const db = yield* TraitDatabase.TraitDatabase
+      expect(scans).toBe(1)
+      expect(otherReads).toBe(1)
+      const updated = Trait.Trait.make({ ...original, requirement: "Own write." })
+      yield* store.update(updated)
+      yield* db.run(
+        sql`CREATE TRIGGER reject_redundant_update BEFORE UPDATE ON traits BEGIN SELECT RAISE(ABORT, 'redundant SQL'); END`
+      )
+      yield* notify(file)
+      const same = yield* store.get(original.name)
+      expect(same).toEqual(updated)
+      yield* db.run(sql`DROP TRIGGER reject_redundant_update`)
+
+      const firstEdit = Trait.Trait.make({ ...original, requirement: "First external edit." })
+      const secondEdit = Trait.Trait.make({ ...original, requirement: "Second external edit." })
+      captured = yield* Deferred.make<void>()
+      const observed = captured
+      resume = yield* Deferred.make<void>()
+      yield* fs.writeFileString(file, Trait.serialize(firstEdit))
+      yield* notify(file)
+      const reading = yield* store.get(original.name).pipe(Effect.forkChild)
+      yield* Deferred.await(observed)
+      yield* fs.writeFileString(file, Trait.serialize(secondEdit))
+      yield* notify(file)
+      yield* Deferred.succeed(resume, undefined)
+      const latest = yield* Fiber.join(reading)
+      expect(latest).toEqual(secondEdit)
+
+      // One invalid file blocks the whole pending batch, preserving all previously indexed rows.
+      yield* fs.writeFileString(file, Trait.serialize(original))
+      yield* fs.writeFileString(otherFile, "---\nname: [\n---\n")
+      yield* notify(file)
+      yield* notify(otherFile)
+      const invalid = yield* store.ls.pipe(Effect.result)
+      expect(Result.isFailure(invalid)).toBe(true)
+      const rows = yield* db.select().from(T.traits)
+      expect(rows).toContainEqual(expect.objectContaining({ name: original.name, requirement: secondEdit.requirement }))
+      yield* fs.writeFileString(otherFile, Trait.serialize(other))
+      yield* notify(otherFile)
+      const repaired = yield* store.ls
+      expect(repaired).toEqual([original, other])
+      expect(scans).toBe(1)
+      yield* db.run(
+        sql`CREATE TRIGGER reject_incremental_update BEFORE UPDATE ON traits WHEN OLD.name = 'untouched' BEGIN SELECT RAISE(ABORT, 'injected batch failure'); END`
+      )
+      yield* fs.writeFileString(file, Trait.serialize(secondEdit))
+      yield* fs.writeFileString(
+        otherFile,
+        Trait.serialize(Trait.Trait.make({ ...other, requirement: "Updated batch." }))
+      )
+      yield* notify(file)
+      yield* notify(otherFile)
+      const failedBatch = yield* store.ls.pipe(Effect.result)
+      expect(Result.isFailure(failedBatch)).toBe(true)
+      const rolledBack = yield* db.select().from(T.traits)
+      expect(rolledBack).toContainEqual(
+        expect.objectContaining({ name: original.name, requirement: original.requirement })
+      )
+      yield* db.run(sql`DROP TRIGGER reject_incremental_update`)
+      const recoveredBatch = yield* store.ls
+      expect(recoveredBatch[0]?.requirement).toBe(secondEdit.requirement)
+      expect(recoveredBatch[1]?.requirement).toBe("Updated batch.")
+      expect(scans).toBe(1)
+      // A notification without a usable filename deliberately requests a full rescan.
+      yield* notify(dir)
+      yield* store.ls
+      expect(scans).toBe(2)
     }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, watched))
   }, Effect.provide(NodeServices.layer))
 )

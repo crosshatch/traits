@@ -38,6 +38,7 @@
     "./TraitDatabase": null,
     "./TraitDatabaseClient": null,
     "./TraitProjectLock": null,
+    "./TraitStoreLibsql": null,
     "./TraitsConfigProvider": null,
     "./TraitsHttpClient": null
   },
@@ -54,6 +55,7 @@
       "./TraitDatabase": null,
       "./TraitDatabaseClient": null,
       "./TraitProjectLock": null,
+      "./TraitStoreLibsql": null,
       "./TraitsConfigProvider": null,
       "./TraitsHttpClient": null
     },

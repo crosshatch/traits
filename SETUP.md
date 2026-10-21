@@ -198,6 +198,13 @@ synchronization before querying. Changes are coalesced briefly, so filesystem
 notifications are asynchronous. Watch errors are reported and retried
 automatically. No model-facing refresh tool is required.
 
+Ordinary notifications reconcile only affected files, validating each pending
+batch before a transactional database update. Notifications from server writes
+are checked against the indexed contents rather than blindly ignored. Full
+rescans are reserved for initialization, explicit internal refresh, and recovery
+from failures or ambiguous notifications. Invalid documents block reads until
+repaired; previously indexed rows are retained when reconciliation fails.
+
 ### Stored trait parsing fails
 
 If a stored trait cannot be parsed, tools return `TraitParseError` with the file

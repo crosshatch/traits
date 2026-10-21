@@ -23,6 +23,7 @@ catalog:
   pkg-pr-new: 0.0.91
   react: 19.3.0
   react-dom: 19.3.0
+  tinybench: ^6.2.0
   typescript: 7.0.2
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vite-plus: 1.0.0

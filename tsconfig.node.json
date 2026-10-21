@@ -3,5 +3,6 @@
     "types": ["node"]
   },
   "extends": "./tsconfig.base.json",
-  "include": ["*.ts", "rules/**/*.ts", "tasks/**/*.ts"]
+  "include": ["*.ts", "rules/**/*.ts", "tasks/**/*.ts"],
+  "references": [{ "path": "./traits" }]
 }
