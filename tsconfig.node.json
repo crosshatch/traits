@@ -1,8 +1,8 @@
 {
+  "extends": "./tsconfig.base.json",
+  "include": ["*.ts", "oxlints/**/*.ts", "tasks/**/*.ts"],
   "compilerOptions": {
     "types": ["node"]
   },
-  "extends": "./tsconfig.base.json",
-  "include": ["*.ts", "rules/**/*.ts", "tasks/**/*.ts"],
   "references": [{ "path": "./traits" }]
 }

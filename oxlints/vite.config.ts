@@ -2,7 +2,7 @@ import { defineConfig } from "vite-plus"
 
 export default defineConfig({
   test: {
-    name: "rules",
+    name: "oxlints",
     include: ["*.test.ts"]
   }
 })

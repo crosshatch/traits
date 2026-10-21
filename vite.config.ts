@@ -2,7 +2,7 @@ import { presets, recommended } from "@effect/tsgo/oxlint-presets"
 import { Record } from "effect"
 import { defineConfig } from "vite-plus"
 
-import custom from "./rules/index.ts"
+import custom from "./oxlints/index.ts"
 
 const toolingIgnores = ["**/.worktrees/**", ".agents/**", "repos/**"]
 
@@ -27,7 +27,7 @@ export default defineConfig({
     ignorePatterns: toolingIgnores,
     jsPlugins: [
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
-      { name: "custom", specifier: "./rules/index.ts" }
+      { name: "custom", specifier: "./oxlints/index.ts" }
     ],
     options: { typeAware: true, typeCheck: true },
     rules: {
@@ -55,6 +55,6 @@ export default defineConfig({
     }
   },
   test: {
-    projects: ["rules/vite.config.ts", "traits/vite.config.ts"]
+    projects: ["oxlints/vite.config.ts", "traits/vite.config.ts"]
   }
 })
