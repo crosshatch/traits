@@ -1,6 +1,7 @@
 import { hostname } from "node:os"
 
 import {
+  Array,
   Clock,
   Crypto,
   Duration,
@@ -12,7 +13,8 @@ import {
   pipe,
   Predicate,
   Schedule,
-  Schema as S
+  Schema as S,
+  String
 } from "effect"
 
 import { ProjectPaths } from "./ProjectPaths.ts"
@@ -51,7 +53,17 @@ export const acquire = Effect.gen(function* () {
   const path = yield* Path.Path
   const crypto = yield* Crypto.Crypto
   const lockDirectory = path.join(traitsDirectory, ".mcp-lock")
-  const owner = { hostname: hostname(), pid: process.pid, token: yield* crypto.randomUUIDv4 }
+  // `randomUUIDv4` changed from an Effect to a function within 4.0.x; `randomBytes` is stable.
+  const token = yield* crypto.randomBytes(16).pipe(
+    Effect.map((bytes) =>
+      pipe(
+        Array.fromIterable(bytes),
+        Array.map((byte) => pipe(byte.toString(16), String.padStart(2, "0"))),
+        Array.join("")
+      )
+    )
+  )
+  const owner = { hostname: hostname(), pid: process.pid, token }
   const inUse = TraitProjectInUseError.make({ directory: traitsDirectory })
 
   const readOwner = Effect.fnUntraced(function* (directory: string) {

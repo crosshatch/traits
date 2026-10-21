@@ -27,6 +27,26 @@ jobs:
       - run: pnpm exec vp check
       - run: pnpm build
 
+  # The published package accepts any Effect 4 release, so verify against the newest one too.
+  latest-effect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: |
+          sed -i -E 's/^(  ("@effect\/[a-z-]+"|effect)): 4\.0\.0$/\1: ^4.0.0/' pnpm-workspace.yaml
+      - run: pnpm update -r effect "@effect/*"
+      - run: pnpm ls -r --depth 0 effect @effect/platform-node
+      - run: pnpm exec vp check --no-fmt
+      - run: pnpm test
+
   test:
     strategy:
       fail-fast: false
