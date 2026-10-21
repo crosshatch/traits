@@ -181,23 +181,48 @@ apply. Git failures fail the check rather than bypass filtering.
 
 Configuration and providers initialize when the MCP server starts. If setup
 fails, the connection stays alive with fallback `derive_trait` and
-`check_traits` tools using the normal descriptions and parameters. Either tool
+`check_traits` tools using the normal descriptions and parameters. Each tool
 returns the original error diagnostics. Surface the failure, fix the reported
 error, and restart the Traits MCP server to load the corrected setup. Then retry
 the same operation; keep any trait proposal pending and retry its derivation
 with identical arguments. Diagnostics include the full Effect cause and may
 contain sensitive values embedded in errors; do not paste credentials into chat.
-Expected tool failures use MCP error results; unexpected runtime defects receive
-a generic internal error response.
+Handler failures and defects use the declared `ToolExecutionError` MCP error
+result.
+
+### External trait edits
+
+`fileReadConcurrency` in `traits.ts` controls the maximum number of trait-file
+reads in flight during startup, full refresh, and incremental reconciliation. It
+defaults to `16`; set a positive integer to tune it for your environment.
+`"unbounded"` explicitly opts out of the limit. Smaller collections naturally
+use fewer concurrent reads. SQL writes and store-state synchronization remain
+serialized, and clean indexed reads do not touch Markdown files.
+
+The server watches the trait directory and automatically synchronizes Markdown
+changes into SQLite. Clean reads query SQLite only; invalidated reads wait for
+synchronization before querying. Changes are coalesced briefly, so filesystem
+notifications are asynchronous. When a watch fails or is unsupported, the server
+reports it and falls back to a full polling synchronization every second while
+retrying the watcher. Polling failures block reads until repaired. No
+model-facing refresh tool is required.
+
+Ordinary notifications reconcile only affected files, validating each pending
+batch before a transactional database update. Notifications from server writes
+are checked against the indexed contents rather than blindly ignored. Full
+rescans are reserved for initialization, explicit internal refresh, and recovery
+from failures or ambiguous notifications. Invalid documents block reads until
+repaired; previously indexed rows are retained when reconciliation fails.
 
 ### Stored trait parsing fails
 
 If a stored trait cannot be parsed, tools return `TraitParseError` with the file
 path and original diagnostic instead of stopping the server. Update all stored
-traits to the format/schema of the currently installed `traits` package: inspect
-its `Trait` schema and `serialize` format, preserving the rules and metadata.
-Retry after fixing the files; no server restart is needed. A failed check is not
-a clean review, and no automatic migration is performed.
+traits only after obtaining repair consent. Inspect the installed package's
+`Trait` schema and `serialize` format, preserving the rules and metadata.
+Validate the repaired files and retry; synchronization is automatic and no
+server restart is needed. A failed check is not a clean review, and no automatic
+migration is performed.
 
 ### Reconciliation fails after approval
 

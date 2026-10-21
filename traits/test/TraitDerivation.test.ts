@@ -1,7 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { Array, Effect, Layer, pipe, Predicate, Record, Schema as S, Semaphore, Stream, String } from "effect"
-import { DecisionModel, LanguageModel } from "effect/ai"
-import { toCodecOpenAI } from "effect/ai/OpenAiStructuredOutput"
+import { DecisionModel, LanguageModel, OpenAiStructuredOutput } from "effect/ai"
 
 import * as Trait from "../Trait.ts"
 import { derive } from "../TraitDerivation.ts"
@@ -26,11 +25,13 @@ const harness = Effect.fn("test.harness")(function* (options: {
   if (options.unaffected !== undefined) stored.set(options.unaffected.name, options.unaffected)
   const mutations: Array<string> = []
   const requests: Array<LanguageModel.ProviderOptions> = []
+  const comparisons: Array<DecisionModel.ProviderOptions> = []
   const decisionModel = yield* DecisionModel.make({
     decide: Effect.fnUntraced(function* (request) {
       let label = "atomic"
       let labels = ["atomic", "decomposable"]
       if (Predicate.hasProperty(request.state, "trait")) {
+        comparisons.push(request)
         const trait = yield* pipe(request.state.trait, S.decodeUnknownEffect(Trait.Trait), Effect.orDie)
         label = options.relationships[trait.name] ?? (yield* Effect.die(`Missing relationship for ${trait.name}`))
         labels = ["distinct", "covered", "clarification", "conflict", "inconclusive"]
@@ -62,9 +63,10 @@ const harness = Effect.fn("test.harness")(function* (options: {
       ])
     },
     streamText: () => Stream.empty,
-    codecTransformer: toCodecOpenAI
+    codecTransformer: OpenAiStructuredOutput.toCodecOpenAI
   })
   const store = TraitStore.TraitStore.of({
+    refresh: Effect.void,
     ls: Effect.sync(() => [...stored.values()]),
     add: (trait) =>
       Effect.suspend(() => {
@@ -97,9 +99,11 @@ const harness = Effect.fn("test.harness")(function* (options: {
     Layer.succeed(TraitsContext, {
       configRoot: "/test",
       excludes: [],
-      semaphore,
+      asDecision: semaphore.withPermits(1),
+      asFileRead: semaphore.withPermits(1),
       config: {
         decisionConcurrency: 4,
+        fileReadConcurrency: 16,
         excludeGitignored: true,
         excludes: [],
         layerDecisionModel: Layer.succeed(DecisionModel.DecisionModel, decisionModel),
@@ -107,8 +111,32 @@ const harness = Effect.fn("test.harness")(function* (options: {
       }
     })
   )
-  return { stored, mutations, requests, layer }
+  return { stored, mutations, requests, comparisons, layer }
 })
+
+it.effect(
+  "reassesses changed approval inputs and requires fresh consent without writing",
+  Effect.fn("test.TraitDerivation.staleApproval")(function* () {
+    for (const change of ["proposal", "store"] as const) {
+      const test = yield* harness({ relationships: { [name]: "clarification" } })
+      const first = yield* derive({ proposedTrait }).pipe(Effect.provide(test.layer))
+      expect(first._tag).toBe("ApprovalRequired")
+      const before = test.comparisons.length
+      if (change === "store")
+        test.stored.set(name, Trait.Trait.make({ ...original, context: "New supporting context." }))
+      const proposal =
+        change === "proposal" ? Trait.Trait.make({ ...proposedTrait, purpose: "Clarified purpose." }) : proposedTrait
+      const stale = yield* derive({ proposedTrait: proposal, approved: true }).pipe(Effect.provide(test.layer))
+      expect(stale._tag).toBe("ApprovalRequired")
+      expect(test.comparisons.length).toBeGreaterThan(before)
+      expect(test.mutations).toEqual([])
+      const refreshed = test.comparisons.length
+      const saved = yield* derive({ proposedTrait: proposal, approved: true }).pipe(Effect.provide(test.layer))
+      expect(saved._tag).toBe("Updated")
+      expect(test.comparisons).toHaveLength(refreshed)
+    }
+  })
+)
 
 it.effect(
   "approves and persists the complete caller trait without generation for creation and clarification",
@@ -118,8 +146,7 @@ it.effect(
       name: Trait.TraitName.make("state-updates"),
       applicability: "Editing state in TSX, except generated components.",
       purpose: "Keep state updates consistent.",
-      guidance: "Update the state operation.",
-      context: "A supporting example.\n"
+      context: "Update the state operation.\n\nA supporting example.\n"
     })
     for (const relationship of ["distinct", "clarification"] as const) {
       const test = yield* harness({ relationships: { [name]: relationship } })
@@ -136,6 +163,7 @@ it.effect(
         )
       })
       expect(test.mutations).toEqual([])
+      const comparisonsBeforeApproval = test.comparisons.length
       const result = yield* derive({
         proposedTrait: proposal,
         approved: true
@@ -145,6 +173,7 @@ it.effect(
         instructions: expect.stringContaining(`Saved traits: ${relationship === "distinct" ? "state-updates" : name}.`),
         trait: { ...proposal, name: relationship === "distinct" ? "state-updates" : name }
       })
+      expect(test.comparisons).toHaveLength(comparisonsBeforeApproval)
       expect(test.stored.get(relationship === "distinct" ? proposal.name : name)).toEqual({
         ...proposal,
         name: relationship === "distinct" ? proposal.name : name
@@ -160,7 +189,7 @@ it.effect(
 )
 
 it.effect(
-  "requires whole-project post-save trait checks for every saved outcome",
+  "scopes post-save verification to the current task and distinguishes saving from auditing",
   Effect.fnUntraced(function* () {
     for (const relationship of ["distinct", "clarification", "conflict"] as const) {
       const test = yield* harness({ relationships: { [name]: relationship } })
@@ -174,17 +203,17 @@ it.effect(
       if (!("instructions" in result)) throw new Error("Expected post-save instructions")
       for (const requirement of [
         `Saved traits: ${relationship === "distinct" ? "state-updates" : name}.`,
-        "Required post-save trait checks: This task is incomplete until you run check_traits against all eligible project-owned files",
-        "traitNames set to the saved trait names",
-        "Checking only changed files or the file that prompted the trait does not satisfy this requirement",
-        "project-owned source, authored configuration, and documentation",
-        "Respect trait applicability and configured exclusions",
+        "files changed or directly involved in the current task",
+        "saved trait names",
+        "Do not automatically expand this into a repository-wide audit",
+        "already reviewed against these exact requirements",
+        "Respect applicability and configured exclusions",
         "dependencies, reference repositories, generated output, lockfiles, Git metadata, secrets, .env files, credentials, and binary assets",
         "minimal behavior-preserving edits",
         "rerun check_traits on corrected files, and run relevant verification",
         "ask before behavior-changing fixes or ambiguous interpretations",
-        "explicitly report the blocker and state that the required post-save trait checks remain incomplete",
-        "Saving a trait does not itself check or update project files"
+        "Distinguish preference saved from implementation reviewed and repository audited",
+        "If no files in the current task are eligible"
       ]) {
         expect(result.instructions).toContain(requirement)
       }
@@ -218,9 +247,7 @@ it.effect(
     const result = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
     expect(result._tag).toBe("Resolved")
     expect(result).toMatchObject({
-      instructions: expect.stringContaining(
-        "This task is incomplete until you run check_traits against all eligible project-owned files"
-      )
+      instructions: expect.stringContaining("files changed or directly involved in the current task")
     })
     expect(test.mutations).toEqual(["update", "rm"])
     expect(test.stored.get(name)).toEqual(proposedTrait)

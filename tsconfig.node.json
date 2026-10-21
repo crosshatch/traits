@@ -3,5 +3,6 @@
   "include": ["*.ts", "oxlints/**/*.ts", "tasks/**/*.ts"],
   "compilerOptions": {
     "types": ["node"]
-  }
+  },
+  "references": [{ "path": "./traits" }]
 }

@@ -8,7 +8,6 @@ requirement: In React code using Effect reactivity atoms, prefer atom-first
   objects containing atoms, so atom hooks retain the cached values without React
   memoization.
 applicability: |-
-  Applies when defining Effect reactivity atom ownership, identity, or Atom.family factories in React.
   File types or languages: text/tsx.
 ---
 ```diff

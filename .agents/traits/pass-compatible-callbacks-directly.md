@@ -14,7 +14,6 @@ requirement: "Prefer passing a function directly as a callback when its
   Array.map(files, (file) => path.resolve(file)) prevents the array index from
   reaching variadic path.resolve."
 applicability: |-
-  Applies when passing callbacks or defining forwarding functions or service methods.
   File types or languages: text/typescript, text/tsx, text/javascript, text/jsx.
   Exception: When a wrapper is necessary to control forwarded arguments or preserve the receiver.
 ---

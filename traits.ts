@@ -5,6 +5,7 @@ import type { TraitsConfig } from "traits"
 const layerClient = OpenRouterClient.layerConfig({ apiKey: Config.Redacted("OPENROUTER_API_KEY") })
 
 export default {
+  decisionConcurrency: 16,
   excludes: ["repos/**"],
   layerDecisionModel: OpenRouterDecisionModel.layer({ model: "~typesafe/jev-latest" }).pipe(Layer.provide(layerClient)),
   layerLanguageModel: OpenRouterLanguageModel.layer({

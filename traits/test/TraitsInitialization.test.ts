@@ -1,13 +1,15 @@
+import { fileURLToPath } from "node:url"
+
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Path, pipe, Queue, Schema as S, Stream } from "effect"
+import { Effect, FileSystem, Path, pipe, Queue, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { CheckTraits } from "../toolkit/CheckTraits.ts"
 import { DeriveTrait } from "../toolkit/DeriveTrait.ts"
 
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
-const server = new URL("../main.ts", import.meta.url).pathname
+const server = fileURLToPath(new URL("../main.ts", import.meta.url))
 
 for (const fixture of [
   { name: "unreadable environment", source: "export default {}", diagnostic: ".env" },
@@ -56,7 +58,10 @@ for (const fixture of [
       })
       yield* spawner.exitCode(ChildProcess.make("git", ["init", "--quiet"], { cwd }))
       yield* fs.writeFileString(path.join(cwd, "traits.ts"), fixture.source)
-      const traitPath = path.join(cwd, ".agents/traits/outdated-trait.md")
+      const projectRoot = yield* spawner
+        .string(ChildProcess.make("git", ["rev-parse", "--show-toplevel"], { cwd }))
+        .pipe(Effect.map(String.trim), Effect.flatMap(fs.realPath))
+      const traitPath = path.join(projectRoot, ".agents", "traits", "outdated-trait.md")
       if ("trait" in fixture) {
         yield* fs.makeDirectory(path.dirname(traitPath), { recursive: true })
         yield* fs.writeFileString(traitPath, fixture.trait)
@@ -130,7 +135,10 @@ for (const fixture of [
           content: [{ type: "text", text: expect.stringContaining(fixture.diagnostic) }]
         })
         if ("trait" in fixture) {
-          expect(JSON.stringify(result)).toContain(traitPath)
+          // The tool text is a JSON document, so Windows path separators appear escaped.
+          expect(result).toMatchObject({
+            content: [{ text: expect.stringContaining(JSON.stringify(traitPath).slice(1, -1)) }]
+          })
           expect(JSON.stringify(result)).toContain("TraitParseError")
           expect(JSON.stringify(result)).toContain("Ask the developer:")
           expect(JSON.stringify(result)).toContain("original arguments")

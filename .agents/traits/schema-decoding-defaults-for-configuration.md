@@ -8,7 +8,6 @@ requirement: For schema-decoded configuration, express optional-field defaults
   and expose the schema’s Encoded type for caller-authored configuration so
   defaulted fields remain optional.
 applicability: |-
-  Applies when defining, decoding, or consuming schema-backed configuration with optional defaults.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

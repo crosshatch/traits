@@ -9,7 +9,6 @@ requirement: When an Effect context exposes decoded configuration, keep the
   derived runtime values, such as normalized paths and semaphores, as separate
   context fields.
 applicability: |-
-  Applies when exposing decoded configuration and derived runtime values through an Effect context.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

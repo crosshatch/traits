@@ -15,6 +15,7 @@
     "!vite.config.ts",
     "_util/**/*.ts",
     "skills/**/*.md",
+    "tables/**/*.ts",
     "toolkit/**/*.ts",
     "dist/package.json",
     "dist/**/*.js",
@@ -28,22 +29,39 @@
   "exports": {
     "./package.json": "./package.json",
     ".": "./index.ts",
+    "./tables": null,
+    "./tables/*": null,
     "./*": "./*.ts",
     "./_util/*": null,
-    "./index": null
+    "./index": null,
+    "./ToolExecutionError": null,
+    "./TraitDatabase": null,
+    "./TraitProjectLock": null,
+    "./TraitsConfigProvider": null,
+    "./TraitsHttpClient": null
   },
   "publishConfig": {
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
+      "./tables": null,
+      "./tables/*": null,
       "./*": "./dist/*.js",
       "./_util/*": null,
-      "./index": null
+      "./index": null,
+      "./ToolExecutionError": null,
+      "./TraitDatabase": null,
+      "./TraitProjectLock": null,
+      "./TraitsConfigProvider": null,
+      "./TraitsHttpClient": null
     },
     "access": "public"
   },
   "dependencies": {
-    "yaml": "^2.9.1"
+    "@effect/sql-libsql": "catalog:",
+    "drizzle-kit": "catalog:",
+    "drizzle-orm": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

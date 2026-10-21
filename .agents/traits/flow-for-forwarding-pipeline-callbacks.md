@@ -11,7 +11,6 @@ requirement: Use flow to compose callbacks and function definitions that only
   !references.has(trait.name))). Keep a callback when it needs additional logic
   or argument handling that flow would not preserve.
 applicability: |-
-  Applies when a callback only forwards its argument through a pipe of transformations.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

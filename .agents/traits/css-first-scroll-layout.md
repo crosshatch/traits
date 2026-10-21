@@ -8,7 +8,6 @@ requirement: Prefer DOM placement, appropriate containing blocks, and CSS
   can reliably express the intended behavior. Use scripted behavior only when
   the requirement cannot be achieved reliably through layout and styling.
 applicability: |-
-  Applies when implementing scroll-dependent UI layout, sticky positioning, or visibility behavior.
   File types or languages: text/css, text/html, text/tsx, text/jsx, text/typescript, text/javascript.
   Exception: When every scripted scroll-dependent behavior under assessment implements a requirement that DOM placement, layout, and CSS cannot reliably express.
 ---

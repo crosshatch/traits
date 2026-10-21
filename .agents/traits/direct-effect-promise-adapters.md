@@ -7,7 +7,6 @@ requirement: "Use `Effect.promise` directly at Promise boundaries instead of
   `fromPromise(() => client.run())` where `fromPromise` merely wraps
   `Effect.promise`."
 applicability: |-
-  Applies when adapting Promise-returning operations to Effect.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

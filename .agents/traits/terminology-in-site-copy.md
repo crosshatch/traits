@@ -7,7 +7,6 @@ requirement: In traits.sh user-facing copy, including accessibility
   “rule.” Use “insight” for the lesson drawn from feedback before it is
   formulated as a trait.
 applicability: |-
-  Applies when writing traits.sh user-facing copy, including accessibility descriptions.
   File types or languages: text/typescript, text/tsx, text/html, text/markdown.
 ---
 ```diff

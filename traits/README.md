@@ -24,12 +24,6 @@ Your agent proposes traits, asks you to approve changes, and checks its work
 against them through MCP. The files live in your project, so you can edit,
 review, and share them with your team.
 
-Each trait requires `name`, `subject`, `requirement`, and `purpose`.
-`applicability` and `guidance` are optional text fields; the Markdown body holds
-supporting context, examples, and references. Additional frontmatter keys are
-rejected. Guidance does not grant permission to act, and model assessments are
-not guarantees.
-
 ## Get started
 
 Paste this into your agent inside your project:

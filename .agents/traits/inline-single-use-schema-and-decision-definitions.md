@@ -9,7 +9,6 @@ requirement: "Prefer inlining single-use schemas, schema transcoder definitions,
   definitions when reused, when needed for readability, or when profiling shows
   meaningful construction overhead."
 applicability: |-
-  Applies when defining single-use schemas, transcoders, or lightweight Decision.make values.
   File types or languages: text/typescript, text/tsx.
   Exception: When extracting a schema, transcoder, or Decision.make definition is needed for readability or justified by profiled construction overhead.
 ---

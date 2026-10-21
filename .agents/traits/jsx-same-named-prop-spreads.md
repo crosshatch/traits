@@ -7,7 +7,6 @@ requirement: "In React JSX, prefer object-spread shorthand for ordinary props
   step={step} index={index}. Keep React’s special key prop explicit, and use
   explicit assignments for renamed or computed values."
 applicability: |-
-  Applies when passing same-named variables as ordinary React JSX props.
   File types or languages: text/tsx, text/jsx.
 ---
 ```diff

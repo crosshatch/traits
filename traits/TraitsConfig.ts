@@ -1,17 +1,17 @@
 import type { NodeServices } from "@effect/platform-node"
-import { Array, Effect, Layer, Path, pipe, Schema as S, Semaphore } from "effect"
+import { Array, Effect, identity, Layer, Path, pipe, Schema as S, Semaphore } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { HttpClient } from "effect/http"
 
-import { getWorktreeRoot } from "./_util/Git.ts"
+import { ProjectPaths } from "./ProjectPaths.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
 export type TraitsConfig = typeof TraitsConfig.Encoded
 export const TraitsConfig = S.Struct({
-  decisionConcurrency: S.Int.check(S.isGreaterThan(0))
+  decisionConcurrency: S.Union([S.Int.check(S.isGreaterThan(0)), S.Literal("unbounded")])
     .pipe(S.withDecodingDefault(Effect.succeed(4)))
     .annotate({
-      description: "Maximum concurrent decision model requests. Defaults to 4."
+      description: "Maximum concurrent decision model requests, or unbounded for no limit. Defaults to 4."
     }),
   excludeGitignored: S.Boolean.pipe(S.withDecodingDefault(Effect.succeed(true))).annotate({
     description: "Exclude Git-ignored files from checks by default. Set false to disable the Git file-set filter."
@@ -21,6 +21,12 @@ export const TraitsConfig = S.Struct({
     .annotate({
       description:
         "Filenames or native filesystem glob patterns excluded from trait checks, relative to traits.ts or absolute. Use directory/** to exclude a subtree. Bare directories are not expanded; escape glob characters in literal filenames using native glob syntax."
+    }),
+  fileReadConcurrency: S.Union([S.Int.check(S.isGreaterThan(0)), S.Literal("unbounded")])
+    .pipe(S.withDecodingDefault(Effect.succeed(16)))
+    .annotate({
+      description:
+        "Maximum concurrent trait-file reads during scans and reconciliation. Defaults to 16. Unbounded explicitly removes the limit."
     }),
   layerDecisionModel: S.declare(
     (
@@ -38,7 +44,8 @@ export const TraitsConfig = S.Struct({
 
 export const layer = Effect.gen(function* () {
   const path = yield* Path.Path
-  const configRoot = yield* getWorktreeRoot
+  const { projectRoot } = yield* ProjectPaths
+  const configRoot = projectRoot
   const url = yield* path.toFileUrl(path.join(configRoot, "traits.ts"))
   const module = yield* Effect.promise(() => import(url.href))
   const config = yield* pipe(module.default, S.decodeUnknownEffect(TraitsConfig))
@@ -56,8 +63,19 @@ export const layer = Effect.gen(function* () {
             path.isAbsolute(pattern) ? path.relative(configRoot, pattern) : pattern
           )
         )
-        const semaphore = yield* Semaphore.make(config.decisionConcurrency)
-        return { config, configRoot, excludes, semaphore }
+        const asDecision =
+          config.decisionConcurrency === "unbounded"
+            ? identity
+            : yield* Semaphore.make(config.decisionConcurrency).pipe(
+                Effect.map((semaphore) => semaphore.withPermits(1))
+              )
+        const asFileRead =
+          config.fileReadConcurrency === "unbounded"
+            ? identity
+            : yield* Semaphore.make(config.fileReadConcurrency).pipe(
+                Effect.map((semaphore) => semaphore.withPermits(1))
+              )
+        return { config, configRoot, excludes, asDecision, asFileRead }
       })
     )
   )

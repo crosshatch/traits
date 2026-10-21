@@ -7,7 +7,6 @@ requirement: 'When an existing named domain type represents a model field,
   TraitName instead of Trait["name"]. Reuse its schema value for decoding as
   well. Keep indexed access when no suitable named domain type exists.'
 applicability: |-
-  Applies when referencing a model field's type or schema where a dedicated domain type already exists.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff

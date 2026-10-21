@@ -7,7 +7,6 @@ requirement: "When extracting a schema’s static type, place the type alias
   directly before `export const User = S.Struct({ id: S.String })`, not after
   it."
 applicability: |-
-  Applies when extracting a static type from an Effect schema.
   File types or languages: text/typescript, text/tsx.
 ---
 ```diff
