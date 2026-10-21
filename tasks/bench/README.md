@@ -22,7 +22,6 @@ validated against the fixture. This mode isolates collection scanning from warm
 reads and mutation workloads. Concurrency and mode are recorded in results.
 
 Runs directly as TypeScript on Node 24; no build or loader is needed.
-`pnpm bench` is an alias for the same tasks command.
 
 Results and generated fixtures are written under `/tmp/opencode/`. Use
 `--output <fresh-directory>` to select a location. `main` must exist locally;

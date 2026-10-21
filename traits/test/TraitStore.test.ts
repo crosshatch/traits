@@ -13,21 +13,51 @@ import {
   Queue,
   Result,
   Schedule,
+  Semaphore,
+  identity,
   Stream
 } from "effect"
+import { DecisionModel, LanguageModel } from "effect/ai"
 import { Reactivity } from "effect/reactivity"
 
-import { FileReadConcurrency } from "../_util/FileReadConcurrency.ts"
 import { ProjectPaths } from "../ProjectPaths.ts"
 import { T } from "../tables/index.ts"
 import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
 import * as TraitDatabaseClient from "../TraitDatabaseClient.ts"
+import { TraitsContext } from "../TraitsContext.ts"
 import * as TraitStore from "../TraitStore.ts"
 
 const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16) =>
   TraitStore.TraitStore.layer.pipe(
-    Layer.provide(Layer.succeed(FileReadConcurrency, fileReadConcurrency)),
+    Layer.provide(
+      Layer.effect(
+        TraitsContext,
+        Effect.gen(function* () {
+          const semaphore = yield* Semaphore.make(fileReadConcurrency)
+          return {
+            asDecision: identity,
+            asFileRead: semaphore.withPermits(1),
+            configRoot: dir,
+            excludes: [],
+            config: {
+              decisionConcurrency: 1,
+              fileReadConcurrency,
+              excludeGitignored: true,
+              excludes: [],
+              layerDecisionModel: Layer.effect(
+                DecisionModel.DecisionModel,
+                Effect.die("No model requests in storage tests")
+              ),
+              layerLanguageModel: Layer.effect(
+                LanguageModel.LanguageModel,
+                Effect.die("No model requests in storage tests")
+              )
+            }
+          }
+        })
+      )
+    ),
     Layer.provideMerge(TraitDatabase.layer),
     Layer.provide(TraitDatabaseClient.layer),
     Layer.provide(Reactivity.layer),

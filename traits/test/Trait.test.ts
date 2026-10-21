@@ -78,6 +78,7 @@ it.effect(
           configRoot: "/test",
           excludes: [],
           asDecision: semaphore.withPermits(1),
+          asFileRead: semaphore.withPermits(1),
           config: {
             decisionConcurrency: 1,
             fileReadConcurrency: 16,

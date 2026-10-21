@@ -1,3 +1,7 @@
+packages:
+  - traits
+  - traits.sh
+
 allowBuilds:
   esbuild: true
   workerd: true
@@ -69,10 +73,6 @@ overrides:
   "@effect/sql-sqlite-do": 4.0.0
   vite@*: "catalog:"
   vitest@*: "catalog:"
-
-packages:
-  - traits
-  - traits.sh
 
 peerDependencyRules:
   allowAny:

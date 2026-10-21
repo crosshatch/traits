@@ -15,8 +15,11 @@ import {
   Result,
   Schedule,
   Schema as S,
-  Stream
+  Stream,
+  Semaphore,
+  identity
 } from "effect"
+import { DecisionModel, LanguageModel } from "effect/ai"
 import { Reactivity } from "effect/reactivity"
 import { Bench } from "tinybench"
 import type * as TraitTypes from "traits/Trait"
@@ -95,8 +98,8 @@ const output = await Effect.runPromise(
       const Paths = yield* Effect.promise(() =>
         importModule<typeof import("traits/ProjectPaths")>("traits/ProjectPaths.ts")
       )
-      const ReadConcurrency = yield* Effect.promise(() =>
-        importModule<typeof import("../../traits/_util/FileReadConcurrency.ts")>("traits/_util/FileReadConcurrency.ts")
+      const ContextModule = yield* Effect.promise(() =>
+        importModule<typeof import("traits/TraitsContext")>("traits/TraitsContext.ts")
       )
       Database = yield* Effect.promise(() =>
         importModule<typeof import("traits").TraitDatabase>("traits/TraitDatabase.ts")
@@ -105,7 +108,39 @@ const output = await Effect.runPromise(
         importModule<typeof import("traits").TraitDatabaseClient>("traits/TraitDatabaseClient.ts")
       )
       layer = Store.TraitStore.layer.pipe(
-        Layer.provide(Layer.succeed(ReadConcurrency.FileReadConcurrency, options.fileReadConcurrency)),
+        Layer.provide(
+          Layer.effect(
+            ContextModule.TraitsContext,
+            Effect.gen(function* () {
+              const asFileRead =
+                options.fileReadConcurrency === "unbounded"
+                  ? identity
+                  : yield* Semaphore.make(options.fileReadConcurrency).pipe(
+                      Effect.map((semaphore) => semaphore.withPermits(1))
+                    )
+              return {
+                asDecision: identity,
+                asFileRead,
+                configRoot: directory,
+                excludes: [],
+                config: {
+                  decisionConcurrency: 1,
+                  fileReadConcurrency: options.fileReadConcurrency,
+                  excludeGitignored: true,
+                  excludes: [],
+                  layerDecisionModel: Layer.effect(
+                    DecisionModel.DecisionModel,
+                    Effect.die("No model requests in storage benchmarks")
+                  ),
+                  layerLanguageModel: Layer.effect(
+                    LanguageModel.LanguageModel,
+                    Effect.die("No model requests in storage benchmarks")
+                  )
+                }
+              }
+            })
+          )
+        ),
         Layer.provideMerge(Database.layer),
         Layer.provideMerge(Client.layer),
         Layer.provide(Layer.succeed(Paths.ProjectPaths, { projectRoot: directory, traitsDirectory: directory })),

@@ -3,7 +3,6 @@ import { Array, Effect, identity, Layer, Path, pipe, Schema as S, Semaphore } fr
 import { DecisionModel, LanguageModel } from "effect/ai"
 import { HttpClient } from "effect/http"
 
-import { FileReadConcurrency } from "./_util/FileReadConcurrency.ts"
 import { ProjectPaths } from "./ProjectPaths.ts"
 import { TraitsContext } from "./TraitsContext.ts"
 
@@ -51,7 +50,6 @@ export const layer = Effect.gen(function* () {
   const module = yield* Effect.promise(() => import(url.href))
   const config = yield* pipe(module.default, S.decodeUnknownEffect(TraitsConfig))
   return Layer.mergeAll(
-    Layer.succeed(FileReadConcurrency, config.fileReadConcurrency),
     // oxlint-disable-next-line effecttsgo/any-unknown-in-error-context
     config.layerDecisionModel.pipe(Layer.orDie),
     // oxlint-disable-next-line effecttsgo/any-unknown-in-error-context
@@ -71,7 +69,13 @@ export const layer = Effect.gen(function* () {
             : yield* Semaphore.make(config.decisionConcurrency).pipe(
                 Effect.map((semaphore) => semaphore.withPermits(1))
               )
-        return { config, configRoot, excludes, asDecision }
+        const asFileRead =
+          config.fileReadConcurrency === "unbounded"
+            ? identity
+            : yield* Semaphore.make(config.fileReadConcurrency).pipe(
+                Effect.map((semaphore) => semaphore.withPermits(1))
+              )
+        return { config, configRoot, excludes, asDecision, asFileRead }
       })
     )
   )

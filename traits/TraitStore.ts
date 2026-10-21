@@ -19,11 +19,11 @@ import {
   String
 } from "effect"
 
-import { FileReadConcurrency } from "./_util/FileReadConcurrency.ts"
 import { ProjectPaths } from "./ProjectPaths.ts"
 import { T } from "./tables/index.ts"
 import * as Trait from "./Trait.ts"
 import * as TraitDatabase from "./TraitDatabase.ts"
+import { TraitsContext } from "./TraitsContext.ts"
 
 export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitParseError", {
   path: S.String,
@@ -91,7 +91,7 @@ export class TraitStore extends Context.Service<TraitStore>()("traits/TraitStore
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const { traitsDirectory } = yield* ProjectPaths
-    const fileReadConcurrency = yield* FileReadConcurrency
+    const { asFileRead } = yield* TraitsContext
     yield* fs.makeDirectory(traitsDirectory, { recursive: true })
     const traitPath = (name: Trait.TraitName) => path.join(traitsDirectory, `${name}.md`)
     const readFile = Effect.fn("TraitStore.readFile")(function* (file: string) {
@@ -158,8 +158,8 @@ export class TraitStore extends Context.Service<TraitStore>()("traits/TraitStore
                 const info = yield* fs.stat(file)
                 if (info.type !== "File") return undefined
                 return yield* readFile(file)
-              }),
-              { concurrency: fileReadConcurrency }
+              }, asFileRead),
+              { concurrency: "unbounded" }
             )
           )
         ),
@@ -192,8 +192,8 @@ export class TraitStore extends Context.Service<TraitStore>()("traits/TraitStore
             })
           )
           return { name: path.basename(file, ".md"), document }
-        }),
-        { concurrency: fileReadConcurrency }
+        }, asFileRead),
+        { concurrency: "unbounded" }
       )
       yield* Effect.gen(function* () {
         const removed: Array<string> = []

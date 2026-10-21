@@ -4,7 +4,6 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "bench": "node tasks/main.ts bench",
     "tasks": "node tasks/main.ts",
     "changeset": "changeset",
     "format": "vp fmt .",

@@ -100,6 +100,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
       configRoot: "/test",
       excludes: [],
       asDecision: semaphore.withPermits(1),
+      asFileRead: semaphore.withPermits(1),
       config: {
         decisionConcurrency: 4,
         fileReadConcurrency: 16,
