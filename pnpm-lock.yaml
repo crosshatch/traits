@@ -243,16 +243,6 @@ overrides:
 importers:
 
   .:
-    dependencies:
-      alchemy:
-        specifier: 'catalog:'
-        version: 2.0.0-beta.80(@effect/platform-node@4.0.0(effect@4.0.0)(redis@6.2.1(@opentelemetry/api@1.9.1)))(@effect/vitest@4.0.0(effect@4.0.0)(vitest@5.0.1))(@types/node@26.6.3)(@types/react@19.3.0)(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20260930.2)(@effect/sql-d1@4.0.0(effect@4.0.0))(@effect/sql-libsql@4.0.0(effect@4.0.0))(@effect/sql-sqlite-do@4.0.0(effect@4.0.0))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1)(effect@4.0.0)(valibot@1.2.0(typescript@7.0.2)))(effect@4.0.0)(hono@4.11.4)(jiti@2.7.0)(react-devtools-core@7.0.1)(typescript@7.0.2)(ws@8.22.0)
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0
-      traits:
-        specifier: workspace:*
-        version: link:traits
     devDependencies:
       '@changesets/changelog-github':
         specifier: 'catalog:'
@@ -272,12 +262,21 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.3
+      alchemy:
+        specifier: 'catalog:'
+        version: 2.0.0-beta.80(@effect/platform-node@4.0.0(effect@4.0.0)(redis@6.2.1(@opentelemetry/api@1.9.1)))(@effect/vitest@4.0.0(effect@4.0.0)(vitest@5.0.1))(@types/node@26.6.3)(@types/react@19.3.0)(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20260930.2)(@effect/sql-d1@4.0.0(effect@4.0.0))(@effect/sql-libsql@4.0.0(effect@4.0.0))(@effect/sql-sqlite-do@4.0.0(effect@4.0.0))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1)(effect@4.0.0)(valibot@1.2.0(typescript@7.0.2)))(effect@4.0.0)(hono@4.11.4)(jiti@2.7.0)(react-devtools-core@7.0.1)(typescript@7.0.2)(ws@8.22.0)
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
       pkg-pr-new:
         specifier: 'catalog:'
         version: 0.0.91
       tinybench:
         specifier: 'catalog:'
         version: 6.2.2
+      traits:
+        specifier: workspace:*
+        version: link:traits
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
