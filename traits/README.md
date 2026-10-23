@@ -34,6 +34,34 @@ Follow this project's conventions, ask me to choose providers and models, and
 preserve existing configuration.
 ```
 
+## Check results
+
+`check_traits` returns `{ traits, files }`, grouped by file for coordinated
+repairs. Each referenced trait definition appears once. Each file includes its
+path, full-snapshot SHA-256 revision, and source chunks; each chunk contains its
+text once and findings that reference trait names. Classifications and
+probabilities are preserved. Chunk start lines are not exact violation
+locations.
+
+No findings returns `{ "traits": [], "files": [] }` for the checked selection.
+
+## Debugging
+
+The launcher runs Traits through Tracewick under section ID `traits`. Traces and
+logs are stored in the current worktree's `.tracewick/tracewick.sqlite`.
+
+Use your project's package runner to inspect them, for example:
+
+```sh
+pnpm exec tracewick runs --id traits
+pnpm exec tracewick traces --id traits --errors
+pnpm exec tracewick logs --id traits --search error
+pnpm exec tracewick traces --run <run-id> --json
+```
+
+Span summaries include duration. Use `--trace <trace-id>` to correlate spans and
+logs, and `--json` for full details. Add `.tracewick/` to your ignore rules.
+
 ## License
 
 [Apache-2.0](https://github.com/crosshatch/traits/blob/main/LICENSE)

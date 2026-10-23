@@ -27,6 +27,8 @@ import * as TraitDatabase from "../TraitDatabase.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import * as TraitStore from "../TraitStore.ts"
 
+const watchReady = Stream.make({ _tag: "Create", path: ".traits-watch-ready" } satisfies FileSystem.WatchEvent)
+
 const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16) =>
   TraitStore.layer.pipe(
     Layer.provide(
@@ -65,7 +67,9 @@ const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency
         FileSystem.FileSystem,
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem
-          return watchChanges ? fs : FileSystem.FileSystem.of({ ...fs, watch: () => Stream.never })
+          return watchChanges
+            ? fs
+            : FileSystem.FileSystem.of({ ...fs, watch: () => Stream.concat(watchReady, Stream.never) })
         })
       )
     )
@@ -78,6 +82,94 @@ const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: R
     Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
   )
 })
+
+it.live(
+  "hydrates once after watcher readiness and includes changes made before registration",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-watch-startup-" })
+    const requested = yield* Deferred.make<void>()
+    const register = yield* Deferred.make<void>()
+    const trait = Trait.Trait.make({
+      name: Trait.TraitName.make("startup"),
+      subject: "Startup.",
+      requirement: "Original.",
+      purpose: "Synchronize once."
+    })
+    const file = path.join(dir, "startup.md")
+    yield* fs.writeFileString(file, Trait.serialize(trait))
+    let scans = 0
+    let reads = 0
+    const watched = FileSystem.FileSystem.of({
+      ...fs,
+      watch: (directory, options) =>
+        Stream.unwrap(
+          Effect.gen(function* () {
+            yield* Deferred.succeed(requested, undefined)
+            yield* Deferred.await(register)
+            return fs.watch(directory, options)
+          })
+        ),
+      readDirectory: (directory) => {
+        if (directory === dir) scans++
+        return fs.readDirectory(directory)
+      },
+      readFileString: (entry, encoding) => {
+        if (entry === file) reads++
+        return fs.readFileString(entry, encoding)
+      }
+    })
+    const opening = yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const initial = yield* store.ls
+      // Allow the trailing probe notification to pass through the debounce.
+      yield* Effect.sleep("100 millis")
+      const again = yield* store.ls
+      expect(again).toEqual(initial)
+      return initial
+    }).pipe(
+      Effect.provide(layerStoreLibsql(dir, true)),
+      Effect.provideService(FileSystem.FileSystem, watched),
+      Effect.forkChild
+    )
+    yield* Deferred.await(requested)
+    const edited = Trait.Trait.make({ ...trait, requirement: "Changed while watcher was offline." })
+    yield* fs.writeFileString(file, Trait.serialize(edited))
+    yield* Deferred.succeed(register, undefined)
+    const indexed = yield* Fiber.join(opening)
+    expect(indexed).toEqual([edited])
+    expect(scans).toBe(1)
+    expect(reads).toBe(1)
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.live(
+  "falls back without hanging when a watcher never acknowledges readiness",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-watch-silent-" })
+    let closed = 0
+    const watched = FileSystem.FileSystem.of({
+      ...fs,
+      watch: () =>
+        Stream.never.pipe(
+          Stream.ensuring(
+            Effect.sync(() => {
+              closed++
+            })
+          )
+        )
+    })
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const rows = yield* store.ls
+      expect(rows).toEqual([])
+      expect(closed).toBe(1)
+    }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, watched))
+  }, Effect.provide(NodeServices.layer)),
+  { timeout: 10000 }
+)
 
 it.effect(
   "offers consent-based recovery with distinct schema and malformed-document diagnostics without writing",
@@ -422,7 +514,8 @@ it.live(
               Effect.sync(() => {
                 delivered++
               })
-            )
+            ),
+            (stream) => Stream.concat(watchReady, stream)
           ),
         readFileString: (file, encoding) =>
           path.dirname(file) !== dir
@@ -506,7 +599,8 @@ it.live(
             Effect.sync(() => {
               delivered++
             })
-          )
+          ),
+          (stream) => Stream.concat(watchReady, stream)
         ),
       readDirectory: (directory) => {
         if (directory === dir) scans++

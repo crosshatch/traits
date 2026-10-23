@@ -1,0 +1,147 @@
+import { fileURLToPath } from "node:url"
+
+import { NodeServices } from "@effect/platform-node"
+import { expect, it } from "@effect/vitest"
+import { Array, Effect, Fiber, FileSystem, Path, pipe, Queue, Schema as S, Stream, String } from "effect"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
+
+const launcher = fileURLToPath(new URL("../bin.ts", import.meta.url))
+const tracewick = fileURLToPath(import.meta.resolve("tracewick/cli"))
+const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
+
+it.effect(
+  "launches Traits through Tracewick with clean MCP stdio and queryable failure telemetry",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+    const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-launcher-" })
+    yield* spawner.exitCode(ChildProcess.make("git", ["init", "--quiet"], { cwd }))
+    yield* fs.writeFileString(
+      path.join(cwd, "package.json"),
+      JSON.stringify({ private: true, packageManager: "npm@11.0.0" })
+    )
+    yield* fs.writeFileString(
+      path.join(cwd, "traits.ts"),
+      String.stripMargin(`
+    |import { Effect, Layer } from ${JSON.stringify(effectUrl)};
+    |export default {
+    |  layerDecisionModel: Layer.effectDiscard(
+    |    Effect.logError("launcher telemetry fixture").pipe(
+    |      Effect.andThen(Effect.die("launcher fixture failure")),
+    |      Effect.withSpan("traits.launcher.fixture")
+    |    )
+    |  ),
+    |  layerLanguageModel: Layer.empty
+    |};
+  `)
+    )
+    const requests = yield* Queue.unbounded<string>()
+    const responses = yield* Queue.unbounded<string>()
+    const child = yield* spawner.spawn(
+      ChildProcess.make(process.execPath, [launcher], {
+        cwd,
+        stdin: Stream.fromQueue(requests).pipe(Stream.encodeText),
+        extendEnv: true,
+        env: { npm_config_audit: "false", npm_config_fund: "false", OTEL_SDK_DISABLED: "false" }
+      })
+    )
+    const stderr = yield* child.stderr.pipe(Stream.decodeText(), Stream.mkString, Effect.forkScoped)
+    yield* child.stdout.pipe(
+      Stream.decodeText(),
+      Stream.splitLines,
+      Stream.runForEach((line) => Queue.offer(responses, line)),
+      Effect.forkScoped
+    )
+    yield* Queue.offer(
+      requests,
+      `${JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-11-25",
+          capabilities: {},
+          clientInfo: { name: "launcher-test", version: "1" }
+        }
+      })}\n`
+    )
+    const response = yield* Queue.take(responses).pipe(Effect.flatMap(S.decodeEffect(S.fromJsonString(S.JsonObject))))
+    expect(response).toMatchObject({
+      id: 1,
+      result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("tracewick runs --id traits") }
+    })
+    yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`)
+    for (const id of [2, 3]) {
+      yield* Queue.offer(
+        requests,
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id,
+          method: "tools/call",
+          params: {
+            name: "check_traits",
+            arguments: { include: [] }
+          }
+        })}\n`
+      )
+      const failed = yield* Queue.take(responses).pipe(
+        Effect.flatMap(S.decodeEffect(S.fromJsonString(S.JsonObject))),
+        Effect.repeat({ until: (response) => response.id === id })
+      )
+      expect(failed).toMatchObject({ result: { isError: true } })
+    }
+    yield* child.kill({ killSignal: "SIGTERM" })
+    const exitCode = yield* child.exitCode
+    expect(exitCode).toBe(130)
+    const diagnostics = yield* Fiber.join(stderr)
+    expect(diagnostics).toContain("[traits] Installing dependencies")
+    const inspect = Effect.fnUntraced(function* (signal: "traces" | "logs", search: string) {
+      const output = yield* spawner.string(
+        ChildProcess.make(
+          process.execPath,
+          [tracewick, signal, "--id", "traits", "--errors", "--search", search, "--json"],
+          { cwd }
+        )
+      )
+      return yield* pipe(output, S.decodeEffect(S.fromJsonString(S.Array(S.JsonObject))))
+    })
+    const spans = yield* inspect("traces", "")
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sectionId: "traits",
+          record: expect.objectContaining({
+            name: "traits.launcher.fixture",
+            status: expect.objectContaining({ code: 2 })
+          })
+        })
+      ])
+    )
+    const roots = Array.filterMap(spans, (span) =>
+      pipe(
+        span,
+        S.decodeUnknownResult(
+          S.Struct({
+            record: S.Struct({ name: S.Literal("CheckTraits.check"), traceId: S.String })
+          })
+        )
+      )
+    )
+    expect(roots).toHaveLength(2)
+    expect(
+      pipe(
+        roots,
+        Array.map((span) => span.record.traceId),
+        Array.dedupe
+      )
+    ).toHaveLength(2)
+    const logs = yield* inspect("logs", "launcher telemetry fixture")
+    expect(logs.length).toBeGreaterThan(0)
+    expect(Array.every(logs, (entry) => entry.sectionId === "traits")).toBe(true)
+    expect(logs[0]).toMatchObject({
+      resource: { attributes: expect.arrayContaining([{ key: "service.name", value: { stringValue: "traits" } }]) }
+    })
+  }, Effect.provide(NodeServices.layer)),
+  { timeout: 60000 }
+)

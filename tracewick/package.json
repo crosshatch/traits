@@ -1,0 +1,38 @@
+{
+  "name": "tracewick",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "bin": {
+    "tracewick": "./dist/main.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/package.json",
+    "dist/descriptor.json",
+    "!dist/test/**",
+    "!dist/vite.config.*"
+  ],
+  "type": "module",
+  "exports": {
+    "./cli": "./main.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      "./cli": "./dist/main.js"
+    },
+    "access": "public"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@effect/sql-libsql": "catalog:",
+    "drizzle-kit": "catalog:",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
+    "protobufjs": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@opentelemetry/otlp-transformer": "catalog:"
+  }
+}

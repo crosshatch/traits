@@ -70,5 +70,9 @@ export const DeriveTrait = Tool.make("derive_trait", {
 export const toolkit = Toolkit.make(DeriveTrait)
 
 export const layer = toolkit.toLayer({
-  derive_trait: flow(Derivation.derive, Effect.catchCause(ToolExecutionError.fromCause))
+  derive_trait: flow(
+    Derivation.derive,
+    Effect.catchCause(ToolExecutionError.fromCause),
+    Effect.withSpan("DeriveTrait.derive", { root: true })
+  )
 })
