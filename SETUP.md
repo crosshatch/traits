@@ -27,13 +27,17 @@ configuration to make installation succeed. If setup conflicts with those
 settings, explain the conflict and ask before changing them. Never expose
 registry credentials.
 
-Ensure `traits`, `effect`, and `@effect/platform-node` are available to the
-checkout that runs Traits. Reuse compatible dependencies already supplied by the
-workspace; install only what is missing. Check resolution from the config's
-location, not just whether a dependency appears in a manifest. Do not introduce
-another lockfile, duplicate workspace dependencies, or silently upgrade an
-existing Effect version. Check the installed Traits package's peer requirements
-and ask before any compatibility migration.
+Ensure `traits`, `tracewick`, `effect`, and `@effect/platform-node` are
+available to the checkout that runs Traits. Reuse compatible dependencies
+already supplied by the workspace; install only what is missing. Check
+resolution from the config's location, not just whether a dependency appears in
+a manifest. Do not introduce another lockfile, duplicate workspace dependencies,
+or silently upgrade an existing Effect version. Check the installed Traits
+package's peer requirements and ask before any compatibility migration.
+
+The Traits launcher uses Tracewick for worktree-local telemetry. Make its CLI
+available to the agent for debugging, and add `.tracewick/` to the checkout's
+ignore rules.
 
 ### 2. Ask about providers and models
 

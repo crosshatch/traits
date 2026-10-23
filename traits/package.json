@@ -61,6 +61,7 @@
     "@effect/sql-libsql": "catalog:",
     "drizzle-kit": "catalog:",
     "drizzle-orm": "catalog:",
+    "tracewick": "workspace:*",
     "yaml": "catalog:"
   },
   "devDependencies": {

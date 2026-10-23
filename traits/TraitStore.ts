@@ -354,12 +354,14 @@ const make = Effect.gen(function* () {
         Effect.sync(() => {
           watcherFailure = undefined
           const file = path.resolve(traitsDirectory, event.path)
-          // Missing/ambiguous filenames require a full rescan, not a guessed incremental update.
-          // So does the first probe event: changes made before the watcher went live were missed.
-          if (pipe(path.basename(file), String.startsWith(watchProbePrefix))) {
-            if (!live) fullRevision = ++revision
+          // Any notification proves the watcher is live. Rescan changes made while it was offline.
+          if (!live) {
+            fullRevision = ++revision
             live = true
-          } else if (file === traitsDirectory) fullRevision = ++revision
+          }
+          // Missing/ambiguous filenames require a full rescan, not a guessed incremental update.
+          if (pipe(path.basename(file), String.startsWith(watchProbePrefix))) return
+          if (file === traitsDirectory) fullRevision = ++revision
           else if (path.dirname(file) === traitsDirectory && path.extname(file) === ".md") dirty.set(file, ++revision)
         })
       ),
@@ -367,24 +369,39 @@ const make = Effect.gen(function* () {
       Stream.runForEach(() => synchronize),
       Effect.forkScoped
     )
-    yield* synchronize
-    yield* Deferred.succeed(started, undefined)
-    // Watch backends register lazily once the stream is pulled, so touch a probe directory until
-    // its event shows the watcher is live.
-    yield* fs.makeTempDirectory({ directory: traitsDirectory, prefix: watchProbePrefix }).pipe(
-      Effect.flatMap((directory) => fs.remove(directory, { recursive: true })),
+    const watchEnded = Fiber.join(watcher).pipe(
+      Effect.andThen(
+        PlatformError.systemError({
+          _tag: "Unknown",
+          module: "FileSystem",
+          method: "watch",
+          pathOrDescriptor: traitsDirectory,
+          cause: "The trait directory watch ended unexpectedly."
+        })
+      )
+    )
+    // Establish watch readiness before hydrating, so the probe cannot trigger a second full scan.
+    yield* fs.makeTempDirectoryScoped({ directory: traitsDirectory, prefix: watchProbePrefix }).pipe(
+      Effect.asVoid,
+      Effect.scoped,
       Effect.ignore,
       Effect.repeat({ schedule: Schedule.spaced("25 millis"), times: 80, until: () => live }),
-      Effect.forkScoped
+      Effect.filterOrFail(
+        () => live,
+        () =>
+          PlatformError.systemError({
+            _tag: "TimedOut",
+            module: "FileSystem",
+            method: "watch",
+            pathOrDescriptor: traitsDirectory,
+            description: "Directory watcher did not become ready"
+          })
+      ),
+      Effect.raceFirst(watchEnded)
     )
-    yield* Fiber.join(watcher)
-    return yield* PlatformError.systemError({
-      _tag: "Unknown",
-      module: "FileSystem",
-      method: "watch",
-      pathOrDescriptor: traitsDirectory,
-      cause: "The trait directory watch ended unexpectedly."
-    })
+    yield* synchronize.pipe(Effect.raceFirst(watchEnded))
+    yield* Deferred.succeed(started, undefined)
+    return yield* watchEnded
   }).pipe(
     Effect.scoped,
     // Backend registration may throw or die instead of returning a tagged platform error.
@@ -404,10 +421,7 @@ const make = Effect.gen(function* () {
         watcherFailure = error
         yield* invalidate
         if (firstFailure)
-          yield* Effect.logWarning(
-            "Trait watch unavailable; polling Markdown every second while retrying the watcher.",
-            error
-          )
+          yield* Effect.logWarning("Trait watch unavailable; polling Markdown while retrying the watcher.", error)
         yield* synchronize
         yield* Deferred.succeed(started, undefined)
       })

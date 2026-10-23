@@ -340,11 +340,18 @@ their preference. Respect existing justified exceptions during manual review.
   scope.
 - The tool checks current full files in 200-line chunks, including unstaged
   content. It does not inspect the Git index or compute a diff.
-- Each expression finding contains the trait and source excerpt with a file path
-  and 1-based chunk starting line. That line is not an exact violation location.
-  Its `assessment` includes classification and probabilities. `inconclusive` is
-  not a confirmed violation. Inspect the full distribution; probabilities are
-  not calibrated guarantees.
+- Results are grouped as `{ traits, files }`. `traits` contains each complete
+  referenced trait definition once. Each file contains its absolute `path`, a
+  `revision` (`sha256:` followed by the hash of the full UTF-8 file snapshot),
+  and `chunks`. Each chunk contains `startLine`, `text`, and `findings`; each
+  finding contains `traitName` and the unchanged `assessment`. Resolve names
+  against the shared trait definitions. Only files/chunks needing review appear.
+- Review all findings for a file together and make coordinated related repairs.
+  The revision identifies the evaluated snapshot, not necessarily current disk
+  contents; re-read changed files before editing or rechecking. `startLine` is
+  the 1-based chunk start, not an exact violation location. `assessment` retains
+  classification and all probabilities. `inconclusive` is not a confirmed
+  violation, and probabilities are not calibrated guarantees.
 - Inspect the code and trait before fixing a finding. Respect scope and
   exceptions; missing context is not proof of a violation.
 - Own the remediation loop whenever you discover an applicable violation,
@@ -387,8 +394,8 @@ rejected findings and give the rejection rationale. Quiet reporting is not
 skipped remediation or lost signal.
 
 - Before committing or opening a PR, review the changed TypeScript files against
-  all traits. An empty result means no failures for the selection; empty
-  selections, unmatched patterns, or an empty trait store perform no
+  all traits. A report with `files: []` means no findings for the selection;
+  empty selections, unmatched patterns, or an empty trait store perform no
   assessments.
 
 ## Operation
@@ -398,6 +405,16 @@ automatically synchronized by a scoped directory watcher. Clean reads query
 SQLite only; observed edits and failed write-through invalidate the index and
 are synchronized before the next read. Invalid files remain errors until
 repaired with consent. No model-facing refresh operation is needed.
+
+Checks still read current source files and synchronized traits on each
+invocation. Successful evaluations of unchanged chunks can be reused for five
+minutes in a server-local cache bounded to 128 entries. Keys include full source
+content and location, complete selected trait definitions, invocation
+circumstances, and model/configuration bindings. Changes miss the cache;
+failures and interruptions are not retained. Concurrent identical evaluations
+share in-flight work. The cache is cleared when the server restarts. Tracewick
+exposes `trait.cache.hit` on `TraitEvaluation.cached` spans, and each tool
+invocation has its own root trace.
 
 The CLI launcher installs project dependencies in its current directory before
 importing the MCP server. Run it from the checkout/workspace root. It selects
@@ -481,20 +498,40 @@ precedence is process environment, worktree-root `.env`, then main-checkout
 `.env`. Reconnect the MCP server after changing credentials. A failed model
 request is an incomplete review, not a pass.
 
-The project MCP command leaves telemetry disabled. For optional OTLP telemetry,
-launch with `npx traits --otlp-endpoint http://127.0.0.1:4318`. The flag is an
-OTLP/HTTP collector base URL; traces and logs go to `/v1/traces` and `/v1/logs`
-beneath it using JSON, with service name `traits` and the package version.
-Metrics are not exported. Omit the flag to disable exports. URLs must use
-HTTP(S). Base paths and query parameters are preserved; fragments are ignored.
-Avoid credentials in command-line URLs. Stderr logging remains enabled; stdout
-stays reserved for MCP.
+The Traits CLI installs dependencies, then launches the MCP server through
+`tracewick run --id traits`. Tracewick captures traces and logs in the current
+worktree's `.tracewick/tracewick.sqlite`; it is separate from the Traits index.
+Stdout stays reserved for MCP and launcher diagnostics go to stderr.
 
-The CLI does not start a collector or persist telemetry locally. Configure the
-collector's storage, rotation, retention, and access controls separately. Use a
-loopback collector for local debugging and read its configured output files; do
-not assume an output directory exists. Treat telemetry as potentially sensitive:
+For bottlenecks and errors, use the project's package runner to inspect
+telemetry from that same worktree. For example, with pnpm:
+
+```sh
+pnpm exec tracewick runs --id traits
+pnpm exec tracewick traces --id traits
+pnpm exec tracewick traces --id traits --errors
+pnpm exec tracewick logs --id traits --search error
+pnpm exec tracewick logs --id traits --errors
+pnpm exec tracewick traces --run <run-id> --json
+pnpm exec tracewick logs --trace <trace-id> --json
+```
+
+Span summaries include duration. Use run and trace IDs to correlate slow spans
+with logs; `--since`, `--until`, and `--limit` narrow the results. `--json`
+includes full records, attributes, and resource/scope metadata. Exporters batch
+data, and active spans appear only after ending; the long-running
+`traits.server` span ends on shutdown. Tracewick keeps ingestion available
+during graceful shutdown so exporters can flush. Add `.tracewick/` to the
+project's ignore rules.
+
+The server uses Effect's standard environment-configured OTLP layers, with
+service name `traits` and the package version. Tracewick supplies the endpoint
+and enables the traces/logs exporters through OTEL environment variables.
+Launching `main.ts` directly uses that same configuration without starting
+Tracewick: set `OTEL_EXPORTER_OTLP_ENDPOINT` (or signal-specific endpoints),
+`OTEL_TRACES_EXPORTER=otlp`, and `OTEL_LOGS_EXPORTER=otlp` to export to a
+collector. Metrics are not exported. Treat telemetry as potentially sensitive:
 spans and logs can include file paths and error text. No full trait bodies,
 source bodies, or authorization headers are intentionally attached by this
 integration, but that is not a blanket redaction guarantee. Do not publish
-collector output without inspection and redaction.
+telemetry without inspection and redaction.

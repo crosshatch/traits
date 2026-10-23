@@ -1,6 +1,7 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, Layer, pipe, Record, Result, Semaphore, String } from "effect"
+import { Array, Deferred, Effect, Fiber, identity, Layer, pipe, Record, Result, Semaphore, String } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
+import { TestClock } from "effect/testing"
 
 import * as Source from "../Source.ts"
 import * as Trait from "../Trait.ts"
@@ -170,5 +171,117 @@ it.effect(
   Effect.fnUntraced(function* () {
     const { result } = yield* run(Array.take(traits, 2), source, true)
     expect(Result.isFailure(result)).toBe(true)
+  })
+)
+
+const makeCacheFixture = Effect.gen(function* () {
+  const calls: Array<DecisionModel.ProviderOptions> = []
+  const entered = yield* Deferred.make<void>()
+  const control = { pause: undefined as Deferred.Deferred<void> | undefined, omitAnswers: false }
+  const decide = Effect.fnUntraced(function* (options: DecisionModel.ProviderOptions) {
+    calls.push(options)
+    yield* Deferred.succeed(entered, undefined)
+    if (control.pause !== undefined) yield* Deferred.await(control.pause)
+    return {
+      answers: control.omitAnswers
+        ? {}
+        : Record.map(options.decisions, () => ({
+            _tag: "Classify" as const,
+            label: "compliant",
+            probabilities: { compliant: 1, violation: 0, "not-applicable": 0, inconclusive: 0 }
+          })),
+      usage: { inputTokens: undefined, outputTokens: undefined }
+    }
+  })
+  const model = yield* DecisionModel.make({ decide })
+  const context = TraitsContext.of({
+    configRoot: ".",
+    excludes: [],
+    asDecision: identity,
+    asFileRead: identity,
+    config: {
+      decisionConcurrency: 1,
+      fileReadConcurrency: 16,
+      excludeGitignored: true,
+      excludes: [],
+      layerDecisionModel: Layer.succeed(DecisionModel.DecisionModel, model),
+      layerLanguageModel: Layer.effect(LanguageModel.LanguageModel, Effect.die("Unused in cache tests"))
+    }
+  })
+  const cached = yield* Evaluation.makeCached
+  const evaluate = (
+    options: {
+      readonly traits?: ReadonlyArray<Trait.Trait> | undefined
+      readonly source?: Source.Source | undefined
+      readonly circumstances?: string | undefined
+      readonly model?: DecisionModel.DecisionModel | undefined
+      readonly context?: TraitsContext["Service"] | undefined
+    } = {}
+  ) =>
+    cached(options.traits ?? Array.take(traits, 1), options.source ?? source, options.circumstances).pipe(
+      Effect.provideService(DecisionModel.DecisionModel, options.model ?? model),
+      Effect.provideService(TraitsContext, options.context ?? context)
+    )
+  return { calls, control, entered, decide, model, context, evaluate }
+})
+
+it.effect(
+  "caches exact inputs with model/config isolation, expiry, and uncached failures",
+  Effect.fnUntraced(function* () {
+    const fixture = yield* makeCacheFixture
+    const empty = yield* fixture.evaluate({ traits: [] })
+    expect(empty).toEqual([])
+    expect(fixture.calls).toHaveLength(0)
+    const initial = yield* fixture.evaluate()
+    const repeated = yield* fixture.evaluate({ source: Source.Source.make({ ...source }) })
+    expect(repeated).toEqual(initial)
+    expect(fixture.calls).toHaveLength(1)
+    yield* fixture.evaluate({ traits: [Trait.Trait.make({ ...traits[0]!, context: "Changed supporting context." })] })
+    yield* fixture.evaluate({ source: Source.Source.make({ ...source, text: "const changed = 1" }) })
+    yield* fixture.evaluate({
+      source: Source.Source.make({
+        ...source,
+        location: Source.SourceLocation.cases.File.make({ path: "/other.ts", startLine: 1 })
+      })
+    })
+    yield* fixture.evaluate({ circumstances: "Different invocation context." })
+    const otherModel = yield* DecisionModel.make({ decide: fixture.decide })
+    yield* fixture.evaluate({ model: otherModel })
+    yield* fixture.evaluate({
+      context: { ...fixture.context, config: { ...fixture.context.config, decisionConcurrency: 2 } }
+    })
+    expect(fixture.calls).toHaveLength(7)
+    yield* TestClock.adjust("5 minutes")
+    yield* fixture.evaluate()
+    expect(fixture.calls).toHaveLength(8)
+    fixture.control.omitAnswers = true
+    const failed = yield* fixture.evaluate({ circumstances: "Retry a failed lookup." }).pipe(Effect.result)
+    expect(Result.isFailure(failed)).toBe(true)
+    fixture.control.omitAnswers = false
+    yield* fixture.evaluate({ circumstances: "Retry a failed lookup." })
+    expect(fixture.calls).toHaveLength(10)
+  })
+)
+
+it.effect(
+  "coalesces concurrent evaluations and evicts old entries at capacity",
+  Effect.fnUntraced(function* () {
+    const fixture = yield* makeCacheFixture
+    fixture.control.pause = yield* Deferred.make<void>()
+    const pending = yield* Effect.all([fixture.evaluate(), fixture.evaluate()], { concurrency: 2 }).pipe(
+      Effect.forkChild
+    )
+    yield* Deferred.await(fixture.entered)
+    yield* Effect.yieldNow
+    expect(fixture.calls).toHaveLength(1)
+    yield* Deferred.succeed(fixture.control.pause, undefined)
+    const results = yield* Fiber.join(pending)
+    expect(results[0]).toEqual(results[1])
+    fixture.control.pause = undefined
+    yield* Effect.forEach(Array.range(0, 127), (index) => fixture.evaluate({ circumstances: `Entry ${index}` }), {
+      discard: true
+    })
+    yield* fixture.evaluate()
+    expect(fixture.calls).toHaveLength(130)
   })
 )

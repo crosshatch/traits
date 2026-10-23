@@ -1,4 +1,4 @@
-import { Array, Effect, Record, Schema as S, String } from "effect"
+import { Array, Cache, Data, Effect, Exit, Option, pipe, Record, Schema as S, String } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 
 import { Assessment } from "./Assessment.ts"
@@ -128,4 +128,48 @@ export const evaluateAll = Effect.fn("TraitEvaluation.evaluateAll")(function* (
     }),
     { concurrency: "unbounded" }
   ).pipe(Effect.map(Array.flatten))
+})
+
+class CacheKey extends Data.Class<{
+  readonly input: string
+  readonly model: DecisionModel.DecisionModel
+  readonly context: TraitsContext["Service"]
+}> {}
+
+/** A bounded, server-instance cache; model/config bindings are part of each key. */
+export const makeCached = Effect.gen(function* () {
+  const input = S.fromJsonString(
+    S.Struct({
+      traits: S.Array(Trait),
+      source: Source,
+      circumstances: S.String.pipe(S.optional)
+    })
+  )
+  const cache = yield* Cache.makeWith(
+    Effect.fnUntraced(function* (key: CacheKey) {
+      const request = yield* pipe(key.input, S.decodeEffect(input), Effect.orDie)
+      return yield* evaluateAll(request.traits, request.source, request.circumstances).pipe(
+        Effect.provideService(DecisionModel.DecisionModel, key.model),
+        Effect.provideService(TraitsContext, key.context)
+      )
+    }),
+    {
+      capacity: 128,
+      timeToLive: (exit) => (Exit.isSuccess(exit) ? "5 minutes" : "0 millis")
+    }
+  )
+  return Effect.fn("TraitEvaluation.cached")(function* (
+    traits: ReadonlyArray<Trait>,
+    source: Source,
+    circumstances?: string
+  ) {
+    if (traits.length === 0) return []
+    const model = yield* DecisionModel.DecisionModel
+    const context = yield* TraitsContext
+    const serialized = yield* pipe({ traits, source, circumstances }, S.encodeEffect(input), Effect.orDie)
+    const key = new CacheKey({ input: serialized, model, context })
+    const existing = yield* Cache.getSuccess(cache, key)
+    yield* Effect.annotateCurrentSpan({ "trait.cache.hit": Option.isSome(existing), "trait.count": traits.length })
+    return yield* Cache.get(cache, key)
+  })
 })
