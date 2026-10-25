@@ -45,12 +45,11 @@ locations.
 
 No findings returns `{ "traits": [], "files": [] }` for the checked selection.
 
-## Debugging
+## Reflection
 
 Run `traits` without a subcommand to start the MCP server with automatic
 telemetry under section ID `traits`. The trait index, traces, and logs share the
-current worktree's `.tracewick/tracewick.sqlite`. This existing path is retained
-so earlier telemetry remains available.
+current worktree's `.reflection/reflection.sqlite`.
 
 Use your project's package runner to inspect them, for example:
 
@@ -63,13 +62,13 @@ pnpm exec traits query 'SELECT * FROM logs WHERE severityNumber >= 17 LIMIT 50'
 
 Queries return JSON rows. Join spans and logs by traceId, or join runId to
 runs.id for section IDs. Use SQLite JSON functions on record/resource/scope
-columns. Add `.tracewick/` to your ignore rules.
+columns. Add `.reflection/` to your ignore rules.
 
 The telemetry subcommands need no `traits.ts`, model credentials, or running MCP
 server. They skip the launcher's project dependency installation. Markdown
 remains authoritative for trait definitions; rebuilding its SQLite index
-preserves telemetry. See [telemetry commands](tracewick/README.md) for all
-filters and OTLP configuration.
+preserves telemetry. See [reflection](reflection/README.md) for all filters and
+OTLP configuration.
 
 ## License
 

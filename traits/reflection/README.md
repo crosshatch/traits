@@ -1,4 +1,4 @@
-# Local telemetry
+# Reflection
 
 ```sh
 traits run --id worker 'node script.ts'
@@ -43,7 +43,7 @@ duplicate data.
 
 ## SQL storage
 
-The shared database is `.tracewick/tracewick.sqlite` at the worktree root, or
+The shared database is `.reflection/reflection.sqlite` at the worktree root, or
 the launch directory outside Git. Concurrent runs use WAL and distinct run IDs.
 
 - `runs`: execution metadata, sectionId, command, cwd, startedAt/endedAt, exit
@@ -69,4 +69,4 @@ traits query "SELECT name, (CAST(endTimeUnixNano AS INTEGER) - CAST(startTimeUni
 The legacy `exports` table is retained to preserve pre-existing batches, but is
 no longer populated or decoded. Historical protobuf batches are not migrated
 into spans/logs. New installations also include this compatibility table. No
-retention policy is applied. Add `.tracewick/` to Git ignore rules.
+retention policy is applied. Add `.reflection/` to Git ignore rules.

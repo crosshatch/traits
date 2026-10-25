@@ -4,8 +4,8 @@ import { Effect, FileSystem, Path, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
+import * as Telemetry from "../../reflection/Telemetry.ts"
 import { T } from "../../tables/index.ts"
-import * as Telemetry from "../../tracewick/Telemetry.ts"
 import * as Database from "../../TraitDatabase.ts"
 
 it.effect(
@@ -52,7 +52,7 @@ it.effect(
             }
           ]
         })
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".tracewick", "tracewick.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
       const result = yield* invoke(
         "SELECT runs.sectionId, logs.timeUnixNano, json_extract(logs.record, '$.body.stringValue') AS message FROM logs JOIN runs ON logs.runId = runs.id WHERE severityNumber >= 17"
       )

@@ -13,7 +13,7 @@ import * as Evaluation from "../TraitEvaluation.ts"
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 const aiUrl = new URL("../../node_modules/effect/dist/ai/index.js", import.meta.url).href
 const server = fileURLToPath(new URL("../mcp.ts", import.meta.url))
-const tracewick = fileURLToPath(new URL("../main.ts", import.meta.url))
+const reflection = fileURLToPath(new URL("../main.ts", import.meta.url))
 
 it.effect(
   "returns handler defects as MCP errors and cached trait findings as valid JSON",
@@ -69,7 +69,7 @@ it.effect(
     const requests = yield* Queue.unbounded<string>()
     const responses = yield* Queue.unbounded<string>()
     const child = yield* spawner.spawn(
-      ChildProcess.make(process.execPath, [tracewick, "run", "--id", "tool-traces", "--", process.execPath, server], {
+      ChildProcess.make(process.execPath, [reflection, "run", "--id", "tool-traces", "--", process.execPath, server], {
         cwd,
         stdin: Stream.fromQueue(requests).pipe(Stream.encodeText),
         stderr: "inherit"
@@ -206,7 +206,7 @@ it.effect(
       ChildProcess.make(
         process.execPath,
         [
-          tracewick,
+          reflection,
           "query",
           "SELECT spans.record FROM spans JOIN runs ON spans.runId = runs.id WHERE runs.sectionId = 'tool-traces' LIMIT 1000"
         ],

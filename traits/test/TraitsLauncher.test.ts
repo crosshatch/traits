@@ -6,11 +6,11 @@ import { Array, Effect, Fiber, FileSystem, Path, pipe, Queue, Schema as S, Strea
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 const launcher = fileURLToPath(new URL("../bin.ts", import.meta.url))
-const tracewick = fileURLToPath(new URL("../main.ts", import.meta.url))
+const reflection = fileURLToPath(new URL("../main.ts", import.meta.url))
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 
 it.effect(
-  "launches Traits through Tracewick with clean MCP stdio and queryable failure telemetry",
+  "launches Traits with reflection, clean MCP stdio and queryable failure telemetry",
   Effect.fnUntraced(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -101,7 +101,7 @@ it.effect(
         ChildProcess.make(
           process.execPath,
           [
-            tracewick,
+            reflection,
             "query",
             `SELECT telemetry.*, runs.sectionId FROM ${signal === "traces" ? "spans" : "logs"} AS telemetry JOIN runs ON telemetry.runId = runs.id WHERE runs.sectionId = 'traits' AND ${signal === "traces" ? "statusCode = 2" : "severityNumber >= 17"} AND telemetry.record LIKE '%${search}%'`
           ],

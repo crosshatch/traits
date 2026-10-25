@@ -412,7 +412,7 @@ minutes in a server-local cache bounded to 128 entries. Keys include full source
 content and location, complete selected trait definitions, invocation
 circumstances, and model/configuration bindings. Changes miss the cache;
 failures and interruptions are not retained. Concurrent identical evaluations
-share in-flight work. The cache is cleared when the server restarts. Tracewick
+share in-flight work. The cache is cleared when the server restarts. Reflection
 exposes `trait.cache.hit` on `TraitEvaluation.cached` spans, and each tool
 invocation has its own root trace.
 
@@ -500,7 +500,7 @@ request is an incomplete review, not a pass.
 
 Bare `traits` installs dependencies, then launches the instrumented MCP server
 under section ID `traits`. The unified CLI captures traces and logs in the
-current worktree's `.tracewick/tracewick.sqlite`, shared with the Traits
+current worktree's `.reflection/reflection.sqlite`, shared with the Traits
 Markdown index. Telemetry subcommands (`run` and `query`) skip project
 dependency installation and do not load `traits.ts` or require model
 credentials. Stdout stays reserved for MCP and launcher diagnostics go to
@@ -525,7 +525,7 @@ Ingestion accepts JSON only and writes individual spans/logs. Legacy exports
 remain stored but are not decoded into the new tables. Exporters batch data, and
 active spans appear only after ending; the long-running `traits.server` span
 ends on shutdown. The CLI keeps ingestion available during graceful shutdown so
-exporters can flush. Add `.tracewick/` to the project's ignore rules.
+exporters can flush. Add `.reflection/` to the project's ignore rules.
 
 The server uses Effect's standard environment-configured OTLP layers, with
 service name `traits` and the package version. The CLI supplies the endpoint and

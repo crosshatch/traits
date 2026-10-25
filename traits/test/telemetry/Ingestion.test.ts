@@ -7,9 +7,9 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
+import * as Protocol from "../../reflection/Protocol.ts"
+import * as Server from "../../reflection/Server.ts"
 import { T } from "../../tables/index.ts"
-import * as Protocol from "../../tracewick/Protocol.ts"
-import * as Server from "../../tracewick/Server.ts"
 import * as Database from "../../TraitDatabase.ts"
 
 it.effect(
@@ -18,7 +18,7 @@ it.effect(
     function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
       yield* Effect.gen(function* () {
         const db = yield* Database.TraitDatabase
         yield* db.insert(T.runs).values({ id: "run", command: ["fixture"], cwd: directory, startedAt: 1 })
@@ -90,7 +90,7 @@ it.effect(
             attributes: [{ key: "integer", value: { intValue: "9223372036854775807" } }]
           }
         })
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, "tracewick.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, "reflection.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer, FetchHttpClient.layer])
   )
@@ -103,7 +103,7 @@ it.effect(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
       const cli = path.resolve(import.meta.dirname, "../../main.ts")
       const fixture = path.resolve(import.meta.dirname, "../fixtures/telemetry.ts")
       {
@@ -152,7 +152,7 @@ it.effect(
           arrayValue: { values: [{ stringValue: "fixture log" }, { stringValue: '{"answer":42}' }] }
         })
         expect(spans).toMatchObject([{ name: "fixture span" }])
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".tracewick", "tracewick.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer, FetchHttpClient.layer])
   )

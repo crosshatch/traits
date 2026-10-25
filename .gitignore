@@ -11,4 +11,4 @@ test-results/
 playwright-report/
 .vitest/
 .worktrees/
-.tracewick/
+.reflection/

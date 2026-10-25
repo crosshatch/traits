@@ -15,6 +15,6 @@ export const resolve = Effect.gen(function* () {
       Effect.map(String.trim),
       Effect.orElseSucceed(() => cwd)
     )
-  const directory = path.join(root, ".tracewick")
-  return { cwd, directory, database: path.join(directory, "tracewick.sqlite") }
+  const directory = path.join(root, ".reflection")
+  return { cwd, directory, database: path.join(directory, "reflection.sqlite") }
 })

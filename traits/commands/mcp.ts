@@ -1,6 +1,6 @@
 import { Effect, Path, pipe, Stdio, String } from "effect"
 
-import * as Run from "../tracewick/Run.ts"
+import * as Run from "../reflection/Run.ts"
 
 /** Start the MCP server as an instrumented child of the unified CLI. */
 export const launch = Effect.gen(function* () {

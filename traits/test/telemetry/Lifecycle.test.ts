@@ -15,7 +15,7 @@ it.effect(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
       const cli = path.resolve(import.meta.dirname, "../../main.ts")
       const fixture = path.resolve(import.meta.dirname, "../fixtures/telemetry.ts")
       const child = yield* spawner.spawn(
@@ -36,7 +36,7 @@ it.effect(
         expect(Array.some(logs, (row) => JSON.stringify(row.record).includes("shutdown log"))).toBe(true)
         const runs = yield* db.select().from(T.runs)
         expect(runs[0]!.endedAt).not.toBeNull()
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".tracewick", "tracewick.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )
@@ -49,7 +49,7 @@ it.effect(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
       const repository = path.join(directory, "main")
       const worktree = path.join(directory, "worktree")
       const nested = path.join(worktree, "nested")
@@ -91,8 +91,8 @@ it.effect(
         concurrency: 2
       })
       expect(codes).toEqual([0, 0])
-      const mainHasDatabase = yield* fs.exists(path.join(repository, ".tracewick"))
-      const nestedHasDatabase = yield* fs.exists(path.join(nested, ".tracewick"))
+      const mainHasDatabase = yield* fs.exists(path.join(repository, ".reflection"))
+      const nestedHasDatabase = yield* fs.exists(path.join(nested, ".reflection"))
       expect(mainHasDatabase).toBe(false)
       expect(nestedHasDatabase).toBe(false)
       yield* Effect.gen(function* () {
@@ -107,7 +107,7 @@ it.effect(
           .from(T.logs)
           .innerJoin(T.runs, eq(T.logs.runId, T.runs.id))
         expect(sections).toEqual(expect.arrayContaining([{ sectionId: "alpha" }, { sectionId: "beta" }]))
-      }).pipe(Effect.provide(Database.layerFile(path.join(worktree, ".tracewick", "tracewick.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(worktree, ".reflection", "reflection.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )
@@ -119,7 +119,7 @@ it.effect(
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
     const cli = path.resolve(import.meta.dirname, "../../main.ts")
     for (const flags of [[], ["--id", ""], ["--id", " "]]) {
       const child = yield* spawner.spawn(
@@ -136,7 +136,7 @@ it.effect(
       expect(exitCode).not.toBe(0)
       expect(stdout).not.toContain("started")
     }
-    const created = yield* fs.exists(path.join(directory, ".tracewick"))
+    const created = yield* fs.exists(path.join(directory, ".reflection"))
     expect(created).toBe(false)
   }, Effect.provide(NodeServices.layer))
 )

@@ -36,7 +36,7 @@ existing Effect version. Check the installed Traits package's peer requirements
 and ask before any compatibility migration.
 
 The Traits CLI includes worktree-local telemetry capture and inspection. Add
-`.tracewick/` to the checkout's ignore rules; its SQLite file stores both the
+`.reflection/` to the checkout's ignore rules; its SQLite file stores both the
 trait index and telemetry.
 
 ### 2. Ask about providers and models
