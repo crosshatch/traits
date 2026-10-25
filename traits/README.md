@@ -51,15 +51,13 @@ Run `traits` without a subcommand to start the MCP server with automatic
 telemetry under section ID `traits`. The trait index, traces, and logs share the
 current worktree's `.reflection/reflection.sqlite`.
 
-Use your project's package runner to inspect them, for example:
+Register a separate reflection MCP server using your project's package runner:
 
 ```sh
-pnpm exec traits run --id worker -- node script.ts
-pnpm exec traits query 'SELECT * FROM runs ORDER BY startedAt DESC LIMIT 20'
-pnpm exec traits query 'SELECT * FROM spans WHERE statusCode = 2 LIMIT 50'
-pnpm exec traits query 'SELECT * FROM logs WHERE severityNumber >= 17 LIMIT 50'
+pnpm exec traits reflection
 ```
 
+Its only tool is `query`, accepting `{ "sql": "SELECT * FROM logs LIMIT 50" }`.
 Queries return JSON rows. Join spans and logs by traceId, or join runId to
 runs.id for section IDs. Use SQLite JSON functions on record/resource/scope
 columns. Add `.reflection/` to your ignore rules.

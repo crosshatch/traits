@@ -142,6 +142,12 @@ preserving other servers. Consult the agent's current configuration format. Use
 the project's package runner to launch the installed Traits CLI, with this
 checkout root as the working directory. For npm, the command is `npx -y traits`.
 
+Register a second MCP server named `reflection` with the same working directory
+and package runner, adding the `reflection` argument (for npm:
+`npx -y traits reflection`). It exposes only `query`, accepting
+`{ "sql": "..." }` to inspect local OTLP data. Verify its tool list separately;
+it needs no model credentials and skips project dependency installation.
+
 Verify config imports and provider compatibility. When credentials are
 available, connect the server and confirm `derive_trait` and `check_traits` are
 exposed, and that the agent discovers the skill. Report manual

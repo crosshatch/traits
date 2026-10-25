@@ -5,8 +5,9 @@ import { expect, it } from "@effect/vitest"
 import { Array, Effect, Fiber, FileSystem, Path, pipe, Queue, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
+import * as ReflectionClient from "./fixtures/reflectionClient.ts"
+
 const launcher = fileURLToPath(new URL("../bin.ts", import.meta.url))
-const reflection = fileURLToPath(new URL("../main.ts", import.meta.url))
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 
 it.effect(
@@ -24,17 +25,17 @@ it.effect(
     yield* fs.writeFileString(
       path.join(cwd, "traits.ts"),
       String.stripMargin(`
-    |import { Effect, Layer } from ${JSON.stringify(effectUrl)};
-    |export default {
-    |  layerDecisionModel: Layer.effectDiscard(
-    |    Effect.logError("launcher telemetry fixture").pipe(
-    |      Effect.andThen(Effect.die("launcher fixture failure")),
-    |      Effect.withSpan("traits.launcher.fixture")
-    |    )
-    |  ),
-    |  layerLanguageModel: Layer.empty
-    |};
-  `)
+      |import { Effect, Layer } from ${JSON.stringify(effectUrl)};
+      |export default {
+      |  layerDecisionModel: Layer.effectDiscard(
+      |    Effect.logError("launcher telemetry fixture").pipe(
+      |      Effect.andThen(Effect.die("launcher fixture failure")),
+      |      Effect.withSpan("traits.launcher.fixture")
+      |    )
+      |  ),
+      |  layerLanguageModel: Layer.empty
+      |};
+      `)
     )
     const requests = yield* Queue.unbounded<string>()
     const responses = yield* Queue.unbounded<string>()
@@ -69,7 +70,7 @@ it.effect(
     const response = yield* Queue.take(responses).pipe(Effect.flatMap(S.decodeEffect(S.fromJsonString(S.JsonObject))))
     expect(response).toMatchObject({
       id: 1,
-      result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("traits query") }
+      result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("traits reflection") }
     })
     yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`)
     for (const id of [2, 3]) {
@@ -97,28 +98,19 @@ it.effect(
     const diagnostics = yield* Fiber.join(stderr)
     expect(diagnostics).toContain("[traits] Installing dependencies")
     const inspect = Effect.fnUntraced(function* (signal: "traces" | "logs", search: string) {
-      const output = yield* spawner.string(
-        ChildProcess.make(
-          process.execPath,
-          [
-            reflection,
-            "query",
-            `SELECT telemetry.*, runs.sectionId FROM ${signal === "traces" ? "spans" : "logs"} AS telemetry JOIN runs ON telemetry.runId = runs.id WHERE runs.sectionId = 'traits' AND ${signal === "traces" ? "statusCode = 2" : "severityNumber >= 17"} AND telemetry.record LIKE '%${search}%'`
-          ],
-          { cwd }
-        )
+      const output = yield* ReflectionClient.query(
+        cwd,
+        `SELECT telemetry.*, runs.sectionId FROM ${signal === "traces" ? "spans" : "logs"} AS telemetry JOIN runs ON telemetry.runId = runs.id WHERE runs.sectionId = 'traits' AND ${signal === "traces" ? "statusCode = 2" : "severityNumber >= 17"} AND telemetry.record LIKE '%${search}%'`
       )
       return yield* pipe(
         output,
-        S.decodeEffect(
-          S.fromJsonString(
-            S.Array(
-              S.Struct({
-                sectionId: S.String,
-                record: S.fromJsonString(S.JsonObject),
-                resource: S.fromJsonString(S.JsonObject)
-              })
-            )
+        S.decodeUnknownEffect(
+          S.Array(
+            S.Struct({
+              sectionId: S.String,
+              record: S.fromJsonString(S.JsonObject),
+              resource: S.fromJsonString(S.JsonObject)
+            })
           )
         )
       )

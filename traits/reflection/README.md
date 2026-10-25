@@ -3,17 +3,17 @@
 ```sh
 traits run --id worker 'node script.ts'
 traits run --id worker -- node script.ts --some-flag
-traits query 'SELECT * FROM runs ORDER BY startedAt DESC LIMIT 20'
-traits query 'SELECT * FROM spans WHERE statusCode = 2 LIMIT 50'
-traits query 'SELECT * FROM logs WHERE severityNumber >= 17 LIMIT 50'
-traits query 'PRAGMA table_info(logs)'
+traits reflection
 ```
 
 `run` requires a nonblank section ID. The quoted command uses a shell; arguments
 after `--` execute directly. Stdio, child exit codes, signals, and shutdown-time
 exporter flushing are preserved. Bare `traits` runs the instrumented MCP server.
-`run` and `query` do not load model configuration or install project
-dependencies.
+`run` and `reflection` do not load model configuration or install project
+dependencies. Configure `traits reflection` as a separate stdio MCP server in
+your agent. It exposes only `query`, accepting a `sql` string and returning JSON
+rows; the trait-management tools remain on the main Traits server. SQL failures
+are MCP tool errors, and the server remains available for subsequent calls.
 
 ## Exporting
 
@@ -61,9 +61,18 @@ are indexed in lowercase; original record values are preserved. SQL returns raw
 rows as a JSON array, with JSON columns remaining strings. Use json_extract for
 projections, SQL joins for correlation, and explicit ORDER BY/LIMIT clauses.
 
-```sh
-traits query "SELECT runs.sectionId, json_extract(logs.record, '$.body.stringValue') AS message FROM logs JOIN runs ON logs.runId = runs.id WHERE logs.severityNumber >= 17 ORDER BY logs.receivedAt DESC LIMIT 50"
-traits query "SELECT name, (CAST(endTimeUnixNano AS INTEGER) - CAST(startTimeUnixNano AS INTEGER)) / 1000000.0 AS durationMs FROM spans ORDER BY durationMs DESC LIMIT 20"
+Example `query` arguments:
+
+```json
+{
+  "sql": "SELECT runs.sectionId, json_extract(logs.record, '$.body.stringValue') AS message FROM logs JOIN runs ON logs.runId = runs.id WHERE logs.severityNumber >= 17 ORDER BY logs.receivedAt DESC LIMIT 50"
+}
+```
+
+```json
+{
+  "sql": "SELECT name, (CAST(endTimeUnixNano AS INTEGER) - CAST(startTimeUnixNano AS INTEGER)) / 1000000.0 AS durationMs FROM spans ORDER BY durationMs DESC LIMIT 20"
+}
 ```
 
 The legacy `exports` table is retained to preserve pre-existing batches, but is

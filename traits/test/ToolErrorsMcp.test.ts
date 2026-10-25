@@ -9,6 +9,7 @@ import * as CheckReport from "../CheckReport.ts"
 import * as Source from "../Source.ts"
 import * as Trait from "../Trait.ts"
 import * as Evaluation from "../TraitEvaluation.ts"
+import * as ReflectionClient from "./fixtures/reflectionClient.ts"
 
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 const aiUrl = new URL("../../node_modules/effect/dist/ai/index.js", import.meta.url).href
@@ -202,34 +203,23 @@ it.effect(
     expect(files).not.toContain("proposed.md")
     yield* child.kill({ killSignal: "SIGTERM" })
     yield* child.exitCode
-    const output = yield* spawner.string(
-      ChildProcess.make(
-        process.execPath,
-        [
-          reflection,
-          "query",
-          "SELECT spans.record FROM spans JOIN runs ON spans.runId = runs.id WHERE runs.sectionId = 'tool-traces' LIMIT 1000"
-        ],
-        {
-          cwd
-        }
-      )
+    const output = yield* ReflectionClient.query(
+      cwd,
+      "SELECT spans.record FROM spans JOIN runs ON spans.runId = runs.id WHERE runs.sectionId = 'tool-traces' LIMIT 1000"
     )
     const spans = yield* pipe(
       output,
-      S.decodeEffect(
-        S.fromJsonString(
-          S.Array(
-            S.Struct({
-              record: S.fromJsonString(
-                S.Struct({
-                  name: S.String,
-                  traceId: S.String,
-                  parentSpanId: S.String.pipe(S.optional)
-                })
-              )
-            })
-          )
+      S.decodeUnknownEffect(
+        S.Array(
+          S.Struct({
+            record: S.fromJsonString(
+              S.Struct({
+                name: S.String,
+                traceId: S.String,
+                parentSpanId: S.String.pipe(S.optional)
+              })
+            )
+          })
         )
       )
     )

@@ -5,14 +5,14 @@ import { Command } from "effect/cli"
 import { Reactivity } from "effect/reactivity"
 
 import * as Mcp from "./commands/mcp.ts"
-import { query } from "./commands/query.ts"
+import { reflection } from "./commands/reflection.ts"
 import { run } from "./commands/run.ts"
 import PackageJson from "./package.json" with { type: "json" }
 
 const program = Command.make("traits").pipe(
   Command.withDescription("Run the Traits MCP server or inspect worktree telemetry"),
   Command.withHandler(() => Mcp.launch),
-  Command.withSubcommands([run, query]),
+  Command.withSubcommands([run, reflection]),
   Command.run({ version: PackageJson.version }),
   Effect.provide([NodeServices.layer, Reactivity.layer, Logger.layer([Logger.withConsoleError(Logger.formatSimple)])]),
   Effect.catchCause(

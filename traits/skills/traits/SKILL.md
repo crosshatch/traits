@@ -501,31 +501,30 @@ request is an incomplete review, not a pass.
 Bare `traits` installs dependencies, then launches the instrumented MCP server
 under section ID `traits`. The unified CLI captures traces and logs in the
 current worktree's `.reflection/reflection.sqlite`, shared with the Traits
-Markdown index. Telemetry subcommands (`run` and `query`) skip project
+Markdown index. Telemetry subcommands (`run` and `reflection`) skip project
 dependency installation and do not load `traits.ts` or require model
 credentials. Stdout stays reserved for MCP and launcher diagnostics go to
 stderr.
 
-For bottlenecks and errors, use the project's package runner to inspect
-telemetry from that same worktree. For example, with pnpm:
+For bottlenecks and errors, connect the separate reflection MCP server in the
+same worktree using the project's package runner:
 
 ```sh
-pnpm exec traits query 'SELECT * FROM runs ORDER BY startedAt DESC LIMIT 20'
-pnpm exec traits query 'SELECT * FROM spans WHERE statusCode = 2 LIMIT 50'
-pnpm exec traits query 'SELECT * FROM logs WHERE severityNumber >= 17 LIMIT 50'
-pnpm exec traits query 'PRAGMA table_info(spans)'
+pnpm exec traits reflection
 ```
 
-SQL returns JSON rows. Use joins on runId/runs.id and traceId to correlate
-telemetry, and runs.sectionId to select a script. Use SQL WHERE, ORDER BY, and
-LIMIT for filtering. The record/resource/scope columns contain complete JSON
-text; query nested fields with json_extract. Nanosecond timestamps are decimal
-text; receivedAt is epoch milliseconds. Inspect columns with PRAGMA table_info.
-Ingestion accepts JSON only and writes individual spans/logs. Legacy exports
-remain stored but are not decoded into the new tables. Exporters batch data, and
-active spans appear only after ending; the long-running `traits.server` span
-ends on shutdown. The CLI keeps ingestion available during graceful shutdown so
-exporters can flush. Add `.reflection/` to the project's ignore rules.
+The server exposes only `query`, taking
+`{ "sql": "SELECT * FROM logs LIMIT 50" }`. SQL returns JSON rows. Use joins on
+runId/runs.id and traceId to correlate telemetry, and runs.sectionId to select a
+script. Use SQL WHERE, ORDER BY, and LIMIT for filtering. The
+record/resource/scope columns contain complete JSON text; query nested fields
+with json_extract. Nanosecond timestamps are decimal text; receivedAt is epoch
+milliseconds. Inspect columns with PRAGMA table_info. Ingestion accepts JSON
+only and writes individual spans/logs. Legacy exports remain stored but are not
+decoded into the new tables. Exporters batch data, and active spans appear only
+after ending; the long-running `traits.server` span ends on shutdown. The CLI
+keeps ingestion available during graceful shutdown so exporters can flush. Add
+`.reflection/` to the project's ignore rules.
 
 The server uses Effect's standard environment-configured OTLP layers, with
 service name `traits` and the package version. The CLI supplies the endpoint and

@@ -67,7 +67,7 @@ const install = (command: string, args: string[]) => {
 const args = process.argv.slice(2)
 const delimiter = args.indexOf("--")
 const options = delimiter === -1 ? args : args.slice(0, delimiter)
-const utility = options.some((arg) => ["run", "query"].includes(arg))
+const utility = options.some((arg) => ["run", "reflection"].includes(arg))
 const informational = options.some((arg) =>
   ["--help", "-h", "--version", "-v", "--completions"].some((flag) => arg === flag || arg.startsWith(`${flag}=`))
 )
