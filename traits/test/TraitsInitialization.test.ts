@@ -9,7 +9,7 @@ import { CheckTraits } from "../toolkit/CheckTraits.ts"
 import { DeriveTrait } from "../toolkit/DeriveTrait.ts"
 
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
-const server = fileURLToPath(new URL("../main.ts", import.meta.url))
+const server = fileURLToPath(new URL("../mcp.ts", import.meta.url))
 
 for (const fixture of [
   { name: "unreadable environment", source: "export default {}", diagnostic: ".env" },

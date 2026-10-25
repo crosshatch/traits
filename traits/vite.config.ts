@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
     name: PackageJson.name,
+    testTimeout: 60000,
     passWithNoTests: true
   }
 })

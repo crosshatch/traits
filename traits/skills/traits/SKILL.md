@@ -498,40 +498,43 @@ precedence is process environment, worktree-root `.env`, then main-checkout
 `.env`. Reconnect the MCP server after changing credentials. A failed model
 request is an incomplete review, not a pass.
 
-The Traits CLI installs dependencies, then launches the MCP server through
-`tracewick run --id traits`. Tracewick captures traces and logs in the current
-worktree's `.tracewick/tracewick.sqlite`; it is separate from the Traits index.
-Stdout stays reserved for MCP and launcher diagnostics go to stderr.
+Bare `traits` installs dependencies, then launches the instrumented MCP server
+under section ID `traits`. The unified CLI captures traces and logs in the
+current worktree's `.tracewick/tracewick.sqlite`, shared with the Traits
+Markdown index. Telemetry subcommands (`run` and `query`) skip project
+dependency installation and do not load `traits.ts` or require model
+credentials. Stdout stays reserved for MCP and launcher diagnostics go to
+stderr.
 
 For bottlenecks and errors, use the project's package runner to inspect
 telemetry from that same worktree. For example, with pnpm:
 
 ```sh
-pnpm exec tracewick runs --id traits
-pnpm exec tracewick traces --id traits
-pnpm exec tracewick traces --id traits --errors
-pnpm exec tracewick logs --id traits --search error
-pnpm exec tracewick logs --id traits --errors
-pnpm exec tracewick traces --run <run-id> --json
-pnpm exec tracewick logs --trace <trace-id> --json
+pnpm exec traits query 'SELECT * FROM runs ORDER BY startedAt DESC LIMIT 20'
+pnpm exec traits query 'SELECT * FROM spans WHERE statusCode = 2 LIMIT 50'
+pnpm exec traits query 'SELECT * FROM logs WHERE severityNumber >= 17 LIMIT 50'
+pnpm exec traits query 'PRAGMA table_info(spans)'
 ```
 
-Span summaries include duration. Use run and trace IDs to correlate slow spans
-with logs; `--since`, `--until`, and `--limit` narrow the results. `--json`
-includes full records, attributes, and resource/scope metadata. Exporters batch
-data, and active spans appear only after ending; the long-running
-`traits.server` span ends on shutdown. Tracewick keeps ingestion available
-during graceful shutdown so exporters can flush. Add `.tracewick/` to the
-project's ignore rules.
+SQL returns JSON rows. Use joins on runId/runs.id and traceId to correlate
+telemetry, and runs.sectionId to select a script. Use SQL WHERE, ORDER BY, and
+LIMIT for filtering. The record/resource/scope columns contain complete JSON
+text; query nested fields with json_extract. Nanosecond timestamps are decimal
+text; receivedAt is epoch milliseconds. Inspect columns with PRAGMA table_info.
+Ingestion accepts JSON only and writes individual spans/logs. Legacy exports
+remain stored but are not decoded into the new tables. Exporters batch data, and
+active spans appear only after ending; the long-running `traits.server` span
+ends on shutdown. The CLI keeps ingestion available during graceful shutdown so
+exporters can flush. Add `.tracewick/` to the project's ignore rules.
 
 The server uses Effect's standard environment-configured OTLP layers, with
-service name `traits` and the package version. Tracewick supplies the endpoint
-and enables the traces/logs exporters through OTEL environment variables.
-Launching `main.ts` directly uses that same configuration without starting
-Tracewick: set `OTEL_EXPORTER_OTLP_ENDPOINT` (or signal-specific endpoints),
-`OTEL_TRACES_EXPORTER=otlp`, and `OTEL_LOGS_EXPORTER=otlp` to export to a
-collector. Metrics are not exported. Treat telemetry as potentially sensitive:
-spans and logs can include file paths and error text. No full trait bodies,
-source bodies, or authorization headers are intentionally attached by this
-integration, but that is not a blanket redaction guarantee. Do not publish
+service name `traits` and the package version. The CLI supplies the endpoint and
+enables the traces/logs exporters through OTEL environment variables. Launching
+the internal `mcp.ts` directly uses that same configuration without starting the
+local receiver: set `OTEL_EXPORTER_OTLP_ENDPOINT` (or signal-specific
+endpoints), `OTEL_TRACES_EXPORTER=otlp`, and `OTEL_LOGS_EXPORTER=otlp` to export
+to a collector. Metrics are not exported. Treat telemetry as potentially
+sensitive: spans and logs can include file paths and error text. No full trait
+bodies, source bodies, or authorization headers are intentionally attached by
+this integration, but that is not a blanket redaction guarantee. Do not publish
 telemetry without inspection and redaction.

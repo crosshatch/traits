@@ -2,6 +2,7 @@ import { blob, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core
 
 import { runs } from "./runs.ts"
 
+// Legacy batches are retained for existing worktrees; new ingestion writes spans/logs only.
 export type exports = typeof exports
 export const exports = sqliteTable(
   "exports",

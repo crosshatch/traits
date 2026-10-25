@@ -1,7 +1,7 @@
 import { Array, Effect, Schema as S, Stdio } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
 
-import * as Run from "../Run.ts"
+import * as Run from "../tracewick/Run.ts"
 
 export const run = Command.make(
   "run",

@@ -47,20 +47,29 @@ No findings returns `{ "traits": [], "files": [] }` for the checked selection.
 
 ## Debugging
 
-The launcher runs Traits through Tracewick under section ID `traits`. Traces and
-logs are stored in the current worktree's `.tracewick/tracewick.sqlite`.
+Run `traits` without a subcommand to start the MCP server with automatic
+telemetry under section ID `traits`. The trait index, traces, and logs share the
+current worktree's `.tracewick/tracewick.sqlite`. This existing path is retained
+so earlier telemetry remains available.
 
 Use your project's package runner to inspect them, for example:
 
 ```sh
-pnpm exec tracewick runs --id traits
-pnpm exec tracewick traces --id traits --errors
-pnpm exec tracewick logs --id traits --search error
-pnpm exec tracewick traces --run <run-id> --json
+pnpm exec traits run --id worker -- node script.ts
+pnpm exec traits query 'SELECT * FROM runs ORDER BY startedAt DESC LIMIT 20'
+pnpm exec traits query 'SELECT * FROM spans WHERE statusCode = 2 LIMIT 50'
+pnpm exec traits query 'SELECT * FROM logs WHERE severityNumber >= 17 LIMIT 50'
 ```
 
-Span summaries include duration. Use `--trace <trace-id>` to correlate spans and
-logs, and `--json` for full details. Add `.tracewick/` to your ignore rules.
+Queries return JSON rows. Join spans and logs by traceId, or join runId to
+runs.id for section IDs. Use SQLite JSON functions on record/resource/scope
+columns. Add `.tracewick/` to your ignore rules.
+
+The telemetry subcommands need no `traits.ts`, model credentials, or running MCP
+server. They skip the launcher's project dependency installation. Markdown
+remains authoritative for trait definitions; rebuilding its SQLite index
+preserves telemetry. See [telemetry commands](tracewick/README.md) for all
+filters and OTLP configuration.
 
 ## License
 

@@ -29,7 +29,7 @@ import * as TraitStore from "../TraitStore.ts"
 
 const watchReady = Stream.make({ _tag: "Create", path: ".traits-watch-ready" } satisfies FileSystem.WatchEvent)
 
-const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16) =>
+const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16, databaseFile?: string) =>
   TraitStore.layer.pipe(
     Layer.provide(
       Layer.effect(
@@ -59,7 +59,7 @@ const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency
         })
       )
     ),
-    Layer.provideMerge(TraitDatabase.layer),
+    Layer.provideMerge(databaseFile === undefined ? TraitDatabase.layer : TraitDatabase.layerFile(databaseFile)),
     Layer.provide(Reactivity.layer),
     Layer.provide(Layer.succeed(ProjectPaths, { projectRoot: dir, traitsDirectory: dir })),
     Layer.provide(
@@ -82,6 +82,61 @@ const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: R
     Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
   )
 })
+
+it.effect(
+  "shares persistent storage with telemetry and preserves exports across index rebuilds",
+  Effect.fnUntraced(
+    function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-shared-storage-" })
+      const directory = path.join(root, ".agents", "traits")
+      const databaseFile = path.join(root, ".tracewick", "tracewick.sqlite")
+      const payload = Buffer.from('{"resourceLogs":[]}')
+      yield* Effect.gen(function* () {
+        const db = yield* TraitDatabase.TraitDatabase
+        yield* db
+          .insert(T.runs)
+          .values({ id: "existing-run", sectionId: "worker", command: ["node"], cwd: root, startedAt: 1 })
+        yield* db
+          .insert(T.exports)
+          .values({ runId: "existing-run", signal: "logs", contentType: "application/json", receivedAt: 2, payload })
+        // Simulate the earlier telemetry-only database, which had no trait table.
+        yield* db.run(sql`DROP TABLE traits`)
+      }).pipe(Effect.provide(TraitDatabase.layerFile(databaseFile)))
+      const trait = Trait.Trait.make({
+        name: Trait.TraitName.make("shared-storage"),
+        subject: "Storage.",
+        requirement: "Keep telemetry during index rebuilds.",
+        purpose: "Preserve debugging history."
+      })
+      yield* fs.makeDirectory(directory, { recursive: true })
+      yield* fs.writeFileString(path.join(directory, "shared-storage.md"), Trait.serialize(trait))
+      yield* Effect.gen(function* () {
+        const store = yield* TraitStore.TraitStore
+        const db = yield* TraitDatabase.TraitDatabase
+        const indexed = yield* store.ls
+        expect(indexed).toEqual([trait])
+        const updated = Trait.Trait.make({ ...trait, requirement: "Updated requirement." })
+        yield* store.update(updated)
+        yield* store.refresh
+        const exports = yield* db.select().from(T.exports)
+        expect(exports).toHaveLength(1)
+        expect(Buffer.from(exports[0]!.payload)).toEqual(payload)
+      }).pipe(Effect.provide(layerStoreLibsql(directory, false, 16, databaseFile)))
+      yield* Effect.gen(function* () {
+        const db = yield* TraitDatabase.TraitDatabase
+        const indexed = yield* db.select().from(T.traits)
+        const runs = yield* db.select().from(T.runs)
+        const exports = yield* db.select().from(T.exports)
+        expect(indexed).toMatchObject([{ name: trait.name, requirement: "Updated requirement." }])
+        expect(runs).toMatchObject([{ id: "existing-run" }])
+        expect(exports).toHaveLength(1)
+      }).pipe(Effect.provide(TraitDatabase.layerFile(databaseFile)))
+    },
+    Effect.provide([NodeServices.layer, Reactivity.layer])
+  )
+)
 
 it.live(
   "hydrates once after watcher readiness and includes changes made before registration",

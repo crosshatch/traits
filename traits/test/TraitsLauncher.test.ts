@@ -6,7 +6,7 @@ import { Array, Effect, Fiber, FileSystem, Path, pipe, Queue, Schema as S, Strea
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 const launcher = fileURLToPath(new URL("../bin.ts", import.meta.url))
-const tracewick = fileURLToPath(import.meta.resolve("tracewick/cli"))
+const tracewick = fileURLToPath(new URL("../main.ts", import.meta.url))
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 
 it.effect(
@@ -69,7 +69,7 @@ it.effect(
     const response = yield* Queue.take(responses).pipe(Effect.flatMap(S.decodeEffect(S.fromJsonString(S.JsonObject))))
     expect(response).toMatchObject({
       id: 1,
-      result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("tracewick runs --id traits") }
+      result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("traits query") }
     })
     yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`)
     for (const id of [2, 3]) {
@@ -100,11 +100,28 @@ it.effect(
       const output = yield* spawner.string(
         ChildProcess.make(
           process.execPath,
-          [tracewick, signal, "--id", "traits", "--errors", "--search", search, "--json"],
+          [
+            tracewick,
+            "query",
+            `SELECT telemetry.*, runs.sectionId FROM ${signal === "traces" ? "spans" : "logs"} AS telemetry JOIN runs ON telemetry.runId = runs.id WHERE runs.sectionId = 'traits' AND ${signal === "traces" ? "statusCode = 2" : "severityNumber >= 17"} AND telemetry.record LIKE '%${search}%'`
+          ],
           { cwd }
         )
       )
-      return yield* pipe(output, S.decodeEffect(S.fromJsonString(S.Array(S.JsonObject))))
+      return yield* pipe(
+        output,
+        S.decodeEffect(
+          S.fromJsonString(
+            S.Array(
+              S.Struct({
+                sectionId: S.String,
+                record: S.fromJsonString(S.JsonObject),
+                resource: S.fromJsonString(S.JsonObject)
+              })
+            )
+          )
+        )
+      )
     })
     const spans = yield* inspect("traces", "")
     expect(spans).toEqual(

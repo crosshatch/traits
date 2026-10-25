@@ -2,26 +2,25 @@ import { gzipSync } from "node:zlib"
 
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { ProtobufLogsSerializer, ProtobufTraceSerializer } from "@opentelemetry/otlp-transformer"
 import { Array, Effect, FileSystem, Path, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
-import * as Database from "../Database.ts"
-import * as Protocol from "../Protocol.ts"
-import * as Server from "../Server.ts"
-import { T } from "../tables/index.ts"
+import { T } from "../../tables/index.ts"
+import * as Protocol from "../../tracewick/Protocol.ts"
+import * as Server from "../../tracewick/Server.ts"
+import * as Database from "../../TraitDatabase.ts"
 
 it.effect(
-  "commits lossless JSON, protobuf and gzip batches, rejecting malformed requests",
+  "commits precise JSON records from gzip and rejects malformed requests atomically",
   Effect.fnUntraced(
     function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
       yield* Effect.gen(function* () {
-        const db = yield* Database.Database
+        const db = yield* Database.TraitDatabase
         yield* db.insert(T.runs).values({ id: "run", command: ["fixture"], cwd: directory, startedAt: 1 })
         const endpoint = yield* Server.start("run")
         const client = yield* HttpClient.HttpClient
@@ -65,44 +64,53 @@ it.effect(
         expect(response.status).toBe(200)
         const responseText = yield* response.text
         expect(responseText).toBe("{}")
-        for (const signal of ["traces", "logs"] as const) {
-          const serializer = signal === "traces" ? ProtobufTraceSerializer : ProtobufLogsSerializer
-          const payload = serializer.serializeRequest([])!
-          const response = yield* post(signal, "application/x-protobuf", payload)
-          expect(response.status).toBe(200)
-          const bytes = yield* response.arrayBuffer
-          expect(serializer.deserializeResponse(new Uint8Array(bytes))).toEqual({})
-        }
         const invalidJson = yield* post("logs", "application/json", Buffer.from("[]"))
         const invalidProtobuf = yield* post("traces", "application/x-protobuf", Buffer.from([10, 255]))
         const unsupported = yield* post("logs", "text/plain", Buffer.from("{}"))
         expect(invalidJson.status).toBe(400)
-        expect(invalidProtobuf.status).toBe(400)
+        expect(invalidProtobuf.status).toBe(415)
         expect(unsupported.status).toBe(415)
-        const rows = yield* db.select().from(T.exports)
-        expect(rows).toHaveLength(3)
-        expect(Buffer.from(rows[0]!.payload)).toEqual(json)
-      }).pipe(Effect.provide(Database.layer(path.join(directory, "tracewick.sqlite"))))
+        const malformed = yield* post(
+          "traces",
+          "application/json",
+          Buffer.from(
+            JSON.stringify({
+              resourceSpans: [{ scopeSpans: [{ spans: [{ name: "must roll back" }, { name: 123 }] }] }]
+            })
+          )
+        )
+        expect(malformed.status).toBe(400)
+        const rows = yield* db.select().from(T.spans)
+        expect(rows).toHaveLength(1)
+        expect(rows[0]).toMatchObject({
+          name: "precise",
+          startTimeUnixNano: "1792768000123456789",
+          record: {
+            futureField: "preserved",
+            attributes: [{ key: "integer", value: { intValue: "9223372036854775807" } }]
+          }
+        })
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, "tracewick.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer, FetchHttpClient.layer])
   )
 )
 
 it.effect(
-  "runs real Effect exporters in both encodings and preserves shell/argv/stdio/exit behavior",
+  "runs real JSON Effect exporters and preserves shell/argv/stdio/exit behavior",
   Effect.fnUntraced(
     function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
       const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
-      const cli = path.resolve(import.meta.dirname, "../main.ts")
-      const fixture = path.resolve(import.meta.dirname, "fixtures/telemetry.ts")
-      for (const encoding of ["json", "protobuf"]) {
+      const cli = path.resolve(import.meta.dirname, "../../main.ts")
+      const fixture = path.resolve(import.meta.dirname, "../fixtures/telemetry.ts")
+      {
         const child = yield* spawner.spawn(
           ChildProcess.make(
             process.execPath,
-            [cli, "run", "--id", "telemetry", "--", process.execPath, fixture, encoding],
+            [cli, "run", "--id", "telemetry", "--", process.execPath, fixture, "json"],
             {
               cwd: directory
             }
@@ -133,32 +141,18 @@ it.effect(
       expect(stdout).toBe("HELLO\n")
       expect(exitCode).toBe(23)
       yield* Effect.gen(function* () {
-        const db = yield* Database.Database
+        const db = yield* Database.TraitDatabase
         const runs = yield* db.select().from(T.runs)
-        expect(Array.map(runs, (run) => run.exitCode)).toEqual([0, 0, 23])
-        expect(Array.map(runs, (run) => run.sectionId)).toEqual(["telemetry", "telemetry", "pipeline"])
-        const exports = yield* db.select().from(T.exports)
-        expect(exports).toHaveLength(4)
-        expect(exports).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ signal: "logs", contentType: "application/json" }),
-            expect.objectContaining({ signal: "traces", contentType: "application/json" }),
-            expect.objectContaining({ signal: "logs", contentType: "application/x-protobuf" }),
-            expect.objectContaining({ signal: "traces", contentType: "application/x-protobuf" })
-          ])
-        )
-        for (const row of exports) {
-          if (row.contentType === "application/json") {
-            expect(Buffer.from(row.payload).toString()).toContain(
-              row.signal === "logs" ? "fixture log" : "fixture span"
-            )
-          } else {
-            const type = Protocol.requests[row.signal]
-            const decoded = type.toObject(type.decode(row.payload), { longs: String })
-            expect(JSON.stringify(decoded)).toContain(row.signal === "logs" ? "fixture log" : "fixture span")
-          }
-        }
-      }).pipe(Effect.provide(Database.layer(path.join(directory, ".tracewick", "tracewick.sqlite"))))
+        expect(Array.map(runs, (run) => run.exitCode)).toEqual([0, 23])
+        expect(Array.map(runs, (run) => run.sectionId)).toEqual(["telemetry", "pipeline"])
+        const logs = yield* db.select().from(T.logs)
+        const spans = yield* db.select().from(T.spans)
+        expect(logs).toHaveLength(1)
+        expect(logs[0]!.record.body).toEqual({
+          arrayValue: { values: [{ stringValue: "fixture log" }, { stringValue: '{"answer":42}' }] }
+        })
+        expect(spans).toMatchObject([{ name: "fixture span" }])
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".tracewick", "tracewick.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer, FetchHttpClient.layer])
   )

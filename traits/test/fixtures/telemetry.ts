@@ -4,10 +4,7 @@ import { FetchHttpClient } from "effect/http"
 import { OtlpLogger, OtlpSerialization, OtlpTracer } from "effect/observability"
 
 const telemetry = Layer.mergeAll(OtlpTracer.layerFromConfig(), OtlpLogger.layerFromConfig()).pipe(
-  Layer.provide([
-    FetchHttpClient.layer,
-    process.argv[2] === "json" ? OtlpSerialization.layerJson : OtlpSerialization.layerProtobuf
-  ])
+  Layer.provide([FetchHttpClient.layer, OtlpSerialization.layerJson])
 )
 
 Effect.gen(function* () {

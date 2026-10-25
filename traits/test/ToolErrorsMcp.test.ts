@@ -12,8 +12,8 @@ import * as Evaluation from "../TraitEvaluation.ts"
 
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
 const aiUrl = new URL("../../node_modules/effect/dist/ai/index.js", import.meta.url).href
-const server = fileURLToPath(new URL("../main.ts", import.meta.url))
-const tracewick = fileURLToPath(import.meta.resolve("tracewick/cli"))
+const server = fileURLToPath(new URL("../mcp.ts", import.meta.url))
+const tracewick = fileURLToPath(new URL("../main.ts", import.meta.url))
 
 it.effect(
   "returns handler defects as MCP errors and cached trait findings as valid JSON",
@@ -203,9 +203,17 @@ it.effect(
     yield* child.kill({ killSignal: "SIGTERM" })
     yield* child.exitCode
     const output = yield* spawner.string(
-      ChildProcess.make(process.execPath, [tracewick, "traces", "--id", "tool-traces", "--json", "--limit", "1000"], {
-        cwd
-      })
+      ChildProcess.make(
+        process.execPath,
+        [
+          tracewick,
+          "query",
+          "SELECT spans.record FROM spans JOIN runs ON spans.runId = runs.id WHERE runs.sectionId = 'tool-traces' LIMIT 1000"
+        ],
+        {
+          cwd
+        }
+      )
     )
     const spans = yield* pipe(
       output,
@@ -213,11 +221,13 @@ it.effect(
         S.fromJsonString(
           S.Array(
             S.Struct({
-              record: S.Struct({
-                name: S.String,
-                traceId: S.String,
-                parentSpanId: S.String.pipe(S.optional)
-              })
+              record: S.fromJsonString(
+                S.Struct({
+                  name: S.String,
+                  traceId: S.String,
+                  parentSpanId: S.String.pipe(S.optional)
+                })
+              )
             })
           )
         )

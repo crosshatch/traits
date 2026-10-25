@@ -29,7 +29,7 @@ it.effect(
     expect(ready).toEqual(["ready"])
     const canonical = yield* fs.realPath(root)
     yield* spawner.exitCode(ChildProcess.make("git", ["init", "--quiet"], { cwd: path.join(directory, "project") }))
-    const server = yield* path.fromFileUrl(new URL("../main.ts", import.meta.url))
+    const server = yield* path.fromFileUrl(new URL("../mcp.ts", import.meta.url))
     const duplicate = yield* spawner.spawn(
       ChildProcess.make(process.execPath, [server], {
         cwd: path.join(directory, "project", ".agents"),

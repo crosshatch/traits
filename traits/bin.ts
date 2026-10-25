@@ -2,11 +2,10 @@
 // traits-ignore-file effect-utilities-with-native-behavior-exceptions: Effect utilities are unavailable until this launcher installs dependencies.
 // traits-ignore-file effect-platform-services: Native Node APIs must install project dependencies before Effect platform services are available.
 // traits-ignore-file effect-based-exception-handling: Dependency installation must finish before Effect error-handling APIs are available.
-import { spawn, type SpawnOptions } from "node:child_process"
+import { spawn } from "node:child_process"
 import { once } from "node:events"
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
 
 const candidates = [
   ["pnpm", ["pnpm-lock.yaml"]],
@@ -40,8 +39,8 @@ const installCommand = (root: string): [string, string[]] => {
   return [manager, ["install", ...(locked ? ["--frozen-lockfile"] : [])]]
 }
 
-const execute = (command: string, args: string[], options: SpawnOptions) => {
-  const child = spawn(command, args, options)
+const install = (command: string, args: string[]) => {
+  const child = spawn(command, args, { stdio: ["ignore", process.stderr, process.stderr] })
   const interrupt = () => {
     child.kill("SIGINT")
   }
@@ -55,7 +54,9 @@ const execute = (command: string, args: string[], options: SpawnOptions) => {
   process.on("SIGTERM", terminate)
   process.on("SIGHUP", hangup)
   return once(child, "close")
-    .then((result) => result as [number | null, NodeJS.Signals | null])
+    .then((result) => {
+      if (result[0] !== 0) throw new Error(`${command} exited with ${result[1] ?? result[0]}`)
+    })
     .finally(() => {
       process.off("SIGINT", interrupt)
       process.off("SIGTERM", terminate)
@@ -63,27 +64,16 @@ const execute = (command: string, args: string[], options: SpawnOptions) => {
     })
 }
 
-const [command, args] = installCommand(process.cwd())
-process.stderr.write(`[traits] Installing dependencies in ${process.cwd()} using ${command}\n`)
-const [installCode, installSignal] = await execute(command, args, {
-  stdio: ["ignore", process.stderr, process.stderr]
-})
-if (installCode !== 0) throw new Error(`${command} exited with ${installSignal ?? installCode}`)
-
-const main = fileURLToPath(new URL(import.meta.url.endsWith(".ts") ? "./main.ts" : "./main.js", import.meta.url))
-const [exitCode, signal] = await execute(
-  process.execPath,
-  [
-    fileURLToPath(import.meta.resolve("tracewick/cli")),
-    "run",
-    "--id",
-    "traits",
-    "--",
-    process.execPath,
-    main,
-    ...process.argv.slice(2)
-  ],
-  { stdio: "inherit", detached: process.platform !== "win32" }
+const args = process.argv.slice(2)
+const delimiter = args.indexOf("--")
+const options = delimiter === -1 ? args : args.slice(0, delimiter)
+const utility = options.some((arg) => ["run", "query"].includes(arg))
+const informational = options.some((arg) =>
+  ["--help", "-h", "--version", "-v", "--completions"].some((flag) => arg === flag || arg.startsWith(`${flag}=`))
 )
-process.exitCode = exitCode ?? 1
-if (signal !== null) process.kill(process.pid, signal)
+if (!utility && !informational) {
+  const [command, installArgs] = installCommand(process.cwd())
+  process.stderr.write(`[traits] Installing dependencies in ${process.cwd()} using ${command}\n`)
+  await install(command, installArgs)
+}
+await import("./main.ts")

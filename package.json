@@ -23,9 +23,7 @@
     "alchemy": "catalog:",
     "effect": "catalog:",
     "pkg-pr-new": "catalog:",
-    "protobufjs": "catalog:",
     "tinybench": "catalog:",
-    "tracewick": "workspace:*",
     "traits": "workspace:*",
     "typescript": "catalog:",
     "vite-plus": "catalog:"

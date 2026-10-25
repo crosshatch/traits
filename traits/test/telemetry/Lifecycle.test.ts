@@ -5,8 +5,8 @@ import { Array, Effect, FileSystem, Path, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
-import * as Database from "../Database.ts"
-import { T } from "../tables/index.ts"
+import { T } from "../../tables/index.ts"
+import * as Database from "../../TraitDatabase.ts"
 
 it.effect(
   "keeps ingestion alive while a signalled child flushes its finalizers",
@@ -16,8 +16,8 @@ it.effect(
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
       const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
-      const cli = path.resolve(import.meta.dirname, "../main.ts")
-      const fixture = path.resolve(import.meta.dirname, "fixtures/telemetry.ts")
+      const cli = path.resolve(import.meta.dirname, "../../main.ts")
+      const fixture = path.resolve(import.meta.dirname, "../fixtures/telemetry.ts")
       const child = yield* spawner.spawn(
         ChildProcess.make(
           process.execPath,
@@ -31,12 +31,12 @@ it.effect(
       yield* child.kill({ killSignal: "SIGTERM" })
       yield* child.exitCode
       yield* Effect.gen(function* () {
-        const db = yield* Database.Database
-        const exports = yield* db.select().from(T.exports)
-        expect(Array.some(exports, (row) => Buffer.from(row.payload).toString().includes("shutdown log"))).toBe(true)
+        const db = yield* Database.TraitDatabase
+        const logs = yield* db.select().from(T.logs)
+        expect(Array.some(logs, (row) => JSON.stringify(row.record).includes("shutdown log"))).toBe(true)
         const runs = yield* db.select().from(T.runs)
         expect(runs[0]!.endedAt).not.toBeNull()
-      }).pipe(Effect.provide(Database.layer(path.join(directory, ".tracewick", "tracewick.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".tracewick", "tracewick.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )
@@ -71,7 +71,7 @@ it.effect(
       ])
       yield* git(["-C", repository, "worktree", "add", "--detach", worktree])
       yield* fs.makeDirectory(nested)
-      const cli = path.resolve(import.meta.dirname, "../main.ts")
+      const cli = path.resolve(import.meta.dirname, "../../main.ts")
       const command = (sectionId: string) =>
         ChildProcess.make(
           process.execPath,
@@ -83,7 +83,7 @@ it.effect(
             "--",
             process.execPath,
             "-e",
-            "const r = await fetch(process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }); if (r.status !== 200) process.exitCode = 1"
+            "const r = await fetch(process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ resourceLogs: [{ scopeLogs: [{ logRecords: [{ severityNumber: 17 }] }] }] }) }); if (r.status !== 200) process.exitCode = 1"
           ],
           { cwd: nested }
         )
@@ -96,18 +96,18 @@ it.effect(
       expect(mainHasDatabase).toBe(false)
       expect(nestedHasDatabase).toBe(false)
       yield* Effect.gen(function* () {
-        const db = yield* Database.Database
+        const db = yield* Database.TraitDatabase
         const runs = yield* db.select().from(T.runs)
-        const exports = yield* db.select().from(T.exports)
+        const exports = yield* db.select().from(T.logs)
         expect(runs).toHaveLength(2)
         expect(exports).toHaveLength(2)
         expect(exports[0]!.runId).not.toBe(exports[1]!.runId)
         const sections = yield* db
           .select({ sectionId: T.runs.sectionId })
-          .from(T.exports)
-          .innerJoin(T.runs, eq(T.exports.runId, T.runs.id))
+          .from(T.logs)
+          .innerJoin(T.runs, eq(T.logs.runId, T.runs.id))
         expect(sections).toEqual(expect.arrayContaining([{ sectionId: "alpha" }, { sectionId: "beta" }]))
-      }).pipe(Effect.provide(Database.layer(path.join(worktree, ".tracewick", "tracewick.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(worktree, ".tracewick", "tracewick.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )
@@ -120,7 +120,7 @@ it.effect(
     const path = yield* Path.Path
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "tracewick-" })
-    const cli = path.resolve(import.meta.dirname, "../main.ts")
+    const cli = path.resolve(import.meta.dirname, "../../main.ts")
     for (const flags of [[], ["--id", ""], ["--id", " "]]) {
       const child = yield* spawner.spawn(
         ChildProcess.make(

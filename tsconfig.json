@@ -1,9 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "./tracewick" },
-    { "path": "./traits" },
-    { "path": "./traits.sh" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "references": [{ "path": "./traits" }, { "path": "./traits.sh" }, { "path": "./tsconfig.node.json" }]
 }

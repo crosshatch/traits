@@ -7,14 +7,12 @@ import { HttpRouter, HttpServer, HttpServerRequest, HttpServerResponse } from "e
 import { HttpApiBuilder } from "effect/http-api"
 
 import { Api } from "./Api.ts"
-import { Database } from "./Database.ts"
 import * as Protocol from "./Protocol.ts"
-import { T } from "./tables/index.ts"
+import * as Telemetry from "./Telemetry.ts"
 
 const maxBodySize = 16 * 1024 * 1024
 
 export const start = Effect.fnUntraced(function* (runId: string) {
-  const db = yield* Database
   const ingest = Effect.fnUntraced(
     function* (signal: Protocol.Signal) {
       const request = yield* HttpServerRequest.HttpServerRequest
@@ -25,7 +23,7 @@ export const start = Effect.fnUntraced(function* (runId: string) {
         String.trim,
         String.toLowerCase
       )
-      if (contentType !== "application/json" && contentType !== "application/x-protobuf") {
+      if (contentType !== "application/json") {
         return HttpServerResponse.empty({ status: 415 })
       }
       const encoding = String.toLowerCase(request.headers["content-encoding"] ?? "identity")
@@ -35,23 +33,22 @@ export const start = Effect.fnUntraced(function* (runId: string) {
         encoding === "gzip"
           ? yield* Effect.callback<Buffer, Protocol.InvalidPayload>((resume) => {
               gunzip(Buffer.from(bytes), { maxOutputLength: maxBodySize }, (cause, result) => {
-                resume(cause !== null ? Effect.fail(Protocol.InvalidPayload.make({ cause })) : Effect.succeed(result))
+                resume(cause !== null ? Protocol.InvalidPayload.make({ cause }) : Effect.succeed(result))
               })
             })
           : Buffer.from(bytes)
-      yield* Protocol.validate(signal, contentType, payload)
+      const body = yield* Protocol.decode(payload)
       const receivedAt = yield* Clock.currentTimeMillis
-      yield* db.insert(T.exports).values({ runId, signal, contentType, receivedAt, payload })
-      return contentType === "application/json"
-        ? HttpServerResponse.text("{}", { contentType })
-        : HttpServerResponse.uint8Array(new Uint8Array(), { contentType })
+      yield* Telemetry.ingest(signal, runId, receivedAt, body)
+      return HttpServerResponse.text("{}", { contentType })
     },
     Effect.catchTags({
       InvalidPayload: () => Effect.succeed(HttpServerResponse.empty({ status: 400 })),
       SchemaError: () => Effect.succeed(HttpServerResponse.empty({ status: 400 })),
       HttpServerError: () => Effect.succeed(HttpServerResponse.empty({ status: 400 })),
       EffectDrizzleQueryError: () =>
-        Effect.succeed(HttpServerResponse.empty({ status: 503, headers: { "retry-after": "1" } }))
+        Effect.succeed(HttpServerResponse.empty({ status: 503, headers: { "retry-after": "1" } })),
+      SqlError: () => Effect.succeed(HttpServerResponse.empty({ status: 503, headers: { "retry-after": "1" } }))
     })
   )
   const handlers = HttpApiBuilder.group(Api, "otlp", (handlers) =>
