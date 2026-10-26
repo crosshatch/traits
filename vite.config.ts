@@ -47,6 +47,7 @@ export default defineConfig({
       "effecttsgo/node-builtin-import": "off",
       "effecttsgo/prefer-schema-over-json": "off",
       "effecttsgo/return-effect-in-gen": "off",
+      "effecttsgo/schema-class-missing-brand": "off",
       "effecttsgo/strict-effect-provide": "off",
       "effecttsgo/unstable-api-usage": "off",
       "typescript/no-import-type-side-effects": "error",

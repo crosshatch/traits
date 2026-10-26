@@ -23,6 +23,7 @@ export default defineConfig({
         })
         const server = await renderer
         const { render } = (await server.ssrLoadModule("/src/prerender.tsx")) as typeof import("./src/prerender.tsx")
+        // oxlint-disable-next-line effecttsgo/prefer-effect-string -- A replacement callback preserves literal dollar sequences in rendered HTML.
         return html.replace('<div id="root"></div>', () => `<div id="root">${render()}</div>`)
       },
       async closeBundle() {

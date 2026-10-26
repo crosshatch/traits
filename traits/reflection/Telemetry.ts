@@ -1,4 +1,4 @@
-import { Effect, pipe, Schema as S } from "effect"
+import { Effect, pipe, Schema as S, String } from "effect"
 
 import { T } from "../tables/index.ts"
 import { TraitDatabase } from "../TraitDatabase.ts"
@@ -47,13 +47,13 @@ export const ingest = Effect.fnUntraced(function* (
             scope,
             resourceSchemaUrl,
             scopeSchemaUrl,
-            traceId: indexed.traceId?.toLowerCase(),
-            spanId: indexed.spanId?.toLowerCase()
+            traceId: indexed.traceId === undefined ? undefined : String.toLowerCase(indexed.traceId),
+            spanId: indexed.spanId === undefined ? undefined : String.toLowerCase(indexed.spanId)
           }
           if (signal === "traces") {
             yield* db.insert(T.spans).values({
               ...common,
-              parentSpanId: indexed.parentSpanId?.toLowerCase(),
+              parentSpanId: indexed.parentSpanId === undefined ? undefined : String.toLowerCase(indexed.parentSpanId),
               name: indexed.name,
               startTimeUnixNano: indexed.startTimeUnixNano,
               endTimeUnixNano: indexed.endTimeUnixNano,

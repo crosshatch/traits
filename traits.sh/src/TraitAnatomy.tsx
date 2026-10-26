@@ -1,4 +1,4 @@
-import { String } from "effect"
+import { Array, pipe, String } from "effect"
 
 type TraitField = {
   readonly name: string
@@ -54,7 +54,7 @@ const fields: ReadonlyArray<TraitField> = [
 ]
 
 const TraitFieldRow = (props: { readonly field: TraitField }) => {
-  const field = props.field
+  const { field } = props
   return (
     <>
       {field.name === "context" && (
@@ -71,11 +71,15 @@ const TraitFieldRow = (props: { readonly field: TraitField }) => {
             <code>
               {field.name !== "context" && <span className="anatomy-key">{field.name}: </span>}
               {field.name === "context"
-                ? field.value.split("\n").map((line, index) => (
+                ? Array.map(String.split(field.value, "\n"), (line, index) => (
                     <span
                       className="anatomy-diff-line"
                       data-change={
-                        line.startsWith("+") ? "added" : line.startsWith("-") && line !== "---" ? "removed" : "context"
+                        pipe(line, String.startsWith("+"))
+                          ? "added"
+                          : pipe(line, String.startsWith("-")) && line !== "---"
+                            ? "removed"
+                            : "context"
                       }
                       key={line}
                     >
@@ -124,7 +128,7 @@ export const TraitAnatomy = () => (
         <pre className="anatomy-delimiter">
           <code>---</code>
         </pre>
-        {fields.map((field) => (
+        {Array.map(fields, (field) => (
           <TraitFieldRow key={field.name} {...{ field }} />
         ))}
       </div>

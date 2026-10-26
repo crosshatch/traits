@@ -1,7 +1,7 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { eq } from "drizzle-orm"
-import { Array, Effect, FileSystem, Path, Stream } from "effect"
+import { Array, Effect, FileSystem, Path, pipe, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
@@ -33,7 +33,7 @@ it.effect(
       yield* Effect.gen(function* () {
         const db = yield* Database.TraitDatabase
         const logs = yield* db.select().from(T.logs)
-        expect(Array.some(logs, (row) => JSON.stringify(row.record).includes("shutdown log"))).toBe(true)
+        expect(Array.some(logs, (row) => pipe(JSON.stringify(row.record), String.includes("shutdown log")))).toBe(true)
         const runs = yield* db.select().from(T.runs)
         expect(runs[0]!.endedAt).not.toBeNull()
       }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
@@ -139,4 +139,33 @@ it.effect(
     const created = yield* fs.exists(path.join(directory, ".reflection"))
     expect(created).toBe(false)
   }, Effect.provide(NodeServices.layer))
+)
+
+it.effect(
+  "preserves OS signal termination and records the completed child status",
+  Effect.fnUntraced(
+    function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-signal-" })
+      const cli = path.resolve(import.meta.dirname, "../../main.ts")
+      const error = yield* spawner
+        .exitCode(
+          ChildProcess.make(
+            process.execPath,
+            [cli, "run", "--id", "signal", "--", process.execPath, "-e", 'process.kill(process.pid, "SIGTERM")'],
+            { cwd: directory }
+          )
+        )
+        .pipe(Effect.flip)
+      expect(error).toMatchObject({ reason: { cause: { message: expect.stringContaining("SIGTERM") } } })
+      yield* Effect.gen(function* () {
+        const db = yield* Database.TraitDatabase
+        const runs = yield* db.select().from(T.runs)
+        expect(runs).toMatchObject([{ exitCode: 143, signal: "SIGTERM", endedAt: expect.any(Number) }])
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
+    },
+    Effect.provide([NodeServices.layer, Reactivity.layer])
+  )
 )

@@ -147,7 +147,7 @@ const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
     return TraitDerivation.cases.Updated.make({ trait, instructions: reviewInstructions([trait]) })
   }
   if (Array.some(traits, (trait) => trait.name === proposedTrait.name)) {
-    return yield* TraitAlreadyExistsError.make({ name: proposedTrait.name })
+    return yield* TraitAlreadyExistsError.make({ traitName: proposedTrait.name })
   }
   const approval = yield* requestApproval({
     snapshot: snapshot(traits),
@@ -245,7 +245,7 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
   const replacementNames = new Set<Trait.TraitName>()
   for (const draft of response.value.traits) {
     if (replacementNames.has(draft.name) || Array.contains(reservedNames, draft.name)) {
-      return yield* TraitAlreadyExistsError.make({ name: draft.name })
+      return yield* TraitAlreadyExistsError.make({ traitName: draft.name })
     }
     replacementNames.add(draft.name)
   }

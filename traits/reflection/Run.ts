@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm"
-import { type Array, Clock, Config, Crypto, Effect, Path } from "effect"
+import { type Array, Clock, Config, Crypto, Effect, Path, Ref } from "effect"
 import { Hex } from "effect/encoding"
 import { ChildProcess } from "effect/process"
 
@@ -20,12 +20,18 @@ export const run = Effect.fnUntraced(function* (
   const runId = yield* crypto.randomBytes(16).pipe(Effect.map(Hex.encode))
   return yield* Effect.gen(function* () {
     const db = yield* TraitDatabase.TraitDatabase
+    const status = yield* Child.ExitStatus
     const startedAt = yield* Clock.currentTimeMillis
     yield* db.insert(T.runs).values({ id: runId, sectionId, command, shell, cwd, startedAt })
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* () {
         const endedAt = yield* Clock.currentTimeMillis
-        yield* db.update(T.runs).set({ endedAt }).where(eq(T.runs.id, runId)).pipe(Effect.orDie)
+        const result = yield* Ref.get(status)
+        yield* db
+          .update(T.runs)
+          .set({ ...result, endedAt })
+          .where(eq(T.runs.id, runId))
+          .pipe(Effect.orDie)
       })
     )
     const endpoint = yield* Server.start(runId)
@@ -53,7 +59,6 @@ export const run = Effect.fnUntraced(function* (
         }
       })
     )
-    yield* db.update(T.runs).set(result).where(eq(T.runs.id, runId))
     return result
   }).pipe(Effect.scoped, Effect.provide(TraitDatabase.layerFile(database)))
 }, Effect.scoped)

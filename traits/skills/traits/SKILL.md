@@ -498,13 +498,13 @@ precedence is process environment, worktree-root `.env`, then main-checkout
 `.env`. Reconnect the MCP server after changing credentials. A failed model
 request is an incomplete review, not a pass.
 
-Bare `traits` installs dependencies, then launches the instrumented MCP server
-under section ID `traits`. The unified CLI captures traces and logs in the
-current worktree's `.reflection/reflection.sqlite`, shared with the Traits
-Markdown index. Telemetry subcommands (`run` and `reflection`) skip project
-dependency installation and do not load `traits.ts` or require model
-credentials. Stdout stays reserved for MCP and launcher diagnostics go to
-stderr.
+`traits mcp` (or bare `traits`) installs dependencies, then runs the
+instrumented MCP server in-process under section ID `traits`. The unified CLI
+captures traces and logs in the current worktree's
+`.reflection/reflection.sqlite`, shared with the Traits Markdown index.
+Telemetry subcommands (`run` and `reflection`) skip project dependency
+installation and do not load `traits.ts` or require model credentials. Stdout
+stays reserved for MCP and launcher diagnostics go to stderr.
 
 For bottlenecks and errors, connect the separate reflection MCP server in the
 same worktree using the project's package runner:
@@ -526,13 +526,13 @@ after ending; the long-running `traits.server` span ends on shutdown. The CLI
 keeps ingestion available during graceful shutdown so exporters can flush. Add
 `.reflection/` to the project's ignore rules.
 
-The server uses Effect's standard environment-configured OTLP layers, with
-service name `traits` and the package version. The CLI supplies the endpoint and
-enables the traces/logs exporters through OTEL environment variables. Launching
-the internal `mcp.ts` directly uses that same configuration without starting the
-local receiver: set `OTEL_EXPORTER_OTLP_ENDPOINT` (or signal-specific
-endpoints), `OTEL_TRACES_EXPORTER=otlp`, and `OTEL_LOGS_EXPORTER=otlp` to export
-to a collector. Metrics are not exported. Treat telemetry as potentially
+The server uses Effect's standard OTLP configuration layers, with service name
+`traits` and the package version. Its scoped ConfigProvider supplies the local
+endpoint and enables exporters without mutating the process environment. The MCP
+server/exporters close before the outer collector and database scopes.
+`commands/mcp.ts` exports the server Effect and is not a separate executable.
+External commands launched by `traits run` still receive standard OTEL
+environment variables. Metrics are not exported. Treat telemetry as potentially
 sensitive: spans and logs can include file paths and error text. No full trait
 bodies, source bodies, or authorization headers are intentionally attached by
 this integration, but that is not a blanket redaction guarantee. Do not publish

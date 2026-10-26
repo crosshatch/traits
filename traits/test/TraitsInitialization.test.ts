@@ -9,7 +9,7 @@ import { CheckTraits } from "../toolkit/CheckTraits.ts"
 import { DeriveTrait } from "../toolkit/DeriveTrait.ts"
 
 const effectUrl = new URL("../../node_modules/effect/dist/index.js", import.meta.url).href
-const server = fileURLToPath(new URL("../mcp.ts", import.meta.url))
+const server = fileURLToPath(new URL("../main.ts", import.meta.url))
 
 for (const fixture of [
   { name: "unreadable environment", source: "export default {}", diagnostic: ".env" },
@@ -137,7 +137,7 @@ for (const fixture of [
         if ("trait" in fixture) {
           // The tool text is a JSON document, so Windows path separators appear escaped.
           expect(result).toMatchObject({
-            content: [{ text: expect.stringContaining(JSON.stringify(traitPath).slice(1, -1)) }]
+            content: [{ text: expect.stringContaining(pipe(JSON.stringify(traitPath), String.slice(1, -1))) }]
           })
           expect(JSON.stringify(result)).toContain("TraitParseError")
           expect(JSON.stringify(result)).toContain("Ask the developer:")

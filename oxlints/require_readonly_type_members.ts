@@ -17,6 +17,7 @@ const reportMissingMappedReadonly = (context: Context, node: ESTree.TSMappedType
     fix: (fixer) => {
       if (node.readonly === "-") {
         const source = context.sourceCode.getText()
+        // oxlint-disable-next-line effecttsgo/prefer-effect-string -- Effect String.indexOf has no start-offset argument.
         const modifierStart = source.indexOf("-readonly", node.range[0])
 
         if (modifierStart !== -1 && modifierStart < node.key.range[0]) {
@@ -25,6 +26,7 @@ const reportMissingMappedReadonly = (context: Context, node: ESTree.TSMappedType
       }
 
       const source = context.sourceCode.getText()
+      // oxlint-disable-next-line effecttsgo/prefer-effect-string -- Effect String.indexOf has no start-offset argument.
       const braceIndex = source.indexOf("{", node.range[0])
 
       if (braceIndex !== -1 && braceIndex < node.key.range[0]) {

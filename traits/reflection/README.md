@@ -8,12 +8,13 @@ traits reflection
 
 `run` requires a nonblank section ID. The quoted command uses a shell; arguments
 after `--` execute directly. Stdio, child exit codes, signals, and shutdown-time
-exporter flushing are preserved. Bare `traits` runs the instrumented MCP server.
-`run` and `reflection` do not load model configuration or install project
-dependencies. Configure `traits reflection` as a separate stdio MCP server in
-your agent. It exposes only `query`, accepting a `sql` string and returning JSON
-rows; the trait-management tools remain on the main Traits server. SQL failures
-are MCP tool errors, and the server remains available for subsequent calls.
+exporter flushing are preserved. `traits mcp` (or bare `traits`) runs the
+instrumented MCP server. `run` and `reflection` do not load model configuration
+or install project dependencies. Configure `traits reflection` as a separate
+stdio MCP server in your agent. It exposes only `query`, accepting a `sql`
+string and returning JSON rows; the trait-management tools remain on the main
+Traits server. SQL failures are MCP tool errors, and the server remains
+available for subsequent calls.
 
 ## Exporting
 

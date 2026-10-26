@@ -1,20 +1,24 @@
-import { Array, Console, Data, Effect, FileSystem, Path } from "effect"
+import { Array, Console, Effect, FileSystem, Path, Schema as S } from "effect"
 import { Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-class RepoInitializationError extends Data.TaggedError("RepoInitializationError") {
+class RepoInitializationError extends S.TaggedError<RepoInitializationError>()("RepoInitializationError", {}) {
   override get message() {
     return "Failed to initialize reference repositories"
   }
 }
 
-class RepoFetchError extends Data.TaggedError("RepoFetchError")<{ readonly repository: string }> {
+class RepoFetchError extends S.TaggedError<RepoFetchError>()("RepoFetchError", {
+  repository: S.String
+}) {
   override get message() {
     return `Failed to fetch "${this.repository}"`
   }
 }
 
-class RepoSwitchError extends Data.TaggedError("RepoSwitchError")<{ readonly repository: string }> {
+class RepoSwitchError extends S.TaggedError<RepoSwitchError>()("RepoSwitchError", {
+  repository: S.String
+}) {
   override get message() {
     return `Failed to switch "${this.repository}" to main`
   }
@@ -32,7 +36,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
         (command) => spawner.exitCode(command),
         Effect.filterOrFail(
           (exitCode) => exitCode === 0,
-          () => new RepoInitializationError()
+          () => RepoInitializationError.make({})
         )
       )
 
@@ -77,7 +81,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => new RepoFetchError({ repository: repo.entry })
+              () => RepoFetchError.make({ repository: repo.entry })
             )
           )
           yield* ChildProcess.make`git switch -C main origin/main`.pipe(
@@ -85,7 +89,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => new RepoSwitchError({ repository: repo.entry })
+              () => RepoSwitchError.make({ repository: repo.entry })
             )
           )
           yield* Console.log(`Synced "${repo.entry}" (main)`)

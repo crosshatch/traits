@@ -70,7 +70,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
     ls: Effect.sync(() => [...stored.values()]),
     add: (trait) =>
       Effect.suspend(() => {
-        if (stored.has(trait.name)) return TraitStore.TraitAlreadyExistsError.make({ name: trait.name })
+        if (stored.has(trait.name)) return TraitStore.TraitAlreadyExistsError.make({ traitName: trait.name })
         mutations.push("add")
         stored.set(trait.name, trait)
         return Effect.succeed(trait)
@@ -83,7 +83,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
     get: (name) =>
       Effect.suspend(() => {
         const trait = stored.get(name)
-        return trait === undefined ? TraitStore.TraitNotFoundError.make({ name }) : Effect.succeed(trait)
+        return trait === undefined ? TraitStore.TraitNotFoundError.make({ traitName: name }) : Effect.succeed(trait)
       }),
     rm: (names) =>
       Effect.sync(() => {

@@ -28,7 +28,7 @@ it.effect(
       |import { Effect, Layer } from ${JSON.stringify(effectUrl)};
       |export default {
       |  layerDecisionModel: Layer.effectDiscard(
-      |    Effect.logError("launcher telemetry fixture").pipe(
+      |    Effect.logError("launcher telemetry fixture server-pid=" + process.pid).pipe(
       |      Effect.andThen(Effect.die("launcher fixture failure")),
       |      Effect.withSpan("traits.launcher.fixture")
       |    )
@@ -40,7 +40,7 @@ it.effect(
     const requests = yield* Queue.unbounded<string>()
     const responses = yield* Queue.unbounded<string>()
     const child = yield* spawner.spawn(
-      ChildProcess.make(process.execPath, [launcher], {
+      ChildProcess.make(process.execPath, [launcher, "mcp"], {
         cwd,
         stdin: Stream.fromQueue(requests).pipe(Stream.encodeText),
         extendEnv: true,
@@ -146,11 +146,17 @@ it.effect(
       )
     ).toHaveLength(2)
     const logs = yield* inspect("logs", "launcher telemetry fixture")
+    expect(JSON.stringify(logs)).toContain(`server-pid=${child.pid}`)
     expect(logs.length).toBeGreaterThan(0)
     expect(Array.every(logs, (entry) => entry.sectionId === "traits")).toBe(true)
     expect(logs[0]).toMatchObject({
       resource: { attributes: expect.arrayContaining([{ key: "service.name", value: { stringValue: "traits" } }]) }
     })
+    const shutdown = yield* ReflectionClient.query(
+      cwd,
+      "SELECT spans.name, runs.endedAt, runs.exitCode FROM spans JOIN runs ON spans.runId = runs.id WHERE spans.name = 'traits.server'"
+    )
+    expect(shutdown).toEqual([{ name: "traits.server", endedAt: expect.any(Number), exitCode: 130 }])
   }, Effect.provide(NodeServices.layer)),
   { timeout: 60000 }
 )

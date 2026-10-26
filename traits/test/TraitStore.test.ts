@@ -324,7 +324,7 @@ it.effect(
       expect(Result.isFailure(collision)).toBe(true)
       if (Result.isFailure(collision)) {
         expect(collision.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
-        expect(collision.failure).toMatchObject({ name: initial.name })
+        expect(collision.failure).toMatchObject({ name: "TraitAlreadyExistsError", traitName: initial.name })
       }
       const afterCollision = yield* store.get(initial.name)
       expect(afterCollision).toEqual(updated)
@@ -348,7 +348,11 @@ it.effect(
       const missing = yield* store.get(initial.name).pipe(Effect.result)
       expect(Result.isFailure(missing)).toBe(true)
       if (Result.isFailure(missing))
-        expect(missing.failure).toMatchObject({ _tag: "TraitNotFoundError", name: initial.name })
+        expect(missing.failure).toMatchObject({
+          _tag: "TraitNotFoundError",
+          name: "TraitNotFoundError",
+          traitName: initial.name
+        })
       yield* store.rm([renamed.name])
       const remaining = yield* store.ls
       expect(remaining).toEqual([])

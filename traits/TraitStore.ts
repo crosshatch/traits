@@ -51,18 +51,18 @@ export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitPars
 }
 
 export class TraitNotFoundError extends S.TaggedError<TraitNotFoundError>()("TraitNotFoundError", {
-  name: Trait.TraitName
+  traitName: Trait.TraitName
 }) {
   override get message() {
-    return `Trait ${this.name} was not found`
+    return `Trait ${this.traitName} was not found`
   }
 }
 
 export class TraitAlreadyExistsError extends S.TaggedError<TraitAlreadyExistsError>()("TraitAlreadyExistsError", {
-  name: Trait.TraitName
+  traitName: Trait.TraitName
 }) {
   override get message() {
-    return `Trait ${this.name} already exists`
+    return `Trait ${this.traitName} already exists`
   }
 }
 
@@ -112,7 +112,8 @@ const make = Effect.gen(function* () {
       traitPath,
       readFile,
       Effect.catchTags({
-        PlatformError: (error) => (error.reason._tag === "NotFound" ? TraitNotFoundError.make({ name }) : error)
+        PlatformError: (error) =>
+          error.reason._tag === "NotFound" ? TraitNotFoundError.make({ traitName: name }) : error
       })
     )
   )
@@ -244,7 +245,7 @@ const make = Effect.gen(function* () {
     yield* ready
     const rows = yield* db.select().from(table).where(eq(table.name, name))
     const row = rows[0]
-    return row === undefined ? yield* TraitNotFoundError.make({ name }) : fromRow(row)
+    return row === undefined ? yield* TraitNotFoundError.make({ traitName: name }) : fromRow(row)
   })
   const store = {
     refresh,
@@ -267,7 +268,7 @@ const make = Effect.gen(function* () {
           .pipe(
             Effect.filterOrFail(
               (existing) => existing.length === 0,
-              () => TraitAlreadyExistsError.make({ name: trait.name })
+              () => TraitAlreadyExistsError.make({ traitName: trait.name })
             )
           )
         yield* Effect.gen(function* () {
@@ -280,7 +281,7 @@ const make = Effect.gen(function* () {
           yield* fs.link(temporary, traitPath(trait.name)).pipe(
             Effect.catchTags({
               PlatformError: (error) =>
-                error.reason._tag === "AlreadyExists" ? TraitAlreadyExistsError.make({ name: trait.name }) : error
+                error.reason._tag === "AlreadyExists" ? TraitAlreadyExistsError.make({ traitName: trait.name }) : error
             })
           )
         }).pipe(

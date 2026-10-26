@@ -1,7 +1,14 @@
 import { constants } from "node:os"
 
-import { Effect, pipe, Record, Schema as S } from "effect"
+import { Context, Effect, pipe, Record, Ref, Schema as S } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
+
+export type Result = { readonly exitCode: number; readonly signal: keyof typeof constants.signals | null }
+
+/** The completed child status is shared with run recording and CLI teardown. */
+export class ExitStatus extends Context.Service<ExitStatus, Ref.Ref<Result | undefined>>()(
+  "traits/reflection/Child/ExitStatus"
+) {}
 
 // Effect 4's Node spawner exposes signal exits as PlatformError causes rather than exit codes.
 // Keep this version-specific adaptation at the process boundary.
@@ -15,6 +22,7 @@ const signalExit = S.Struct({
 
 export const run = Effect.fnUntraced(function* (command: ChildProcess.Command) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+  const status = yield* ExitStatus
   const child = yield* spawner.spawn(command)
   const services = yield* Effect.context<never>()
   const runFork = Effect.runForkWith(services)
@@ -30,7 +38,7 @@ export const run = Effect.fnUntraced(function* (command: ChildProcess.Command) {
         for (const [signal, listener] of Record.toEntries(listeners)) process.off(signal, listener)
       })
   )
-  return yield* child.exitCode.pipe(
+  const awaitExit = child.exitCode.pipe(
     Effect.map((exitCode) => ({ exitCode, signal: null })),
     Effect.catchTags({
       PlatformError: (error) =>
@@ -41,5 +49,14 @@ export const run = Effect.fnUntraced(function* (command: ChildProcess.Command) {
           Effect.mapError(() => error)
         )
     })
+  )
+  // On interruption, keep the collector and signal listeners alive until the child finishes flushing.
+  return yield* awaitExit.pipe(
+    Effect.onExit(() =>
+      awaitExit.pipe(
+        Effect.flatMap((result) => Ref.set(status, result)),
+        Effect.ignore
+      )
+    )
   )
 }, Effect.scoped)

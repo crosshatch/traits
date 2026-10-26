@@ -47,9 +47,9 @@ No findings returns `{ "traits": [], "files": [] }` for the checked selection.
 
 ## Reflection
 
-Run `traits` without a subcommand to start the MCP server with automatic
-telemetry under section ID `traits`. The trait index, traces, and logs share the
-current worktree's `.reflection/reflection.sqlite`.
+Run `traits mcp` (or bare `traits`) to start the MCP server in-process with
+automatic telemetry under section ID `traits`. The trait index, traces, and logs
+share the current worktree's `.reflection/reflection.sqlite`.
 
 Register a separate reflection MCP server using your project's package runner:
 

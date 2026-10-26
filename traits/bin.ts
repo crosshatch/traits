@@ -2,6 +2,7 @@
 // traits-ignore-file effect-utilities-with-native-behavior-exceptions: Effect utilities are unavailable until this launcher installs dependencies.
 // traits-ignore-file effect-platform-services: Native Node APIs must install project dependencies before Effect platform services are available.
 // traits-ignore-file effect-based-exception-handling: Dependency installation must finish before Effect error-handling APIs are available.
+/* oxlint-disable effecttsgo/prefer-effect-array, effecttsgo/prefer-effect-string -- Effect is unavailable until this launcher installs dependencies. */
 import { spawn } from "node:child_process"
 import { once } from "node:events"
 import { existsSync, readFileSync } from "node:fs"

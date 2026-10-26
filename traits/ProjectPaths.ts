@@ -19,7 +19,7 @@ export const layer = Layer.effect(
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const projectRoot = yield* spawner.string(ChildProcess.make`git rev-parse --show-toplevel`).pipe(
       Effect.map(String.trim),
-      Effect.filterOrFail(String.isNonEmpty, () => new GitRootError()),
+      Effect.filterOrFail(String.isNonEmpty, () => GitRootError.make({})),
       Effect.flatMap(fs.realPath)
     )
     const directory = path.join(projectRoot, ".agents", "traits")
