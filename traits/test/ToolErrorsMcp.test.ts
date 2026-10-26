@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url"
 
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Path, pipe, Queue, Schema as S, Stream, String } from "effect"
+import { Array, Effect, FileSystem, Path, pipe, Queue, Schedule, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import * as CheckReport from "../CheckReport.ts"
@@ -71,6 +71,8 @@ it.effect(
     const child = yield* spawner.spawn(
       ChildProcess.make(process.execPath, [server], {
         cwd,
+        extendEnv: true,
+        env: { OTEL_BSP_SCHEDULE_DELAY: "100" },
         stdin: Stream.fromQueue(requests).pipe(Stream.encodeText),
         stderr: "inherit"
       })
@@ -88,7 +90,11 @@ it.effect(
     ) {
       yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`)
       while (true) {
-        const text = yield* Queue.take(responses)
+        const text = yield* Queue.take(responses).pipe(
+          Effect.raceFirst(
+            child.exitCode.pipe(Effect.flatMap((code) => Effect.die(`MCP server exited before replying (${code})`)))
+          )
+        )
         const response = yield* pipe(
           text,
           S.decodeEffect(
@@ -200,12 +206,15 @@ it.effect(
     expect(empty).toEqual({ traits: [], files: [] })
     const files = yield* fs.readDirectory(path.join(cwd, ".agents/traits"))
     expect(files).not.toContain("proposed.md")
-    yield* child.kill({ killSignal: "SIGTERM" })
-    yield* child.exitCode
     const output = yield* ReflectionClient.query(
       cwd,
-      "SELECT spans.record FROM spans JOIN runs ON spans.runId = runs.id WHERE runs.sectionId = 'traits' LIMIT 1000"
+      "SELECT spans.record FROM spans JOIN runs ON spans.runId = runs.id WHERE runs.sectionId = 'traits' AND spans.name IN ('CheckTraits.check', 'DeriveTrait.derive') LIMIT 1000"
+    ).pipe(
+      Effect.repeat({ schedule: Schedule.spaced("100 millis"), until: (rows) => rows.length === 4 }),
+      Effect.timeout("15 seconds")
     )
+    yield* child.kill({ killSignal: "SIGTERM" })
+    yield* child.exitCode
     const spans = yield* pipe(
       output,
       S.decodeUnknownEffect(

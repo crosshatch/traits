@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url"
 
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, Fiber, FileSystem, Path, pipe, Queue, Schema as S, Stream, String } from "effect"
+import { Array, Effect, Fiber, FileSystem, Path, pipe, Queue, Schedule, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import * as ReflectionClient from "./fixtures/reflectionClient.ts"
@@ -44,10 +44,23 @@ it.effect(
         cwd,
         stdin: Stream.fromQueue(requests).pipe(Stream.encodeText),
         extendEnv: true,
-        env: { npm_config_audit: "false", npm_config_fund: "false", OTEL_SDK_DISABLED: "false" }
+        env: {
+          npm_config_audit: "false",
+          npm_config_fund: "false",
+          OTEL_SDK_DISABLED: "false",
+          OTEL_BSP_SCHEDULE_DELAY: "100",
+          OTEL_BLRP_SCHEDULE_DELAY: "100"
+        }
       })
     )
     const stderr = yield* child.stderr.pipe(Stream.decodeText(), Stream.mkString, Effect.forkScoped)
+    const exited = child.exitCode.pipe(
+      Effect.flatMap((code) =>
+        Fiber.join(stderr).pipe(
+          Effect.flatMap((diagnostics) => Effect.die(`Launcher exited before replying (${code}): ${diagnostics}`))
+        )
+      )
+    )
     yield* child.stdout.pipe(
       Stream.decodeText(),
       Stream.splitLines,
@@ -67,7 +80,10 @@ it.effect(
         }
       })}\n`
     )
-    const response = yield* Queue.take(responses).pipe(Effect.flatMap(S.decodeEffect(S.fromJsonString(S.JsonObject))))
+    const response = yield* Queue.take(responses).pipe(
+      Effect.raceFirst(exited),
+      Effect.flatMap(S.decodeEffect(S.fromJsonString(S.JsonObject)))
+    )
     expect(response).toMatchObject({
       id: 1,
       result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("traits reflection") }
@@ -87,16 +103,12 @@ it.effect(
         })}\n`
       )
       const failed = yield* Queue.take(responses).pipe(
+        Effect.raceFirst(exited),
         Effect.flatMap(S.decodeEffect(S.fromJsonString(S.JsonObject))),
         Effect.repeat({ until: (response) => response.id === id })
       )
       expect(failed).toMatchObject({ result: { isError: true } })
     }
-    yield* child.kill({ killSignal: "SIGTERM" })
-    const exitCode = yield* child.exitCode
-    expect(exitCode).toBe(130)
-    const diagnostics = yield* Fiber.join(stderr)
-    expect(diagnostics).toContain("[traits] Installing dependencies")
     const inspect = Effect.fnUntraced(function* (signal: "traces" | "logs", search: string) {
       const output = yield* ReflectionClient.query(
         cwd,
@@ -115,7 +127,14 @@ it.effect(
         )
       )
     })
-    const spans = yield* inspect("traces", "")
+    // Observe exported request spans before termination; Windows kills Node without running finalizers.
+    const spans = yield* inspect("traces", "").pipe(
+      Effect.repeat({
+        schedule: Schedule.spaced("100 millis"),
+        until: (rows) => Array.filter(rows, (row) => row.record.name === "CheckTraits.check").length === 2
+      }),
+      Effect.timeout("15 seconds")
+    )
     expect(spans).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -145,18 +164,28 @@ it.effect(
         Array.dedupe
       )
     ).toHaveLength(2)
-    const logs = yield* inspect("logs", "launcher telemetry fixture")
+    const logs = yield* inspect("logs", "launcher telemetry fixture").pipe(
+      Effect.repeat({ schedule: Schedule.spaced("100 millis"), until: (rows) => rows.length > 0 }),
+      Effect.timeout("15 seconds")
+    )
     expect(JSON.stringify(logs)).toContain(`server-pid=${child.pid}`)
     expect(logs.length).toBeGreaterThan(0)
     expect(Array.every(logs, (entry) => entry.sectionId === "traits")).toBe(true)
     expect(logs[0]).toMatchObject({
       resource: { attributes: expect.arrayContaining([{ key: "service.name", value: { stringValue: "traits" } }]) }
     })
-    const shutdown = yield* ReflectionClient.query(
-      cwd,
-      "SELECT spans.name, runs.endedAt, runs.exitCode FROM spans JOIN runs ON spans.runId = runs.id WHERE spans.name = 'traits.server'"
-    )
-    expect(shutdown).toEqual([{ name: "traits.server", endedAt: expect.any(Number), exitCode: 130 }])
+    yield* child.kill({ killSignal: "SIGTERM" })
+    const exitCode = yield* child.exitCode
+    expect(exitCode).toBe(process.platform === "win32" ? 1 : 130)
+    const diagnostics = yield* Fiber.join(stderr)
+    expect(diagnostics).toContain("[traits] Installing dependencies")
+    if (process.platform !== "win32") {
+      const shutdown = yield* ReflectionClient.query(
+        cwd,
+        "SELECT spans.name, runs.endedAt, runs.exitCode FROM spans JOIN runs ON spans.runId = runs.id WHERE spans.name = 'traits.server'"
+      )
+      expect(shutdown).toEqual([{ name: "traits.server", endedAt: expect.any(Number), exitCode: 130 }])
+    }
   }, Effect.provide(NodeServices.layer)),
   { timeout: 60000 }
 )

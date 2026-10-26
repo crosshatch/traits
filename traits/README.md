@@ -45,29 +45,6 @@ locations.
 
 No findings returns `{ "traits": [], "files": [] }` for the checked selection.
 
-## Reflection
-
-Run `traits mcp` (or bare `traits`) to start the MCP server in-process with
-automatic telemetry under section ID `traits`. The trait index, traces, and logs
-share the current worktree's `.reflection/reflection.sqlite`.
-
-Register a separate reflection MCP server using your project's package runner:
-
-```sh
-pnpm exec traits reflection
-```
-
-Its only tool is `query`, accepting `{ "sql": "SELECT * FROM logs LIMIT 50" }`.
-Queries return JSON rows. Join spans and logs by traceId, or join runId to
-runs.id for section IDs. Use SQLite JSON functions on record/resource/scope
-columns. Add `.reflection/` to your ignore rules.
-
-The telemetry subcommands need no `traits.ts`, model credentials, or running MCP
-server. They skip the launcher's project dependency installation. Markdown
-remains authoritative for trait definitions; rebuilding its SQLite index
-preserves telemetry. See [reflection](reflection/README.md) for all filters and
-OTLP configuration.
-
 ## License
 
 [Apache-2.0](https://github.com/crosshatch/traits/blob/main/LICENSE)

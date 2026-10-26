@@ -2,27 +2,27 @@ import { gzipSync } from "node:zlib"
 
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Path, Stream } from "effect"
+import { Array, Effect, Path, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
 import * as Protocol from "../../reflection/Protocol.ts"
-import * as Server from "../../reflection/Server.ts"
+import { serve } from "../../reflection/serve.ts"
 import { T } from "../../tables/index.ts"
 import * as Database from "../../TraitDatabase.ts"
+import { databaseDirectory } from "../fixtures/databaseDirectory.ts"
 
 it.effect(
   "commits precise JSON records from gzip and rejects malformed requests atomically",
   Effect.fnUntraced(
     function* () {
-      const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
+      const directory = yield* databaseDirectory("reflection-")
       yield* Effect.gen(function* () {
         const db = yield* Database.TraitDatabase
         yield* db.insert(T.runs).values({ id: "run", command: ["fixture"], cwd: directory, startedAt: 1 })
-        const endpoint = yield* Server.start("run")
+        const endpoint = yield* serve("run")
         const client = yield* HttpClient.HttpClient
         const post = Effect.fnUntraced(function* (
           signal: Protocol.Signal,
@@ -100,10 +100,9 @@ it.effect(
   "runs real JSON Effect exporters and preserves shell/argv/stdio/exit behavior",
   Effect.fnUntraced(
     function* () {
-      const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
+      const directory = yield* databaseDirectory("reflection-")
       const cli = path.resolve(import.meta.dirname, "../../main.ts")
       const fixture = path.resolve(import.meta.dirname, "../fixtures/telemetry.ts")
       {
@@ -129,10 +128,20 @@ it.effect(
         expect(stderr).toBe("child stderr\n")
       }
       const shell = yield* spawner.spawn(
-        ChildProcess.make(process.execPath, [cli, "run", "--id", "pipeline", "cat | tr a-z A-Z; exit 23"], {
-          cwd: directory,
-          stdin: Stream.make(Buffer.from("hello\n"))
-        })
+        ChildProcess.make(
+          process.execPath,
+          [
+            cli,
+            "run",
+            "--id",
+            "pipeline",
+            `"${process.execPath}" -e "process.stdin.setEncoding('utf8');process.stdin.on('data',c=>process.stdout.write(c.toUpperCase()));process.stdin.on('end',()=>{process.exitCode=23})"`
+          ],
+          {
+            cwd: directory,
+            stdin: Stream.make(Buffer.from("hello\n"))
+          }
+        )
       )
       const [stdout, exitCode] = yield* Effect.all(
         [shell.stdout.pipe(Stream.decodeText(), Stream.mkString), shell.exitCode],

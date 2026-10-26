@@ -26,6 +26,7 @@ import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import * as TraitStore from "../TraitStore.ts"
+import { databaseDirectory } from "./fixtures/databaseDirectory.ts"
 
 const watchReady = Stream.make({ _tag: "Create", path: ".traits-watch-ready" } satisfies FileSystem.WatchEvent)
 
@@ -89,7 +90,7 @@ it.effect(
     function* () {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
-      const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-shared-storage-" })
+      const root = yield* databaseDirectory("traits-shared-storage-")
       const directory = path.join(root, ".agents", "traits")
       const databaseFile = path.join(root, ".reflection", "reflection.sqlite")
       const payload = Buffer.from('{"resourceLogs":[]}')

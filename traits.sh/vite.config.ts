@@ -1,4 +1,5 @@
 /* oxlint-disable effecttsgo/async-function */
+import { pipe, String } from "effect"
 import { createServer, defineConfig, type ViteDevServer } from "vite-plus"
 
 let renderer: Promise<ViteDevServer> | undefined
@@ -23,8 +24,11 @@ export default defineConfig({
         })
         const server = await renderer
         const { render } = (await server.ssrLoadModule("/src/prerender.tsx")) as typeof import("./src/prerender.tsx")
-        // oxlint-disable-next-line effecttsgo/prefer-effect-string -- A replacement callback preserves literal dollar sequences in rendered HTML.
-        return html.replace('<div id="root"></div>', () => `<div id="root">${render()}</div>`)
+        const placeholder = '<div id="root"></div>'
+        if (!pipe(html, String.includes(placeholder))) return html
+        // Escape replacement-string tokens so rendered dollar sequences stay literal.
+        const replacement = pipe(`<div id="root">${render()}</div>`, String.replaceAll("$", "$$$$"))
+        return pipe(html, String.replace(placeholder, replacement))
       },
       async closeBundle() {
         const closing = renderer

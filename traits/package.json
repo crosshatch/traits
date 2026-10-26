@@ -19,7 +19,6 @@
     "tables/**/*.ts",
     "toolkit/**/*.ts",
     "reflection/**/*.ts",
-    "reflection/README.md",
     "dist/package.json",
     "dist/**/*.js",
     "dist/**/*.js.map",

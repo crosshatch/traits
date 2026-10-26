@@ -265,13 +265,9 @@ review as incomplete.
 3. Independently inspect each changed section against every applicable trait. An
    empty tool result does not replace direct inspection against the trait text.
    Formatting, lint, and type checks do not establish trait compliance.
-4. For recognizable patterns, search explicitly and inspect matches. For the
-   curried-call rule, look for nested calls such as `fn(args)(value)`, including
-   multiline forms and `yield* S.decodeUnknownEffect(schema)(input)`. Check the
-   actual signature before deciding whether a match is a violation. Also inspect
-   parameter destructuring, manually constructed tagged-union members, wrapped
-   schema modifiers, and misplaced imports when their traits apply. Searches
-   support review; a lack of matches is not proof that every trait is satisfied.
+4. Search for recognizable patterns from applicable traits and inspect matches
+   against their exact requirements and surrounding code. A lack of matches is
+   not proof that every trait is satisfied.
 5. Call `check_traits` on all changed TypeScript files after the latest edits.
    Before a commit or PR, omit `traitNames` so every stored trait is checked;
    focused checks supplement rather than replace that final review.
@@ -330,8 +326,7 @@ their preference. Respect existing justified exceptions during manual review.
   relative to the directory containing `traits.ts` or absolute. Use
   `directory/**` to exclude a subtree; bare directories are not expanded
   automatically. Escape glob characters in literal filenames using native glob
-  syntax. This repository configures `repos/**` and `**/dist/**` in `traits.ts`.
-  No custom path classification or glob expansion semantics are imposed.
+  syntax.
 - Assess only project-owned source and relevant authored configuration or
   documentation. For whole-project trait checks, prefer an explicit project-file
   manifest. Never submit third-party/reference code, generated output or
@@ -400,21 +395,9 @@ skipped remediation or lost signal.
 
 ## Operation
 
-Trait definitions are read from SQLite, hydrated from Markdown at startup and
-automatically synchronized by a scoped directory watcher. Clean reads query
-SQLite only; observed edits and failed write-through invalidate the index and
-are synchronized before the next read. Invalid files remain errors until
-repaired with consent. No model-facing refresh operation is needed.
-
-Checks still read current source files and synchronized traits on each
-invocation. Successful evaluations of unchanged chunks can be reused for five
-minutes in a server-local cache bounded to 128 entries. Keys include full source
-content and location, complete selected trait definitions, invocation
-circumstances, and model/configuration bindings. Changes miss the cache;
-failures and interruptions are not retained. Concurrent identical evaluations
-share in-flight work. The cache is cleared when the server restarts. Reflection
-exposes `trait.cache.hit` on `TraitEvaluation.cached` spans, and each tool
-invocation has its own root trace.
+Markdown edits synchronize automatically; no manual refresh is needed. Checks
+use current source files and trait definitions. Invalid trait files remain
+errors until repaired with consent.
 
 The CLI launcher installs project dependencies in its current directory before
 importing the MCP server. Run it from the checkout/workspace root. It selects
@@ -422,9 +405,7 @@ the package manager from `package.json#packageManager` or an unambiguous
 lockfile; the selected executable must be on PATH. Installation preserves
 lockfiles but can execute lifecycle scripts, so only launch in trusted
 checkouts. Allow enough MCP startup time for a cold install and avoid
-simultaneous installations in the same worktree. During development, use
-`node traits/bin.ts` with a Node version supporting native TypeScript execution;
-pass server flags after the filename.
+simultaneous installations in the same worktree.
 
 Surface tool failures; never treat a failed operation as a successful save or
 review. `ToolExecutionError` reports an operational failure with a message, and
@@ -498,42 +479,5 @@ precedence is process environment, worktree-root `.env`, then main-checkout
 `.env`. Reconnect the MCP server after changing credentials. A failed model
 request is an incomplete review, not a pass.
 
-`traits mcp` (or bare `traits`) installs dependencies, then runs the
-instrumented MCP server in-process under section ID `traits`. The unified CLI
-captures traces and logs in the current worktree's
-`.reflection/reflection.sqlite`, shared with the Traits Markdown index.
-Telemetry subcommands (`run` and `reflection`) skip project dependency
-installation and do not load `traits.ts` or require model credentials. Stdout
-stays reserved for MCP and launcher diagnostics go to stderr.
-
-For bottlenecks and errors, connect the separate reflection MCP server in the
-same worktree using the project's package runner:
-
-```sh
-pnpm exec traits reflection
-```
-
-The server exposes only `query`, taking
-`{ "sql": "SELECT * FROM logs LIMIT 50" }`. SQL returns JSON rows. Use joins on
-runId/runs.id and traceId to correlate telemetry, and runs.sectionId to select a
-script. Use SQL WHERE, ORDER BY, and LIMIT for filtering. The
-record/resource/scope columns contain complete JSON text; query nested fields
-with json_extract. Nanosecond timestamps are decimal text; receivedAt is epoch
-milliseconds. Inspect columns with PRAGMA table_info. Ingestion accepts JSON
-only and writes individual spans/logs. Legacy exports remain stored but are not
-decoded into the new tables. Exporters batch data, and active spans appear only
-after ending; the long-running `traits.server` span ends on shutdown. The CLI
-keeps ingestion available during graceful shutdown so exporters can flush. Add
-`.reflection/` to the project's ignore rules.
-
-The server uses Effect's standard OTLP configuration layers, with service name
-`traits` and the package version. Its scoped ConfigProvider supplies the local
-endpoint and enables exporters without mutating the process environment. The MCP
-server/exporters close before the outer collector and database scopes.
-`commands/mcp.ts` exports the server Effect and is not a separate executable.
-External commands launched by `traits run` still receive standard OTEL
-environment variables. Metrics are not exported. Treat telemetry as potentially
-sensitive: spans and logs can include file paths and error text. No full trait
-bodies, source bodies, or authorization headers are intentionally attached by
-this integration, but that is not a blanket redaction guarantee. Do not publish
-telemetry without inspection and redaction.
+For debugging, use the reflection MCP server when available and follow its query
+instructions.

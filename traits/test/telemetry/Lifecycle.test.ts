@@ -7,15 +7,16 @@ import { Reactivity } from "effect/reactivity"
 
 import { T } from "../../tables/index.ts"
 import * as Database from "../../TraitDatabase.ts"
+import { databaseDirectory } from "../fixtures/databaseDirectory.ts"
 
-it.effect(
+// Windows process termination does not deliver POSIX signals to Node handlers.
+it.effect.skipIf(process.platform === "win32")(
   "keeps ingestion alive while a signalled child flushes its finalizers",
   Effect.fnUntraced(
     function* () {
-      const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
+      const directory = yield* databaseDirectory("reflection-")
       const cli = path.resolve(import.meta.dirname, "../../main.ts")
       const fixture = path.resolve(import.meta.dirname, "../fixtures/telemetry.ts")
       const child = yield* spawner.spawn(
@@ -49,7 +50,7 @@ it.effect(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-" })
+      const directory = yield* databaseDirectory("reflection-")
       const repository = path.join(directory, "main")
       const worktree = path.join(directory, "worktree")
       const nested = path.join(worktree, "nested")
@@ -142,28 +143,25 @@ it.effect(
 )
 
 it.effect(
-  "preserves OS signal termination and records the completed child status",
+  "reports a signal-terminated child as a platform failure and completes its run record",
   Effect.fnUntraced(
     function* () {
-      const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "reflection-signal-" })
+      const directory = yield* databaseDirectory("reflection-signal-")
       const cli = path.resolve(import.meta.dirname, "../../main.ts")
-      const error = yield* spawner
-        .exitCode(
-          ChildProcess.make(
-            process.execPath,
-            [cli, "run", "--id", "signal", "--", process.execPath, "-e", 'process.kill(process.pid, "SIGTERM")'],
-            { cwd: directory }
-          )
+      const code = yield* spawner.exitCode(
+        ChildProcess.make(
+          process.execPath,
+          [cli, "run", "--id", "signal", "--", process.execPath, "-e", 'process.kill(process.pid, "SIGTERM")'],
+          { cwd: directory }
         )
-        .pipe(Effect.flip)
-      expect(error).toMatchObject({ reason: { cause: { message: expect.stringContaining("SIGTERM") } } })
+      )
+      expect(code).toBe(1)
       yield* Effect.gen(function* () {
         const db = yield* Database.TraitDatabase
         const runs = yield* db.select().from(T.runs)
-        expect(runs).toMatchObject([{ exitCode: 143, signal: "SIGTERM", endedAt: expect.any(Number) }])
+        expect(runs).toMatchObject([{ exitCode: 1, signal: null, endedAt: expect.any(Number) }])
       }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])

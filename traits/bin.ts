@@ -41,7 +41,12 @@ const installCommand = (root: string): [string, string[]] => {
 }
 
 const install = (command: string, args: string[]) => {
-  const child = spawn(command, args, { stdio: ["ignore", process.stderr, process.stderr] })
+  // Windows package-manager shims are .cmd files, which Node cannot spawn directly.
+  const child = spawn(
+    process.platform === "win32" ? "cmd.exe" : command,
+    process.platform === "win32" ? ["/d", "/s", "/c", command, ...args] : args,
+    { stdio: ["ignore", process.stderr, process.stderr] }
+  )
   const interrupt = () => {
     child.kill("SIGINT")
   }

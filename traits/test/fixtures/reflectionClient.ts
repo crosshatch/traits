@@ -1,4 +1,4 @@
-import { Effect, Path, pipe, Queue, Schema as S, Stream } from "effect"
+import { Effect, Fiber, Path, pipe, Queue, Schema as S, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 export const connect = Effect.fnUntraced(function* (cwd: string) {
@@ -11,6 +11,14 @@ export const connect = Effect.fnUntraced(function* (cwd: string) {
       cwd,
       stdin: Stream.fromQueue(requests).pipe(Stream.encodeText)
     })
+  )
+  const stderr = yield* child.stderr.pipe(Stream.decodeText(), Stream.mkString, Effect.forkScoped)
+  const exited = child.exitCode.pipe(
+    Effect.flatMap((code) =>
+      Fiber.join(stderr).pipe(
+        Effect.flatMap((diagnostics) => Effect.die(`Reflection exited before replying (${code}): ${diagnostics}`))
+      )
+    )
   )
   yield* child.stdout.pipe(
     Stream.decodeText(),
@@ -27,7 +35,7 @@ export const connect = Effect.fnUntraced(function* (cwd: string) {
     )
     yield* Queue.offer(requests, `${text}\n`)
     while (true) {
-      const line = yield* Queue.take(responses)
+      const line = yield* Queue.take(responses).pipe(Effect.raceFirst(exited))
       const response = yield* pipe(line, S.decodeEffect(S.fromJsonString(S.JsonObject)))
       if (response.id === requestId) return response
     }

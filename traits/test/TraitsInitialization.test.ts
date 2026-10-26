@@ -85,7 +85,11 @@ for (const fixture of [
       const request = Effect.fn("test.McpRequest")(function* (id: number, method: string, params: unknown = {}) {
         yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`)
         while (true) {
-          const line = yield* Queue.take(responses)
+          const line = yield* Queue.take(responses).pipe(
+            Effect.raceFirst(
+              child.exitCode.pipe(Effect.flatMap((code) => Effect.die(`MCP server exited before replying (${code})`)))
+            )
+          )
           const response = yield* pipe(
             line,
             S.decodeEffect(

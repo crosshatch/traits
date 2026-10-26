@@ -8,7 +8,7 @@ import { OtlpLogger, OtlpSerialization, OtlpTracer } from "effect/observability"
 
 import PackageJson from "../package.json" with { type: "json" }
 import * as ProjectPaths from "../ProjectPaths.ts"
-import * as Server from "../reflection/Server.ts"
+import { serve as serveReflection } from "../reflection/serve.ts"
 import { T } from "../tables/index.ts"
 import * as ConfigurationError from "../toolkit/ConfigurationError.ts"
 import { toolkit } from "../toolkit/toolkit.ts"
@@ -132,7 +132,7 @@ export const serve = Effect.gen(function* () {
     })
   )
   // The collector's outer scope stays open while the server's inner scope flushes exporters.
-  const endpoint = yield* Server.start(runId)
+  const endpoint = yield* serveReflection(runId)
   const provider = yield* ConfigProvider.ConfigProvider
   const local = ConfigProvider.fromUnknown({
     OTEL_EXPORTER_OTLP_ENDPOINT: endpoint,
