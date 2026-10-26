@@ -38,38 +38,15 @@ catalog:
   yaml: ^2.9.1
 
 minimumReleaseAgeExclude:
-  - "@alchemy.run/cloudflare-runtime@2.0.0-beta.80"
-  - "@alchemy.run/floci@2.0.0-beta.80"
-  - "@alchemy.run/node-utils@2.0.0-beta.80"
   - "@cloudflare/workers-types@5.20260930.2"
-  - "@distilled.cloud/acme@1.0.0-rc.13"
-  - "@distilled.cloud/aws@1.0.0-rc.13"
-  - "@distilled.cloud/axiom@1.0.0-rc.13"
-  - "@distilled.cloud/cloudflare@1.0.0-rc.13"
-  - "@distilled.cloud/core@1.0.0-rc.13"
-  - "@distilled.cloud/doppler@1.0.0-rc.13"
-  - "@distilled.cloud/fly-io@1.0.0-rc.13"
-  - "@distilled.cloud/gcp@1.0.0-rc.13"
-  - "@distilled.cloud/hetzner@1.0.0-rc.13"
-  - "@distilled.cloud/infisical@1.0.0-rc.13"
-  - "@distilled.cloud/neon@1.0.0-rc.13"
-  - "@distilled.cloud/planetscale@1.0.0-rc.13"
-  - "@distilled.cloud/prisma@1.0.0-rc.13"
-  - "@distilled.cloud/railway@1.0.0-rc.13"
-  - "@distilled.cloud/stripe@1.0.0-rc.13"
-  - "@distilled.cloud/zerossl@1.0.0-rc.13"
-  - "@effect/tsgo-darwin-arm64@0.47.2 || 0.57.0"
-  - "@effect/tsgo-darwin-x64@0.47.2 || 0.57.0"
-  - "@effect/tsgo-linux-arm@0.47.2 || 0.57.0"
-  - "@effect/tsgo-linux-arm64@0.47.2 || 0.57.0"
-  - "@effect/tsgo-linux-x64@0.47.2 || 0.57.0"
-  - "@effect/tsgo-win32-arm64@0.47.2 || 0.57.0"
-  - "@effect/tsgo-win32-x64@0.47.2 || 0.57.0"
-  - "@effect/tsgo@0.47.2 || 0.57.0"
-  - "@vitest/mocker@5.0.3"
-  - "@vitest/spy@5.0.3"
-  - alchemy@2.0.0-beta.80
-  - vitest@5.0.3
+  - "@effect/tsgo-darwin-arm64@0.57.0"
+  - "@effect/tsgo-darwin-x64@0.57.0"
+  - "@effect/tsgo-linux-arm@0.57.0"
+  - "@effect/tsgo-linux-arm64@0.57.0"
+  - "@effect/tsgo-linux-x64@0.57.0"
+  - "@effect/tsgo-win32-arm64@0.57.0"
+  - "@effect/tsgo-win32-x64@0.57.0"
+  - "@effect/tsgo@0.57.0"
 
 overrides:
   "@effect/sql-d1": ^4.0.6
