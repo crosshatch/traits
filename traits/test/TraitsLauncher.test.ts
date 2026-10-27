@@ -86,7 +86,7 @@ it.effect(
     )
     expect(response).toMatchObject({
       id: 1,
-      result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("traits reflection") }
+      result: { serverInfo: { name: "traits" }, instructions: expect.stringContaining("Traits capture durable") }
     })
     yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`)
     for (const id of [2, 3]) {
