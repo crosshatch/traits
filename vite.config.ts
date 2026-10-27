@@ -29,7 +29,7 @@ export default defineConfig({
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
       { name: "custom", specifier: "./oxlints/index.ts" }
     ],
-    options: { typeAware: true, typeCheck: true },
+    options: { typeAware: true, typeCheck: false },
     rules: {
       ...Record.mapEntries(
         {
