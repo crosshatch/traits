@@ -1,4 +1,7 @@
 /* oxlint-disable effecttsgo/async-function */
+import { readFile } from "node:fs/promises"
+
+import { pipe, String } from "effect"
 import { createServer, defineConfig, type ViteDevServer } from "vite-plus"
 
 let renderer: Promise<ViteDevServer> | undefined
@@ -6,6 +9,24 @@ let renderer: Promise<ViteDevServer> | undefined
 export default defineConfig({
   root: import.meta.dirname,
   plugins: [
+    {
+      name: "traits.sh:setup-guide",
+      configureServer(server) {
+        server.middlewares.use("/SETUP.md", (_request, response, next) => {
+          void readFile(new URL("../SETUP.md", import.meta.url), "utf8").then((source) => {
+            response.setHeader("Content-Type", "text/plain; charset=utf-8")
+            response.end(source)
+          }, next)
+        })
+      },
+      async generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "SETUP.md",
+          source: await readFile(new URL("../SETUP.md", import.meta.url), "utf8")
+        })
+      }
+    },
     {
       name: "traits.sh:prerender",
       configureServer(server) {
@@ -23,7 +44,11 @@ export default defineConfig({
         })
         const server = await renderer
         const { render } = (await server.ssrLoadModule("/src/prerender.tsx")) as typeof import("./src/prerender.tsx")
-        return html.replace('<div id="root"></div>', () => `<div id="root">${render()}</div>`)
+        const placeholder = '<div id="root"></div>'
+        if (!pipe(html, String.includes(placeholder))) return html
+        // Escape replacement-string tokens so rendered dollar sequences stay literal.
+        const replacement = pipe(`<div id="root">${render()}</div>`, String.replaceAll("$", "$$$$"))
+        return pipe(html, String.replace(placeholder, replacement))
       },
       async closeBundle() {
         const closing = renderer

@@ -1,3 +1,4 @@
+import { Option, pipe, String } from "effect"
 import { type Context, defineRule, type ESTree } from "vite-plus/lint/plugins"
 
 const reportMissingReadonly = (context: Context, node: ESTree.TSIndexSignature | ESTree.TSPropertySignature) => {
@@ -15,19 +16,28 @@ const reportMissingMappedReadonly = (context: Context, node: ESTree.TSMappedType
     node,
     messageId: "missingReadonly",
     fix: (fixer) => {
+      const source = pipe(context.sourceCode.getText(), String.slice(node.range[0]))
       if (node.readonly === "-") {
-        const source = context.sourceCode.getText()
-        const modifierStart = source.indexOf("-readonly", node.range[0])
+        const modifierStart = pipe(
+          source,
+          String.indexOf("-readonly"),
+          Option.map((index) => index + node.range[0]),
+          Option.getOrUndefined
+        )
 
-        if (modifierStart !== -1 && modifierStart < node.key.range[0]) {
+        if (modifierStart !== undefined && modifierStart < node.key.range[0]) {
           return fixer.replaceTextRange([modifierStart, modifierStart + "-readonly".length], "readonly")
         }
       }
 
-      const source = context.sourceCode.getText()
-      const braceIndex = source.indexOf("{", node.range[0])
+      const braceIndex = pipe(
+        source,
+        String.indexOf("{"),
+        Option.map((index) => index + node.range[0]),
+        Option.getOrUndefined
+      )
 
-      if (braceIndex !== -1 && braceIndex < node.key.range[0]) {
+      if (braceIndex !== undefined && braceIndex < node.key.range[0]) {
         return fixer.insertTextAfterRange([braceIndex, braceIndex + 1], " readonly")
       }
 

@@ -32,9 +32,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
-      - uses: alchemy-run/alchemy@main
+      - name: Deploy or destroy stage
+        if: ${{ github.event_name == 'pull_request' || github.ref_name == 'main' }}
         env:
+          ACTION: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && 'destroy' || 'deploy' }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
+          PULL_REQUEST: ${{ github.event_name == 'pull_request' && github.event.number || '' }}
+          STAGE: ${{ github.event_name == 'pull_request' && format('staging-{0}', github.event.number) || 'prod' }}
+        run: pnpm exec alchemy "$ACTION" --stage "$STAGE" --yes

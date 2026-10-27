@@ -23,7 +23,7 @@ export const traitIgnores = (text: string): ReadonlySet<string> => {
   const references = new Set<string>()
   for (const line of String.split(text, "\n")) {
     const trimmed = String.trim(line)
-    if (trimmed === "" || trimmed.startsWith("#!")) continue
+    if (trimmed === "" || pipe(trimmed, String.startsWith("#!"))) continue
     const comment = pipe(trimmed, decodeComment, Option.getOrUndefined)
     if (comment === undefined) break
     const directive = pipe(comment[1], String.trim, decodeDirective, Option.getOrUndefined)

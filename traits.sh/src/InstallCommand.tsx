@@ -8,7 +8,8 @@ const statusAtom = Atom.family((_compact: boolean) => Atom.make("Paste into your
 const copyAtom = Atom.family((compact: boolean) =>
   Atom.fn(
     Effect.fn("InstallCommand.copy")(function* (_event, ctx) {
-      const status = yield* Effect.promise(() => navigator.clipboard.writeText(setupPrompt)).pipe(
+      const prompt = setupPrompt(new URL("/SETUP.md", window.location.href).href)
+      const status = yield* Effect.promise(() => navigator.clipboard.writeText(prompt)).pipe(
         Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
       )
       ctx.set(statusAtom(compact), status)

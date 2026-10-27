@@ -85,7 +85,11 @@ for (const fixture of [
       const request = Effect.fn("test.McpRequest")(function* (id: number, method: string, params: unknown = {}) {
         yield* Queue.offer(requests, `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`)
         while (true) {
-          const line = yield* Queue.take(responses)
+          const line = yield* Queue.take(responses).pipe(
+            Effect.raceFirst(
+              child.exitCode.pipe(Effect.flatMap((code) => Effect.die(`MCP server exited before replying (${code})`)))
+            )
+          )
           const response = yield* pipe(
             line,
             S.decodeEffect(
@@ -137,7 +141,7 @@ for (const fixture of [
         if ("trait" in fixture) {
           // The tool text is a JSON document, so Windows path separators appear escaped.
           expect(result).toMatchObject({
-            content: [{ text: expect.stringContaining(JSON.stringify(traitPath).slice(1, -1)) }]
+            content: [{ text: expect.stringContaining(pipe(JSON.stringify(traitPath), String.slice(1, -1))) }]
           })
           expect(JSON.stringify(result)).toContain("TraitParseError")
           expect(JSON.stringify(result)).toContain("Ask the developer:")

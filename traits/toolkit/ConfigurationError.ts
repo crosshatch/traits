@@ -34,8 +34,14 @@ export const layer = (cause: Cause.Cause<unknown>) =>
     : McpServer.toolkit(toolkit).pipe(
         Layer.provide(
           toolkit.toLayer({
-            derive_trait: () => Effect.fail(`${Cause.pretty(cause)}\n\n${String.trim(derivationInstructions)}`),
-            check_traits: () => Effect.fail(`${Cause.pretty(cause)}\n\n${String.trim(reviewInstructions)}`)
+            derive_trait: () =>
+              Effect.fail(`${Cause.pretty(cause)}\n\n${String.trim(derivationInstructions)}`).pipe(
+                Effect.withSpan("DeriveTrait.derive", { root: true })
+              ),
+            check_traits: () =>
+              Effect.fail(`${Cause.pretty(cause)}\n\n${String.trim(reviewInstructions)}`).pipe(
+                Effect.withSpan("CheckTraits.check", { root: true })
+              )
           })
         )
       )

@@ -26,8 +26,11 @@ import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import * as TraitStore from "../TraitStore.ts"
+import { databaseDirectory } from "./fixtures/databaseDirectory.ts"
 
-const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16) =>
+const watchReady = Stream.make({ _tag: "Create", path: ".traits-watch-ready" } satisfies FileSystem.WatchEvent)
+
+const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency = 16, databaseFile?: string) =>
   TraitStore.layer.pipe(
     Layer.provide(
       Layer.effect(
@@ -57,7 +60,7 @@ const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency
         })
       )
     ),
-    Layer.provideMerge(TraitDatabase.layer),
+    Layer.provideMerge(databaseFile === undefined ? TraitDatabase.layer : TraitDatabase.layerFile(databaseFile)),
     Layer.provide(Reactivity.layer),
     Layer.provide(Layer.succeed(ProjectPaths, { projectRoot: dir, traitsDirectory: dir })),
     Layer.provide(
@@ -65,7 +68,9 @@ const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency
         FileSystem.FileSystem,
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem
-          return watchChanges ? fs : FileSystem.FileSystem.of({ ...fs, watch: () => Stream.never })
+          return watchChanges
+            ? fs
+            : FileSystem.FileSystem.of({ ...fs, watch: () => Stream.concat(watchReady, Stream.never) })
         })
       )
     )
@@ -78,6 +83,149 @@ const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: R
     Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
   )
 })
+
+it.effect(
+  "shares persistent storage with telemetry and preserves exports across index rebuilds",
+  Effect.fnUntraced(
+    function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const root = yield* databaseDirectory("traits-shared-storage-")
+      const directory = path.join(root, ".agents", "traits")
+      const databaseFile = path.join(root, ".agents", "traits", "traits.sqlite")
+      const payload = Buffer.from('{"resourceLogs":[]}')
+      yield* Effect.gen(function* () {
+        const db = yield* TraitDatabase.TraitDatabase
+        yield* db
+          .insert(T.runs)
+          .values({ id: "existing-run", sectionId: "worker", command: ["node"], cwd: root, startedAt: 1 })
+        yield* db
+          .insert(T.exports)
+          .values({ runId: "existing-run", signal: "logs", contentType: "application/json", receivedAt: 2, payload })
+        // Simulate the earlier telemetry-only database, which had no trait table.
+        yield* db.run(sql`DROP TABLE traits`)
+      }).pipe(Effect.provide(TraitDatabase.layerFile(databaseFile)))
+      const trait = Trait.Trait.make({
+        name: Trait.TraitName.make("shared-storage"),
+        subject: "Storage.",
+        requirement: "Keep telemetry during index rebuilds.",
+        purpose: "Preserve debugging history."
+      })
+      yield* fs.makeDirectory(directory, { recursive: true })
+      yield* fs.writeFileString(path.join(directory, "shared-storage.md"), Trait.serialize(trait))
+      yield* Effect.gen(function* () {
+        const store = yield* TraitStore.TraitStore
+        const db = yield* TraitDatabase.TraitDatabase
+        const indexed = yield* store.ls
+        expect(indexed).toEqual([trait])
+        const updated = Trait.Trait.make({ ...trait, requirement: "Updated requirement." })
+        yield* store.update(updated)
+        yield* store.refresh
+        const exports = yield* db.select().from(T.exports)
+        expect(exports).toHaveLength(1)
+        expect(Buffer.from(exports[0]!.payload)).toEqual(payload)
+      }).pipe(Effect.provide(layerStoreLibsql(directory, false, 16, databaseFile)))
+      yield* Effect.gen(function* () {
+        const db = yield* TraitDatabase.TraitDatabase
+        const indexed = yield* db.select().from(T.traits)
+        const runs = yield* db.select().from(T.runs)
+        const exports = yield* db.select().from(T.exports)
+        expect(indexed).toMatchObject([{ name: trait.name, requirement: "Updated requirement." }])
+        expect(runs).toMatchObject([{ id: "existing-run" }])
+        expect(exports).toHaveLength(1)
+      }).pipe(Effect.provide(TraitDatabase.layerFile(databaseFile)))
+    },
+    Effect.provide([NodeServices.layer, Reactivity.layer])
+  )
+)
+
+it.live(
+  "hydrates once after watcher readiness and includes changes made before registration",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-watch-startup-" })
+    const requested = yield* Deferred.make<void>()
+    const register = yield* Deferred.make<void>()
+    const trait = Trait.Trait.make({
+      name: Trait.TraitName.make("startup"),
+      subject: "Startup.",
+      requirement: "Original.",
+      purpose: "Synchronize once."
+    })
+    const file = path.join(dir, "startup.md")
+    yield* fs.writeFileString(file, Trait.serialize(trait))
+    let scans = 0
+    let reads = 0
+    const watched = FileSystem.FileSystem.of({
+      ...fs,
+      watch: (directory, options) =>
+        Stream.unwrap(
+          Effect.gen(function* () {
+            yield* Deferred.succeed(requested, undefined)
+            yield* Deferred.await(register)
+            return fs.watch(directory, options)
+          })
+        ),
+      readDirectory: (directory) => {
+        if (directory === dir) scans++
+        return fs.readDirectory(directory)
+      },
+      readFileString: (entry, encoding) => {
+        if (entry === file) reads++
+        return fs.readFileString(entry, encoding)
+      }
+    })
+    const opening = yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const initial = yield* store.ls
+      // Allow the trailing probe notification to pass through the debounce.
+      yield* Effect.sleep("100 millis")
+      const again = yield* store.ls
+      expect(again).toEqual(initial)
+      return initial
+    }).pipe(
+      Effect.provide(layerStoreLibsql(dir, true)),
+      Effect.provideService(FileSystem.FileSystem, watched),
+      Effect.forkChild
+    )
+    yield* Deferred.await(requested)
+    const edited = Trait.Trait.make({ ...trait, requirement: "Changed while watcher was offline." })
+    yield* fs.writeFileString(file, Trait.serialize(edited))
+    yield* Deferred.succeed(register, undefined)
+    const indexed = yield* Fiber.join(opening)
+    expect(indexed).toEqual([edited])
+    expect(scans).toBe(1)
+    expect(reads).toBe(1)
+  }, Effect.provide(NodeServices.layer))
+)
+
+it.live(
+  "falls back without hanging when a watcher never acknowledges readiness",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-watch-silent-" })
+    let closed = 0
+    const watched = FileSystem.FileSystem.of({
+      ...fs,
+      watch: () =>
+        Stream.never.pipe(
+          Stream.ensuring(
+            Effect.sync(() => {
+              closed++
+            })
+          )
+        )
+    })
+    yield* Effect.gen(function* () {
+      const store = yield* TraitStore.TraitStore
+      const rows = yield* store.ls
+      expect(rows).toEqual([])
+      expect(closed).toBe(1)
+    }).pipe(Effect.provide(layerStoreLibsql(dir, true)), Effect.provideService(FileSystem.FileSystem, watched))
+  }, Effect.provide(NodeServices.layer)),
+  { timeout: 10000 }
+)
 
 it.effect(
   "offers consent-based recovery with distinct schema and malformed-document diagnostics without writing",
@@ -177,7 +325,7 @@ it.effect(
       expect(Result.isFailure(collision)).toBe(true)
       if (Result.isFailure(collision)) {
         expect(collision.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
-        expect(collision.failure).toMatchObject({ name: initial.name })
+        expect(collision.failure).toMatchObject({ name: "TraitAlreadyExistsError", traitName: initial.name })
       }
       const afterCollision = yield* store.get(initial.name)
       expect(afterCollision).toEqual(updated)
@@ -201,7 +349,11 @@ it.effect(
       const missing = yield* store.get(initial.name).pipe(Effect.result)
       expect(Result.isFailure(missing)).toBe(true)
       if (Result.isFailure(missing))
-        expect(missing.failure).toMatchObject({ _tag: "TraitNotFoundError", name: initial.name })
+        expect(missing.failure).toMatchObject({
+          _tag: "TraitNotFoundError",
+          name: "TraitNotFoundError",
+          traitName: initial.name
+        })
       yield* store.rm([renamed.name])
       const remaining = yield* store.ls
       expect(remaining).toEqual([])
@@ -422,7 +574,8 @@ it.live(
               Effect.sync(() => {
                 delivered++
               })
-            )
+            ),
+            (stream) => Stream.concat(watchReady, stream)
           ),
         readFileString: (file, encoding) =>
           path.dirname(file) !== dir
@@ -506,7 +659,8 @@ it.live(
             Effect.sync(() => {
               delivered++
             })
-          )
+          ),
+          (stream) => Stream.concat(watchReady, stream)
         ),
       readDirectory: (directory) => {
         if (directory === dir) scans++

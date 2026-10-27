@@ -27,7 +27,7 @@ jobs:
       - run: pnpm exec vp check
       - run: pnpm build
 
-  # The published package accepts any Effect 4 release, so verify against the newest one too.
+  # Verify the newest Effect releases allowed by the published peer ranges.
   latest-effect:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -40,9 +40,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: |
-          sed -i -E 's/^(  ("@effect\/[a-z-]+"|effect)): 4\.0\.0$/\1: ^4.0.0/' pnpm-workspace.yaml
       - run: pnpm update -r effect "@effect/*"
+      # Updating dependencies can replace patched binaries without running prepare.
+      - run: pnpm run prepare
       - run: pnpm ls -r --depth 0 effect @effect/platform-node
       - run: pnpm exec vp check --no-fmt
       - run: pnpm test

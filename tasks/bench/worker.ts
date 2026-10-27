@@ -16,6 +16,7 @@ import {
   Schedule,
   Schema as S,
   Stream,
+  String,
   Semaphore,
   identity
 } from "effect"
@@ -64,7 +65,7 @@ const output = await Effect.runPromise(
     const trackedFs = FileSystem.FileSystem.of({
       ...fs,
       readFileString: (file, encoding) => {
-        if (file.startsWith(directory) && file.endsWith(".md")) io.reads++
+        if (pipe(file, String.startsWith(directory)) && pipe(file, String.endsWith(".md"))) io.reads++
         return fs.readFileString(file, encoding)
       },
       readDirectory: (file) => {
@@ -76,7 +77,7 @@ const output = await Effect.runPromise(
           Stream.tap((event) =>
             Effect.sync(() => {
               io.watchEvents++
-              if (event.path.endsWith(".md")) io.markdownEvents++
+              if (pipe(event.path, String.endsWith(".md"))) io.markdownEvents++
             })
           )
         )
@@ -167,7 +168,7 @@ const output = await Effect.runPromise(
     let sink = 0
     const matches = (trait: TraitTypes.Trait) =>
       Array.some([trait.name, trait.subject, trait.requirement, trait.purpose, trait.context ?? ""], (text) =>
-        text.includes(fixture.query)
+        pipe(text, String.includes(fixture.query))
       )
     const expectedMatches = pipe(
       fixture.records,

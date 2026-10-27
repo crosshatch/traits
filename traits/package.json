@@ -14,16 +14,19 @@
     "*.ts",
     "!vite.config.ts",
     "_util/**/*.ts",
+    "commands/**/*.ts",
     "skills/**/*.md",
     "tables/**/*.ts",
     "toolkit/**/*.ts",
+    "reflection/**/*.ts",
     "dist/package.json",
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
     "!dist/vite.config.*",
-    "!dist/integration/**"
+    "!dist/integration/**",
+    "!dist/test/**"
   ],
   "type": "module",
   "exports": {
@@ -33,6 +36,10 @@
     "./tables/*": null,
     "./*": "./*.ts",
     "./_util/*": null,
+    "./commands/*": null,
+    "./reflection/*": null,
+    "./mcp": null,
+    "./WorkspacePaths": null,
     "./index": null,
     "./ToolExecutionError": null,
     "./TraitDatabase": null,
@@ -48,6 +55,10 @@
       "./tables/*": null,
       "./*": "./dist/*.js",
       "./_util/*": null,
+      "./commands/*": null,
+      "./reflection/*": null,
+      "./mcp": null,
+      "./WorkspacePaths": null,
       "./index": null,
       "./ToolExecutionError": null,
       "./TraitDatabase": null,
@@ -69,7 +80,7 @@
     "effect": "catalog:"
   },
   "peerDependencies": {
-    "@effect/platform-node": "^4.0.0",
-    "effect": "^4.0.0"
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:"
   }
 }
