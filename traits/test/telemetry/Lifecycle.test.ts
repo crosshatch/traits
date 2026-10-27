@@ -37,7 +37,7 @@ it.effect.skipIf(process.platform === "win32")(
         expect(Array.some(logs, (row) => pipe(JSON.stringify(row.record), String.includes("shutdown log")))).toBe(true)
         const runs = yield* db.select().from(T.runs)
         expect(runs[0]!.endedAt).not.toBeNull()
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".agents", "traits", "traits.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )
@@ -92,8 +92,8 @@ it.effect(
         concurrency: 2
       })
       expect(codes).toEqual([0, 0])
-      const mainHasDatabase = yield* fs.exists(path.join(repository, ".reflection"))
-      const nestedHasDatabase = yield* fs.exists(path.join(nested, ".reflection"))
+      const mainHasDatabase = yield* fs.exists(path.join(repository, ".agents", "traits", "traits.sqlite"))
+      const nestedHasDatabase = yield* fs.exists(path.join(nested, ".agents", "traits", "traits.sqlite"))
       expect(mainHasDatabase).toBe(false)
       expect(nestedHasDatabase).toBe(false)
       yield* Effect.gen(function* () {
@@ -108,7 +108,7 @@ it.effect(
           .from(T.logs)
           .innerJoin(T.runs, eq(T.logs.runId, T.runs.id))
         expect(sections).toEqual(expect.arrayContaining([{ sectionId: "alpha" }, { sectionId: "beta" }]))
-      }).pipe(Effect.provide(Database.layerFile(path.join(worktree, ".reflection", "reflection.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(worktree, ".agents", "traits", "traits.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )
@@ -137,7 +137,7 @@ it.effect(
       expect(exitCode).not.toBe(0)
       expect(stdout).not.toContain("started")
     }
-    const created = yield* fs.exists(path.join(directory, ".reflection"))
+    const created = yield* fs.exists(path.join(directory, ".agents", "traits", "traits.sqlite"))
     expect(created).toBe(false)
   }, Effect.provide(NodeServices.layer))
 )
@@ -162,7 +162,7 @@ it.effect(
         const db = yield* Database.TraitDatabase
         const runs = yield* db.select().from(T.runs)
         expect(runs).toMatchObject([{ exitCode: 1, signal: null, endedAt: expect.any(Number) }])
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".agents", "traits", "traits.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )

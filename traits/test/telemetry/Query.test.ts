@@ -50,7 +50,7 @@ it.effect(
             scopeSchemaUrl: ""
           }
         ])
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".agents", "traits", "traits.sqlite"))))
       const result = yield* ReflectionClient.query(
         directory,
         "SELECT runs.sectionId, logs.timeUnixNano, json_extract(logs.record, '$.body.stringValue') AS message FROM logs JOIN runs ON logs.runId = runs.id WHERE severityNumber >= 17"

@@ -35,9 +35,16 @@ another lockfile, duplicate workspace dependencies, or silently upgrade an
 existing Effect version. Check the installed Traits package's peer requirements
 and ask before any compatibility migration.
 
-The Traits CLI includes worktree-local telemetry capture and inspection. Add
-`.reflection/` to the checkout's ignore rules; its SQLite file stores both the
-trait index and telemetry.
+The shared local database is `.agents/traits/traits.sqlite`. Create or update
+`.agents/traits/.gitignore`, preserving existing entries, to include:
+
+```gitignore
+traits.sqlite
+traits.sqlite-*
+```
+
+This ignores the database and SQLite sidecar files while keeping trait Markdown
+files version-controlled.
 
 ### 2. Ask about providers and models
 

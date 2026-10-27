@@ -92,7 +92,7 @@ it.effect(
       const path = yield* Path.Path
       const root = yield* databaseDirectory("traits-shared-storage-")
       const directory = path.join(root, ".agents", "traits")
-      const databaseFile = path.join(root, ".reflection", "reflection.sqlite")
+      const databaseFile = path.join(root, ".agents", "traits", "traits.sqlite")
       const payload = Buffer.from('{"resourceLogs":[]}')
       yield* Effect.gen(function* () {
         const db = yield* TraitDatabase.TraitDatabase

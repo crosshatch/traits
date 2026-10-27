@@ -1,4 +1,6 @@
 /* oxlint-disable effecttsgo/async-function */
+import { readFile } from "node:fs/promises"
+
 import { pipe, String } from "effect"
 import { createServer, defineConfig, type ViteDevServer } from "vite-plus"
 
@@ -7,6 +9,24 @@ let renderer: Promise<ViteDevServer> | undefined
 export default defineConfig({
   root: import.meta.dirname,
   plugins: [
+    {
+      name: "traits.sh:setup-guide",
+      configureServer(server) {
+        server.middlewares.use("/SETUP.md", (_request, response, next) => {
+          void readFile(new URL("../SETUP.md", import.meta.url), "utf8").then((source) => {
+            response.setHeader("Content-Type", "text/plain; charset=utf-8")
+            response.end(source)
+          }, next)
+        })
+      },
+      async generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "SETUP.md",
+          source: await readFile(new URL("../SETUP.md", import.meta.url), "utf8")
+        })
+      }
+    },
     {
       name: "traits.sh:prerender",
       configureServer(server) {

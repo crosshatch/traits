@@ -11,4 +11,3 @@ test-results/
 playwright-report/
 .vitest/
 .worktrees/
-.reflection/

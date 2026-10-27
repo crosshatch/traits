@@ -90,7 +90,7 @@ it.effect(
             attributes: [{ key: "integer", value: { intValue: "9223372036854775807" } }]
           }
         })
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, "reflection.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, "traits.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer, FetchHttpClient.layer])
   )
@@ -161,7 +161,7 @@ it.effect(
           arrayValue: { values: [{ stringValue: "fixture log" }, { stringValue: '{"answer":42}' }] }
         })
         expect(spans).toMatchObject([{ name: "fixture span" }])
-      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".reflection", "reflection.sqlite"))))
+      }).pipe(Effect.provide(Database.layerFile(path.join(directory, ".agents", "traits", "traits.sqlite"))))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer, FetchHttpClient.layer])
   )
