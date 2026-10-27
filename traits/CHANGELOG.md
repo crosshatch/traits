@@ -1,5 +1,111 @@
 # traits
 
+## 0.5.11
+
+### Patch Changes
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Store the shared trait index and reflection data at
+  `.agents/traits/traits.sqlite`. Document a colocated `.gitignore` for the
+  database and SQLite sidecar files.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Consolidate shared MCP workflow instructions and shorten tool descriptions and
+  the agent skill. Preserve approval, scope, remediation, and recovery guidance
+  while removing duplicated prose and internal implementation details.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Hydrate the trait index after watcher readiness to avoid a duplicate startup
+  scan. Cache exact unchanged evaluations with bounded capacity and expiry, and
+  isolate each tool invocation in its own root trace.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Return compact, file-grouped check reports with shared trait definitions,
+  source chunks, and full-file snapshot revisions. The check_traits success
+  response is now { traits, files } instead of a flat evaluation array.
+  Assessments and review coverage are preserved; the raw TraitEvaluation API
+  remains unchanged.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Run the default Traits MCP server directly in the CLI process. Scope the local
+  collector outside the server and exporters so shutdown flushes telemetry
+  before closing the collector. Keep external-command execution on `traits run`.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Simplify local telemetry to JSON-only OTLP ingestion and individual span/log
+  rows with complete record and resource/scope JSON. Replace inspection filters
+  with the reflection MCP SQL query tool, returning JSON rows. Remove protobuf
+  decoding and descriptor generation. Retain legacy export batches without
+  migrating them.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Update workspace dependencies with compatible version ranges, including Effect
+  4.0.6 and the latest Drizzle release candidates. Adapt error schemas and
+  tooling to the updated Effect checks, preserving existing error payloads.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Add telemetry subcommands to the traits CLI to collect child-process OTLP
+  traces and logs in a worktree-local SQLite database, with a required section
+  ID for grouping script runs and SQL queries for listing, searching, and
+  filtering stored telemetry.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Name the local telemetry API reflection, with implementation under
+  `traits/reflection/` and shared storage at `.agents/traits/traits.sqlite`.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Replace the SQL query CLI command with `traits reflection`, a separate stdio
+  MCP server exposing only the query tool. It accepts SQL and returns JSON rows
+  from the worktree database without loading trait model configuration.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Simplify command execution using Effect's scoped process spawner. Preserve
+  normal child exit codes and keep the collector alive during child cleanup.
+  Interruption uses standard SIGTERM process-group cleanup instead of exact
+  signal forwarding and re-emission. Inline run implementation into its CLI
+  command.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Rename the identifier payload field on TraitNotFoundError and
+  TraitAlreadyExistsError from name to traitName, preserving Error.name for the
+  error type. Consumers of these error payloads should read traitName instead.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Launch the Traits MCP server with reflection for worktree-local traces and
+  logs, and document CLI inspection for bottlenecks and errors.
+
+  Use standard OTEL environment configuration instead of the custom OTLP
+  endpoint flag.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Bundle telemetry ingestion and inspection into the traits package and CLI.
+  Bare traits starts the instrumented MCP server; run and reflection handle
+  telemetry without loading model configuration. Use one worktree-local SQLite
+  database and complete Drizzle schema for trait definitions, runs, spans, and
+  logs, preserving existing telemetry at its current path. Consolidate telemetry
+  tests into the Traits suite and remove the standalone telemetry package.
+
+- [#91](https://github.com/crosshatch/traits/pull/91)
+  [`e6d6034`](https://github.com/crosshatch/traits/commit/e6d603480cfe3d892e4eab8edbe976998f98d9df) -
+  Launch package-manager command shims through cmd.exe on Windows. Inline OTLP
+  record ingestion into the receiver. Improve cross-platform test shutdown,
+  startup-failure diagnostics, and temporary libSQL database cleanup, and
+  reapply Effect tooling patches in the latest-dependency CI job.
+
 ## 0.5.10
 
 ### Patch Changes
