@@ -143,6 +143,3 @@ follow [SETUP.md](https://github.com/crosshatch/traits/blob/main/SETUP.md).
 Preserve the consumer's package-manager and workspace conventions, ask about
 providers/models, and do not overwrite existing configuration. Report blocked
 setup accurately; do not create a trait merely to test installation.
-
-For debugging, use the reflection MCP server when available and follow its query
-instructions.
