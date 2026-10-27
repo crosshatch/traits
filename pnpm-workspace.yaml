@@ -1,5 +1,6 @@
 packages:
   - traits
+  - traits-next
   - traits.sh
 
 allowBuilds:
