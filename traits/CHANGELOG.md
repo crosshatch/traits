@@ -1,5 +1,14 @@
 # traits
 
+## 0.5.12
+
+### Patch Changes
+
+- [#94](https://github.com/crosshatch/traits/pull/94)
+  [`dd98ae1`](https://github.com/crosshatch/traits/commit/dd98ae13e4e65cc28f6611e8377ed4626691c35b) -
+  Stop configuring and recommending the optional reflection MCP server during
+  standard Traits setup.
+
 ## 0.5.11
 
 ### Patch Changes
