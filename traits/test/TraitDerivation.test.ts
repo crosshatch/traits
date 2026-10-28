@@ -115,6 +115,41 @@ const harness = Effect.fn("test.harness")(function* (options: {
 })
 
 it.effect(
+  "retains independent pending proposals while invalidating assessments after a save",
+  Effect.fnUntraced(function* () {
+    const first = Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("first-pending") })
+    const second = Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("second-pending") })
+    for (const proposals of [
+      [first, second],
+      [second, first]
+    ] as const) {
+      const test = yield* harness({
+        relationships: { [name]: "distinct", [first.name]: "distinct", [second.name]: "distinct" }
+      })
+      for (const proposal of proposals) {
+        const result = yield* derive({ proposedTrait: proposal }).pipe(Effect.provide(test.layer))
+        expect(result._tag).toBe("ApprovalRequired")
+      }
+      const comparisons = test.comparisons.length
+      const saved = yield* derive({ proposedTrait: proposals[0], approved: true }).pipe(Effect.provide(test.layer))
+      expect(saved._tag).toBe("Created")
+      expect(test.comparisons).toHaveLength(comparisons)
+
+      const stale = yield* derive({ proposedTrait: proposals[1], approved: true }).pipe(Effect.provide(test.layer))
+      expect(stale._tag).toBe("ApprovalRequired")
+      expect(test.mutations).toEqual(["add"])
+      const refreshed = test.comparisons.length
+      expect(refreshed).toBeGreaterThan(comparisons)
+
+      const next = yield* derive({ proposedTrait: proposals[1], approved: true }).pipe(Effect.provide(test.layer))
+      expect(next._tag).toBe("Created")
+      expect(test.comparisons).toHaveLength(refreshed)
+      expect(test.mutations).toEqual(["add", "add"])
+    }
+  })
+)
+
+it.effect(
   "reassesses changed approval inputs and requires fresh consent without writing",
   Effect.fn("test.TraitDerivation.staleApproval")(function* () {
     for (const change of ["proposal", "store"] as const) {

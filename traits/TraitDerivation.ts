@@ -43,7 +43,7 @@ type PendingAssessment = {
   readonly results: ReadonlyArray<TraitConflict>
 }
 
-const pendingAssessments = new WeakMap<TraitStore["Service"], PendingAssessment>()
+const pendingAssessments = new WeakMap<TraitStore["Service"], Map<Trait.TraitName, PendingAssessment>>()
 const snapshot = (traits: ReadonlyArray<Trait.Trait>) => pipe(traits, Array.map(Trait.serialize), JSON.stringify)
 
 const requestApproval = Effect.fn("TraitDerivation.requestApproval")(function* (options: {
@@ -70,7 +70,9 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
   const traits = yield* store.ls
   const proposal = Trait.serialize(params.proposedTrait)
   const revision = snapshot(traits)
-  const pending = pendingAssessments.get(store)
+  const pendingByName = pendingAssessments.get(store) ?? new Map<Trait.TraitName, PendingAssessment>()
+  pendingAssessments.set(store, pendingByName)
+  const pending = pendingByName.get(params.proposedTrait.name)
   const reusable = params.approved === true && pending?.proposal === proposal && pending.snapshot === revision
   const results = reusable
     ? pending.results
@@ -84,9 +86,9 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
     results
   )
   if (TraitDerivation.guards.ApprovalRequired(result)) {
-    pendingAssessments.set(store, { proposal, snapshot: revision, results })
-  } else if (pendingAssessments.get(store) === pending) {
-    pendingAssessments.delete(store)
+    pendingByName.set(params.proposedTrait.name, { proposal, snapshot: revision, results })
+  } else if (pendingByName.get(params.proposedTrait.name) === pending) {
+    pendingByName.delete(params.proposedTrait.name)
   }
   return result
 })
