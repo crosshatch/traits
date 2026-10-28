@@ -1,5 +1,16 @@
 # traits
 
+## 0.5.14
+
+### Patch Changes
+
+- [#99](https://github.com/crosshatch/traits/pull/99)
+  [`ecce011`](https://github.com/crosshatch/traits/commit/ecce0114e28f29e5a53ab72a83b427c33539ddec) -
+  Preserve approval for unchanged trait actions after unrelated store changes.
+  Reassess relationships before saving and request fresh consent only when the
+  proposal or displayed action changes. Serialize derivations per store so
+  concurrently approved independent proposals can all be saved.
+
 ## 0.5.13
 
 ### Patch Changes
