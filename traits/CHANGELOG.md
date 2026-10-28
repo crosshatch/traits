@@ -1,5 +1,15 @@
 # traits
 
+## 0.5.13
+
+### Patch Changes
+
+- [#97](https://github.com/crosshatch/traits/pull/97)
+  [`dd0c930`](https://github.com/crosshatch/traits/commit/dd0c930a58f0d168251e0b76fab7c428f9749aab) -
+  Preserve independent pending trait proposals so approving one does not
+  invalidate another merely because it was proposed later. Continue requiring
+  fresh approval when the proposal or trait store changes.
+
 ## 0.5.12
 
 ### Patch Changes
