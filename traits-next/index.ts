@@ -1,1 +1,12 @@
-export {}
+export * as Trait from "./Trait.ts"
+export * as TraitAssertion from "./TraitAssertion.ts"
+export * as TraitBody from "./TraitBody.ts"
+export * as TraitEnrichment from "./TraitEnrichment.ts"
+export * as TraitEnrichmentContext from "./TraitEnrichmentContext.ts"
+export * as TraitEnrichmentError from "./TraitEnrichmentError.ts"
+export * as TraitEnrichmentModule from "./TraitEnrichmentModule.ts"
+export * as TraitEnrichmentModules from "./TraitEnrichmentModules.ts"
+export * as TraitInput from "./TraitInput.ts"
+export * as TraitName from "./TraitName.ts"
+export * as TraitPurpose from "./TraitPurpose.ts"
+export * as TraitSubject from "./TraitSubject.ts"
