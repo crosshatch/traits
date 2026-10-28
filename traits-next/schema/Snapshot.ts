@@ -7,6 +7,6 @@ export type Snapshot = typeof Snapshot.Type
 export const Snapshot = S.Struct({
   /** The current file path, or its last path before deletion. */
   path: S.NonEmptyString,
-  /** The change kind and its complete text versions. */
+  /** The change kind and its complete content versions. */
   change: SnapshotChange
 })
