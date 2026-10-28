@@ -1,4 +1,4 @@
-import { Array, Effect, pipe, Schema as S, String } from "effect"
+import { Array, Effect, pipe, Schema as S, Semaphore, String } from "effect"
 import { LanguageModel } from "effect/ai"
 
 import * as Approval from "./_util/Approval.ts"
@@ -41,18 +41,27 @@ type PendingAssessment = {
   readonly proposal: string
   readonly snapshot: string
   readonly results: ReadonlyArray<TraitConflict>
+  readonly message: string
 }
 
 const pendingAssessments = new WeakMap<TraitStore["Service"], Map<Trait.TraitName, PendingAssessment>>()
+const derivationLocks = new WeakMap<TraitStore["Service"], Semaphore.Semaphore>()
 const snapshot = (traits: ReadonlyArray<Trait.Trait>) => pipe(traits, Array.map(Trait.serialize), JSON.stringify)
 
 const requestApproval = Effect.fn("TraitDerivation.requestApproval")(function* (options: {
   readonly message: string
   readonly approved?: boolean | undefined
   readonly snapshot: string
+  readonly approvedMessage?: string | undefined
 }) {
   const store = yield* TraitStore
-  const approval = yield* Approval.request(options)
+  const approval = yield* Approval.request({
+    message: options.message,
+    approved:
+      options.approvedMessage !== undefined && options.approvedMessage !== options.message
+        ? undefined
+        : options.approved
+  })
   if (Approval.Approval.guards.Approved(approval)) {
     const current = yield* store.ls
     if (snapshot(current) !== options.snapshot) {
@@ -67,6 +76,13 @@ const requestApproval = Effect.fn("TraitDerivation.requestApproval")(function* (
 
 export const derive = Effect.fn("TraitDerivation.derive")(function* (params: DeriveParams) {
   const store = yield* TraitStore
+  const lock = derivationLocks.get(store) ?? Semaphore.makeUnsafe(1)
+  derivationLocks.set(store, lock)
+  return yield* deriveLocked(params).pipe(lock.withPermits(1))
+})
+
+const deriveLocked = Effect.fn("TraitDerivation.deriveLocked")(function* (params: DeriveParams) {
+  const store = yield* TraitStore
   const traits = yield* store.ls
   const proposal = Trait.serialize(params.proposedTrait)
   const revision = snapshot(traits)
@@ -80,13 +96,15 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
   const result = yield* deriveAssessed(
     {
       ...params,
-      approved: params.approved === true && pending !== undefined && !reusable ? undefined : params.approved
+      approved:
+        params.approved === true && pending !== undefined && pending.proposal !== proposal ? undefined : params.approved
     },
     traits,
-    results
+    results,
+    pending?.message
   )
   if (TraitDerivation.guards.ApprovalRequired(result)) {
-    pendingByName.set(params.proposedTrait.name, { proposal, snapshot: revision, results })
+    pendingByName.set(params.proposedTrait.name, { proposal, snapshot: revision, results, message: result.message })
   } else if (pendingByName.get(params.proposedTrait.name) === pending) {
     pendingByName.delete(params.proposedTrait.name)
   }
@@ -96,7 +114,8 @@ export const derive = Effect.fn("TraitDerivation.derive")(function* (params: Der
 const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
   params: DeriveParams,
   traits: ReadonlyArray<Trait.Trait>,
-  results: ReadonlyArray<TraitConflict>
+  results: ReadonlyArray<TraitConflict>,
+  approvedMessage?: string
 ) {
   const store = yield* TraitStore
   const { proposedTrait } = params
@@ -110,7 +129,8 @@ const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
       traits: Array.map(failures, (failure) => failure.existing),
       proposal: proposedTrait,
       snapshot: snapshot(traits),
-      approved: params.approved
+      approved: params.approved,
+      approvedMessage
     })
   }
   const clarifications = Array.filter(results, TraitConflict.guards.Clarification)
@@ -142,7 +162,8 @@ const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
         ],
         "\n\n"
       ),
-      approved: params.approved
+      approved: params.approved,
+      approvedMessage
     })
     if (!Approval.Approval.guards.Approved(approval)) return approval
     yield* store.update(trait)
@@ -154,7 +175,8 @@ const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
   const approval = yield* requestApproval({
     snapshot: snapshot(traits),
     message: `Save trait ${proposedTrait.name}?\n\n${Trait.serialize(proposedTrait)}`,
-    approved: params.approved
+    approved: params.approved,
+    approvedMessage
   })
   if (!Approval.Approval.guards.Approved(approval)) return approval
   const trait = yield* store.add(proposedTrait)
@@ -166,6 +188,7 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
   readonly proposal: Trait.Trait
   readonly snapshot: string
   readonly approved?: boolean | undefined
+  readonly approvedMessage?: string | undefined
 }) {
   const store = yield* TraitStore
   const approval = yield* requestApproval({
@@ -182,7 +205,8 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
       ],
       "\n\n"
     ),
-    approved: options.approved
+    approved: options.approved,
+    approvedMessage: options.approvedMessage
   })
   if (!Approval.Approval.guards.Approved(approval)) return approval
   const documents = Array.map(options.traits, Trait.serialize)
