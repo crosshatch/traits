@@ -1,0 +1,5 @@
+export type { TraitEnrichment, TraitEnrichmentServices } from "./TraitEnrichment.ts"
+export { TraitEnrichmentContext } from "./TraitEnrichmentContext.ts"
+export { TraitEnrichmentError, TraitEnrichmentErrorReason } from "./TraitEnrichmentError.ts"
+export { TraitEnrichmentModule } from "./TraitEnrichmentModule.ts"
+export { TraitEnrichmentModules } from "./TraitEnrichmentModules.ts"
