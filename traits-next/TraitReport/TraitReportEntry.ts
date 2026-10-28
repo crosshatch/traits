@@ -7,5 +7,6 @@ export type TraitReportEntry = typeof TraitReportEntry.Type
 export const TraitReportEntry = S.Struct({
   /** The shared static definition, included once for this trait. */
   trait: Trait,
+  /** Input locations, enrichments, and decisions associated with this trait. */
   inputs: S.Array(TraitInputReport)
 })

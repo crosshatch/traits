@@ -8,8 +8,10 @@ export const TraitInputLocation = S.Struct({
   snapshot: S.Literals(["current", "previous"]),
   /** Zero-based UTF-16 offsets with an exclusive end; omitted for the whole snapshot. */
   range: S.Struct({
-    start: S.Int.check(S.isGreaterThanOrEqualTo(0)),
-    end: S.Int.check(S.isGreaterThanOrEqualTo(0))
+    /** Inclusive starting offset. */
+    start: S.Natural,
+    /** Exclusive ending offset. */
+    end: S.Natural
   })
     .check(
       S.makeFilter((range) => range.end >= range.start, {
