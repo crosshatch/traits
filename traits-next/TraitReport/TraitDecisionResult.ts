@@ -1,6 +1,8 @@
 import { Schema as S } from "effect"
 import { DecisionModel, Response } from "effect/ai"
 
+import { Probability } from "../schema/index.ts"
+
 export type TraitDecisionResult = typeof TraitDecisionResult.Type
 export const TraitDecisionResult = S.Struct({
   /** The single assertion assessment returned by the decision model. */
@@ -12,16 +14,16 @@ export const TraitDecisionResult = S.Struct({
       /** Model-reported probabilities for each classification. */
       probabilities: S.Struct({
         /** Probability that the input satisfies the assertion. */
-        compliant: S.Finite.check(S.isBetween({ minimum: 0, maximum: 1 })),
+        compliant: Probability,
         /** Probability that the input violates the assertion. */
-        violation: S.Finite.check(S.isBetween({ minimum: 0, maximum: 1 })),
+        violation: Probability,
         /** Probability that the trait does not apply to the input. */
-        "not-applicable": S.Finite.check(S.isBetween({ minimum: 0, maximum: 1 })),
+        "not-applicable": Probability,
         /** Probability that the available evidence is insufficient for assessment. */
-        inconclusive: S.Finite.check(S.isBetween({ minimum: 0, maximum: 1 }))
+        inconclusive: Probability
       }),
       /** Optional provider-defined confidence, not a calibrated guarantee. */
-      confidence: S.Finite.check(S.isBetween({ minimum: 0, maximum: 1 })).pipe(S.optionalKey)
+      confidence: Probability.pipe(S.optionalKey)
     })
   }),
   /** Provider-reported token usage. */
