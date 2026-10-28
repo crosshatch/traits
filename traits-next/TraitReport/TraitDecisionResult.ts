@@ -3,6 +3,7 @@ import { DecisionModel, Response } from "effect/ai"
 
 import { Probability } from "../schema/index.ts"
 
+/** A complete Effect AI assertion classification response, including usage and metadata. */
 export type TraitDecisionResult = typeof TraitDecisionResult.Type
 export const TraitDecisionResult = S.Struct({
   /** The single assertion assessment returned by the decision model. */

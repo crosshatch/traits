@@ -4,6 +4,7 @@ import { SnapshotChangeLocation } from "../schema/index.ts"
 import { TraitDecisionResult } from "./TraitDecisionResult.ts"
 import { TraitReportEnrichment } from "./TraitReportEnrichment.ts"
 
+/** One input location's enrichments and optional assertion decision. */
 export type TraitInputReport = typeof TraitInputReport.Type
 export const TraitInputReport = S.Struct({
   /** The input snapshot or region assessed against the trait. */
