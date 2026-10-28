@@ -1,9 +1,12 @@
 import { Schema as S } from "effect"
 
+import { SnapshotChange } from "./SnapshotChange.ts"
+
+/** A file's path and complete creation, update, or deletion contents. */
 export type Snapshot = typeof Snapshot.Type
 export const Snapshot = S.Struct({
-  /** The file path at this snapshot, which may differ across a rename. */
+  /** The current file path, or its last path before deletion. */
   path: S.NonEmptyString,
-  /** The complete text of this snapshot. */
-  text: S.String
+  /** The change kind and its complete text versions. */
+  change: SnapshotChange
 })

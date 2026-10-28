@@ -1,5 +1,6 @@
 import { Data } from "effect"
 
+/** The scope of execution an enrichment requests to skip or halt. */
 export type TraitEnrichmentErrorReason = Data.TaggedEnum<{
   /** Skip only the current enrichment. */
   Enrichment: {}

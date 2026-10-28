@@ -7,6 +7,7 @@ import { TraitName } from "./TraitName.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
 
+/** A trait's static definition and optional enrichment module references. */
 export type Trait = typeof Trait.Type
 export const Trait = S.Struct({
   name: TraitName,

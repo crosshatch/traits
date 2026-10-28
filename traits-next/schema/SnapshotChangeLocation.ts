@@ -2,6 +2,7 @@ import { Schema as S } from "effect"
 
 import { InputRange } from "./InputRange.ts"
 
+/** A whole-file or ranged location in either side of a snapshot change. */
 export type SnapshotChangeLocation = typeof SnapshotChangeLocation.Type
 export const SnapshotChangeLocation = S.Struct({
   /** The path in the referenced snapshot. */

@@ -1,5 +1,6 @@
 import { Schema as S } from "effect"
 
+/** A descriptive kebab-case trait name without a redundant trait- prefix. */
 export type TraitName = typeof TraitName.Type
 export const TraitName = S.NonEmptyString.check(
   S.isTrimmed(),
