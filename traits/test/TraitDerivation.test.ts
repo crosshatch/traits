@@ -115,7 +115,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
 })
 
 it.effect(
-  "retains independent pending proposals while invalidating assessments after a save",
+  "preserves approved actions while reassessing after an unrelated save",
   Effect.fnUntraced(function* () {
     const first = Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("first-pending") })
     const second = Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("second-pending") })
@@ -135,16 +135,64 @@ it.effect(
       expect(saved._tag).toBe("Created")
       expect(test.comparisons).toHaveLength(comparisons)
 
-      const stale = yield* derive({ proposedTrait: proposals[1], approved: true }).pipe(Effect.provide(test.layer))
-      expect(stale._tag).toBe("ApprovalRequired")
-      expect(test.mutations).toEqual(["add"])
-      const refreshed = test.comparisons.length
-      expect(refreshed).toBeGreaterThan(comparisons)
-
       const next = yield* derive({ proposedTrait: proposals[1], approved: true }).pipe(Effect.provide(test.layer))
       expect(next._tag).toBe("Created")
-      expect(test.comparisons).toHaveLength(refreshed)
+      expect(test.comparisons.length).toBeGreaterThan(comparisons)
       expect(test.mutations).toEqual(["add", "add"])
+    }
+  })
+)
+
+it.effect(
+  "saves concurrently approved proposals without re-prompting",
+  Effect.fnUntraced(function* () {
+    const proposals = Array.makeBy(4, (index) =>
+      Trait.Trait.make({
+        ...proposedTrait,
+        name: Trait.TraitName.make(`concurrent-${index}`)
+      })
+    )
+    const relationships = pipe(
+      proposals,
+      Array.map((proposal) => [proposal.name, "distinct"] as const),
+      Record.fromEntries
+    )
+    const test = yield* harness({ relationships: { ...relationships, [name]: "distinct" } })
+    const pending = yield* Effect.forEach(
+      proposals,
+      Effect.fnUntraced(function* (proposal) {
+        return yield* derive({ proposedTrait: proposal })
+      }),
+      { concurrency: "unbounded" }
+    ).pipe(Effect.provide(test.layer))
+    expect(Array.map(pending, (result) => result._tag)).toEqual(Array.makeBy(4, () => "ApprovalRequired"))
+    const saved = yield* Effect.forEach(
+      proposals,
+      Effect.fnUntraced(function* (proposal) {
+        return yield* derive({ proposedTrait: proposal, approved: true })
+      }),
+      { concurrency: "unbounded" }
+    ).pipe(Effect.provide(test.layer))
+    expect(Array.map(saved, (result) => result._tag)).toEqual(Array.makeBy(4, () => "Created"))
+    expect(test.mutations).toEqual(Array.makeBy(4, () => "add"))
+  })
+)
+
+it.effect(
+  "requires new consent when reassessment changes a creation into an update or reconciliation",
+  Effect.fnUntraced(function* () {
+    for (const relationship of ["clarification", "conflict"] as const) {
+      const relationships: Record<Trait.TraitName, "distinct" | "clarification" | "conflict"> = { [name]: "distinct" }
+      const test = yield* harness({ relationships })
+      const proposal = Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("new-proposal") })
+      const pending = yield* derive({ proposedTrait: proposal }).pipe(Effect.provide(test.layer))
+      expect(pending._tag).toBe("ApprovalRequired")
+      test.stored.set(name, Trait.Trait.make({ ...original, context: "Changed target." }))
+      relationships[name] = relationship
+      const changed = yield* derive({ proposedTrait: proposal, approved: true }).pipe(Effect.provide(test.layer))
+      expect(changed._tag).toBe("ApprovalRequired")
+      expect(test.mutations).toEqual([])
+      expect(test.requests).toEqual([])
     }
   })
 )
