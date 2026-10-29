@@ -8,6 +8,10 @@ import { TraitsContext } from "./TraitsContext.ts"
 
 export type TraitsConfig = typeof TraitsConfig.Encoded
 export const TraitsConfig = S.Struct({
+  checkForUpdates: S.Boolean.pipe(S.optional, S.withDecodingDefault(Effect.succeed(true))).annotate({
+    description:
+      "Check npm for Traits updates and request a server-and-skill update decision. Disabled for source development runs."
+  }),
   decisionConcurrency: S.Union([S.Int.check(S.isGreaterThan(0)), S.Literal("unbounded")])
     .pipe(S.withDecodingDefault(Effect.succeed(4)))
     .annotate({

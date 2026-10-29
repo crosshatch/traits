@@ -9,10 +9,7 @@ export const Approval = S.TaggedUnion({
   Declined: {}
 })
 
-export const request = Effect.fn("Approval.request")(function* (options: {
-  readonly message: string
-  readonly approved?: boolean | undefined
-}) {
+export const formClient = Effect.gen(function* () {
   const client = yield* Effect.serviceOption(McpSchema.McpServerClient).pipe(Effect.map(Option.getOrUndefined))
   const supportsForm =
     client !== undefined &&
@@ -24,7 +21,15 @@ export const request = Effect.fn("Approval.request")(function* (options: {
     (String.toLowerCase(client.clientInfo.name) === "opencode" ||
       typeof client.requestMetadata?.["ai.opencode/sessionID"] === "string")
 
-  if (client === undefined || !supportsForm || globalForms) {
+  return client !== undefined && supportsForm && !globalForms ? client : undefined
+})
+
+export const request = Effect.fn("Approval.request")(function* (options: {
+  readonly message: string
+  readonly approved?: boolean | undefined
+}) {
+  const client = yield* formClient
+  if (client === undefined) {
     return options.approved === true
       ? Approval.cases.Approved.make({})
       : Approval.cases.ApprovalRequired.make({ message: options.message })

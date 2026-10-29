@@ -11,6 +11,7 @@ import * as Evaluation from "../TraitEvaluation.ts"
 import { excludeIgnored } from "../traitIgnores.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore } from "../TraitStore.ts"
+import * as Updates from "../Updates.ts"
 
 export const CheckTraits = Tool.make("check_traits", {
   description: String.stripMargin(`
@@ -21,6 +22,7 @@ export const CheckTraits = Tool.make("check_traits", {
   | files: [] means no findings for the selection, not repository-wide compliance. Empty selections or stores perform no assessments. Inconclusive is unresolved context, not a confirmed violation; probabilities are not calibrated guarantees.
   `),
   parameters: S.Struct({
+    updateDecision: Updates.Decision.pipe(S.optional),
     include: S.Array(S.String).annotate({
       description:
         "Project-owned source, configuration, or documentation paths/globs, absolute or relative to the MCP working directory."
@@ -34,10 +36,11 @@ export const CheckTraits = Tool.make("check_traits", {
         "Optional unique trait names for a focused review. Omit for all stored traits; an empty array selects none."
     })
   }),
-  success: CheckReport.CheckReport,
+  success: S.Union([CheckReport.CheckReport, Updates.Notice]),
   failure: ToolExecutionError.ToolExecutionError,
   failureMode: "return",
   dependencies: [
+    Updates.Updates,
     DecisionModel.DecisionModel,
     TraitStore,
     FileSystem.FileSystem,
@@ -58,6 +61,9 @@ export const layer = toolkit.toLayer(
     const evaluateCachedTraits = yield* Evaluation.makeCached
     return {
       check_traits: Effect.fn("CheckTraits.check", { root: true })(function* (params) {
+        const updates = yield* Updates.Updates
+        const notice = yield* updates.gate(params.updateDecision)
+        if (notice !== undefined) return notice
         const store = yield* TraitStore
         const context = yield* TraitsContext
         const fs = yield* FileSystem.FileSystem

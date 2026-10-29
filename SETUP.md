@@ -157,6 +157,50 @@ Do not create a trait merely to test installation.
 
 ## Troubleshooting
 
+### Updating Traits and its skill
+
+Published server builds check npm's `latest` release in the background, with a
+two-second timeout and a 24-hour in-process cache. Offline checks do not prevent
+tool use. Source development runs skip the check. Set `checkForUpdates: false`
+in `traits.ts` to disable it.
+
+The next tool call offers **Update now / Later / Skip this version**, using a
+native MCP form when supported and an agent-presented question otherwise. Until
+answered, the operation returns `UpdateAvailable` without running. Later defers
+prompts for 24 hours; Skip suppresses that version for the server session. These
+decisions and the cache reset when the server restarts. `UpdateApproved` means
+approval, not installation success. If an approved update cannot proceed, the
+user can choose Later and the agent can retry with that `updateDecision` to
+resume normal work.
+
+After approval, wait for active Traits calls to finish. Run the installed CLI in
+a separate process from the package that declares Traits, using its owning
+package manager and every active skill destination. For example, with npm
+(replace the version with the approved `latestVersion`):
+
+```sh
+npx --no-install traits update --target 0.5.15 --manager npm .claude/skills/traits/SKILL.md
+```
+
+`traits update` supports local npm, pnpm, and modern Yarn dependencies with
+ordinary stable version specifiers and a `node_modules` install layout. It
+preserves the dependency section and range style, installs the exact approved
+version, checks skill snapshots before installing, synchronizes unmodified
+snapshots, and verifies dependency-linked skills against the updated package.
+Customized or stale snapshots require reconciliation first. Installation and
+skill writes are not one transaction: if a step fails, inspect the reported
+state before retrying. All active skill paths must be supplied explicitly; the
+updater does not discover other agents' installations.
+
+For global, package-runner, workspace/catalog, or other installations, use the
+owning installation mechanism, then synchronize the skill from that exact
+release's `skills/traits/SKILL.md`. Never update only the server.
+
+Wait for active calls to finish, then reconnect using the MCP host. The CLI does
+not kill or restart the running server. Verify `serverInfo.version` and the
+installed skill contents. A cached skill may require a host reload or a new
+conversation independently of the server restart.
+
 ### Dependency-linked skills
 
 With pnpm 12.11+, install Traits using the project's conventions, then use

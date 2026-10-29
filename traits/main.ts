@@ -7,12 +7,13 @@ import { Reactivity } from "effect/reactivity"
 import * as Mcp from "./commands/mcp.ts"
 import { reflection } from "./commands/reflection.ts"
 import * as Run from "./commands/run.ts"
+import * as Update from "./commands/update.ts"
 import PackageJson from "./package.json" with { type: "json" }
 
 Command.make("traits").pipe(
   Command.withDescription("Run the Traits MCP server or inspect worktree telemetry"),
   Command.withHandler(() => Mcp.serve),
-  Command.withSubcommands([Mcp.mcp, Run.run, reflection]),
+  Command.withSubcommands([Mcp.mcp, Run.run, reflection, Update.update]),
   Command.run({ version: PackageJson.version }),
   Effect.provide([NodeServices.layer, Reactivity.layer, Logger.layer([Logger.withConsoleError(Logger.formatSimple)])]),
   Effect.tapCause((cause) =>
