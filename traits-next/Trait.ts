@@ -5,6 +5,7 @@ import { TraitBody } from "./TraitBody.ts"
 import { TraitEnrichmentModules } from "./TraitEnrichment/index.ts"
 import { TraitName } from "./TraitName.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
+import { TraitSegmenterModule } from "./TraitSegmenter/index.ts"
 import { TraitSubject } from "./TraitSubject.ts"
 
 /** A trait's static definition and optional enrichment module references. */
@@ -14,6 +15,8 @@ export const Trait = S.Struct({
   subject: TraitSubject,
   assertion: TraitAssertion.pipe(S.optionalKey),
   purpose: TraitPurpose,
+  /** The segmenter to use; omitted for whole-input evaluation. */
+  segment: TraitSegmenterModule.pipe(S.optionalKey),
   enrichments: TraitEnrichmentModules.pipe(S.optionalKey),
   body: TraitBody.pipe(S.optionalKey)
 })
