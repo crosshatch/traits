@@ -12,4 +12,4 @@ export class EnrichmentContext extends Context.Service<
     /** The file and its creation, update, or deletion contents. */
     readonly input: Snapshot
   }
->()("traits-next/Enrichment/EnrichmentContext") {}
+>()("traits/Enrichment/EnrichmentContext") {}
