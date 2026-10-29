@@ -1,5 +1,3 @@
 export * from "./TraitEnrichment.ts"
 export * from "./TraitEnrichmentContext.ts"
 export * from "./TraitEnrichmentError.ts"
-export * from "./TraitEnrichmentModule.ts"
-export * from "./TraitEnrichmentModules.ts"

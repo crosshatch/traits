@@ -1,11 +1,10 @@
 import { Schema as S } from "effect"
 
+import { TraitModuleSpecifier, TraitModuleSpecifiers } from "./schema/index.ts"
 import { TraitAssertion } from "./TraitAssertion.ts"
 import { TraitBody } from "./TraitBody.ts"
-import { TraitEnrichmentModules } from "./TraitEnrichment/index.ts"
 import { TraitName } from "./TraitName.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
-import { TraitSegmenterModule } from "./TraitSegmenter/index.ts"
 import { TraitSubject } from "./TraitSubject.ts"
 
 /** A trait's static definition, required segmenter, and optional enrichment references. */
@@ -20,9 +19,9 @@ export const Trait = S.Struct({
   /** What the trait aims to achieve or protect, and why. */
   purpose: TraitPurpose,
   /** The segmenter to use for evaluation. */
-  segment: TraitSegmenterModule,
+  segment: TraitModuleSpecifier,
   /** Modules supplying input-specific evaluation context. */
-  enrichments: TraitEnrichmentModules.pipe(S.optionalKey),
+  enrichments: TraitModuleSpecifiers.pipe(S.optionalKey),
   /** Shared supporting context from the trait's Markdown body. */
   body: TraitBody.pipe(S.optionalKey)
 })
