@@ -5,8 +5,8 @@ import type { HttpClient } from "effect/http"
 import type { KeyValueStore } from "effect/persistence"
 import type { ChildProcessSpawner } from "effect/process"
 
-/** Services available during enrichment setup and execution. */
-export type TraitEnrichmentServices =
+/** Shared services available during trait extension setup and execution. */
+export type TraitServices =
   | LanguageModel.LanguageModel
   | DecisionModel.DecisionModel
   | EmbeddingModel.EmbeddingModel
