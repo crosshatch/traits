@@ -9,4 +9,4 @@ export class SegmenterContext extends Context.Service<
     /** The file and complete contents on each side of its change. */
     readonly input: Snapshot
   }
->()("traits-next/Segmenter/SegmenterContext") {}
+>()("traits/Segmenter/SegmenterContext") {}
