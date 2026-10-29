@@ -1,4 +1,4 @@
-import { Effect, flow, Schema as S, String } from "effect"
+import { Effect, Schema as S, String } from "effect"
 import { DecisionModel, LanguageModel, Tool, Toolkit } from "effect/ai"
 
 import * as ToolExecutionError from "../ToolExecutionError.ts"
@@ -6,6 +6,7 @@ import * as Trait from "../Trait.ts"
 import * as Derivation from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import { TraitStore } from "../TraitStore.ts"
+import * as Updates from "../Updates.ts"
 
 export const DeriveTrait = Tool.make("derive_trait", {
   description: String.stripMargin(`
@@ -16,6 +17,7 @@ export const DeriveTrait = Tool.make("derive_trait", {
   | RevisionRequired means revise and obtain fresh approval; ask what to change if feedback is absent. Declined means stop. Keep pending revisions across related follow-ups unless cancelled.
   `),
   parameters: S.Struct({
+    updateDecision: Updates.Decision.pipe(S.optional),
     proposedTrait: Trait.Trait.annotate({
       description:
         "Complete proposed trait. Clarifications replace the existing body/context while preserving its name; omitted optional fields are removed."
@@ -25,10 +27,10 @@ export const DeriveTrait = Tool.make("derive_trait", {
         "Fallback approval for the exact proposal and automatically selected action shown to the user, including any existing trait being updated. Set true only after approval; native clients still receive a form. Does not bypass relationship checks."
     })
   }),
-  success: Derivation.TraitDerivation,
+  success: S.Union([Derivation.TraitDerivation, Updates.Notice]),
   failure: ToolExecutionError.ToolExecutionError,
   failureMode: "return",
-  dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitsContext, TraitStore]
+  dependencies: [DecisionModel.DecisionModel, LanguageModel.LanguageModel, TraitsContext, TraitStore, Updates.Updates]
 })
   .annotate(Tool.Title, "Derive Trait")
   .annotate(Tool.Readonly, false)
@@ -37,9 +39,10 @@ export const DeriveTrait = Tool.make("derive_trait", {
 export const toolkit = Toolkit.make(DeriveTrait)
 
 export const layer = toolkit.toLayer({
-  derive_trait: flow(
-    Derivation.derive,
-    Effect.catchCause(ToolExecutionError.fromCause),
-    Effect.withSpan("DeriveTrait.derive", { root: true })
-  )
+  derive_trait: Effect.fn("DeriveTrait.derive", { root: true })(function* (params) {
+    const updates = yield* Updates.Updates
+    const notice = yield* updates.gate(params.updateDecision)
+    if (notice !== undefined) return notice
+    return yield* Derivation.derive(params)
+  }, Effect.catchCause(ToolExecutionError.fromCause))
 })
