@@ -1,8 +1,8 @@
 import { Schema as S } from "effect"
 
-/** A snapshot's text or binary contents, independent of its file format. */
-export type SnapshotContent = typeof SnapshotContent.Type
-export const SnapshotContent = S.TaggedUnion({
+/** Text or binary contents, independent of file format. */
+export type Content = typeof Content.Type
+export const Content = S.TaggedUnion({
   Text: {
     /** The complete decoded text. */
     text: S.String

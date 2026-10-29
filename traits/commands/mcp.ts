@@ -63,7 +63,7 @@ const server = McpServer.layerStdio({
 export const serve = Effect.gen(function* () {
   const db = yield* TraitDatabase.TraitDatabase
   const path = yield* Path.Path
-  const crypto = yield* SecureRandom.SecureRandom
+  const crypto = yield* SecureRandom.SecureRandom.pipe(Effect.provide(SecureRandom.layerWebCrypto))
   const runId = yield* crypto.randomBytes(16).pipe(Effect.map(Hex.encode))
   const startedAt = yield* Clock.currentTimeMillis
   yield* db

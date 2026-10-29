@@ -32,7 +32,7 @@ export const run = Command.make(
     const path = yield* Path.Path
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const { cwd, database } = yield* WorkspacePaths.resolve
-    const crypto = yield* SecureRandom.SecureRandom
+    const crypto = yield* SecureRandom.SecureRandom.pipe(Effect.provide(SecureRandom.layerWebCrypto))
     const runId = yield* crypto.randomBytes(16).pipe(Effect.map(Hex.encode))
     yield* Effect.gen(function* () {
       const db = yield* TraitDatabase.TraitDatabase

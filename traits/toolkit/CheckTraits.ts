@@ -44,7 +44,6 @@ export const CheckTraits = Tool.make("check_traits", {
     FileSystem.FileSystem,
     Path.Path,
     ChildProcessSpawner.ChildProcessSpawner,
-    Digest.Digest,
     TraitsContext
   ]
 })
