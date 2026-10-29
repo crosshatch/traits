@@ -8,7 +8,7 @@ import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSegmenterModule } from "./TraitSegmenter/index.ts"
 import { TraitSubject } from "./TraitSubject.ts"
 
-/** A trait's static definition and optional segmenter and enrichment references. */
+/** A trait's static definition, required segmenter, and optional enrichment references. */
 export type Trait = typeof Trait.Type
 export const Trait = S.Struct({
   /** The trait's descriptive kebab-case name. */
@@ -19,8 +19,8 @@ export const Trait = S.Struct({
   assertion: TraitAssertion.pipe(S.optionalKey),
   /** What the trait aims to achieve or protect, and why. */
   purpose: TraitPurpose,
-  /** The segmenter to use; omitted for whole-input evaluation. */
-  segment: TraitSegmenterModule.pipe(S.optionalKey),
+  /** The segmenter to use for evaluation. */
+  segment: TraitSegmenterModule,
   /** Modules supplying input-specific evaluation context. */
   enrichments: TraitEnrichmentModules.pipe(S.optionalKey),
   /** Shared supporting context from the trait's Markdown body. */
