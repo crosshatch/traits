@@ -1,6 +1,6 @@
 export * from "./InputRange.ts"
+export * from "./InputSegment.ts"
 export * from "./Probability.ts"
 export * from "./Snapshot.ts"
 export * from "./SnapshotChange.ts"
-export * from "./SnapshotChangeLocation.ts"
 export * from "./SnapshotContent.ts"
