@@ -8,7 +8,7 @@
     "changeset": "changeset",
     "format": "vp fmt .",
     "prepare": "effect-tsgo patch --oxlint",
-    "build": "effect-tsgo tsrs@0.20.0-ts7.1.0-beta -b tsconfig.json",
+    "build": "effect-tsgo tsrs@0.20.1-ts7.1.0-beta -b tsconfig.json",
     "check": "vp check && pnpm build && pnpm test",
     "test": "vp test run",
     "test:traits:integration": "vp test run --config traits.integration.config.ts"
