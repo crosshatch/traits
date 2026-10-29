@@ -1,5 +1,0 @@
-export * from "./TraitAssessment.ts"
-export * from "./TraitInputReport.ts"
-export * from "./TraitReport.ts"
-export * from "./TraitReportEnrichment.ts"
-export * from "./TraitReportEntry.ts"
