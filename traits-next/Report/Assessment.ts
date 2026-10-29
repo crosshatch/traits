@@ -3,8 +3,8 @@ import { Schema as S } from "effect"
 import { Probability } from "../schema/index.ts"
 
 /** The assertion's classification, probabilities, and optional confidence. */
-export type TraitAssessment = typeof TraitAssessment.Type
-export const TraitAssessment = S.Struct({
+export type Assessment = typeof Assessment.Type
+export const Assessment = S.Struct({
   /** The classification selected by the model. */
   label: S.Literals(["compliant", "violation", "not-applicable", "inconclusive"]),
   /** Model-reported probabilities for each classification. */
