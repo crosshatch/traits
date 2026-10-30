@@ -1,4 +1,4 @@
-import { Data, Schema as S } from "effect"
+import { Schema as S } from "effect"
 
 /** The scope of execution an enrichment requests to skip. */
 export type EnrichmentErrorReason = typeof EnrichmentErrorReason.Type
@@ -12,12 +12,12 @@ export const EnrichmentErrorReason = S.TaggedUnion({
 })
 
 /** An enrichment skip signal with required recovery guidance. */
-export class EnrichmentError extends Data.TaggedError("EnrichmentError")<{
+export class EnrichmentError extends S.TaggedError<EnrichmentError>()("EnrichmentError", {
   /** The scope of execution to skip. */
-  readonly reason: EnrichmentErrorReason
+  reason: EnrichmentErrorReason,
   /** Recovery guidance for the requested skip. */
-  readonly instruction: string
-}> {
+  instruction: S.String
+}) {
   override get message(): string {
     const message = EnrichmentErrorReason.match(this.reason, {
       Enrichment: () => "Enrichment skipped.",
