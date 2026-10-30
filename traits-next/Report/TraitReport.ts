@@ -10,6 +10,6 @@ export const TraitReport = S.Struct({
   trait: Trait,
   /** Input-specific enrichments and assessments associated with this trait. */
   inputs: S.Array(InputReport),
-  /** Recovery guidance when this trait was skipped for all inputs. */
+  /** Present exactly when this trait was skipped for all inputs; contains required recovery guidance. */
   instruction: S.String.pipe(S.optionalKey)
 })
