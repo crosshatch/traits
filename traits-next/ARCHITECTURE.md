@@ -77,7 +77,7 @@ has prevented that assessment.
 
 When a trait has an assertion, assessment uses the static trait definition, the
 selected source location, and generated enrichment context. The decision model
-provides the probabilities retained in an `Assessment` for each outcome:
+provides the probabilities retained directly as `Assessment` fields:
 
 | Outcome     | Meaning                                       |
 | ----------- | --------------------------------------------- |
