@@ -3,22 +3,22 @@ import { Data } from "effect"
 /** The scope of execution an enrichment requests to skip or halt. */
 export type EnrichmentErrorReason = Data.TaggedEnum<{
   /** Skip only the current enrichment. */
-  Enrichment: {}
+  readonly Enrichment: {}
   /** Skip evaluation of the current trait for this input. */
-  Input: {}
+  readonly Input: {}
   /** Skip evaluation of the current trait for all inputs. */
-  Trait: {}
+  readonly Trait: {}
   /** Halt all trait evaluations in the current run. */
-  Evaluation: {}
+  readonly Evaluation: {}
 }>
 export const EnrichmentErrorReason = Data.taggedEnum<EnrichmentErrorReason>()
 
-/** An enrichment control signal with an optional reportable recovery instruction. */
+/** An enrichment skip or halt signal with required recovery guidance. */
 export class EnrichmentError extends Data.TaggedError("EnrichmentError")<{
   /** The scope of execution to skip or halt. */
   readonly reason: EnrichmentErrorReason
-  /** A recovery instruction to include in the report when provided. */
-  readonly instruction?: string | undefined
+  /** Recovery guidance for the requested skip or halt. */
+  readonly instruction: string
 }> {
   override get message(): string {
     const message = EnrichmentErrorReason.$match(this.reason, {
@@ -27,6 +27,6 @@ export class EnrichmentError extends Data.TaggedError("EnrichmentError")<{
       Trait: () => "Trait skipped for all inputs.",
       Evaluation: () => "Evaluation halted."
     })
-    return this.instruction === undefined ? message : `${message} ${this.instruction}`
+    return `${message} ${this.instruction}`
   }
 }

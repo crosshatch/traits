@@ -57,6 +57,6 @@ export default defineConfig({
     }
   },
   test: {
-    projects: ["oxlints/vite.config.ts", "traits/vite.config.ts"]
+    projects: ["oxlints/vite.config.ts", "traits/vite.config.ts", "traits-next/vite.config.ts"]
   }
 })
