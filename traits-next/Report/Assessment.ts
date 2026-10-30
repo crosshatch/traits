@@ -2,11 +2,9 @@ import { Schema as S } from "effect"
 
 import { Probability } from "../schema/index.ts"
 
-/** The assertion's classification and probabilities. */
+/** The assertion's classification probabilities. */
 export type Assessment = typeof Assessment.Type
 export const Assessment = S.Struct({
-  /** The classification selected by the model. */
-  label: S.Literals(["pass", "fail", "na", "uncertain"]),
   /** Classification probabilities supplied by the decision model. */
   probabilities: S.Struct({
     /** Probability that the input satisfies the assertion. */
