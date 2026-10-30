@@ -32,6 +32,9 @@ Each trait references a segmenter and may reference enrichments. These
 extensions are initialized before use, separating reusable setup from the work
 performed for each input or location.
 
+Enrichment module references must be distinct within a trait, so each module
+unambiguously identifies its configured enrichment in outcomes and recoveries.
+
 ## Segment a selected source
 
 The segmenter receives an `InputSource` and produces a nonempty array of
@@ -43,6 +46,10 @@ The segmenter receives an `InputSource` and produces a nonempty array of
 
 A range must have nonnegative integer offsets, must not end before its start,
 and must fit within its source text. Binary sources use `Full`, not text ranges.
+
+`InputLocation` pairs a source with its segment and owns this validation. Input
+reports and execution recoveries include it as `input`, retaining its validation
+with the source at `input.source` and segment at `input.location`.
 
 Segmentation must succeed and cannot request skips or evaluation halts. If
 custom segmentation fails, evaluation falls back to text-based chunking; binary
@@ -92,8 +99,8 @@ highest probability alone does not necessarily justify a definitive result.
 
 ## Handle skips and halts
 
-Every enrichment failure requires recovery instructions. Its reason determines
-which remaining work stops:
+Every enrichment failure requires nonblank recovery instructions. Its reason
+determines which remaining work stops:
 
 | Reason       | Effect                                                                                               |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
@@ -116,10 +123,11 @@ failure or recovery instruction.
 
 Each failure is stored once in its trait report's `recoveries`, with its module,
 instruction, and stage. Execution failures also identify their scope reason,
-source and location. Setup failures have no source location. Reports use
-deterministic ordering based on trait, source/location, and configured module
-order, not the timing of concurrent completions. Scheduling and cancellation are
-runner responsibilities; the schemas represent their results.
+source and location, validated against the same source-range constraints as
+input reports. Setup failures have no source location. Reports use deterministic
+ordering based on trait, source/location, and configured module order, not the
+timing of concurrent completions. Scheduling and cancellation are runner
+responsibilities; the schemas represent their results.
 
 ## Assemble the report
 
@@ -131,7 +139,7 @@ Report
     ├── static Trait
     ├── Recovery[]
     └── InputReport[]
-        ├── InputSource + InputSegment location
+        ├── input: InputLocation { source, location }
         ├── EnrichmentReport[]
         └── Assessment?
 ```

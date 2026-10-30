@@ -1,5 +1,7 @@
 import { Schema as S } from "effect"
 
+import { RecoveryInstruction } from "../schema/index.ts"
+
 /** The scope of execution an enrichment requests to skip. */
 export type EnrichmentErrorReason = typeof EnrichmentErrorReason.Type
 export const EnrichmentErrorReason = S.TaggedUnion({
@@ -16,7 +18,7 @@ export class EnrichmentError extends S.TaggedError<EnrichmentError>()("Enrichmen
   /** The scope of execution to skip. */
   reason: EnrichmentErrorReason,
   /** Recovery guidance for the requested skip. */
-  instruction: S.String
+  instruction: RecoveryInstruction
 }) {
   override get message(): string {
     const message = EnrichmentErrorReason.match(this.reason, {
