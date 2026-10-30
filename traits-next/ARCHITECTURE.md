@@ -70,9 +70,9 @@ has prevented that assessment.
 
 When a trait has an assertion, assessment uses the static trait definition, the
 selected source location, and generated enrichment context. The decision model
-produces an `Assessment` with a label and corresponding probability fields:
+provides the probabilities retained in an `Assessment` for each outcome:
 
-| Label       | Meaning                                       |
+| Outcome     | Meaning                                       |
 | ----------- | --------------------------------------------- |
 | `pass`      | The assertion holds.                          |
 | `fail`      | The assertion does not hold.                  |
@@ -85,6 +85,10 @@ schema. These probabilities express relative certainty across outcomes;
 `uncertain` explicitly indicates insufficient evidence to decide.
 
 Guidance-only traits have no assertion and therefore no assertion assessment.
+
+The report retains probabilities rather than the provider-selected label.
+Consumers interpret them using explicit thresholds or decision policies; the
+highest probability alone does not necessarily justify a definitive result.
 
 ## Handle skips and halts
 
