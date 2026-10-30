@@ -2,7 +2,7 @@ import { Schema as S } from "effect"
 
 import { Probability } from "../schema/index.ts"
 
-/** The assertion's classification, probabilities, and optional confidence. */
+/** The assertion's classification and probabilities. */
 export type Assessment = typeof Assessment.Type
 export const Assessment = S.Struct({
   /** The classification selected by the model. */
@@ -17,7 +17,5 @@ export const Assessment = S.Struct({
     na: Probability,
     /** Probability that the available evidence is insufficient for assessment. */
     uncertain: Probability
-  }),
-  /** Optional provider-defined confidence, not a calibrated guarantee. */
-  confidence: Probability.pipe(S.optionalKey)
+  })
 })
