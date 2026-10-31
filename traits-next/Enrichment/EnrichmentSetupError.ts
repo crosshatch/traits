@@ -4,8 +4,11 @@ import { RecoveryInstruction } from "../schema/index.ts"
 
 /** An initialization failure with required recovery guidance. */
 export class EnrichmentSetupError extends S.TaggedError<EnrichmentSetupError>()("EnrichmentSetupError", {
-  /** How to recover from the failure. */
-  instruction: RecoveryInstruction
+  /** Required guidance for resolving enrichment initialization failure; carries no execution cancellation scope. */
+  instruction: RecoveryInstruction.annotate({
+    description:
+      "Required guidance for resolving enrichment initialization failure; carries no execution cancellation scope."
+  })
 }) {
   override get message(): string {
     return `Enrichment initialization failed. ${this.instruction}`
