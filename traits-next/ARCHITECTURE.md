@@ -17,10 +17,13 @@ Enrichment never rewrites the trait or its body.
 
 Lifecycle changes and evaluation sources are separate representations:
 
-- `Snapshot` describes a creation, update, or deletion. Updates retain both
-  content versions and the previous path, including renames.
-- `InputSource` identifies one selected version by its path and complete
-  `Content`: decoded text or binary bytes.
+- `Snapshot` directly describes a creation, update, or deletion. Creations and
+  deletions carry a `source: InputSource`; updates carry `previous` and
+  `current` sources. Each source includes its own path, so updates naturally
+  retain renames.
+- `InputSource` identifies one selected version by its path and complete decoded
+  `text`. Only text inputs are supported; binary files must be excluded or
+  explicitly rejected at the input boundary, not silently decoded as text.
 
 The caller provides the input to evaluate. Segmentation operates on that input's
 complete source contents; diff selection and before/after pairing are not the
@@ -37,32 +40,32 @@ unambiguously identifies its configured enrichment in outcomes and recoveries.
 
 ## Segment a selected source
 
-The segmenter receives an `InputSource` and produces a nonempty array of
-`InputSegment` values:
-
-- `Full` selects the complete source.
-- `Range` selects decoded text using zero-based UTF-16 offsets, with an
-  inclusive start and exclusive end.
+Segmenter initialization returns an execution function that takes an
+`InputSource` directly and produces a nonempty array of `InputRange` values.
+Each range selects decoded text using zero-based UTF-16 offsets, with an
+inclusive start and exclusive end. The complete source is represented by
+`{ start: 0, end: source.text.length }`, including `{ start: 0, end: 0 }` for
+empty text.
 
 A range must have nonnegative integer offsets, must not end before its start,
-and must fit within its source text. Binary sources use `Full`, not text ranges.
+and must fit within its source text.
 
-`InputLocation` pairs a source with its segment and owns this validation. Input
-reports and execution recoveries include it as `input`, retaining its validation
-with the source at `input.source` and segment at `input.location`.
+`Input` pairs a source with its range and owns this validation. Input reports
+and execution recoveries include it as `input`, retaining its validation with
+the source at `input.source` and range at `input.range`. Enrichment context uses
+the same `Input` representation.
 
 Segmentation must succeed and cannot request skips or evaluation halts. If
-custom segmentation fails, evaluation falls back to text-based chunking; binary
-sources fall back to `Full`. Cancelling evaluation does not trigger fallback
-work.
+custom segmentation fails, evaluation falls back to text-based chunking.
+Cancelling evaluation does not trigger fallback work.
 
 ## Enrich each trait and source location
 
 For each location selected for evaluation, enrichment receives:
 
 - `trait`: the unchanged static definition.
-- `input`: the complete selected source version.
-- `location`: the `Full` or `Range` segment being evaluated.
+- `input`: an `Input` containing the complete selected source at `input.source`
+  and the selected `InputRange` at `input.range`.
 
 The enrichment returns a string of context for that evaluation. An empty string
 is a valid completed result. The source remains available in full even when the
@@ -139,15 +142,14 @@ Report
     ├── static Trait
     ├── Recovery[]
     └── InputReport[]
-        ├── input: InputLocation { source, location }
+        ├── input: Input { source, range }
         ├── EnrichmentReport[]
         └── Assessment?
 ```
 
 Each input report includes the source path and complete selected-version
 contents, making its location interpretable without relying on array positions.
-Its schema rejects text ranges outside the source or ranges against binary
-content.
+Its schema rejects text ranges outside the source.
 
 An enrichment report is `Completed`, with required generated `text`, `Failed`,
 or `Cancelled`. Failure details are stored in the trait's recovery entries, not
