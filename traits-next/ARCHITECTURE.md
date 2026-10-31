@@ -200,9 +200,9 @@ wrong stage is an ordinary diagnostic, not a recovery control signal.
 
 Other failures and defects are stored once in `diagnostics`, not duplicated in
 `recoveries`. Unknown enrichment execution failures omit that invocation's
-context and produce a `Failed` outcome; they do not infer `Input` or `Trait`
-cancellation. Siblings may continue and assessment follows the existing recovery
-policy. Interruption is cancellation, never a diagnostic or recovery signal.
+context; they do not infer `Input` or `Trait` cancellation. Siblings may
+continue and assessment follows the existing recovery policy. Interruption is
+cancellation, never a diagnostic or recovery signal.
 
 Each diagnostic contains a configured module and an `info` tagged union with
 exactly one explanation: `Error { error }` for normalized failure details, or
@@ -281,8 +281,10 @@ failed.
 Trait-first grouping remains unchanged; alternative grouping is a separate
 design decision.
 
-An enrichment report is `Completed`, with required generated `text`, `Failed`,
-or `Cancelled`. Failure details are stored in the trait's recovery or diagnostic
+An enrichment report contains only a `module` and successfully generated `text`,
+including a valid empty string. Failed, cancelled, and unstarted enrichments do
+not produce enrichment entries. Absence does not distinguish these execution
+states. Failure details are stored in the trait's recovery or diagnostic
 entries, not duplicated in enrichment or input reports. Setup failures are
 recorded once, without fabricating per-input execution failures.
 
@@ -292,3 +294,19 @@ guidance; enrichment recoveries remain attached to their traits.
 
 Partial results are preserved through skips and halts, so the final report
 contains completed work alongside any recovery instructions.
+
+## Reevaluate after remediation
+
+After the client follows recovery instructions, reevaluation starts from the
+affected sources or changes, not their previous segments. Reload the relevant
+inputs, rerun segmentation, and run all applicable trait checks for those
+inputs, including checks that previously succeeded. Remediation can change both
+source contents and segmentation boundaries.
+
+Report-local input indices and ranges describe one evaluation; they are not
+durable retry identifiers. Tracking affected inputs and determining what work to
+redo belongs to a separate mechanism, potentially a `.traits-lock`, whose design
+remains undecided. Setup failures may affect multiple inputs; that mechanism
+must retain the affected source/change associations independently of report
+indices. The client report supplies results and remediation, not an execution
+ledger or retry schedule.
