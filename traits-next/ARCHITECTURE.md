@@ -204,24 +204,26 @@ context and produce a `Failed` outcome; they do not infer `Input` or `Trait`
 cancellation. Siblings may continue and assessment follows the existing recovery
 policy. Interruption is cancellation, never a diagnostic or recovery signal.
 
-Each diagnostic contains a configured module and a safe, nonblank message, with
-optional actionable instructions only when remediation is known. The runner must
-handle arbitrary thrown values, including cyclic objects and ordinary errors,
-without relying on JSON serialization. It must exclude raw error objects, source
-text, and excerpts from diagnostics and use a generic failure message when
-useful details cannot be safely extracted. A diagnostic explains failure; it
-need not invent a remedy.
+Each diagnostic contains a configured module and an `info` tagged union with
+exactly one explanation: `Error { error }` for normalized failure details, or
+`Instruction { instruction }` for actionable remediation including relevant
+failure context. Both alternatives require nonblank text and reject the other's
+field. The runner chooses `Instruction` when remediation is known and `Error`
+otherwise. The runner must handle arbitrary thrown values, including cyclic
+objects and ordinary errors, without relying on JSON serialization. It must
+exclude raw error objects, source text, and excerpts from diagnostics and use a
+generic failure message when useful details cannot be safely extracted. A
+diagnostic explains failure; it need not invent a remedy.
 
 Each diagnostic's `origin` is tagged `SegmenterSetup`, `SegmenterExecution`,
-`EnrichmentSetup`, or `EnrichmentExecution`. Shared module, message, and
-optional instruction fields live on the diagnostic itself. Setup origins have no
-input reference. Segmenter execution diagnostics reference the caller's supplied
-change by index in caller order, before filtering or scheduling; callers retain
-that association outside the source-free report. The runner validates change
-indices against the supplied changes. Enrichment execution diagnostics reference
-the containing trait report's inputs, preserving their before/after provenance.
-Setup failures do not fabricate inputs, and segmenter failures need no synthetic
-assessment target.
+`EnrichmentSetup`, or `EnrichmentExecution`. Shared `module` and `info` fields
+live on the diagnostic itself. Setup origins have no input reference. Segmenter
+execution diagnostics reference the caller's supplied change by index in caller
+order, before filtering or scheduling; callers retain that association outside
+the source-free report. The runner validates change indices against the supplied
+changes. Enrichment execution diagnostics reference the containing trait
+report's inputs, preserving their before/after provenance. Setup failures do not
+fabricate inputs, and segmenter failures need no synthetic assessment target.
 
 Reports use deterministic ordering based on trait, source/location, and
 configured module order, not the timing of concurrent completions. Scheduling
