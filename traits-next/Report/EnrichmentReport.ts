@@ -2,7 +2,7 @@ import { Schema as S } from "effect"
 
 import { ModuleSpecifier } from "../schema/index.ts"
 
-/** An enrichment outcome; failure details live in the trait report's recoveries. */
+/** An enrichment outcome; failure details live in the trait report's recoveries or diagnostics. */
 export type EnrichmentReport = typeof EnrichmentReport.Type
 export const EnrichmentReport = S.TaggedUnion({
   Completed: {
@@ -12,7 +12,7 @@ export const EnrichmentReport = S.TaggedUnion({
     text: S.String
   },
   Failed: {
-    /** The module that failed; its recovery entry records the reason and instruction. */
+    /** The module that failed; its recovery or diagnostic entry records the details. */
     module: ModuleSpecifier
   },
   Cancelled: {

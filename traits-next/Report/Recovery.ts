@@ -3,7 +3,7 @@ import { Record, Schema as S } from "effect"
 import { EnrichmentErrorReason } from "../Enrichment/index.ts"
 import { ModuleSpecifier, RecoveryInstruction } from "../schema/index.ts"
 
-/** One observed enrichment failure, stored once in its containing trait report. */
+/** One recognized enrichment recovery signal, stored once in its containing trait report. */
 export type Recovery = typeof Recovery.Type
 export const Recovery = S.TaggedUnion({
   Setup: {

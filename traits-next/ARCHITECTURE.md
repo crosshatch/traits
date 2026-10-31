@@ -84,7 +84,9 @@ separately. This validation checks bounds, not diff correspondence.
 Custom initialization or execution failures and defects also trigger text-based
 fallback. Initialization failure uses fallback for all changes depending on that
 initialization; execution failure affects the current change. Cancelling
-evaluation does not trigger fallback work.
+evaluation does not trigger fallback work. Segmenter failures remain visible as
+diagnostics even when fallback succeeds; invalid output also produces a
+diagnostic describing the validation failure.
 
 Fallback chunks every available source independently, covering its complete
 text:
@@ -165,8 +167,10 @@ highest probability alone does not necessarily justify a definitive result.
 
 ## Handle skips and halts
 
-Every enrichment failure requires nonblank recovery instructions. Its reason
-determines which remaining work stops:
+Extension initialization and execution accept unknown failures. Extensions need
+not serialize their errors; the runner normalizes failures at the boundary.
+Recognized `EnrichmentError` execution signals require nonblank recovery
+instructions. Their reason determines which remaining work stops:
 
 | Reason       | Effect                                                                                               |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
@@ -174,12 +178,13 @@ determines which remaining work stops:
 | `Input`      | Prevent assessment of this trait for the input and cancel its remaining enrichments.                 |
 | `Trait`      | Cancel remaining work for this trait across inputs because a trait-wide prerequisite is unavailable. |
 
-An initialization failure disables the enrichment and carries recovery guidance,
-not a scope reason. Whether assessment requires that enrichment is a separate
-policy, not a decision encoded by the setup error. During execution,
-`Enrichment` affects only its current invocation. Enrichments cannot halt
-unrelated traits. Whole-evaluation halts belong to the evaluator rather than
-extensions.
+An initialization failure disables the enrichment. A recognized
+`EnrichmentSetupError` carries recovery guidance, not a scope reason; other
+setup failures produce diagnostics. Whether assessment requires that enrichment
+is a separate policy, not a decision encoded by the setup error. During
+execution, `Enrichment` affects only its current invocation. Enrichments cannot
+halt unrelated traits. Whole-evaluation halts belong to the evaluator rather
+than extensions.
 
 Parallel failures are collected rather than reduced to one winning error.
 Cancellation stops remaining work at the requested scope, but does not erase
@@ -187,13 +192,41 @@ successful results or failures already observed. A later trait-wide failure does
 not invalidate assessments already completed. Cancelled work gets no invented
 failure or recovery instruction.
 
-Each failure is stored once in its trait report's `recoveries`, with its module,
-instruction, and stage. Execution failures also identify their scope reason and
-reference the originating input by index within the containing trait report.
-Setup failures have no input reference. Reports use deterministic ordering based
-on trait, source/location, and configured module order, not the timing of
-concurrent completions. Scheduling and cancellation are runner responsibilities;
-the schemas represent their results.
+Recognized enrichment signals are stored once in the trait report's
+`recoveries`, with their module, instruction, and stage. Execution signals also
+identify their scope reason and reference the originating input by index within
+the containing trait report. Recognition is stage-specific: an error from the
+wrong stage is an ordinary diagnostic, not a recovery control signal.
+
+Other failures and defects are stored once in `diagnostics`, not duplicated in
+`recoveries`. Unknown enrichment execution failures omit that invocation's
+context and produce a `Failed` outcome; they do not infer `Input` or `Trait`
+cancellation. Siblings may continue and assessment follows the existing recovery
+policy. Interruption is cancellation, never a diagnostic or recovery signal.
+
+Each diagnostic contains a configured module and a safe, nonblank message, with
+optional actionable instructions only when remediation is known. The runner must
+handle arbitrary thrown values, including cyclic objects and ordinary errors,
+without relying on JSON serialization. It must exclude raw error objects, source
+text, and excerpts from diagnostics and use a generic failure message when
+useful details cannot be safely extracted. A diagnostic explains failure; it
+need not invent a remedy.
+
+Each diagnostic's `origin` is tagged `SegmenterSetup`, `SegmenterExecution`,
+`EnrichmentSetup`, or `EnrichmentExecution`. Shared module, message, and
+optional instruction fields live on the diagnostic itself. Setup origins have no
+input reference. Segmenter execution diagnostics reference the caller's supplied
+change by index in caller order, before filtering or scheduling; callers retain
+that association outside the source-free report. The runner validates change
+indices against the supplied changes. Enrichment execution diagnostics reference
+the containing trait report's inputs, preserving their before/after provenance.
+Setup failures do not fabricate inputs, and segmenter failures need no synthetic
+assessment target.
+
+Reports use deterministic ordering based on trait, source/location, and
+configured module order, not the timing of concurrent completions. Scheduling
+and cancellation are runner responsibilities; the schemas represent their
+results.
 
 ## Assemble the report
 
@@ -204,6 +237,7 @@ Report
 └── traits: TraitReport[]
     ├── static Trait
     ├── recoveries: Recovery[] (execution input index)
+    ├── diagnostics: Diagnostic[] (setup, change index, or input index)
     └── inputs: InputReport[]
         ├── path: string
         ├── side: before | after
@@ -231,10 +265,11 @@ their input-report reference.
 Input entries are allocated in deterministic source/range order, including work
 that fails or is cancelled, so execution recoveries always have a target. Setup
 failures do not fabricate input entries. The trait report schema validates
-recovery input indices. Range ordering and nonnegative offsets are validated by
-the report schemas, but bounds against source length must be validated during
-execution before reporting. Input indices must remain stable when assembling
-partial results; completion order does not determine their values.
+recovery and enrichment-diagnostic input indices. Range ordering and nonnegative
+offsets are validated by the report schemas, but bounds against source length
+must be validated during execution before reporting. Input indices must remain
+stable when assembling partial results; completion order does not determine
+their values.
 
 Report assembly must preserve the originating input and module for each
 execution failure when assigning these indices. The schema's bounds check alone
@@ -245,9 +280,9 @@ Trait-first grouping remains unchanged; alternative grouping is a separate
 design decision.
 
 An enrichment report is `Completed`, with required generated `text`, `Failed`,
-or `Cancelled`. Failure details are stored in the trait's recovery entries, not
-duplicated in enrichment or input reports. Setup failures are recorded once,
-without fabricating per-input execution failures.
+or `Cancelled`. Failure details are stored in the trait's recovery or diagnostic
+entries, not duplicated in enrichment or input reports. Setup failures are
+recorded once, without fabricating per-input execution failures.
 
 A missing assessment alone does not indicate failure, since guidance-only traits
 also omit assessments. The overall report may carry evaluator-owned halt
