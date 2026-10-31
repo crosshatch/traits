@@ -2,15 +2,20 @@ import { Schema as S } from "effect"
 
 import { Probability } from "../schema/index.ts"
 
-/** The assertion's classification probabilities. */
+/** Assertion outcome probabilities; normalization is owned by the decision model, and consumers apply explicit decision policies. */
 export type Assessment = typeof Assessment.Type
 export const Assessment = S.Struct({
   /** Probability that the input satisfies the assertion. */
-  pass: Probability,
+  pass: Probability.annotate({ description: "Probability that the input satisfies the assertion." }),
   /** Probability that the input violates the assertion. */
-  fail: Probability,
+  fail: Probability.annotate({ description: "Probability that the input violates the assertion." }),
   /** Probability that the trait does not apply to the input. */
-  na: Probability,
+  na: Probability.annotate({ description: "Probability that the trait does not apply to the input." }),
   /** Probability that the available evidence is insufficient for assessment. */
-  uncertain: Probability
+  uncertain: Probability.annotate({
+    description: "Probability that the available evidence is insufficient for assessment."
+  })
+}).annotate({
+  description:
+    "Assertion outcome probabilities; normalization is owned by the decision model, and consumers apply explicit decision policies."
 })

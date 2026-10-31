@@ -2,7 +2,7 @@ import { Schema as S } from "effect"
 
 import { RecoveryInstruction } from "../schema/index.ts"
 
-/** The scope of execution an enrichment requests to skip. */
+/** Requested execution skip scope: Enrichment skips only this invocation, Input prevents the current input's assessment, and Trait stops remaining work for this trait. */
 export type EnrichmentErrorReason = typeof EnrichmentErrorReason.Type
 export const EnrichmentErrorReason = S.TaggedUnion({
   /** Skip only the current enrichment. */
@@ -11,14 +11,21 @@ export const EnrichmentErrorReason = S.TaggedUnion({
   Input: {},
   /** Skip remaining work for this trait because a trait-wide prerequisite is unavailable. */
   Trait: {}
+}).annotate({
+  description:
+    "Requested execution skip scope: Enrichment skips only this invocation, Input prevents the current input's assessment, and Trait stops remaining work for this trait."
 })
 
 /** An enrichment skip signal with required recovery guidance. */
 export class EnrichmentError extends S.TaggedError<EnrichmentError>()("EnrichmentError", {
-  /** The scope of execution to skip. */
-  reason: EnrichmentErrorReason,
-  /** Recovery guidance for the requested skip. */
-  instruction: RecoveryInstruction
+  /** The scope of remaining execution to stop; unrelated traits are unaffected. */
+  reason: EnrichmentErrorReason.annotate({
+    description: "The scope of remaining execution to stop; unrelated traits are unaffected."
+  }),
+  /** Required actionable guidance for resolving the failure before reevaluation. */
+  instruction: RecoveryInstruction.annotate({
+    description: "Required actionable guidance for resolving the failure before reevaluation."
+  })
 }) {
   override get message(): string {
     const message = EnrichmentErrorReason.match(this.reason, {
