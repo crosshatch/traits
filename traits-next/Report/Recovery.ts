@@ -1,7 +1,7 @@
 import { Record, Schema as S } from "effect"
 
 import { EnrichmentErrorReason } from "../Enrichment/index.ts"
-import { InputLocation, ModuleSpecifier, RecoveryInstruction } from "../schema/index.ts"
+import { Input, ModuleSpecifier, RecoveryInstruction } from "../schema/index.ts"
 
 /** One observed enrichment failure, stored once in its containing trait report. */
 export type Recovery = typeof Recovery.Type
@@ -18,7 +18,7 @@ export const Recovery = S.TaggedUnion({
     /** The scope of work invalidated by this failure. */
     reason: S.Literals(Record.keys(EnrichmentErrorReason.cases)),
     /** The source and validated location on which the failure originated. */
-    input: InputLocation,
+    input: Input,
     /** Required recovery guidance. */
     instruction: RecoveryInstruction
   }
