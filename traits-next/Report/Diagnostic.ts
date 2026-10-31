@@ -7,10 +7,21 @@ export type Diagnostic = typeof Diagnostic.Type
 export const Diagnostic = S.Struct({
   /** The configured extension module. */
   module: ModuleSpecifier,
-  /** Safe, nonblank failure details, excluding source text and raw error objects. */
-  message: S.NonEmptyString.check(S.isPattern(/\S/u)),
-  /** Actionable remediation, only when known. */
-  instruction: RecoveryInstruction.pipe(S.optionalKey),
+  /** One client-facing explanation: failure details or actionable remediation. */
+  info: S.TaggedUnion({
+    Error: {
+      /** Normalized failure details when remediation is unknown. */
+      error: S.NonEmptyString.check(S.isPattern(/\S/u)),
+      /** Error details and recovery instructions are mutually exclusive. */
+      instruction: S.Never.pipe(S.optionalKey)
+    },
+    Instruction: {
+      /** Actionable recovery guidance, including relevant failure context. */
+      instruction: RecoveryInstruction,
+      /** Recovery instructions replace standalone error details. */
+      error: S.Never.pipe(S.optionalKey)
+    }
+  }),
   /** The extension kind, lifecycle stage, and execution location when available. */
   origin: S.TaggedUnion({
     /** Segmenter initialization failed before selecting assessment inputs. */
