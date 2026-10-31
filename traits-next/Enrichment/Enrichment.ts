@@ -2,15 +2,14 @@ import type { Effect } from "effect"
 
 import type { TraitServices } from "../TraitServices.ts"
 import type { EnrichmentContext } from "./EnrichmentContext.ts"
-import type { EnrichmentError } from "./EnrichmentError.ts"
-import type { EnrichmentSetupError } from "./EnrichmentSetupError.ts"
 
 /**
  * Shared setup producing a per-input context Effect without modifying the trait body.
- * Failures are recovered internally or mapped to the stage-specific error contract.
+ * Recognized enrichment errors carry explicit recovery guidance and execution scope;
+ * other failures become runner-normalized diagnostics without inferred broad cancellation.
  */
 export type Enrichment = Effect.Effect<
-  Effect.Effect<string, EnrichmentError, EnrichmentContext | TraitServices>,
-  EnrichmentSetupError,
+  Effect.Effect<string, unknown, EnrichmentContext | TraitServices>,
+  unknown,
   TraitServices
 >

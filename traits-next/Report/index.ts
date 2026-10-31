@@ -1,4 +1,5 @@
 export * from "./Assessment.ts"
+export * from "./Diagnostic.ts"
 export * from "./InputReport.ts"
 export * from "./Report.ts"
 export * from "./EnrichmentReport.ts"
