@@ -4,10 +4,10 @@ import type { Change, Segment } from "../schema/index.ts"
 import type { TraitServices } from "../TraitServices.ts"
 
 /**
- * Shared setup producing a function that selects assessment ranges within a change.
- * Segmentation must succeed and cannot request skips or halts.
- * The runner falls back to text-based chunking on setup or execution failures and defects,
- * preserving interruption.
+ * Initializes change-aware segmentation; skips and halts are unsupported.
+ * Before enrichment, the runner validates the whole result. Setup/execution failures,
+ * defects, or invalid output trigger text-chunk fallback across all available sides
+ * (including empty sources), without historical mappings. Interruption never triggers fallback.
  */
 export type Segmenter = Effect.Effect<
   (change: Change) => Effect.Effect<Array.NonEmptyReadonlyArray<Segment>, never, TraitServices>,

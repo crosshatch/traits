@@ -3,7 +3,7 @@
 ```text
 Static traits + provided inputs
   → initialize extensions
-  → segment each source
+  → segment each change
   → enrich each trait/source location
   → assess assertions
   → return reports and recovery instructions
@@ -73,9 +73,34 @@ missing mappings, including when using fallback segmentation.
 Enrichment context uses this representation. Serialized input reports carry only
 paths, sides, and ranges, not source contents.
 
-Segmentation must succeed and cannot request skips or evaluation halts. If
-custom segmentation fails, evaluation falls back to text-based chunking.
-Cancelling evaluation does not trigger fallback work.
+Segmentation must succeed and cannot request skips or evaluation halts. Before
+scheduling any enrichments for a change, the runner validates the entire custom
+result: it must be nonempty, and every segment combined with that change must
+validate as an `Input`. An empty result, malformed segment, unavailable selected
+side, or out-of-bounds primary or historical range replaces the entire result
+with fallback segmentation for that change; valid fragments are not scheduled
+separately. This validation checks bounds, not diff correspondence.
+
+Custom initialization or execution failures and defects also trigger text-based
+fallback. Initialization failure uses fallback for all changes depending on that
+initialization; execution failure affects the current change. Cancelling
+evaluation does not trigger fallback work.
+
+Fallback chunks every available source independently, covering its complete
+text:
+
+| Change           | Fallback targets                               |
+| ---------------- | ---------------------------------------------- |
+| Creation         | `After` chunks from the after-source.          |
+| Deletion         | `Before` chunks from the before-source.        |
+| Update or rename | `Before` and `After` chunks from both sources. |
+
+Each empty source produces one range `{ start: 0, end: 0 }`. Fallback `After`
+segments omit `before`, since correspondence was not computed. Both-side
+fallback prioritizes coverage of deleted material over efficiency and can assess
+unchanged material in both versions. It requires neither diff mapping nor
+historical semantic analysis. Fallback inputs undergo the same validation before
+enrichment.
 
 ## Enrich each trait and source location
 
@@ -106,9 +131,19 @@ has prevented that assessment.
 
 ## Assess the assertion
 
-When a trait has an assertion, assessment uses the static trait definition, the
-selected source location, and generated enrichment context. The decision model
-provides the probabilities retained directly as `Assessment` fields:
+When a trait has an assertion, assessment receives the static trait definition,
+the complete validated `Input`, and completed enrichment context. The input
+preserves both available source versions, the primary segment, and any
+historical mappings, including the distinction between omitted and empty
+mappings. This context remains available even when no enrichments are configured
+or no enrichment context is produced, provided recovery has not prevented
+assessment.
+
+The segment's primary side and range identify the assessment target; the
+surrounding change and historical mappings provide evidence, not additional
+assessment targets. Enrichments supplement that evidence rather than being
+responsible for preserving before/after context. The decision model provides the
+probabilities retained directly as `Assessment` fields:
 
 | Outcome     | Meaning                                       |
 | ----------- | --------------------------------------------- |
@@ -200,6 +235,11 @@ recovery input indices. Range ordering and nonnegative offsets are validated by
 the report schemas, but bounds against source length must be validated during
 execution before reporting. Input indices must remain stable when assembling
 partial results; completion order does not determine their values.
+
+Report assembly must preserve the originating input and module for each
+execution failure when assigning these indices. The schema's bounds check alone
+does not prove that a recovery references the input and module that actually
+failed.
 
 Trait-first grouping remains unchanged; alternative grouping is a separate
 design decision.
