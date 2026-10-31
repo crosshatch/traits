@@ -1,17 +1,29 @@
-import { Schema as S } from "effect"
+import { Array, Schema as S } from "effect"
 
-import { InputRange } from "./InputRange.ts"
-import { InputSource } from "./InputSource.ts"
+import { Change } from "./Change.ts"
+import { Segment } from "./Segment.ts"
 
-/** A source version and a range validated against its complete text. */
+/** A shared change and a segment validated against its source versions. */
 export type Input = typeof Input.Type
 export const Input = S.Struct({
-  /** The selected file version, including its path and complete contents. */
-  source: InputSource,
-  /** The selected UTF-16 range; zero to text length selects the complete source. */
-  range: InputRange
+  /** Available before and after source versions. */
+  change: Change,
+  /** The primary assessment target and optional historical context. */
+  segment: Segment
 }).check(
-  S.makeFilter((input) => input.range.end <= input.source.text.length, {
-    message: "A range must fit within the source's UTF-16 length."
-  })
+  S.makeFilter(
+    (input) =>
+      Segment.match(input.segment, {
+        Before: (segment) => input.change.before !== undefined && segment.range.end <= input.change.before.text.length,
+        After: (segment) =>
+          input.change.after !== undefined &&
+          segment.range.end <= input.change.after.text.length &&
+          (segment.before === undefined ||
+            Array.every(
+              segment.before,
+              (range) => input.change.before !== undefined && range.end <= input.change.before.text.length
+            ))
+      }),
+    { message: "Selected ranges must refer to available source versions and fit within their UTF-16 lengths." }
+  )
 )

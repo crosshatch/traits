@@ -9,7 +9,7 @@ export class EnrichmentContext extends Context.Service<
   {
     /** The static trait definition, unchanged by enrichments. */
     readonly trait: Trait
-    /** The complete selected source and validated location being enriched. */
+    /** The shared change and validated segment being enriched. */
     readonly input: Input
   }
 >()("traits/Enrichment/EnrichmentContext") {}

@@ -17,17 +17,17 @@ Enrichment never rewrites the trait or its body.
 
 Lifecycle changes and evaluation sources are separate representations:
 
-- `Snapshot` directly describes a creation, update, or deletion. Creations and
-  deletions carry a `source: InputSource`; updates carry `previous` and
-  `current` sources. Each source includes its own path, so updates naturally
-  retain renames.
+- `Change` contains `before` and/or `after` sources, with at least one required
+  in both the schema and inferred type. After-only means creation, before-only
+  means deletion, and both means update. Each source has its own path,
+  preserving renames without a separate path field.
 - `InputSource` identifies one selected version by its path and complete decoded
   `text`. Only text inputs are supported; binary files must be excluded or
   explicitly rejected at the input boundary, not silently decoded as text.
 
-The caller provides the input to evaluate. Segmentation operates on that input's
-complete source contents; diff selection and before/after pairing are not the
-segmenter's responsibility.
+The caller supplies a change. Segmenters can inspect both available versions and
+select assessment targets from either side. This does not require full semantic
+analysis of both versions or a historical compiler project.
 
 ## Initialize extensions
 
@@ -38,10 +38,20 @@ performed for each input or location.
 Enrichment module references must be distinct within a trait, so each module
 unambiguously identifies its configured enrichment in outcomes and recoveries.
 
-## Segment a selected source
+## Select ranges within a change
 
-Segmenter initialization returns an execution function that takes an
-`InputSource` directly and produces a nonempty array of `InputRange` values.
+Segmenter initialization returns an execution function that takes a `Change`
+directly and produces a nonempty array of `Segment` values:
+
+- `Before`: a primary `range` in the before-source, including deleted material.
+- `After`: a primary `range` in the after-source, plus optional `before` ranges
+  providing mapped historical context.
+
+An omitted `After.before` means correspondence has not been computed; an empty
+array means it was computed and found no counterpart. Nonempty historical ranges
+require a before-source. Each segment produces one assessment input; historical
+context ranges are not additional independent assessment targets.
+
 Each range selects decoded text using zero-based UTF-16 offsets, with an
 inclusive start and exclusive end. The complete source is represented by
 `{ start: 0, end: source.text.length }`, including `{ start: 0, end: 0 }` for
@@ -50,10 +60,18 @@ empty text.
 A range must have nonnegative integer offsets, must not end before its start,
 and must fit within its source text.
 
-`Input` pairs a source with its range and owns this validation. Input reports
-and execution recoveries include it as `input`, retaining its validation with
-the source at `input.source` and range at `input.range`. Enrichment context uses
-the same `Input` representation.
+`Input` pairs the shared `change` with a `segment`. Its schema requires the
+selected side to exist and checks primary and historical range bounds against
+their respective source texts. Before and after offsets are independent: mapped
+correspondence must be established through diff analysis, not numeric overlap.
+Bounds validation alone does not establish correspondence. Simple segmenters may
+omit mappings; change-aware implementations may supply them.
+
+Mappings are supplied by the segmenter. The runner does not promise to compute
+missing mappings, including when using fallback segmentation.
+
+Enrichment context uses this representation. Serialized input reports carry only
+paths, sides, and ranges, not source contents.
 
 Segmentation must succeed and cannot request skips or evaluation halts. If
 custom segmentation fails, evaluation falls back to text-based chunking.
@@ -64,8 +82,18 @@ Cancelling evaluation does not trigger fallback work.
 For each location selected for evaluation, enrichment receives:
 
 - `trait`: the unchanged static definition.
-- `input`: an `Input` containing the complete selected source at `input.source`
-  and the selected `InputRange` at `input.range`.
+- `input`: an `Input` containing the shared `change` and one `segment`. The
+  segment tag determines the primary side; `After.before` provides optional
+  historical context. Both complete source versions remain available when
+  present.
+
+For an `After` segment, enrichments access mapped historical ranges through
+`input.segment.before` and resolve their text against
+`input.change.before.text`. These ranges may represent multiple historical
+regions and need not correspond to separately emitted `Before` segments. Mapping
+availability is optional: enrichments must not interpret an omitted mapping as
+evidence that no previous content exists. Before-only segments remain available
+for independently assessing deleted material.
 
 The enrichment returns a string of context for that evaluation. An empty string
 is a valid completed result. The source remains available in full even when the
@@ -125,12 +153,12 @@ not invalidate assessments already completed. Cancelled work gets no invented
 failure or recovery instruction.
 
 Each failure is stored once in its trait report's `recoveries`, with its module,
-instruction, and stage. Execution failures also identify their scope reason,
-source and location, validated against the same source-range constraints as
-input reports. Setup failures have no source location. Reports use deterministic
-ordering based on trait, source/location, and configured module order, not the
-timing of concurrent completions. Scheduling and cancellation are runner
-responsibilities; the schemas represent their results.
+instruction, and stage. Execution failures also identify their scope reason and
+reference the originating input by index within the containing trait report.
+Setup failures have no input reference. Reports use deterministic ordering based
+on trait, source/location, and configured module order, not the timing of
+concurrent completions. Scheduling and cancellation are runner responsibilities;
+the schemas represent their results.
 
 ## Assemble the report
 
@@ -138,18 +166,43 @@ Reports group results by trait, then by evaluated source location:
 
 ```text
 Report
-└── TraitReport[]
+└── traits: TraitReport[]
     ├── static Trait
-    ├── Recovery[]
-    └── InputReport[]
-        ├── input: Input { source, range }
+    ├── recoveries: Recovery[] (execution input index)
+    └── inputs: InputReport[]
+        ├── path: string
+        ├── side: before | after
+        ├── range: InputRange
         ├── EnrichmentReport[]
         └── Assessment?
 ```
 
-Each input report includes the source path and complete selected-version
-contents, making its location interpretable without relying on array positions.
-Its schema rejects text ranges outside the source.
+Input reports contain paths, sides, and ranges, without source text or excerpts.
+Assembly maps `Before`/`After` segments to report `side: before`/`side: after`,
+using the selected source's path and the primary range. Historical context
+ranges are not echoed into the report. Full sources remain available internally
+during execution. Each trait definition appears once in its trait report.
+Generated enrichment text remains in the report, but should not routinely echo
+the source.
+
+Ranges describe the text supplied for evaluation, not necessarily the file's
+current contents. Clients must already have that text or read the file to
+inspect code. The side specifies whether the path and offsets address before or
+after content, including deleted files and renamed paths. It does not identify a
+specific revision; callers must retain any further association with supplied
+versions outside the report. Execution recoveries retain this provenance through
+their input-report reference.
+
+Input entries are allocated in deterministic source/range order, including work
+that fails or is cancelled, so execution recoveries always have a target. Setup
+failures do not fabricate input entries. The trait report schema validates
+recovery input indices. Range ordering and nonnegative offsets are validated by
+the report schemas, but bounds against source length must be validated during
+execution before reporting. Input indices must remain stable when assembling
+partial results; completion order does not determine their values.
+
+Trait-first grouping remains unchanged; alternative grouping is a separate
+design decision.
 
 An enrichment report is `Completed`, with required generated `text`, `Failed`,
 or `Cancelled`. Failure details are stored in the trait's recovery entries, not
