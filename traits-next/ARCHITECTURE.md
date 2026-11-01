@@ -355,7 +355,7 @@ can change both source contents and segmentation boundaries.
 
 Report-local input indices and ranges describe one evaluation; they are not
 durable retry identifiers. Tracking affected inputs and determining what work to
-redo belongs to the incremental tracking mechanism modeled by `TraitsLockfile`.
+redo belongs to the incremental tracking mechanism modeled by `TraitsLock`.
 Setup failures may affect multiple inputs; that mechanism must retain the
 affected source/change associations independently of report indices. The client
 report supplies results and remediation, not an execution ledger or retry
@@ -363,7 +363,7 @@ schedule.
 
 ## Incremental evaluation records
 
-`TraitsLockfile` is a first-pass, versioned schema for workspace-scoped
+`TraitsLock` is a first-pass, versioned schema for workspace-scoped
 tracking, not an implemented cache. Each entry identifies one trait/change
 evaluation by trait name, complete definition digest, evaluation digest, and
 before/after source paths and content digests. Absent sources differ from empty

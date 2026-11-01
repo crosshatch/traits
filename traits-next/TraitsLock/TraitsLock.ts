@@ -3,8 +3,8 @@ import { Schema as S } from "effect"
 import { Entry } from "./Entry.ts"
 
 /** Workspace-scoped incremental evaluation records; persistence, scheduling, and reuse validation are runner responsibilities. */
-export type TraitsLockfile = typeof TraitsLockfile.Type
-export const TraitsLockfile = S.Struct({
+export type TraitsLock = typeof TraitsLock.Type
+export const TraitsLock = S.Struct({
   /** Lockfile format version; incompatible formats require explicit migration or rebuilding. */
   version: S.Literal(1).annotate({
     description: "Lockfile format version; incompatible formats require explicit migration or rebuilding."
