@@ -347,14 +347,64 @@ contains completed work alongside any recovery instructions.
 
 After the client follows recovery instructions, reevaluation starts from the
 affected sources or changes, not their previous segments. Reload the relevant
-inputs, rerun segmentation, and run all applicable trait checks for those
-inputs, including checks that previously succeeded. Remediation can change both
-source contents and segmentation boundaries.
+inputs and determine which trait/change evaluations are invalidated. Rerun
+segmentation and applicable checks for invalidated or retryable evaluations.
+Retain clean passes only when their source versions, trait definition,
+evaluation configuration, and tracked dependencies remain unchanged. Remediation
+can change both source contents and segmentation boundaries.
 
 Report-local input indices and ranges describe one evaluation; they are not
 durable retry identifiers. Tracking affected inputs and determining what work to
-redo belongs to a separate mechanism, potentially a `.traits-lock`, whose design
-remains undecided. Setup failures may affect multiple inputs; that mechanism
-must retain the affected source/change associations independently of report
-indices. The client report supplies results and remediation, not an execution
-ledger or retry schedule.
+redo belongs to the incremental tracking mechanism modeled by `TraitsLockfile`.
+Setup failures may affect multiple inputs; that mechanism must retain the
+affected source/change associations independently of report indices. The client
+report supplies results and remediation, not an execution ledger or retry
+schedule.
+
+## Incremental evaluation records
+
+`TraitsLockfile` is a first-pass, versioned schema for workspace-scoped
+tracking, not an implemented cache. Each entry identifies one trait/change
+evaluation by trait name, complete definition digest, evaluation digest, and
+before/after source paths and content digests. Absent sources differ from empty
+text. Report-local indices, timestamps, and Git revisions are not durable
+evaluation identities. Paths must be canonical within the workspace; copying
+records between workspaces does not by itself establish equivalent inputs.
+
+Fingerprints are lowercase SHA-256 digests. Their canonical serialization and
+domain/version separation remain runtime contracts to implement. The evaluation
+digest covers evaluator/model configuration, assertion thresholds and
+aggregation policy, and resolved extension implementations. Module specifier
+strings alone do not identify extension behavior; transitive code and
+configuration dependencies must also participate in invalidation.
+
+Execution and assessment remain separate. `Complete` means all required work
+finished without fallback or omitted context. `Degraded` means assessment
+finished but segmentation or enrichment lost evidence. `Incomplete` records
+unfinished work and all observed causes, with an optional aggregate over
+completed assessments. Neither degraded nor incomplete passes authorize reuse.
+The runner supplies these outcomes directly; the tracker never infers them from
+absent report assessments or diagnostic prose. Detailed remediation remains in
+the evaluation report.
+
+The initial reuse rule requires `Complete` with `Pass`, identical evaluation
+identity, complete dependency coverage, and successful revalidation of every
+dependency. `Fail`, `Inconclusive`, `NotApplicable`, and `GuidanceOnly` are
+retained for tracking but initially do not qualify for reuse. Aggregation
+thresholds and mixed-segment outcome rules must be explicit in the fingerprinted
+decision policy; the schemas do not infer a verdict from probabilities or
+prescribe that policy.
+
+Dependencies identify canonical resources and their observed state digests.
+Coverage is explicit: an empty dependency list does not establish independence.
+Untracked reads, unverifiable external state, or unresolved dependency versions
+prevent reuse. Dependency discovery must account for negative lookups, directory
+membership, and creation/deletion where relevant, not just existing file
+contents. Captured partial dependencies may remain on incomplete records.
+
+Record assembly replaces matching evaluation identities and preserves distinct
+source versions where needed; retention, atomic writes, concurrency control,
+crash recovery, and the `.traits-lock` storage location remain deferred. The
+lockfile stores outcomes rather than full report evidence, so reuse does not
+reconstruct an old report. Clients cannot infer per-input execution status from
+missing assessments; durable status here is at trait/change granularity.
