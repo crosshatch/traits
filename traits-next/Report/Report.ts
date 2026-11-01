@@ -17,7 +17,7 @@ export const Report = S.Struct({
     description: "Selected traits and their input-specific results in deterministic order."
   }),
   /** Evaluator-owned halt guidance; enrichment failures cannot halt unrelated traits. */
-  instruction: RecoveryInstruction.annotate({
+  instruction: RecoveryInstruction.annotateKey({
     description: "Evaluator-owned halt guidance; enrichment failures cannot halt unrelated traits."
   }).pipe(S.optionalKey)
 })

@@ -15,22 +15,22 @@ export const Trait = S.Struct({
   /** The kind of artifact, action, transaction, relationship, or situation to identify and assess. */
   subject: TraitSubject,
   /** The assertion to assess; omitted for guidance-only traits that produce no assertion assessment. */
-  assertion: TraitAssertion.annotate({
+  assertion: TraitAssertion.annotateKey({
     description: "The assertion to assess; omitted for guidance-only traits that produce no assertion assessment."
   }).pipe(S.optionalKey),
   /** What the trait aims to achieve or protect, and why that matters. */
   purpose: TraitPurpose,
   /** The required module selecting assessment segments from each change. */
-  segment: ModuleSpecifier.annotate({
+  segment: ModuleSpecifier.annotateKey({
     description: "The required module selecting assessment segments from each change."
   }),
   /** Ordered, distinct modules supplying input-specific context; omitted when no enrichments are configured. */
-  enrichments: ModuleSpecifiers.annotate({
+  enrichments: ModuleSpecifiers.annotateKey({
     description:
       "Ordered, distinct modules supplying input-specific context; omitted when no enrichments are configured."
   }).pipe(S.optionalKey),
   /** Shared supporting context from the trait's Markdown body; enrichments do not modify it. */
-  body: TraitBody.annotate({
+  body: TraitBody.annotateKey({
     description: "Shared supporting context from the trait's Markdown body; enrichments do not modify it."
   }).pipe(S.optionalKey)
 }).annotate({

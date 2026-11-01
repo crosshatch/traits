@@ -15,7 +15,7 @@ export const Diagnostic = S.TaggedUnion({
   },
   Instruction: {
     /** Actionable remediation including relevant failure context, replacing standalone error details. */
-    instruction: RecoveryInstruction.annotate({
+    instruction: RecoveryInstruction.annotateKey({
       description: "Actionable remediation including relevant failure context, replacing standalone error details."
     })
   }
@@ -25,7 +25,9 @@ export const Diagnostic = S.TaggedUnion({
     Tuple.map(
       S.fieldsAssign({
         /** The configured segmenter or enrichment module that failed. */
-        module: ModuleSpecifier.annotate({ description: "The configured segmenter or enrichment module that failed." }),
+        module: ModuleSpecifier.annotateKey({
+          description: "The configured segmenter or enrichment module that failed."
+        }),
         /** The extension kind and lifecycle stage: setup origins have no location, segmenter execution references a supplied change, and enrichment execution references a trait-local input. */
         origin: DiagnosticOrigin
       })

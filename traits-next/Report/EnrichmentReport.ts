@@ -6,7 +6,7 @@ import { ModuleSpecifier } from "../schema/index.ts"
 export type EnrichmentReport = typeof EnrichmentReport.Type
 export const EnrichmentReport = S.Struct({
   /** The configured enrichment module that successfully produced this context. */
-  module: ModuleSpecifier.annotate({
+  module: ModuleSpecifier.annotateKey({
     description: "The configured enrichment module that successfully produced this context."
   }),
   /** Successfully generated input-specific context, including a valid empty string. */
