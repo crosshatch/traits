@@ -349,8 +349,8 @@ After the client follows recovery instructions, reevaluation starts from the
 affected sources or changes, not their previous segments. Reload the relevant
 inputs and determine which trait/change evaluations are invalidated. Rerun
 segmentation and applicable checks for invalidated or retryable evaluations.
-Retain clean passes only when their source versions, trait definition,
-evaluation configuration, and tracked dependencies remain unchanged. Remediation
+Retain clean passes only when their source versions and combined configuration
+remain unchanged and the runner's invalidation policy permits reuse. Remediation
 can change both source contents and segmentation boundaries.
 
 Report-local input indices and ranges describe one evaluation; they are not
@@ -365,42 +365,55 @@ schedule.
 
 `TraitsLock` is a first-pass, versioned schema for workspace-scoped tracking,
 not an implemented cache. Each entry identifies one trait/change evaluation by
-trait name, complete definition digest, evaluation digest, and before/after
-source paths and content digests. Absent sources differ from empty text.
-Report-local indices, timestamps, and Git revisions are not durable evaluation
-identities. Paths must be canonical within the workspace; copying records
-between workspaces does not by itself establish equivalent inputs.
+trait name, combined configuration digest, and before/after source paths and
+content digests, and stores its check-level `result`. Absent sources differ from
+empty text. Report-local indices, timestamps, and Git revisions are not durable
+evaluation identities. Paths must be canonical within the workspace; copying
+records between workspaces does not by itself establish equivalent inputs.
 
 Fingerprints are lowercase SHA-256 digests. Their canonical serialization and
-domain/version separation remain runtime contracts to implement. The evaluation
-digest covers evaluator/model configuration, assertion thresholds and
-aggregation policy, and resolved extension implementations. Module specifier
-strings alone do not identify extension behavior; transitive code and
-configuration dependencies must also participate in invalidation.
+domain/version separation remain runtime contracts to implement. The
+configuration digest covers the complete static trait definition, evaluator
+version, model configuration, assertion thresholds and aggregation policy, and
+resolved extension implementations. Module specifier strings alone do not
+identify extension behavior.
 
-Execution and assessment remain separate. `Complete` means all required work
-finished without fallback or omitted context. `Degraded` means assessment
-finished but segmentation or enrichment lost evidence. `Incomplete` records
-unfinished work and all observed causes, with an optional aggregate over
-completed assessments. Neither degraded nor incomplete passes authorize reuse.
-The runner supplies these outcomes directly; the tracker never infers them from
-absent report assessments or diagnostic prose. Detailed remediation remains in
-the evaluation report.
+The runner derives a check-level `CheckResult` shared by incremental tracking,
+CI, and MCP consumers. Assessment probabilities describe the evaluated material;
+the check result also accounts for whether required execution succeeded:
 
-The initial reuse rule requires `Complete` with `Pass`, identical evaluation
-identity, complete dependency coverage, and successful revalidation of every
-dependency. `Fail`, `Inconclusive`, `NotApplicable`, and `GuidanceOnly` are
-retained for tracking but initially do not qualify for reuse. Aggregation
-thresholds and mixed-segment outcome rules must be explicit in the fingerprinted
-decision policy; the schemas do not infer a verdict from probabilities or
-prescribe that policy.
+- `Pass`: all required work completed successfully and assessment policy
+  accepted the result.
+- `Fail`: an assessment failed or a required execution stage failed, including
+  failures recovered through segmentation fallback or omitted enrichment
+  context. An intentional enrichment skip also prevents a clean pass under the
+  initial conservative policy.
+- `Inconclusive`: execution succeeded but evidence did not establish an accepted
+  assessment verdict.
+- `Incomplete`: work was interrupted, cancelled, halted, or never finished.
 
-Dependencies identify canonical resources and their observed state digests.
-Coverage is explicit: an empty dependency list does not establish independence.
-Untracked reads, unverifiable external state, or unresolved dependency versions
-prevent reuse. Dependency discovery must account for negative lookups, directory
-membership, and creation/deletion where relevant, not just existing file
-contents. Captured partial dependencies may remain on incomplete records.
+Known failures take precedence over incomplete work; otherwise unfinished work
+takes precedence over inconclusive assessments. Partial passing assessments
+never establish a passing check. Fallback can continue gathering useful evidence
+without turning an unsuccessful check into a pass. Detailed causes and
+remediation remain in the report, rather than being duplicated in the lock. The
+runner supplies the result directly; clients and tracking never infer it from
+missing assessments or diagnostic prose. This is a contract for the deferred
+runner, not implemented classification behavior.
+
+CI treats only `Pass` as success. Reuse additionally requires identical
+evaluation identity and approval under the runner's invalidation policy. Other
+results remain tracked but do not qualify for reuse. Acceptance of
+not-applicable and guidance-only evaluations requires explicit policy rather
+than silently treating them as passes. Aggregation thresholds and mixed-segment
+outcome rules belong to the fingerprinted decision policy; the schemas do not
+derive check results from probabilities.
+
+Dependency capture and storage are deferred; entries contain no dependency list
+or coverage flag. Matching source and configuration fingerprints alone does not
+establish safe reuse for checks affected by other files or external state. The
+runner must rerun those checks unless its invalidation policy can establish that
+their results remain valid. This schema does not implement that policy.
 
 Record assembly replaces matching evaluation identities and preserves distinct
 source versions where needed; retention, atomic writes, concurrency control,
