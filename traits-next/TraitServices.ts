@@ -7,7 +7,8 @@ import type { ChildProcessSpawner } from "effect/process"
 
 /**
  * Services available during trait extension setup and execution.
- * Each execution receives its own chat and scope; the setup scope outlives its executions.
+ * Each execution receives its own chat and scope. Setup is shared per extension across
+ * the program lifecycle; its scope outlives dependent executions until shutdown or explicit reset.
  */
 export type TraitServices =
   | Chat.Chat
