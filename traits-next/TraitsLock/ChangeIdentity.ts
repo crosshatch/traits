@@ -9,7 +9,7 @@ const SourceIdentity = S.Struct({
     description: "Canonical source path within the evaluation workspace; before and after paths may differ for renames."
   }),
   /** Digest of the exact supplied source text, including empty text; not a timestamp or Git revision. */
-  content: Fingerprint.annotate({
+  content: Fingerprint.annotateKey({
     description: "Digest of the exact supplied source text, including empty text; not a timestamp or Git revision."
   })
 })
@@ -18,11 +18,13 @@ const SourceIdentity = S.Struct({
 export type ChangeIdentity = typeof ChangeIdentity.Type
 export const ChangeIdentity = S.Struct({
   /** Historical source identity, including the old path for a rename; omitted for creation. */
-  before: SourceIdentity.annotate({
+  before: SourceIdentity.annotateKey({
     description: "Historical source identity, including the old path for a rename; omitted for creation."
   }).pipe(S.optionalKey),
   /** Updated source identity; omitted for deletion. */
-  after: SourceIdentity.annotate({ description: "Updated source identity; omitted for deletion." }).pipe(S.optionalKey)
+  after: SourceIdentity.annotateKey({ description: "Updated source identity; omitted for deletion." }).pipe(
+    S.optionalKey
+  )
 })
   .annotate({
     description:

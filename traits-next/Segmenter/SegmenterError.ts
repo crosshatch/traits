@@ -5,7 +5,7 @@ import { RecoveryInstruction } from "../schema/index.ts"
 /** A segmentation execution failure with required recovery guidance; text fallback still applies. */
 export class SegmenterError extends S.TaggedError<SegmenterError>()("SegmenterError", {
   /** Required actionable guidance for resolving segmentation execution failure before reevaluation. */
-  instruction: RecoveryInstruction.annotate({
+  instruction: RecoveryInstruction.annotateKey({
     description: "Required actionable guidance for resolving segmentation execution failure before reevaluation."
   })
 }) {

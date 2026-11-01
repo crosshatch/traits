@@ -43,7 +43,7 @@ export const Outcome = S.TaggedUnion({
           "Observed causes of unfinished work; multiple concurrent causes are retained rather than selecting a winner."
       }),
     /** Aggregate of completed assessments only, if any; does not imply the whole evaluation finished. */
-    assessment: AssessmentResult.annotate({
+    assessment: AssessmentResult.annotateKey({
       description: "Aggregate of completed assessments only, if any; does not imply the whole evaluation finished."
     }).pipe(S.optionalKey)
   }

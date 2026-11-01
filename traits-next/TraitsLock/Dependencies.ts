@@ -19,7 +19,7 @@ export const Dependencies = S.Struct({
           "Canonical resource identity understood by the dependency resolver, such as a file URL; never a credential."
       }),
       /** Digest of the observed dependency state; creation, deletion, and absence must invalidate dependent checks. */
-      fingerprint: Fingerprint.annotate({
+      fingerprint: Fingerprint.annotateKey({
         description:
           "Digest of the observed dependency state; creation, deletion, and absence must invalidate dependent checks."
       })

@@ -363,13 +363,13 @@ schedule.
 
 ## Incremental evaluation records
 
-`TraitsLock` is a first-pass, versioned schema for workspace-scoped
-tracking, not an implemented cache. Each entry identifies one trait/change
-evaluation by trait name, complete definition digest, evaluation digest, and
-before/after source paths and content digests. Absent sources differ from empty
-text. Report-local indices, timestamps, and Git revisions are not durable
-evaluation identities. Paths must be canonical within the workspace; copying
-records between workspaces does not by itself establish equivalent inputs.
+`TraitsLock` is a first-pass, versioned schema for workspace-scoped tracking,
+not an implemented cache. Each entry identifies one trait/change evaluation by
+trait name, complete definition digest, evaluation digest, and before/after
+source paths and content digests. Absent sources differ from empty text.
+Report-local indices, timestamps, and Git revisions are not durable evaluation
+identities. Paths must be canonical within the workspace; copying records
+between workspaces does not by itself establish equivalent inputs.
 
 Fingerprints are lowercase SHA-256 digests. Their canonical serialization and
 domain/version separation remain runtime contracts to implement. The evaluation

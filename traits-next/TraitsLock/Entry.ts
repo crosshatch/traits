@@ -10,13 +10,13 @@ import { Outcome } from "./Outcome.ts"
 export type Entry = typeof Entry.Type
 export const Entry = S.Struct({
   /** Trait name for lookup and display; the name alone does not establish reuse eligibility. */
-  trait: TraitName.annotate({
+  trait: TraitName.annotateKey({
     description: "Trait name for lookup and display; the name alone does not establish reuse eligibility."
   }),
   /** Digest of the complete static trait definition. */
-  definition: Fingerprint.annotate({ description: "Digest of the complete static trait definition." }),
+  definition: Fingerprint.annotateKey({ description: "Digest of the complete static trait definition." }),
   /** Digest of evaluator version, model/configuration, decision policy, and resolved extension implementation identities. */
-  evaluation: Fingerprint.annotate({
+  evaluation: Fingerprint.annotateKey({
     description:
       "Digest of evaluator version, model/configuration, decision policy, and resolved extension implementation identities."
   }),

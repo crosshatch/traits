@@ -7,11 +7,11 @@ import { Segment } from "./Segment.ts"
 export type Input = typeof Input.Type
 export const Input = S.Struct({
   /** The available before and after sources, retained as context for enrichment and assessment. */
-  change: Change.annotate({
+  change: Change.annotateKey({
     description: "The available before and after sources, retained as context for enrichment and assessment."
   }),
   /** The primary assessment target and optional historical mappings, validated against the available sources. */
-  segment: Segment.annotate({
+  segment: Segment.annotateKey({
     description:
       "The primary assessment target and optional historical mappings, validated against the available sources."
   })

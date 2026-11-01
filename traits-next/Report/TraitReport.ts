@@ -7,7 +7,7 @@ import { InputReport } from "./InputReport.ts"
 export type TraitReport = typeof TraitReport.Type
 export const TraitReport = S.Struct({
   /** The unchanged static trait definition, included once for these results. */
-  trait: Trait.annotate({ description: "The unchanged static trait definition, included once for these results." }),
+  trait: Trait.annotateKey({ description: "The unchanged static trait definition, included once for these results." }),
   /** Scheduled assessment inputs in deterministic order, including failed or cancelled work; indices are local to this report, not durable retry identifiers. */
   inputs: S.Array(InputReport).annotate({
     description:

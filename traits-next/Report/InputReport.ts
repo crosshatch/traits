@@ -20,7 +20,7 @@ export const InputReport = S.Struct({
       "Successfully produced enrichment contexts only; missing entries do not distinguish failure, cancellation, or unstarted work."
   }),
   /** Assertion probabilities when assessment completed; omission alone does not indicate failure, since guidance-only traits have no assessment. */
-  assessment: Assessment.annotate({
+  assessment: Assessment.annotateKey({
     description:
       "Assertion probabilities when assessment completed; omission alone does not indicate failure, since guidance-only traits have no assessment."
   }).pipe(S.optionalKey)
