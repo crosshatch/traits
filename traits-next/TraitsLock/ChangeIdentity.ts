@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { Fingerprint } from "./Fingerprint.ts"
+import { Fingerprint } from "../schema/index.ts"
 
 /** One supplied source version identified without retaining its text. */
 const SourceIdentity = S.Struct({

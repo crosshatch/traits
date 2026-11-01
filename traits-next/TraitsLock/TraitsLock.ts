@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { Entry } from "./Entry.ts"
+import { TraitsLockEntry } from "./TraitsLockEntry.ts"
 
 /** Workspace-scoped incremental evaluation records; persistence, scheduling, and reuse validation are runner responsibilities. */
 export type TraitsLock = typeof TraitsLock.Type
@@ -10,7 +10,7 @@ export const TraitsLock = S.Struct({
     description: "Lockfile format version; incompatible formats require explicit migration or rebuilding."
   }),
   /** Trait/change evaluation records; assembly replaces matching identities rather than appending duplicate attempts. */
-  entries: S.Array(Entry).annotate({
+  entries: S.Array(TraitsLockEntry).annotate({
     description:
       "Trait/change evaluation records; assembly replaces matching identities rather than appending duplicate attempts."
   })
