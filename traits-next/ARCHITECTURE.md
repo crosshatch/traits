@@ -35,8 +35,22 @@ Each trait references a segmenter and may reference enrichments. These
 extensions are initialized before use, separating reusable setup from the work
 performed for each input or location.
 
+Initialization is shared across the entire program lifecycle, not repeated per
+trait or evaluation. A program-level registry identifies an extension by its
+kind (segmenter or enrichment) and resolved module identity. Module references
+are canonicalized when constructing static trait definitions, so aliases resolve
+to one registry entry and one report module reference. Concurrent callers await
+the same initialization outcome. Setup resources live until program shutdown or
+an explicit reset; execution resources remain independent. Shared setup state
+must support concurrent executions across traits and evaluations.
+
+A failed initialization remains failed until explicit reset or program restart;
+starting another evaluation does not retry it. Reset must coordinate dependent
+executions before replacing setup resources. Registry, resolution, and reset
+implementation remain separate from these lifecycle contracts.
+
 Enrichment module references must be distinct within a trait, so each module
-unambiguously identifies its configured enrichment in outcomes and recoveries.
+unambiguously identifies its configured enrichment in results and failures.
 
 ## Select ranges within a change
 
@@ -70,8 +84,8 @@ omit mappings; change-aware implementations may supply them.
 Mappings are supplied by the segmenter. The runner does not promise to compute
 missing mappings, including when using fallback segmentation.
 
-Enrichment context uses this representation. Serialized input reports carry only
-paths, sides, and ranges, not source contents.
+Enrichment context uses this representation. Serialized input reports preserve
+the complete segment and reference the caller's change, without source contents.
 
 Segmentation must succeed and cannot request skips or evaluation halts. Before
 scheduling any enrichments for a change, the runner validates the entire custom
@@ -87,6 +101,15 @@ initialization; execution failure affects the current change. Cancelling
 evaluation does not trigger fallback work. Segmenter failures remain visible as
 diagnostics even when fallback succeeds; invalid output also produces a
 diagnostic describing the validation failure.
+
+Both segmenter error channels accept arbitrary failures. `SegmenterSetupError`
+provides required recovery instructions for initialization, and `SegmenterError`
+provides them for execution. The runner recognizes each only at its matching
+stage and reports `Diagnostic.Instruction` with the corresponding segmenter
+origin. Both still trigger fallback. Wrong-stage errors and other failures
+follow ordinary failure normalization: `Error` unless the runner independently
+knows actionable remediation. Instructions never turn a segmenter failure into a
+skip or halt request.
 
 Fallback chunks every available source independently, covering its complete
 text:
@@ -180,11 +203,13 @@ instructions. Their reason determines which remaining work stops:
 
 An initialization failure disables the enrichment. A recognized
 `EnrichmentSetupError` carries recovery guidance, not a scope reason; other
-setup failures produce diagnostics. Whether assessment requires that enrichment
-is a separate policy, not a decision encoded by the setup error. During
-execution, `Enrichment` affects only its current invocation. Enrichments cannot
-halt unrelated traits. Whole-evaluation halts belong to the evaluator rather
-than extensions.
+setup failures produce ordinary diagnostics. Whether assessment requires that
+enrichment is a separate policy, not a decision encoded by the setup error.
+After an `Enrichment`-scope skip, assessment proceeds with the remaining
+available context unless another outcome prevents assessment, such as `Input` or
+`Trait` cancellation. During execution, `Enrichment` affects only its current
+invocation. Enrichments cannot halt unrelated traits. Whole-evaluation halts
+belong to the evaluator rather than extensions.
 
 Parallel failures are collected rather than reduced to one winning error.
 Cancellation stops remaining work at the requested scope, but does not erase
@@ -192,38 +217,45 @@ successful results or failures already observed. A later trait-wide failure does
 not invalidate assessments already completed. Cancelled work gets no invented
 failure or recovery instruction.
 
-Recognized enrichment signals are stored once in the trait report's
-`recoveries`, with their module, instruction, and stage. Execution signals also
-identify their scope reason and reference the originating input by index within
-the containing trait report. Recognition is stage-specific: an error from the
-wrong stage is an ordinary diagnostic, not a recovery control signal.
+All observed extension failures and defects are stored in `Report.diagnostics`,
+each recorded once per returned report with its configured module, origin, and
+explanation. Diagnostics help the client explain problems and remediation;
+recovery-control decisions remain internal to the runner. Recognized enrichment
+execution signals retain their `Enrichment`, `Input`, or `Trait` reason on
+`EnrichmentError`, but diagnostics serialize only the explanation tag, its text,
+module, and origin. Recognition remains stage-specific: an error from the wrong
+stage is an ordinary failure, not a recovery control signal.
 
-Other failures and defects are stored once in `diagnostics`, not duplicated in
-`recoveries`. Unknown enrichment execution failures omit that invocation's
-context; they do not infer `Input` or `Trait` cancellation. Siblings may
-continue and assessment follows the existing recovery policy. Interruption is
-cancellation, never a diagnostic or recovery signal.
+Ordinary failures may also include actionable instructions; remediation text
+never implies cancellation. Unknown enrichment execution failures omit that
+invocation's context; they do not infer `Input` or `Trait` cancellation.
+Siblings may continue and assessment proceeds with the remaining available
+context unless another outcome prevents assessment. Interruption is cancellation
+and never creates a diagnostic.
 
-Each diagnostic contains a configured module and an `info` tagged union with
+Each diagnostic is a tagged union with shared `module` and `origin` fields and
 exactly one explanation: `Error { error }` for normalized failure details, or
 `Instruction { instruction }` for actionable remediation including relevant
-failure context. Both alternatives require nonblank text and reject the other's
-field. The runner chooses `Instruction` when remediation is known and `Error`
-otherwise. The runner must handle arbitrary thrown values, including cyclic
-objects and ordinary errors, without relying on JSON serialization. It must
-exclude raw error objects, source text, and excerpts from diagnostics and use a
-generic failure message when useful details cannot be safely extracted. A
-diagnostic explains failure; it need not invent a remedy.
+failure context. Both alternatives require nonblank text; the tag selects the
+explanation, with normal unknown-property handling. The runner chooses
+`Instruction` when remediation is known and `Error` otherwise. The runner must
+handle arbitrary thrown values, including cyclic objects and ordinary errors,
+without relying on JSON serialization. It must exclude raw error objects, source
+text, and excerpts from diagnostics and use a generic failure message when
+useful details cannot be safely extracted. A diagnostic explains what happened;
+it need not invent a remedy.
 
 Each diagnostic's `origin` is tagged `SegmenterSetup`, `SegmenterExecution`,
-`EnrichmentSetup`, or `EnrichmentExecution`. Shared `module` and `info` fields
-live on the diagnostic itself. Setup origins have no input reference. Segmenter
-execution diagnostics reference the caller's supplied change by index in caller
-order, before filtering or scheduling; callers retain that association outside
-the source-free report. The runner validates change indices against the supplied
-changes. Enrichment execution diagnostics reference the containing trait
-report's inputs, preserving their before/after provenance. Setup failures do not
-fabricate inputs, and segmenter failures need no synthetic assessment target.
+`EnrichmentSetup`, or `EnrichmentExecution`. The explanation and shared `module`
+field live on the diagnostic itself. Setup origins have no trait or input
+reference. Execution origins reference the originating trait by index in
+`Report.traits`. Segmenter execution failures reference the caller's supplied
+change by index in caller order, before filtering or scheduling; callers retain
+that association outside the source-free report. The runner validates change
+indices against the supplied changes. Enrichment execution failures reference
+the originating trait report's inputs, preserving their before/after provenance.
+Setup failures do not fabricate inputs, and segmenter failures need no synthetic
+assessment target.
 
 Reports use deterministic ordering based on trait, source/location, and
 configured module order, not the timing of concurrent completions. Scheduling
@@ -236,46 +268,63 @@ Reports group results by trait, then by evaluated source location:
 
 ```text
 Report
+├── diagnostics: Diagnostic[] (Error | Instruction, with module and origin)
 └── traits: TraitReport[]
     ├── static Trait
-    ├── recoveries: Recovery[] (execution input index)
-    ├── diagnostics: Diagnostic[] (setup, change index, or input index)
     └── inputs: InputReport[]
-        ├── path: string
-        ├── side: before | after
-        ├── range: InputRange
+        ├── change: number
+        ├── segment: Segment
         ├── EnrichmentReport[]
         └── Assessment?
 ```
 
-Input reports contain paths, sides, and ranges, without source text or excerpts.
-Assembly maps `Before`/`After` segments to report `side: before`/`side: after`,
-using the selected source's path and the primary range. Historical context
-ranges are not echoed into the report. Full sources remain available internally
-during execution. Each trait definition appears once in its trait report.
-Generated enrichment text remains in the report, but should not routinely echo
-the source.
+Input reports reference changes by index in the original caller-supplied order,
+before filtering or scheduling, and preserve the complete `Segment`, without
+source text or excerpts. This includes historical correspondence on `After`:
+omission means unknown, while an empty array means no counterpart. Paths,
+including both paths for renames, are resolved through the original change. Full
+sources remain available internally during execution. Each trait definition
+appears once in its trait report. Generated enrichment text remains in the
+report, but should not routinely echo the source.
 
 Ranges describe the text supplied for evaluation, not necessarily the file's
-current contents. Clients must already have that text or read the file to
-inspect code. The side specifies whether the path and offsets address before or
-after content, including deleted files and renamed paths. It does not identify a
-specific revision; callers must retain any further association with supplied
-versions outside the report. Execution recoveries retain this provenance through
+current contents. Clients retain the original request to resolve paths and
+source versions. They can inspect the supplied snapshots or retrieve matching
+versions from a known Git baseline; arbitrary supplied text need not exist in
+Git. The segment tag identifies the primary source side, and historical ranges
+address the same change's before source. Reports do not identify Git revisions
+or embed snapshots. Enrichment execution failures retain this provenance through
 their input-report reference.
 
 Input entries are allocated in deterministic source/range order, including work
-that fails or is cancelled, so execution recoveries always have a target. Setup
-failures do not fabricate input entries. The trait report schema validates
-recovery and enrichment-diagnostic input indices. Range ordering and nonnegative
-offsets are validated by the report schemas, but bounds against source length
-must be validated during execution before reporting. Input indices must remain
-stable when assembling partial results; completion order does not determine
-their values.
+that fails or is cancelled, so enrichment execution failures always reference an
+input. Setup failures do not fabricate input entries. The root report schema
+validates execution trait/input indices, requires enrichment failure modules to
+be configured enrichments, and requires segmenter failures to name the
+configured segmenter. Each input's enrichment modules must be configured and
+unique. The schemas require a trait assertion for assessments. The runner must
+prevent assessment of an input stopped by `Input` or `Trait` recovery while
+preserving completed assessments on other inputs. This execution invariant is
+not validated by the report schema because cancellation decisions are not
+serialized. Range ordering and nonnegative offsets are validated by the report
+schemas, but change-index bounds, source-side availability, and all ranges
+against source length must be validated during execution before reporting. Input
+indices must remain stable when assembling partial results; completion order
+does not determine their values.
+
+Clients scan `Report.diagnostics` for problems and remediation. Setup failures
+name an extension configured by at least one reported trait; affected traits can
+be identified from their configuration. Execution origins identify the
+particular trait and input or change involved. The registry owns persistent
+setup outcomes; report assembly includes each relevant setup failure once. Later
+evaluations may include the same persistent setup failure again without implying
+another initialization attempt. Trait and input indices are report-local, not
+program-lifetime identities. Event deduplication remains an assembly obligation;
+structural validation cannot establish that two entries describe the same event.
 
 Report assembly must preserve the originating input and module for each
 execution failure when assigning these indices. The schema's bounds check alone
-does not prove that a recovery references the input and module that actually
+does not prove that a failure references the input and module that actually
 failed.
 
 Trait-first grouping remains unchanged; alternative grouping is a separate
@@ -284,13 +333,12 @@ design decision.
 An enrichment report contains only a `module` and successfully generated `text`,
 including a valid empty string. Failed, cancelled, and unstarted enrichments do
 not produce enrichment entries. Absence does not distinguish these execution
-states. Failure details are stored in the trait's recovery or diagnostic
-entries, not duplicated in enrichment or input reports. Setup failures are
-recorded once, without fabricating per-input execution failures.
+states. Failure details are stored in the report's shared diagnostics. Setup
+failures are recorded once, without fabricating per-input execution failures.
 
 A missing assessment alone does not indicate failure, since guidance-only traits
 also omit assessments. The overall report may carry evaluator-owned halt
-guidance; enrichment recoveries remain attached to their traits.
+guidance alongside the shared diagnostic list.
 
 Partial results are preserved through skips and halts, so the final report
 contains completed work alongside any recovery instructions.

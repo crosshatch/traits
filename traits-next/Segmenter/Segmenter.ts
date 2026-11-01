@@ -5,6 +5,8 @@ import type { TraitServices } from "../TraitServices.ts"
 
 /**
  * Initializes change-aware segmentation; failures are reported alongside fallback.
+ * Stage-appropriate SegmenterSetupError and SegmenterError failures supply actionable
+ * instructions without a recovery target. Both error channels accept arbitrary failures.
  * Before enrichment, the runner validates the whole result. Setup/execution failures,
  * defects, or invalid output trigger text-chunk fallback across all available sides
  * (including empty sources), without historical mappings. Interruption never triggers fallback.
