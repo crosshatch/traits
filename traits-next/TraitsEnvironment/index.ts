@@ -1,3 +1,5 @@
+export * from "./EnvironmentInfo.ts"
 export * from "./TraitsEnvironment.ts"
+export * from "./TraitsEnvironmentStore.ts"
 export * from "./TraitsSource.ts"
 export * from "./TraitSources.ts"
