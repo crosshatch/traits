@@ -1,4 +1,4 @@
-import { Array, Console, Duration, Effect, Schema as S } from "effect"
+import { Array, Console, Effect, Schema as S } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
 import { Profile } from "../../../Profile/Profile.ts"
@@ -51,7 +51,7 @@ export const create = Command.make(
         profiles: [...Array.filter(config.profiles, (entry) => entry.name !== name), { name, profile }],
         activeProfile: config.activeProfile ?? name
       })
-    }).pipe((operation) => withLock(operation, Duration.minutes(2)))
+    }).pipe(withLock)
     yield* Console.log(
       `Saved profile ${name}. Model availability and role capabilities are checked when models are resolved.`
     )

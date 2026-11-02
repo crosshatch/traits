@@ -1,10 +1,11 @@
 /**
  * Mutual exclusion for local CLI configuration and credential updates.
- * The timeout covers kernel lock acquisition, not semaphore queueing or operation time.
+ * The one-minute timeout covers lock setup and acquisition, not semaphore queueing or operation time.
  * Not reentrant; no rollback. Nonblocking attempts keep waiting interruptible.
  * Effect FileSystem does not expose the native descriptor required by the locking API.
  * Never unlink or replace the persistent lock file; closing its handle releases the lock.
- * UserConfigLockSetupError reports service initialization failures.
+ * Native modules are loaded on first lock use and memoized per service instance.
+ * UserConfigLockSetupError reports native-module setup failures.
  * UserConfigLockError reports lock-use failures; protected operation errors propagate unchanged.
  */
 import { Context, Duration, Effect, FileSystem, Layer, Option, Schedule, Schema as S, Scope, Semaphore } from "effect"
@@ -33,7 +34,7 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
     const { dataDirectory, lock } = yield* WorkspacePaths
     const secure = yield* UserFileSecurity
     const semaphore = yield* Semaphore.make(1)
-    const [{ tryLock }, { constants, open }] = yield* Effect.all(
+    const modules = yield* Effect.all(
       [
         Effect.tryPromise({
           try: () => import("fs-native-extensions"),
@@ -45,10 +46,11 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
         })
       ],
       { concurrency: "unbounded" }
-    )
-    return <A, E, R>(operation: Effect.Effect<A, E, R>, timeout: Duration.Duration) =>
+    ).pipe(Effect.cached)
+    return <A, E, R>(operation: Effect.Effect<A, E, R>) =>
       Effect.scopedWith((scope) =>
         Effect.gen(function* () {
+          const [{ tryLock }, { constants, open }] = yield* modules
           yield* fs.makeDirectory(dataDirectory, { recursive: true, mode: 0o700 })
           yield* secure(dataDirectory, "Directory")
           yield* secure(lock, "File").pipe(
@@ -109,11 +111,11 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
               })
           }),
           Effect.timeoutOrElse({
-            duration: timeout,
+            duration: Duration.minutes(1),
             orElse: () =>
               UserConfigLockError.make({
                 path: lock,
-                message: `Timed out after ${Duration.toMillis(timeout)}ms waiting for the user configuration lock at ${lock}. Another operation may still hold it; do not delete the lock file.`
+                message: `Timed out after one minute waiting for the user configuration lock at ${lock}. Another operation may still hold it; do not delete the lock file.`
               })
           }),
           Effect.andThen(operation)

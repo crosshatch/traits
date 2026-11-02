@@ -1,4 +1,4 @@
-import { Array, Console, Duration, Effect } from "effect"
+import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
 import { ProfileName } from "../../../Profile/ProfileName.ts"
@@ -25,7 +25,7 @@ export const remove = Command.make(
           ? { activeProfile: config.activeProfile }
           : {})
       })
-    }).pipe((operation) => withLock(operation, Duration.minutes(2)))
+    }).pipe(withLock)
     yield* Console.log(`Removed profile ${name}.`)
   })
 )

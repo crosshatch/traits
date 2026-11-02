@@ -1,4 +1,4 @@
-import { Array, Console, Duration, Effect } from "effect"
+import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
 import { ProfileName } from "../../../Profile/ProfileName.ts"
@@ -20,7 +20,7 @@ export const use = Command.make(
         )
       )
       yield* writeConfig({ ...config, activeProfile: name })
-    }).pipe((operation) => withLock(operation, Duration.minutes(2)))
+    }).pipe(withLock)
     yield* Console.log(`Using profile ${name}.`)
   })
 )
