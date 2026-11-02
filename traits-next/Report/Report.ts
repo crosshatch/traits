@@ -34,7 +34,7 @@ export const Report = S.Struct({
             SegmenterSetup: () => Array.some(report.traits, (trait) => diagnostic.module === trait.trait.segment),
             EnrichmentSetup: () =>
               Array.some(report.traits, (trait) => trait.trait.enrichments?.includes(diagnostic.module) === true),
-            SegmenterExecution: (origin) => diagnostic.module === report.traits[origin.trait]?.trait.segment,
+            SegmenterExecution: () => Array.some(report.traits, (trait) => diagnostic.module === trait.trait.segment),
             EnrichmentExecution: (origin) => {
               const trait = report.traits[origin.trait]
               return (

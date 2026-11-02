@@ -4,7 +4,7 @@ import { Schema as S } from "effect"
 export type TraitName = typeof TraitName.Type
 export const TraitName = S.NonEmptyString.check(
   S.isTrimmed(),
-  S.isPattern(/^(?!trait-)[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  S.isPattern(/^(?!trait-)[a-z0-9]+(?:-[a-z0-9]+)*$/u),
   S.isMaxLength(200)
 )
   .pipe(S.brand("traits/TraitName"))

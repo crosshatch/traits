@@ -3,7 +3,7 @@ import { Record, Schema as S, Tuple } from "effect"
 import { ModuleSpecifier, RecoveryInstruction } from "../schema/index.ts"
 import { DiagnosticOrigin } from "./DiagnosticOrigin.ts"
 
-/** A diagnostic for an observed extension failure, even when fallback succeeds; interruption is cancellation and creates no diagnostic. */
+/** A diagnostic for an observed extension failure; interruption is cancellation and creates no extension diagnostic. */
 export type Diagnostic = typeof Diagnostic.Type
 export const Diagnostic = S.TaggedUnion({
   Error: {
@@ -35,6 +35,6 @@ export const Diagnostic = S.TaggedUnion({
   )
   .annotate({
     description:
-      "A diagnostic for an observed extension failure, even when fallback succeeds; interruption is cancellation and creates no diagnostic."
+      "A diagnostic for an observed extension failure; interruption is cancellation and creates no extension diagnostic."
   })
   .pipe(S.toTaggedUnion("_tag"))
