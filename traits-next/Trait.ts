@@ -7,23 +7,23 @@ import { TraitName } from "./TraitName.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
 
-/** A static trait definition with required segmentation and optional assertion, supporting body, and enrichments. */
+/** A static trait definition with optional subject, segmentation, assertion, supporting body, and enrichments. */
 export type Trait = typeof Trait.Type
 export const Trait = S.Struct({
   /** A descriptive kebab-case trait name without a redundant trait- prefix. */
   name: TraitName,
   /** The kind of artifact, action, transaction, relationship, or situation to identify and assess. */
-  subject: TraitSubject,
+  subject: TraitSubject.pipe(S.optionalKey),
   /** The assertion to assess; omitted for guidance-only traits that produce no assertion assessment. */
   assertion: TraitAssertion.annotateKey({
     description: "The assertion to assess; omitted for guidance-only traits that produce no assertion assessment."
   }).pipe(S.optionalKey),
   /** What the trait aims to achieve or protect, and why that matters. */
   purpose: TraitPurpose,
-  /** The required module selecting assessment segments from each change. */
+  /** An optional module selecting assessment segments from each change. */
   segment: ModuleSpecifier.annotateKey({
-    description: "The required module selecting assessment segments from each change."
-  }),
+    description: "An optional module selecting assessment segments from each change."
+  }).pipe(S.optionalKey),
   /** Ordered, distinct modules supplying input-specific context; omitted when no enrichments are configured. */
   enrichments: ModuleSpecifiers.annotateKey({
     description:
@@ -35,5 +35,5 @@ export const Trait = S.Struct({
   }).pipe(S.optionalKey)
 }).annotate({
   description:
-    "A static trait definition with required segmentation and optional assertion, supporting body, and enrichments."
+    "A static trait definition with optional subject, segmentation, assertion, supporting body, and enrichments."
 })
