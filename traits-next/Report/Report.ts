@@ -9,6 +9,11 @@ import { TraitReport } from "./TraitReport.ts"
 /** Client-facing evaluation results grouped by trait, without source text or excerpts; retry tracking is external. */
 export type Report = typeof Report.Type
 export const Report = S.Struct({
+  /** Whether evaluation was interrupted; retained results may be incomplete. Recovery-scope cancellation alone does not count as interruption. */
+  interrupted: S.Boolean.annotate({
+    description:
+      "Whether evaluation was interrupted; retained results may be incomplete. Recovery-scope cancellation alone does not count as interruption."
+  }),
   /** Diagnostics included once per report, with locations and explanations for client remediation. */
   diagnostics: S.Array(Diagnostic).annotate({
     description: "Diagnostics included once per report, with locations and explanations for client remediation."
@@ -51,13 +56,14 @@ export const Report = S.Struct({
     )
   )
 
-/** Whether a complete runner-produced report has no failures or halt instructions and every required assessment is accepted by the supplied policy. */
+/** Whether a complete runner-produced report has no interruption, failures, or halt instructions and every required assessment is accepted by the supplied policy. */
 export const isPass: {
   (acceptsAssessment: (assessment: Assessment) => boolean): (report: Report) => boolean
   (report: Report, acceptsAssessment: (assessment: Assessment) => boolean): boolean
 } = Function.dual(
   2,
   (report: Report, acceptsAssessment: (assessment: Assessment) => boolean): boolean =>
+    !report.interrupted &&
     report.diagnostics.length === 0 &&
     report.instruction === undefined &&
     Array.every(

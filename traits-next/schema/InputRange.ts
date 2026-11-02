@@ -20,13 +20,14 @@ export const InputRange = S.Struct({
     })
   )
 
-/** Whether a validated InputRange fits the text without splitting surrogate pairs; assumes nonnegative, ordered integer offsets. */
+/** Whether a range has nonnegative, ordered integer offsets and fits the text without splitting surrogate pairs. */
 export const isValidForText: {
   (text: string): (range: InputRange) => boolean
   (range: InputRange, text: string): boolean
 } = Function.dual(
   2,
   (range: InputRange, text: string): boolean =>
+    S.is(InputRange)(range) &&
     range.end <= text.length &&
     !Option.exists(String.codePointAt(text, range.start - 1), (code) => code > 0xffff) &&
     !Option.exists(String.codePointAt(text, range.end - 1), (code) => code > 0xffff)

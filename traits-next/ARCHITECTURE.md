@@ -62,8 +62,22 @@ execution-sharing contract is separate from program-lifetime initialization and
 does not cache results across evaluations. Each shared invocation owns its own
 execution resources. Runner implementation remains deferred.
 
+Segmentation is intentionally trait-independent in this version. A segmenter
+receives no trait subject, assertion, or per-trait options; traits using the
+same resolved module receive the same segments for a change. Different selection
+behavior requires different segmenter modules, which may reuse implementation
+internally. Trait-specific enrichment and assessment remain separate downstream
+work.
+
+Trait independence enables sharing segmentation results; it is not required to
+share initialization. If per-trait execution options are introduced later,
+execution identity must include every option that affects segmentation rather
+than sharing by module and change alone. Setup identity would need to change
+only if those options also affect initialization. Per-trait options and their
+identity semantics remain deferred.
+
 Segmenter initialization returns an execution function that takes a `Change`
-directly and produces a nonempty array of `Segment` values:
+directly and produces an array of `Segment` values:
 
 - `Before`: a primary `range` in the before-source, including deleted material.
 - `After`: a primary `range` in the after-source, plus optional `before` ranges
@@ -97,13 +111,19 @@ missing mappings.
 Enrichment context uses this representation. Serialized input reports preserve
 the complete segment and reference the caller's change, without source contents.
 
+An empty result successfully selects no targets for the change. It produces no
+input reports, enrichment, assessments, or diagnostics; requested trait reports
+remain represented even when their inputs are empty. This outcome may pass
+`Report.isPass` when no other failure or halt occurred. Failures and defects
+must not be converted into empty successful results.
+
 Segmentation must succeed and cannot request skips or evaluation halts. Before
 scheduling any enrichments for a change, the runner validates the entire custom
-result: it must be nonempty, and every segment combined with that change must
-validate as an `Input`. An empty result, malformed segment, unavailable selected
-side, or out-of-bounds primary or historical range rejects the entire result for
-that change; valid fragments are not scheduled separately. This validation
-checks bounds, not diff correspondence.
+result: every segment combined with that change must validate as an `Input`. A
+malformed segment, unavailable selected side, or out-of-bounds primary or
+historical range rejects the entire result for that change; valid fragments are
+not scheduled separately. This validation checks bounds, not diff
+correspondence.
 
 Initialization or execution failures and defects prevent dependent enrichment
 and assessment. Initialization failure blocks all changes using that segmenter;
@@ -115,11 +135,21 @@ setup or execution diagnostic records the failure once; invalid output produces
 a diagnostic describing the validation failure. These diagnostics make
 `Report.isPass` false even if unaffected assessments pass.
 
-Both segmenter error channels accept arbitrary failures. `SegmenterSetupError`
-provides required recovery instructions for initialization, and `SegmenterError`
-provides them for execution. The runner recognizes each only at its matching
-stage and reports `Diagnostic.Instruction` with the corresponding segmenter
-origin. Wrong-stage errors and other failures follow ordinary failure
+No fallback preserves the configured segmenter's selection semantics. Generic
+text chunks may not represent its intended targets and can produce misleading
+assessments, duplicated context, and unnecessary model calls. We accept reduced
+coverage after segmentation failure, including potentially deleted material,
+rather than silently substitute another selection strategy. For example, a
+syntax error blocks dependent traits for a change only if their segmenter cannot
+handle it and fails. Diagnostics expose that failure, recovery instructions make
+known remediation actionable, and unaffected work may continue. An empty result
+therefore means successful selection of no targets, never concealed failure.
+
+Segmenter error channels are stage-specific. `SegmenterSetupError` provides
+required recovery instructions for initialization, and `SegmenterError` provides
+them for execution. The runner recognizes each only at its matching stage and
+reports `Diagnostic.Instruction` with the corresponding segmenter origin.
+Unexpected defects and contract-violating failures follow ordinary failure
 normalization: `Error` unless the runner independently knows actionable
 remediation. Instructions never turn a segmenter failure into a skip or halt
 request.
@@ -187,10 +217,19 @@ highest probability alone does not necessarily justify a definitive result.
 
 ## Handle skips and halts
 
-Extension initialization and execution accept unknown failures. Extensions need
-not serialize their errors; the runner normalizes failures at the boundary.
-Recognized `EnrichmentError` execution signals require nonblank recovery
-instructions. Their reason determines which remaining work stops:
+Extensions map expected underlying failures into their stage-specific API
+errors: `SegmenterSetupError` or `EnrichmentSetupError` for initialization, and
+`SegmenterError` or `EnrichmentError` for execution. These are the declared
+error channels; extensions do not serialize underlying errors. Unexpected
+failures may be explicitly promoted to defects, and thrown exceptions remain
+defects. Narrowing the types alone does not convert failures into defects.
+Required recovery guidance must be actionable rather than invented merely to
+satisfy the type.
+
+The runner still normalizes unexpected defects and contract violations from
+untrusted extensions at the boundary. `EnrichmentError` execution signals
+require nonblank recovery instructions. Their reason determines which remaining
+work stops:
 
 | Reason       | Effect                                                                                               |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
@@ -200,13 +239,13 @@ instructions. Their reason determines which remaining work stops:
 
 An initialization failure disables the enrichment. A recognized
 `EnrichmentSetupError` carries recovery guidance, not a scope reason; other
-setup failures produce ordinary diagnostics. Whether assessment requires that
-enrichment is a separate policy, not a decision encoded by the setup error.
-After an `Enrichment`-scope skip, assessment proceeds with the remaining
-available context unless another outcome prevents assessment, such as `Input` or
-`Trait` cancellation. During execution, `Enrichment` affects only its current
-invocation. Enrichments cannot halt unrelated traits. Whole-evaluation halts
-belong to the evaluator rather than extensions.
+setup defects or contract violations produce ordinary diagnostics. Whether
+assessment requires that enrichment is a separate policy, not a decision encoded
+by the setup error. After an `Enrichment`-scope skip, assessment proceeds with
+the remaining available context unless another outcome prevents assessment, such
+as `Input` or `Trait` cancellation. During execution, `Enrichment` affects only
+its current invocation. Enrichments cannot halt unrelated traits.
+Whole-evaluation halts belong to the evaluator rather than extensions.
 
 Parallel failures are collected rather than reduced to one winning error.
 Cancellation stops remaining work at the requested scope, but does not erase
@@ -224,11 +263,11 @@ module, and origin. Recognition remains stage-specific: an error from the wrong
 stage is an ordinary failure, not a recovery control signal.
 
 Ordinary failures may also include actionable instructions; remediation text
-never implies cancellation. Unknown enrichment execution failures omit that
-invocation's context; they do not infer `Input` or `Trait` cancellation.
-Siblings may continue and assessment proceeds with the remaining available
-context unless another outcome prevents assessment. Interruption is cancellation
-and never creates a diagnostic.
+never implies cancellation. Unexpected enrichment execution defects or contract
+violations omit that invocation's context; they do not infer `Input` or `Trait`
+cancellation. Siblings may continue and assessment proceeds with the remaining
+available context unless another outcome prevents assessment. Interruption is
+cancellation and never creates a diagnostic.
 
 Each diagnostic is a tagged union with shared `module` and `origin` fields and
 exactly one explanation: `Error { error }` for normalized failure details, or
@@ -239,8 +278,9 @@ explanation, with normal unknown-property handling. The runner chooses
 handle arbitrary thrown values, including cyclic objects and ordinary errors,
 without relying on JSON serialization. It must exclude raw error objects, source
 text, and excerpts from diagnostics and use a generic failure message when
-useful details cannot be safely extracted. A diagnostic explains what happened;
-it need not invent a remedy.
+useful details cannot be safely extracted. Unexpected failure explanations must
+be bounded, readable text rather than serialized arbitrary payloads. A
+diagnostic explains what happened; it need not invent a remedy.
 
 Each diagnostic's `origin` is tagged `SegmenterSetup`, `SegmenterExecution`,
 `EnrichmentSetup`, or `EnrichmentExecution`. The explanation and shared `module`
@@ -344,21 +384,26 @@ contains completed work alongside any recovery instructions.
 
 ## Reevaluate after remediation
 
-`Report.isPass` derives success from the absence of diagnostics and evaluator
-halt instructions and acceptance of every required assessment by a
+`Report.isPass` requires `interrupted: false`, the absence of diagnostics and
+evaluator halt instructions, and acceptance of every required assessment by a
 caller-supplied decision policy. Guidance-only traits require no assessment. No
 probability threshold or not-applicable acceptance rule is implicit in the
 helper.
 
 This relies on a complete runner-produced report: all requested trait
 evaluations must be represented, and every failure, skip, cancellation, or
-unfinished check must be explained by a diagnostic or evaluator instruction. A
-shared cancellation or halt explanation may cover multiple inputs without
-duplicate diagnostics. Interruption still creates no extension diagnostic, but
-any returned partial report must carry evaluator halt instructions. No returned
-report cannot be interpreted as success. The helper cannot detect omitted work
-from the original request; zero scheduled inputs may legitimately pass when no
-work was applicable and no failure or halt occurred.
+unfinished check must be accounted for by a diagnostic, evaluator instruction,
+or evaluation interruption. A shared cancellation or halt explanation may cover
+multiple inputs without duplicate diagnostics. Every report has a required
+`interrupted` boolean. An interrupted evaluation returns `interrupted: true`,
+preserving completed results and already-observed diagnostics without inventing
+assessments or extension failures for cancelled work. No interruption message or
+instruction is required; `Report.instruction` remains available for actual
+evaluator halt guidance. Recovery-scope cancellation already explained by an
+enrichment diagnostic does not itself set `interrupted`. If no report is
+returned, success cannot be inferred. The helper cannot detect omitted work from
+the original request; zero scheduled inputs may legitimately pass when no work
+was applicable and no failure, halt, or interruption occurred.
 
 After the client follows recovery instructions, reevaluation starts from the
 affected sources or changes, not their previous segments. Reload the relevant
