@@ -1,3 +1,4 @@
+export * from "./AccountName.ts"
 export * from "./Credential.ts"
 export * from "./OAuthAttempt.ts"
 export * from "./ProviderAccount.ts"

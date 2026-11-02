@@ -4,11 +4,14 @@
   "private": true,
   "license": "Apache-2.0",
   "bin": {
-    "traits": "./main.ts"
+    "traits-next": "./dist/main.js"
   },
   "type": "module",
   "exports": {
     ".": "./index.ts"
+  },
+  "dependencies": {
+    "fs-native-extensions": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

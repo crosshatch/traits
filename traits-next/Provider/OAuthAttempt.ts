@@ -1,5 +1,6 @@
 import { Schema as S } from "effect"
 
+import { AccountName } from "./AccountName.ts"
 import { ProviderId } from "./ProviderId.ts"
 
 /** Public authorization attempt details; never contains access or refresh tokens. */
@@ -21,7 +22,7 @@ export const OAuthAttempt = S.Struct({
 export type OAuthAttemptStatus = typeof OAuthAttemptStatus.Type
 export const OAuthAttemptStatus = S.TaggedUnion({
   Pending: {},
-  Complete: { account: S.NonEmptyString },
+  Complete: { account: AccountName },
   Failed: { message: S.String },
   Expired: {},
   Cancelled: {}
