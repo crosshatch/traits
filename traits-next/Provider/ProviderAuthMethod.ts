@@ -10,15 +10,6 @@ export const ProviderAuthMethod = S.TaggedUnion({
   OAuth: {
     id: S.NonEmptyString.check(S.isTrimmed()),
     label: S.NonEmptyString
-  },
-  Environment: {
-    id: S.NonEmptyString.check(S.isTrimmed()),
-    label: S.NonEmptyString,
-    variables: S.NonEmptyArray(S.NonEmptyString.check(S.isTrimmed())).check(S.isUnique())
-  },
-  External: {
-    id: S.NonEmptyString.check(S.isTrimmed()),
-    label: S.NonEmptyString
   }
 }).annotate({
   description: "A provider-advertised authentication method; availability is determined by its implementation."

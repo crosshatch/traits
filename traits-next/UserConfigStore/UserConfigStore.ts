@@ -1,8 +1,9 @@
-import { Context, Effect, FileSystem, Layer, Option, Path, pipe, Schema as S } from "effect"
+import { Context, Effect, FileSystem, Layer, Path, pipe, Schema as S } from "effect"
 
 import { WorkspacePaths } from "../Cli/WorkspacePaths.ts"
 import { ProviderAccount } from "../Provider/index.ts"
 import { UserConfig } from "../UserConfig.ts"
+import { UserFileSecurity } from "../UserFileSecurity.ts"
 
 /** Fresh user configuration and account storage, independent of the host environment. */
 export class UserConfigStore extends Context.Service<
@@ -37,10 +38,6 @@ export class AccountsWriteError extends S.TaggedError<AccountsWriteError>()("Acc
   cause: S.Defect()
 }) {}
 
-class FsError extends S.TaggedError<FsError>()("UserConfigFsError", {
-  message: S.String
-}) {}
-
 class InvalidConfigError extends S.TaggedError<InvalidConfigError>()("InvalidConfigError", {
   path: S.String
 }) {
@@ -49,36 +46,19 @@ class InvalidConfigError extends S.TaggedError<InvalidConfigError>()("InvalidCon
   }
 }
 
-/** Local POSIX storage with fresh reads, owner-only credentials, and atomic file replacement. */
+/** Local storage with fresh reads, owner-only credentials, and atomic file replacement. */
 export const layerFromFs = Layer.effect(
   UserConfigStore,
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const { config, accounts, dataDirectory } = yield* WorkspacePaths
-
-    const secure = Effect.fn("UserConfigStore.secure")(function* (
-      filename: string,
-      type: "Directory" | "File",
-      mode: number
-    ) {
-      yield* fs.lstat(filename).pipe(
-        Effect.filterOrFail(
-          (info) =>
-            process.platform !== "win32" &&
-            info.type === type &&
-            (process.getuid === undefined || Option.getOrUndefined(info.uid) === process.getuid()),
-          () =>
-            FsError.make({
-              message: `Refusing insecure credential storage at ${filename}; expected an owned, nonsymlink ${type} on a POSIX filesystem.`
-            })
-        )
-      )
-      yield* fs.chmod(filename, mode)
-    })
+    const secure = yield* UserFileSecurity
 
     const readConfig = Effect.gen(function* () {
-      if (!(yield* fs.exists(config))) return UserConfig.make({ profiles: [] })
+      if (!(yield* fs.exists(config))) {
+        return UserConfig.make({ profiles: [] })
+      }
       const text = yield* fs.readFileString(config)
       return yield* pipe(
         text,
@@ -88,9 +68,11 @@ export const layerFromFs = Layer.effect(
     }).pipe(Effect.mapError((cause) => UserConfigReadError.make({ cause })))
 
     const readAccounts = Effect.gen(function* () {
-      if (!(yield* fs.exists(accounts))) return []
-      yield* secure(dataDirectory, "Directory", 0o700)
-      yield* secure(accounts, "File", 0o600)
+      if (!(yield* fs.exists(accounts))) {
+        return []
+      }
+      yield* secure(dataDirectory, "Directory")
+      yield* secure(accounts, "File")
       const text = yield* fs.readFileString(accounts)
       // Schema errors can contain input values; do not expose credential contents in diagnostics.
       return yield* pipe(
@@ -102,8 +84,9 @@ export const layerFromFs = Layer.effect(
 
     const write = Effect.fn("UserConfigStore.write")(function* (filename: string, text: string) {
       yield* fs.makeDirectory(path.dirname(filename), { recursive: true, mode: 0o700 })
+      yield* secure(path.dirname(filename), "Directory")
       const temporary = yield* fs.makeTempFileScoped({ directory: path.dirname(filename), prefix: ".traits-" })
-      yield* fs.chmod(temporary, 0o600)
+      yield* secure(temporary, "File")
       yield* fs.writeFileString(temporary, text, { mode: 0o600 })
       yield* fs.rename(temporary, filename)
     }, Effect.scoped)
@@ -119,7 +102,7 @@ export const layerFromFs = Layer.effect(
     const writeAccounts = Effect.fn("UserConfigStore.writeAccounts")(
       function* (providerAccounts: ReadonlyArray<ProviderAccount>) {
         yield* fs.makeDirectory(dataDirectory, { recursive: true, mode: 0o700 })
-        yield* secure(dataDirectory, "Directory", 0o700)
+        yield* secure(dataDirectory, "Directory")
         const text = yield* pipe(
           providerAccounts,
           S.encodeEffect(S.fromJsonString(S.Array(ProviderAccount))),

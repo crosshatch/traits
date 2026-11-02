@@ -1,0 +1,26 @@
+import { Array, Console, Duration, Effect } from "effect"
+import { Argument, CliError, Command } from "effect/cli"
+
+import { ProfileName } from "../../../Profile/ProfileName.ts"
+import { UserConfigStore } from "../../../UserConfigStore/UserConfigStore.ts"
+import { UserConfigLock } from "../../UserConfigLock.ts"
+
+export const use = Command.make(
+  "use",
+  { name: Argument.String("name").pipe(Argument.withSchema(ProfileName)) },
+  Effect.fn("profile.use")(function* (params) {
+    const { readConfig, writeConfig } = yield* UserConfigStore
+    const withLock = yield* UserConfigLock
+    const { name } = params
+    yield* Effect.gen(function* () {
+      const config = yield* readConfig.pipe(
+        Effect.filterOrFail(
+          (config) => Array.some(config.profiles, (entry) => entry.name === name),
+          () => CliError.UserError.make({ cause: `Unknown profile: ${name}` })
+        )
+      )
+      yield* writeConfig({ ...config, activeProfile: name })
+    }).pipe((operation) => withLock(operation, Duration.minutes(2)))
+    yield* Console.log(`Using profile ${name}.`)
+  })
+)
