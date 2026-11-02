@@ -345,79 +345,32 @@ contains completed work alongside any recovery instructions.
 
 ## Reevaluate after remediation
 
+`Report.isPass` derives success from the absence of diagnostics and evaluator
+halt instructions and acceptance of every required assessment by a
+caller-supplied decision policy. Guidance-only traits require no assessment. No
+probability threshold or not-applicable acceptance rule is implicit in the
+helper.
+
+This relies on a complete runner-produced report: all requested trait
+evaluations must be represented, and every failure, skip, cancellation, or
+unfinished check must be explained by a diagnostic or evaluator instruction. A
+shared cancellation or halt explanation may cover multiple inputs without
+duplicate diagnostics. Interruption still creates no extension diagnostic or
+fallback work, but any returned partial report must carry evaluator halt
+instructions. No returned report cannot be interpreted as success. The helper
+cannot detect omitted work from the original request; zero scheduled inputs may
+legitimately pass when no work was applicable and no failure or halt occurred.
+
 After the client follows recovery instructions, reevaluation starts from the
 affected sources or changes, not their previous segments. Reload the relevant
-inputs and determine which trait/change evaluations are invalidated. Rerun
-segmentation and applicable checks for invalidated or retryable evaluations.
-Retain clean passes only when their source versions and combined configuration
-remain unchanged and the runner's invalidation policy permits reuse. Remediation
-can change both source contents and segmentation boundaries.
+inputs, rerun segmentation, and rerun all applicable trait checks, including
+previously successful checks. Remediation can change both source contents and
+segmentation boundaries.
 
 Report-local input indices and ranges describe one evaluation; they are not
-durable retry identifiers. Tracking affected inputs and determining what work to
-redo belongs to the incremental tracking mechanism modeled by `TraitsLock`.
-Setup failures may affect multiple inputs; that mechanism must retain the
-affected source/change associations independently of report indices. The client
-report supplies results and remediation, not an execution ledger or retry
-schedule.
-
-## Incremental evaluation records
-
-`TraitsLock` is a first-pass, versioned schema for workspace-scoped tracking,
-not an implemented cache. Each entry identifies one trait/change evaluation by
-trait name, combined configuration digest, and before/after source paths and
-content digests, and stores its check-level `result`. Absent sources differ from
-empty text. Report-local indices, timestamps, and Git revisions are not durable
-evaluation identities. Paths must be canonical within the workspace; copying
-records between workspaces does not by itself establish equivalent inputs.
-
-Fingerprints are lowercase SHA-256 digests. Their canonical serialization and
-domain/version separation remain runtime contracts to implement. The
-configuration digest covers the complete static trait definition, evaluator
-version, model configuration, assertion thresholds and aggregation policy, and
-resolved extension implementations. Module specifier strings alone do not
-identify extension behavior.
-
-The runner derives a check-level `CheckResult` shared by incremental tracking,
-CI, and MCP consumers. Assessment probabilities describe the evaluated material;
-the check result also accounts for whether required execution succeeded:
-
-- `Pass`: all required work completed successfully and assessment policy
-  accepted the result.
-- `Fail`: an assessment failed or a required execution stage failed, including
-  failures recovered through segmentation fallback or omitted enrichment
-  context. An intentional enrichment skip also prevents a clean pass under the
-  initial conservative policy.
-- `Inconclusive`: execution succeeded but evidence did not establish an accepted
-  assessment verdict.
-- `Incomplete`: work was interrupted, cancelled, halted, or never finished.
-
-Known failures take precedence over incomplete work; otherwise unfinished work
-takes precedence over inconclusive assessments. Partial passing assessments
-never establish a passing check. Fallback can continue gathering useful evidence
-without turning an unsuccessful check into a pass. Detailed causes and
-remediation remain in the report, rather than being duplicated in the lock. The
-runner supplies the result directly; clients and tracking never infer it from
-missing assessments or diagnostic prose. This is a contract for the deferred
-runner, not implemented classification behavior.
-
-CI treats only `Pass` as success. Reuse additionally requires identical
-evaluation identity and approval under the runner's invalidation policy. Other
-results remain tracked but do not qualify for reuse. Acceptance of
-not-applicable and guidance-only evaluations requires explicit policy rather
-than silently treating them as passes. Aggregation thresholds and mixed-segment
-outcome rules belong to the fingerprinted decision policy; the schemas do not
-derive check results from probabilities.
-
-Dependency capture and storage are deferred; entries contain no dependency list
-or coverage flag. Matching source and configuration fingerprints alone does not
-establish safe reuse for checks affected by other files or external state. The
-runner must rerun those checks unless its invalidation policy can establish that
-their results remain valid. This schema does not implement that policy.
-
-Record assembly replaces matching evaluation identities and preserves distinct
-source versions where needed; retention, atomic writes, concurrency control,
-crash recovery, and the `.traits-lock` storage location remain deferred. The
-lockfile stores outcomes rather than full report evidence, so reuse does not
-reconstruct an old report. Clients cannot infer per-input execution status from
-missing assessments; durable status here is at trait/change granularity.
+durable retry identifiers. Incremental checking, dependency tracking, cache
+invalidation, and persistent lock formats are deferred until the core execution
+model is established. The client report supplies results and remediation, not an
+execution ledger or retry schedule. A passing assessment does not by itself
+establish successful execution; observed extension failures remain relevant even
+when fallback produces useful assessment results.
