@@ -1,9 +1,14 @@
 import { Array, Schema as S } from "effect"
 
+import { isSurrogatePairBoundary } from "../util/index.ts"
 import { Change } from "./Change.ts"
+import type { InputRange } from "./InputRange.ts"
 import { Segment } from "./Segment.ts"
 
-/** A change and assessment segment with source-presence and UTF-16 bounds validation; bounds do not establish diff correspondence. */
+const isSourceRange = (text: string, range: InputRange): boolean =>
+  range.end <= text.length && isSurrogatePairBoundary(text, range.start) && isSurrogatePairBoundary(text, range.end)
+
+/** A change and assessment segment with source-presence, UTF-16 bounds, and surrogate-pair boundary validation; validation does not establish diff correspondence. */
 export type Input = typeof Input.Type
 export const Input = S.Struct({
   /** The available before and after sources, retained as context for enrichment and assessment. */
@@ -18,23 +23,26 @@ export const Input = S.Struct({
 })
   .annotate({
     description:
-      "A change and assessment segment with source-presence and UTF-16 bounds validation; bounds do not establish diff correspondence."
+      "A change and assessment segment with source-presence, UTF-16 bounds, and surrogate-pair boundary validation; validation does not establish diff correspondence."
   })
   .check(
     S.makeFilter(
       (input) =>
         Segment.match(input.segment, {
           Before: (segment) =>
-            input.change.before !== undefined && segment.range.end <= input.change.before.text.length,
+            input.change.before !== undefined && isSourceRange(input.change.before.text, segment.range),
           After: (segment) =>
             input.change.after !== undefined &&
-            segment.range.end <= input.change.after.text.length &&
+            isSourceRange(input.change.after.text, segment.range) &&
             (segment.before === undefined ||
               Array.every(
                 segment.before,
-                (range) => input.change.before !== undefined && range.end <= input.change.before.text.length
+                (range) => input.change.before !== undefined && isSourceRange(input.change.before.text, range)
               ))
         }),
-      { message: "Selected ranges must refer to available source versions and fit within their UTF-16 lengths." }
+      {
+        message:
+          "Selected ranges must refer to available source versions, fit within their UTF-16 lengths, and not split surrogate pairs."
+      }
     )
   )

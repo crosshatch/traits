@@ -1,6 +1,5 @@
 export * from "./InputRange.ts"
 export * from "./Input.ts"
-export * from "./InputSide.ts"
 export * from "./InputSource.ts"
 export * from "./Probability.ts"
 export * from "./RecoveryInstruction.ts"
