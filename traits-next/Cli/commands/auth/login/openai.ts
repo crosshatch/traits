@@ -4,21 +4,20 @@ import { Command } from "effect/cli"
 import { AccountName } from "../../../../Provider/AccountName.ts"
 import { Credential } from "../../../../Provider/Credential.ts"
 import { ProviderAccount } from "../../../../Provider/ProviderAccount.ts"
-import * as Shared from "./shared.ts"
+import { commonFlags, readApiKey, saveAccount } from "./_common.ts"
 
 export const openai = Command.make(
   "openai",
-  Shared.commonFlags,
+  commonFlags,
   Effect.fn("auth.login.openai")(function* (params) {
-    const apiKey = yield* Shared.readApiKey(params.keyEnv, "OpenAI API key")
-    yield* Shared.saveAccount(
+    const apiKey = yield* readApiKey(params.keyEnv, "OpenAI API key")
+    yield* saveAccount(
       ProviderAccount.make({
         id: Option.getOrElse(params.account, () => AccountName.make("openai")),
         provider: "openai",
         method: "api-key",
         credential: Credential.cases.ApiKey.make({ apiKey })
-      }),
-      params.replace
+      })
     )
   })
 ).pipe(Command.withDescription("Save an OpenAI API-key account"))

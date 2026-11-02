@@ -6,7 +6,8 @@ requirement: Prefer namespace imports and qualified member access when importing
   sharing a module-name prefix.
 applicability: Applies in TypeScript, TSX, JavaScript, and JSX files. Excludes
   imports from project-level schema utility modules and barrels, which use named
-  imports instead.
+  imports instead, and imports from directory-specific _common utility modules,
+  which also use named imports.
 purpose: Make related local exports visibly belong to their module without
   repetitive aliases or crowded named imports.
 ---
