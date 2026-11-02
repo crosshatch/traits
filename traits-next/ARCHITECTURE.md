@@ -80,14 +80,16 @@ inclusive start and exclusive end. The complete source is represented by
 empty text.
 
 A range must have nonnegative integer offsets, must not end before its start,
-and must fit within its source text.
+and must fit within its source text. Neither boundary may split a UTF-16
+surrogate pair. This does not require grapheme-cluster boundaries.
 
 `Input` pairs the shared `change` with a `segment`. Its schema requires the
-selected side to exist and checks primary and historical range bounds against
-their respective source texts. Before and after offsets are independent: mapped
-correspondence must be established through diff analysis, not numeric overlap.
-Bounds validation alone does not establish correspondence. Simple segmenters may
-omit mappings; change-aware implementations may supply them.
+selected side to exist and checks primary and historical range bounds and
+surrogate-pair boundaries against their respective source texts. Before and
+after offsets are independent: mapped correspondence must be established through
+diff analysis, not numeric overlap. Bounds validation alone does not establish
+correspondence. Simple segmenters may omit mappings; change-aware
+implementations may supply them.
 
 Mappings are supplied by the segmenter. The runner does not promise to compute
 missing mappings.
