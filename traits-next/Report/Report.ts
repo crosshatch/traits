@@ -1,6 +1,7 @@
-import { Array, Schema as S } from "effect"
+import { Array, Function, Schema as S } from "effect"
 
 import { RecoveryInstruction } from "../schema/index.ts"
+import type { Assessment } from "./Assessment.ts"
 import { Diagnostic } from "./Diagnostic.ts"
 import { DiagnosticOrigin } from "./DiagnosticOrigin.ts"
 import { TraitReport } from "./TraitReport.ts"
@@ -49,3 +50,23 @@ export const Report = S.Struct({
       }
     )
   )
+
+/** Whether a complete runner-produced report has no failures or halt instructions and every required assessment is accepted by the supplied policy. */
+export const isPass: {
+  (acceptsAssessment: (assessment: Assessment) => boolean): (report: Report) => boolean
+  (report: Report, acceptsAssessment: (assessment: Assessment) => boolean): boolean
+} = Function.dual(
+  2,
+  (report: Report, acceptsAssessment: (assessment: Assessment) => boolean): boolean =>
+    report.diagnostics.length === 0 &&
+    report.instruction === undefined &&
+    Array.every(
+      report.traits,
+      (traitReport) =>
+        traitReport.trait.assertion === undefined ||
+        Array.every(
+          traitReport.inputs,
+          (input) => input.assessment !== undefined && acceptsAssessment(input.assessment)
+        )
+    )
+)
