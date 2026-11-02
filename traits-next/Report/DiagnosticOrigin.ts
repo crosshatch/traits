@@ -5,10 +5,6 @@ export const DiagnosticOrigin = S.TaggedUnion({
   /** Segmenter initialization failed before selecting assessment inputs. */
   SegmenterSetup: {},
   SegmenterExecution: {
-    /** Index into the containing Report.traits identifying the originating trait evaluation. */
-    trait: S.Natural.annotate({
-      description: "Index into the containing Report.traits identifying the originating trait evaluation."
-    }),
     /** Index into the caller's supplied changes in original caller order, before filtering or scheduling; not an input-report index. */
     change: S.Natural.annotate({
       description:

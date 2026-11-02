@@ -41,8 +41,8 @@ kind (segmenter or enrichment) and resolved module identity. Module references
 are canonicalized when constructing static trait definitions, so aliases resolve
 to one registry entry and one report module reference. Concurrent callers await
 the same initialization outcome. Setup resources live until program shutdown or
-an explicit reset; execution resources remain independent. Shared setup state
-must support concurrent executions across traits and evaluations.
+an explicit reset; each distinct execution owns its resources. Shared setup
+state must support concurrent executions across traits and evaluations.
 
 A failed initialization remains failed until explicit reset or program restart;
 starting another evaluation does not retry it. Reset must coordinate dependent
@@ -53,6 +53,14 @@ Enrichment module references must be distinct within a trait, so each module
 unambiguously identifies its configured enrichment in results and failures.
 
 ## Select ranges within a change
+
+Within one evaluation, the runner segments each caller-supplied change once per
+resolved segmenter module, sharing the validated result or failure across all
+traits using that module. Concurrent consumers share the same invocation; an
+observed execution failure is recorded once for its module and change. This
+execution-sharing contract is separate from program-lifetime initialization and
+does not cache results across evaluations. Each shared invocation owns its own
+execution resources. Runner implementation remains deferred.
 
 Segmenter initialization returns an execution function that takes a `Change`
 directly and produces a nonempty array of `Segment` values:
@@ -82,7 +90,7 @@ Bounds validation alone does not establish correspondence. Simple segmenters may
 omit mappings; change-aware implementations may supply them.
 
 Mappings are supplied by the segmenter. The runner does not promise to compute
-missing mappings, including when using fallback segmentation.
+missing mappings.
 
 Enrichment context uses this representation. Serialized input reports preserve
 the complete segment and reference the caller's change, without source contents.
@@ -91,41 +99,28 @@ Segmentation must succeed and cannot request skips or evaluation halts. Before
 scheduling any enrichments for a change, the runner validates the entire custom
 result: it must be nonempty, and every segment combined with that change must
 validate as an `Input`. An empty result, malformed segment, unavailable selected
-side, or out-of-bounds primary or historical range replaces the entire result
-with fallback segmentation for that change; valid fragments are not scheduled
-separately. This validation checks bounds, not diff correspondence.
+side, or out-of-bounds primary or historical range rejects the entire result for
+that change; valid fragments are not scheduled separately. This validation
+checks bounds, not diff correspondence.
 
-Custom initialization or execution failures and defects also trigger text-based
-fallback. Initialization failure uses fallback for all changes depending on that
-initialization; execution failure affects the current change. Cancelling
-evaluation does not trigger fallback work. Segmenter failures remain visible as
-diagnostics even when fallback succeeds; invalid output also produces a
-diagnostic describing the validation failure.
+Initialization or execution failures and defects prevent dependent enrichment
+and assessment. Initialization failure blocks all changes using that segmenter;
+execution failure or invalid output blocks the current change for every trait
+sharing that invocation. Other segmenters and unaffected changes may continue.
+No replacement segments or synthetic input reports are created. All requested
+trait reports remain represented, even when their inputs are empty. The shared
+setup or execution diagnostic records the failure once; invalid output produces
+a diagnostic describing the validation failure. These diagnostics make
+`Report.isPass` false even if unaffected assessments pass.
 
 Both segmenter error channels accept arbitrary failures. `SegmenterSetupError`
 provides required recovery instructions for initialization, and `SegmenterError`
 provides them for execution. The runner recognizes each only at its matching
 stage and reports `Diagnostic.Instruction` with the corresponding segmenter
-origin. Both still trigger fallback. Wrong-stage errors and other failures
-follow ordinary failure normalization: `Error` unless the runner independently
-knows actionable remediation. Instructions never turn a segmenter failure into a
-skip or halt request.
-
-Fallback chunks every available source independently, covering its complete
-text:
-
-| Change           | Fallback targets                               |
-| ---------------- | ---------------------------------------------- |
-| Creation         | `After` chunks from the after-source.          |
-| Deletion         | `Before` chunks from the before-source.        |
-| Update or rename | `Before` and `After` chunks from both sources. |
-
-Each empty source produces one range `{ start: 0, end: 0 }`. Fallback `After`
-segments omit `before`, since correspondence was not computed. Both-side
-fallback prioritizes coverage of deleted material over efficiency and can assess
-unchanged material in both versions. It requires neither diff mapping nor
-historical semantic analysis. Fallback inputs undergo the same validation before
-enrichment.
+origin. Wrong-stage errors and other failures follow ordinary failure
+normalization: `Error` unless the runner independently knows actionable
+remediation. Instructions never turn a segmenter failure into a skip or halt
+request.
 
 ## Enrich each trait and source location
 
@@ -248,13 +243,14 @@ it need not invent a remedy.
 Each diagnostic's `origin` is tagged `SegmenterSetup`, `SegmenterExecution`,
 `EnrichmentSetup`, or `EnrichmentExecution`. The explanation and shared `module`
 field live on the diagnostic itself. Setup origins have no trait or input
-reference. Execution origins reference the originating trait by index in
-`Report.traits`. Segmenter execution failures reference the caller's supplied
-change by index in caller order, before filtering or scheduling; callers retain
-that association outside the source-free report. The runner validates change
-indices against the supplied changes. Enrichment execution failures reference
-the originating trait report's inputs, preserving their before/after provenance.
-Setup failures do not fabricate inputs, and segmenter failures need no synthetic
+reference. Segmenter execution failures reference the caller's supplied change
+by index in caller order, before filtering or scheduling; callers retain that
+association outside the source-free report. The runner validates change indices
+against the supplied changes. The configured module and change identify the
+shared segmentation invocation, without choosing an originating trait.
+Enrichment execution failures reference the originating trait by index in
+`Report.traits` and its inputs, preserving their before/after provenance. Setup
+failures do not fabricate inputs, and segmenter failures need no synthetic
 assessment target.
 
 Reports use deterministic ordering based on trait, source/location, and
@@ -299,33 +295,34 @@ their input-report reference.
 Input entries are allocated in deterministic source/range order, including work
 that fails or is cancelled, so enrichment execution failures always reference an
 input. Setup failures do not fabricate input entries. The root report schema
-validates execution trait/input indices, requires enrichment failure modules to
-be configured enrichments, and requires segmenter failures to name the
-configured segmenter. Each input's enrichment modules must be configured and
-unique. The schemas require a trait assertion for assessments. The runner must
-prevent assessment of an input stopped by `Input` or `Trait` recovery while
-preserving completed assessments on other inputs. This execution invariant is
-not validated by the report schema because cancellation decisions are not
-serialized. Range ordering and nonnegative offsets are validated by the report
-schemas, but change-index bounds, source-side availability, and all ranges
-against source length must be validated during execution before reporting. Input
-indices must remain stable when assembling partial results; completion order
-does not determine their values.
+validates enrichment execution trait/input indices, requires enrichment failure
+modules to be configured enrichments, and requires segmenter failures to name
+the segmenter configured by at least one reported trait. Each input's enrichment
+modules must be configured and unique. The schemas require a trait assertion for
+assessments. The runner must prevent assessment of an input stopped by `Input`
+or `Trait` recovery while preserving completed assessments on other inputs. This
+execution invariant is not validated by the report schema because cancellation
+decisions are not serialized. Range ordering and nonnegative offsets are
+validated by the report schemas, but change-index bounds, source-side
+availability, and all ranges against source length must be validated during
+execution before reporting. Input indices must remain stable when assembling
+partial results; completion order does not determine their values.
 
 Clients scan `Report.diagnostics` for problems and remediation. Setup failures
 name an extension configured by at least one reported trait; affected traits can
-be identified from their configuration. Execution origins identify the
-particular trait and input or change involved. The registry owns persistent
-setup outcomes; report assembly includes each relevant setup failure once. Later
-evaluations may include the same persistent setup failure again without implying
-another initialization attempt. Trait and input indices are report-local, not
-program-lifetime identities. Event deduplication remains an assembly obligation;
-structural validation cannot establish that two entries describe the same event.
+be identified from their configuration. Segmenter execution origins identify the
+shared change; enrichment execution origins identify the particular trait and
+input involved. The registry owns persistent setup outcomes; report assembly
+includes each relevant setup failure once. Later evaluations may include the
+same persistent setup failure again without implying another initialization
+attempt. Trait and input indices are report-local, not program-lifetime
+identities. Event deduplication remains an assembly obligation; structural
+validation cannot establish that two entries describe the same event.
 
-Report assembly must preserve the originating input and module for each
-execution failure when assigning these indices. The schema's bounds check alone
-does not prove that a failure references the input and module that actually
-failed.
+Report assembly must preserve the originating module and change for segmentation
+failures, or trait and input for enrichment failures, when assigning these
+indices. The schema's bounds check alone does not prove that a failure
+references the input and module that actually failed.
 
 Trait-first grouping remains unchanged; alternative grouping is a separate
 design decision.
@@ -355,11 +352,11 @@ This relies on a complete runner-produced report: all requested trait
 evaluations must be represented, and every failure, skip, cancellation, or
 unfinished check must be explained by a diagnostic or evaluator instruction. A
 shared cancellation or halt explanation may cover multiple inputs without
-duplicate diagnostics. Interruption still creates no extension diagnostic or
-fallback work, but any returned partial report must carry evaluator halt
-instructions. No returned report cannot be interpreted as success. The helper
-cannot detect omitted work from the original request; zero scheduled inputs may
-legitimately pass when no work was applicable and no failure or halt occurred.
+duplicate diagnostics. Interruption still creates no extension diagnostic, but
+any returned partial report must carry evaluator halt instructions. No returned
+report cannot be interpreted as success. The helper cannot detect omitted work
+from the original request; zero scheduled inputs may legitimately pass when no
+work was applicable and no failure or halt occurred.
 
 After the client follows recovery instructions, reevaluation starts from the
 affected sources or changes, not their previous segments. Reload the relevant
@@ -373,4 +370,4 @@ invalidation, and persistent lock formats are deferred until the core execution
 model is established. The client report supplies results and remediation, not an
 execution ledger or retry schedule. A passing assessment does not by itself
 establish successful execution; observed extension failures remain relevant even
-when fallback produces useful assessment results.
+when other work produces passing assessments.
