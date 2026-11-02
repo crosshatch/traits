@@ -11,8 +11,8 @@ Static traits + provided inputs
 
 ## Provide traits and inputs
 
-A `Trait` is a static definition: its name, subject, purpose, optional assertion
-and supporting body, required segmenter module, and optional enrichment modules.
+A `Trait` is a static definition: its name, purpose, optional subject, assertion
+and supporting body, optional segmenter module, and optional enrichment modules.
 Enrichment never rewrites the trait or its body.
 
 Lifecycle changes and evaluation sources are separate representations:
@@ -31,9 +31,9 @@ analysis of both versions or a historical compiler project.
 
 ## Initialize extensions
 
-Each trait references a segmenter and may reference enrichments. These
-extensions are initialized before use, separating reusable setup from the work
-performed for each input or location.
+Each trait may reference a segmenter and enrichments. These extensions are
+initialized before use, separating reusable setup from the work performed for
+each input or location.
 
 Initialization is shared across the entire program lifecycle, not repeated per
 trait or evaluation. A program-level registry identifies an extension by its
