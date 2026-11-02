@@ -1,8 +1,8 @@
 import { Command } from "effect/cli"
 
 import PackageJson from "../package.json" with { type: "json" }
-import { auth } from "./commands/auth.ts"
-import { profile } from "./commands/profile.ts"
+import { auth } from "./commands/auth/auth.ts"
+import { profile } from "./commands/profile/profile.ts"
 
 export const Cli = Command.make("traits").pipe(
   Command.withDescription("Manage trait checking credentials and model profiles"),

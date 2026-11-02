@@ -9,6 +9,7 @@
  */
 import { Context, Duration, Effect, FileSystem, Layer, Option, Schedule, Schema as S, Scope, Semaphore } from "effect"
 
+import { UserFileSecurity } from "../UserFileSecurity.ts"
 import { WorkspacePaths } from "./WorkspacePaths.ts"
 
 export class UserConfigLockSetupError extends S.TaggedError<UserConfigLockSetupError>()("UserConfigLockSetupError", {
@@ -30,6 +31,7 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const { dataDirectory, lock } = yield* WorkspacePaths
+    const secure = yield* UserFileSecurity
     const semaphore = yield* Semaphore.make(1)
     const [{ tryLock }, { constants, open }] = yield* Effect.all(
       [
@@ -48,46 +50,40 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
       Effect.scopedWith((scope) =>
         Effect.gen(function* () {
           yield* fs.makeDirectory(dataDirectory, { recursive: true, mode: 0o700 })
-          yield* fs.lstat(dataDirectory).pipe(
-            Effect.filterOrFail(
-              (info) =>
-                process.platform !== "win32" &&
-                info.type === "Directory" &&
-                (process.getuid === undefined || Option.getOrUndefined(info.uid) === process.getuid()),
-              () =>
-                UserConfigLockError.make({
-                  path: dataDirectory,
-                  message: `Refusing insecure lock storage at ${dataDirectory}; expected an owned, nonsymlink directory on a POSIX filesystem.`
-                })
-            )
+          yield* secure(dataDirectory, "Directory")
+          yield* secure(lock, "File").pipe(
+            Effect.catchTags({
+              PlatformError: (cause) => (cause.reason._tag === "NotFound" ? Effect.void : Effect.fail(cause))
+            })
           )
-          yield* fs.chmod(dataDirectory, 0o700)
           const file = yield* Effect.tryPromise({
-            try: () => open(lock, constants.O_CREAT | constants.O_RDWR | constants.O_NOFOLLOW, 0o600),
+            try: () => open(lock, constants.O_CREAT | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0), 0o600),
             catch: (cause) =>
               UserConfigLockError.make({
                 path: lock,
-                message: "Failed to open the lock file without following symbolic links.",
+                message: "Failed to open the lock file.",
                 cause
               })
           }).pipe((acquire) =>
             Effect.acquireRelease(acquire, (file) => Effect.promise(() => file.close()).pipe(Effect.orDie))
           )
-          yield* Effect.tryPromise({
-            try: () => file.stat(),
+          yield* secure(lock, "File")
+          const info = yield* Effect.tryPromise({
+            try: () => file.stat({ bigint: true }),
             catch: (cause) =>
               UserConfigLockError.make({ path: lock, message: "Failed to inspect the open lock file.", cause })
-          }).pipe(
+          })
+          yield* fs.lstat(lock).pipe(
             Effect.filterOrFail(
-              (info) => info.isFile() && (process.getuid === undefined || info.uid === process.getuid()),
+              (current) => info.isFile() && current.dev === info.dev && Option.getOrUndefined(current.ino) === info.ino,
               () =>
                 UserConfigLockError.make({
                   path: lock,
-                  message: `Refusing insecure lock storage at ${lock}; expected an owned, nonsymlink file on a POSIX filesystem.`
+                  message: `The open lock file no longer matches the secured path at ${lock}.`
                 })
             ),
             Effect.filterOrFail(
-              (info) => info.size === 0,
+              () => info.size === 0n,
               () =>
                 UserConfigLockError.make({
                   path: lock,
@@ -95,15 +91,6 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
                 })
             )
           )
-          yield* Effect.tryPromise({
-            try: () => file.chmod(0o600),
-            catch: (cause) =>
-              UserConfigLockError.make({
-                path: lock,
-                message: "Failed to restrict permissions on the open lock file.",
-                cause
-              })
-          })
           yield* Effect.try({
             try: () => tryLock(file.fd),
             catch: (cause) =>
@@ -112,6 +99,8 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
         }).pipe(
           Scope.provide(scope),
           Effect.catchTags({
+            UserFileSecurityError: (cause) =>
+              UserConfigLockError.make({ path: cause.path, message: cause.message, cause }),
             PlatformError: (cause) =>
               UserConfigLockError.make({
                 path: lock,
