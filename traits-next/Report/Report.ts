@@ -2,6 +2,7 @@ import { Array, Function, Schema as S } from "effect"
 
 import { RecoveryInstruction } from "../schema/index.ts"
 import type { Assessment } from "./Assessment.ts"
+import { ChangePaths } from "./ChangePaths.ts"
 import { Diagnostic } from "./Diagnostic.ts"
 import { DiagnosticOrigin } from "./DiagnosticOrigin.ts"
 import { TraitReport } from "./TraitReport.ts"
@@ -9,6 +10,10 @@ import { TraitReport } from "./TraitReport.ts"
 /** Client-facing evaluation results grouped by trait, without source text or excerpts; retry tracking is external. */
 export type Report = typeof Report.Type
 export const Report = S.Struct({
+  /** Paths for every supplied change in original caller order, including changes with no selected inputs. */
+  changes: S.Array(ChangePaths).annotate({
+    description: "Paths for every supplied change in original caller order, including changes with no selected inputs."
+  }),
   /** Whether evaluation was interrupted; retained results may be incomplete. Recovery-scope cancellation alone does not count as interruption. */
   interrupted: S.Boolean.annotate({
     description:
@@ -39,7 +44,9 @@ export const Report = S.Struct({
             SegmenterSetup: () => Array.some(report.traits, (trait) => diagnostic.module === trait.trait.segment),
             EnrichmentSetup: () =>
               Array.some(report.traits, (trait) => trait.trait.enrichments?.includes(diagnostic.module) === true),
-            SegmenterExecution: () => Array.some(report.traits, (trait) => diagnostic.module === trait.trait.segment),
+            SegmenterExecution: (origin) =>
+              origin.change < report.changes.length &&
+              Array.some(report.traits, (trait) => diagnostic.module === trait.trait.segment),
             EnrichmentExecution: (origin) => {
               const trait = report.traits[origin.trait]
               return (
@@ -53,6 +60,24 @@ export const Report = S.Struct({
       {
         message: "Diagnostics must name configured extensions with valid execution locations."
       }
+    ),
+    S.makeFilter(
+      (report) =>
+        Array.every(report.traits, (trait) =>
+          Array.every(trait.inputs, (input) => {
+            const change = report.changes[input.change]
+            return (
+              change !== undefined &&
+              (input.segment._tag === "Before"
+                ? change.before !== undefined
+                : change.after !== undefined &&
+                  (input.segment.before === undefined ||
+                    input.segment.before.length === 0 ||
+                    change.before !== undefined))
+            )
+          })
+        ),
+      { message: "Inputs must reference reported changes with paths for all selected source sides." }
     )
   )
 

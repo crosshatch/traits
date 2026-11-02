@@ -5,10 +5,9 @@ export const DiagnosticOrigin = S.TaggedUnion({
   /** Segmenter initialization failed before selecting assessment inputs. */
   SegmenterSetup: {},
   SegmenterExecution: {
-    /** Index into the caller's supplied changes in original caller order, before filtering or scheduling; not an input-report index. */
+    /** Index into Report.changes in original caller order; not an input-report index. */
     change: S.Natural.annotate({
-      description:
-        "Index into the caller's supplied changes in original caller order, before filtering or scheduling; not an input-report index."
+      description: "Index into Report.changes in original caller order; not an input-report index."
     })
   },
   /** Enrichment initialization failed before processing assessment inputs. */

@@ -285,15 +285,14 @@ diagnostic explains what happened; it need not invent a remedy.
 Each diagnostic's `origin` is tagged `SegmenterSetup`, `SegmenterExecution`,
 `EnrichmentSetup`, or `EnrichmentExecution`. The explanation and shared `module`
 field live on the diagnostic itself. Setup origins have no trait or input
-reference. Segmenter execution failures reference the caller's supplied change
-by index in caller order, before filtering or scheduling; callers retain that
-association outside the source-free report. The runner validates change indices
-against the supplied changes. The configured module and change identify the
-shared segmentation invocation, without choosing an originating trait.
-Enrichment execution failures reference the originating trait by index in
-`Report.traits` and its inputs, preserving their before/after provenance. Setup
-failures do not fabricate inputs, and segmenter failures need no synthetic
-assessment target.
+reference. Segmenter execution failures reference `Report.changes` by index in
+original caller order, before filtering or scheduling. The report schema
+validates change indices against this path table. The configured module and
+change identify the shared segmentation invocation, without choosing an
+originating trait. Enrichment execution failures reference the originating trait
+by index in `Report.traits` and its inputs, preserving their before/after
+provenance. Setup failures do not fabricate inputs, and segmenter failures need
+no synthetic assessment target.
 
 Reports use deterministic ordering based on trait, source/location, and
 configured module order, not the timing of concurrent completions. Scheduling
@@ -306,6 +305,9 @@ Reports group results by trait, then by evaluated source location:
 
 ```text
 Report
+├── changes: ChangePaths[] ({ before?: string, after?: string }, at least one side)
+├── interrupted: boolean
+├── instruction?: string
 ├── diagnostics: Diagnostic[] (Error | Instruction, with module and origin)
 └── traits: TraitReport[]
     ├── static Trait
@@ -319,20 +321,24 @@ Report
 Input reports reference changes by index in the original caller-supplied order,
 before filtering or scheduling, and preserve the complete `Segment`, without
 source text or excerpts. This includes historical correspondence on `After`:
-omission means unknown, while an empty array means no counterpart. Paths,
-including both paths for renames, are resolved through the original change. Full
+omission means unknown, while an empty array means no counterpart. Required
+`Report.changes` records before and/or after paths for every supplied change in
+caller order, including changes with no inputs or failed segmentation. At least
+one path is required per change; separate paths preserve renames. Both input and
+segmentation diagnostic indices resolve through this table without the original
+request. The table remains complete in partial and interrupted reports. Full
 sources remain available internally during execution. Each trait definition
 appears once in its trait report. Generated enrichment text remains in the
 report, but should not routinely echo the source.
 
 Ranges describe the text supplied for evaluation, not necessarily the file's
-current contents. Clients retain the original request to resolve paths and
-source versions. They can inspect the supplied snapshots or retrieve matching
-versions from a known Git baseline; arbitrary supplied text need not exist in
-Git. The segment tag identifies the primary source side, and historical ranges
-address the same change's before source. Reports do not identify Git revisions
-or embed snapshots. Enrichment execution failures retain this provenance through
-their input-report reference.
+current contents. Paths are self-contained in the report; retrieving exact
+source versions still requires external provenance. Clients can inspect retained
+supplied snapshots or retrieve matching versions from a known Git baseline;
+arbitrary supplied text need not exist in Git. The segment tag identifies the
+primary source side, and historical ranges address the same change's before
+source. Reports do not identify Git revisions or embed snapshots. Enrichment
+execution failures retain this provenance through their input-report reference.
 
 Input entries are allocated in deterministic source/range order, including work
 that fails or is cancelled, so enrichment execution failures always reference an
@@ -345,10 +351,11 @@ assessments. The runner must prevent assessment of an input stopped by `Input`
 or `Trait` recovery while preserving completed assessments on other inputs. This
 execution invariant is not validated by the report schema because cancellation
 decisions are not serialized. Range ordering and nonnegative offsets are
-validated by the report schemas, but change-index bounds, source-side
-availability, and all ranges against source length must be validated during
-execution before reporting. Input indices must remain stable when assembling
-partial results; completion order does not determine their values.
+validated by the report schemas, along with change-index bounds and path
+presence for primary and historical source sides. Range bounds and surrogate
+boundaries against source text must be validated during execution before
+reporting. Input indices must remain stable when assembling partial results;
+completion order does not determine their values.
 
 Clients scan `Report.diagnostics` for problems and remediation. Setup failures
 name an extension configured by at least one reported trait; affected traits can

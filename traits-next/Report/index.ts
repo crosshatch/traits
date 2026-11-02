@@ -1,4 +1,5 @@
 export * from "./Assessment.ts"
+export * from "./ChangePaths.ts"
 export * from "./Diagnostic.ts"
 export * from "./DiagnosticOrigin.ts"
 export * from "./InputReport.ts"
