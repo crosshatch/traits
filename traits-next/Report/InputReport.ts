@@ -7,10 +7,9 @@ import { EnrichmentReport } from "./EnrichmentReport.ts"
 /** A source-free report for one assessment input, referencing the supplied change and preserving its complete segment. */
 export type InputReport = typeof InputReport.Type
 export const InputReport = S.Struct({
-  /** Index into the caller's supplied changes in original caller order, before filtering or scheduling; resolves source paths and versions. */
+  /** Index into Report.changes in original caller order; resolves before and after source paths. */
   change: S.Natural.annotate({
-    description:
-      "Index into the caller's supplied changes in original caller order, before filtering or scheduling; resolves source paths and versions."
+    description: "Index into Report.changes in original caller order; resolves before and after source paths."
   }),
   /** One primary before/after assessment target, with optional historical context for an after target. */
   segment: Segment,
