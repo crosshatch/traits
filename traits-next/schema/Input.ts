@@ -1,12 +1,8 @@
 import { Array, Schema as S } from "effect"
 
-import { isSurrogatePairBoundary } from "../util/index.ts"
 import { Change } from "./Change.ts"
-import type { InputRange } from "./InputRange.ts"
+import { isValidForText } from "./InputRange.ts"
 import { Segment } from "./Segment.ts"
-
-const isSourceRange = (text: string, range: InputRange): boolean =>
-  range.end <= text.length && isSurrogatePairBoundary(text, range.start) && isSurrogatePairBoundary(text, range.end)
 
 /** A change and assessment segment with source-presence, UTF-16 bounds, and surrogate-pair boundary validation; validation does not establish diff correspondence. */
 export type Input = typeof Input.Type
@@ -30,14 +26,14 @@ export const Input = S.Struct({
       (input) =>
         Segment.match(input.segment, {
           Before: (segment) =>
-            input.change.before !== undefined && isSourceRange(input.change.before.text, segment.range),
+            input.change.before !== undefined && isValidForText(segment.range, input.change.before.text),
           After: (segment) =>
             input.change.after !== undefined &&
-            isSourceRange(input.change.after.text, segment.range) &&
+            isValidForText(segment.range, input.change.after.text) &&
             (segment.before === undefined ||
               Array.every(
                 segment.before,
-                (range) => input.change.before !== undefined && isSourceRange(input.change.before.text, range)
+                (range) => input.change.before !== undefined && isValidForText(range, input.change.before.text)
               ))
         }),
       {
