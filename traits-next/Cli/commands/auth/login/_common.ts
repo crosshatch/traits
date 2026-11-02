@@ -1,5 +1,5 @@
 import { Array, Config, Console, Duration, Effect, Option, Redacted, String } from "effect"
-import { CliError, Flag, Prompt } from "effect/cli"
+import { CliError, Flag, Prompt, TerminalCapabilities } from "effect/cli"
 
 import { AccountName } from "../../../../Provider/AccountName.ts"
 import { ProviderAccount } from "../../../../Provider/ProviderAccount.ts"
@@ -11,10 +11,6 @@ export const commonFlags = {
   keyEnv: Flag.String("key-env").pipe(
     Flag.withDescription("Read the API key from this environment variable, never from argv"),
     Flag.optional
-  ),
-  replace: Flag.Boolean("replace").pipe(
-    Flag.withDescription("Replace an existing account explicitly"),
-    Flag.withDefault(false)
   )
 }
 
@@ -24,7 +20,8 @@ export const readApiKey = Effect.fn("auth.readApiKey")(
     if (variable !== undefined) {
       return yield* Config.Redacted(variable)
     }
-    if (process.stdin.isTTY !== true) {
+    const { canPrompt } = yield* TerminalCapabilities.TerminalCapabilities
+    if (!canPrompt) {
       return yield* CliError.UserError.make({
         cause: "Interactive API-key entry requires a terminal. Use --key-env <variable> in headless mode."
       })
@@ -37,16 +34,11 @@ export const readApiKey = Effect.fn("auth.readApiKey")(
   )
 )
 
-export const saveAccount = Effect.fn("auth.saveAccount")(function* (entry: ProviderAccount, replace: boolean) {
+export const saveAccount = Effect.fn("auth.saveAccount")(function* (entry: ProviderAccount) {
   const { readAccounts, writeAccounts } = yield* UserConfigStore
   const withLock = yield* UserConfigLock
   yield* Effect.gen(function* () {
-    const accounts = yield* readAccounts.pipe(
-      Effect.filterOrFail(
-        (accounts) => replace || !Array.some(accounts, (saved) => saved.id === entry.id),
-        () => CliError.UserError.make({ cause: `Account ${entry.id} already exists. Use --replace to overwrite it.` })
-      )
-    )
+    const accounts = yield* readAccounts
     yield* writeAccounts([...Array.filter(accounts, (saved) => saved.id !== entry.id), entry])
   }).pipe((operation) => withLock(operation, Duration.minutes(2)))
   yield* Console.log(`Saved ${entry.id} (${entry.provider}). The API key has not been verified remotely.`)
