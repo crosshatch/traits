@@ -1,4 +1,4 @@
-import { Array, Console, Duration, Effect } from "effect"
+import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
 import { AccountName } from "../../../Provider/AccountName.ts"
@@ -37,7 +37,7 @@ export const logout = Command.make(
         })
       }
       yield* writeAccounts(Array.filter(accounts, (entry) => entry.id !== account))
-    }).pipe((operation) => withLock(operation, Duration.minutes(2)))
+    }).pipe(withLock)
     yield* Console.log(`Removed local credentials for ${account}; the provider key has not been revoked.`)
   })
 )

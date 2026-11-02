@@ -4,7 +4,6 @@ import {
   Array,
   Config,
   Deferred,
-  Duration,
   Effect,
   Fiber,
   FileSystem,
@@ -116,12 +115,12 @@ it.live(
         const withLock = yield* UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
         const independentLock = yield* UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
         const callerScope = yield* Scope.Scope
-        const observedScope = yield* withLock(Scope.Scope, Duration.seconds(20))
+        const observedScope = yield* withLock(Scope.Scope)
         expect(observedScope).toBe(callerScope)
         const entered = yield* Deferred.make<void>()
         const holder = yield* Deferred.succeed(entered, undefined).pipe(
           Effect.andThen(Effect.never),
-          (operation) => withLock(operation, Duration.seconds(20)),
+          withLock,
           Effect.forkScoped
         )
         yield* Deferred.await(entered)
@@ -129,15 +128,13 @@ it.live(
         const waiter = yield* withLock(
           Effect.sync(() => {
             ran = true
-          }),
-          Duration.seconds(20)
+          })
         ).pipe(Effect.forkScoped)
         let independentlyRan = false
         const independentWaiter = yield* independentLock(
           Effect.sync(() => {
             independentlyRan = true
-          }),
-          Duration.seconds(20)
+          })
         ).pipe(Effect.forkScoped)
         yield* Effect.sleep("50 millis")
         expect(ran).toBe(false)
@@ -148,9 +145,9 @@ it.live(
         expect(ran).toBe(true)
         expect(independentlyRan).toBe(true)
         const sentinel = { _tag: "CallerError" }
-        const failure = yield* withLock(Effect.fail(sentinel), Duration.seconds(20)).pipe(Effect.flip)
+        const failure = yield* withLock(Effect.fail(sentinel)).pipe(Effect.flip)
         expect(failure).toBe(sentinel)
-        yield* withLock(Effect.void, Duration.seconds(20))
+        yield* withLock(Effect.void)
       })
     ).pipe(Effect.provide(runtime)),
   60000
@@ -165,7 +162,7 @@ it.live(
         const withLock = yield* UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
         yield* fs.makeDirectory(paths.dataDirectory, { recursive: true })
         yield* fs.writeFileString(paths.lock, "legacy")
-        const error = yield* withLock(Effect.void, Duration.seconds(20)).pipe(Effect.flip)
+        const error = yield* withLock(Effect.void).pipe(Effect.flip)
         expect(error).toBeInstanceOf(UserConfigLockError)
         expect(error.message).toContain("legacy lock marker")
         yield* fs.writeFileString(paths.lock, "")
@@ -179,10 +176,10 @@ it.live(
             method: "api-key",
             credential: Credential.cases.ApiKey.make({ apiKey: Redacted.make("fake-test-key") })
           })
-          yield* withLock(writeAccounts([account]), Duration.seconds(20))
+          yield* withLock(writeAccounts([account]))
           const saved = yield* readAccounts
           expect(Array.map(saved, (entry) => entry.id)).toEqual([account.id])
-          yield* withLock(writeAccounts([]), Duration.seconds(20))
+          yield* withLock(writeAccounts([]))
           const removed = yield* readAccounts
           expect(removed).toEqual([])
           if (process.platform !== "win32") {

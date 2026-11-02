@@ -1,4 +1,5 @@
 import { Context, Effect, FileSystem, Layer, Path, pipe, Schema as S } from "effect"
+import { CliError } from "effect/cli"
 
 import { WorkspacePaths } from "../Cli/WorkspacePaths.ts"
 import { ProviderAccount } from "../Provider/index.ts"
@@ -20,23 +21,59 @@ export class UserConfigStore extends Context.Service<
 
 /** A failure loading user profiles and their active selection. */
 export class UserConfigReadError extends S.TaggedError<UserConfigReadError>()("UserConfigReadError", {
+  path: S.String,
   cause: S.Defect()
-}) {}
+}) {
+  override get message() {
+    return `Could not read profiles from ${this.path}. Check that the file is readable and contains valid profile JSON.`
+  }
+
+  override get [CliError.userMessage]() {
+    return this.message
+  }
+}
 
 /** A failure loading saved provider accounts. */
 export class AccountsReadError extends S.TaggedError<AccountsReadError>()("AccountsReadError", {
+  path: S.String,
   cause: S.Defect()
-}) {}
+}) {
+  override get message() {
+    return `Could not read provider accounts from ${this.path}. Check the file format, ownership, and permissions.`
+  }
+
+  override get [CliError.userMessage]() {
+    return this.message
+  }
+}
 
 /** A failure persisting user profiles and their active selection. */
 export class UserConfigWriteError extends S.TaggedError<UserConfigWriteError>()("UserConfigWriteError", {
+  path: S.String,
   cause: S.Defect()
-}) {}
+}) {
+  override get message() {
+    return `Could not save profiles to ${this.path}. Check directory ownership, permissions, and available disk space.`
+  }
+
+  override get [CliError.userMessage]() {
+    return this.message
+  }
+}
 
 /** A failure persisting saved provider accounts. */
 export class AccountsWriteError extends S.TaggedError<AccountsWriteError>()("AccountsWriteError", {
+  path: S.String,
   cause: S.Defect()
-}) {}
+}) {
+  override get message() {
+    return `Could not save provider accounts to ${this.path}. Check directory ownership, permissions, and available disk space.`
+  }
+
+  override get [CliError.userMessage]() {
+    return this.message
+  }
+}
 
 class InvalidConfigError extends S.TaggedError<InvalidConfigError>()("InvalidConfigError", {
   path: S.String
@@ -65,7 +102,7 @@ export const layerFromFs = Layer.effect(
         S.decodeEffect(S.fromJsonString(UserConfig)),
         Effect.mapError(() => InvalidConfigError.make({ path: config }))
       )
-    }).pipe(Effect.mapError((cause) => UserConfigReadError.make({ cause })))
+    }).pipe(Effect.mapError((cause) => UserConfigReadError.make({ path: config, cause })))
 
     const readAccounts = Effect.gen(function* () {
       if (!(yield* fs.exists(accounts))) {
@@ -80,7 +117,7 @@ export const layerFromFs = Layer.effect(
         S.decodeEffect(S.fromJsonString(S.Array(ProviderAccount))),
         Effect.mapError(() => InvalidConfigError.make({ path: accounts }))
       )
-    }).pipe(Effect.mapError((cause) => AccountsReadError.make({ cause })))
+    }).pipe(Effect.mapError((cause) => AccountsReadError.make({ path: accounts, cause })))
 
     const write = Effect.fn("UserConfigStore.write")(function* (filename: string, text: string) {
       yield* fs.makeDirectory(path.dirname(filename), { recursive: true, mode: 0o700 })
@@ -96,7 +133,7 @@ export const layerFromFs = Layer.effect(
         const text = yield* pipe(userConfig, S.encodeEffect(S.fromJsonString(UserConfig)), Effect.orDie)
         yield* write(config, text)
       },
-      Effect.mapError((cause) => UserConfigWriteError.make({ cause }))
+      Effect.mapError((cause) => UserConfigWriteError.make({ path: config, cause }))
     )
 
     const writeAccounts = Effect.fn("UserConfigStore.writeAccounts")(
@@ -110,7 +147,7 @@ export const layerFromFs = Layer.effect(
         )
         yield* write(accounts, text)
       },
-      Effect.mapError((cause) => AccountsWriteError.make({ cause }))
+      Effect.mapError((cause) => AccountsWriteError.make({ path: accounts, cause }))
     )
 
     return UserConfigStore.of({ readConfig, readAccounts, writeConfig, writeAccounts })
