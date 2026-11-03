@@ -1,6 +1,8 @@
 import { Config, Context, Effect, Equal, FileSystem, Layer, Option, Path, Schema as S, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
+type UserFileType = "Directory" | "File"
+
 export class UserFileSecurityError extends S.TaggedError<UserFileSecurityError>()("UserFileSecurityError", {
   path: S.String,
   message: S.String
@@ -54,8 +56,6 @@ export class UserFileSecurity extends Context.Service<UserFileSecurity>()("trait
 }) {
   static readonly layer = this.make.pipe(Layer.effect(UserFileSecurity))
 }
-
-type UserFileType = "Directory" | "File"
 
 const windowsProcessOptions = (filename: string, type: UserFileType) => ({
   env: { TRAITS_SECURE_PATH: filename, TRAITS_SECURE_TYPE: type },
