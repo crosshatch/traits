@@ -7,7 +7,7 @@ import { Profile } from "../../Profile/Profile.ts"
 import { ProfileName } from "../../Profile/ProfileName.ts"
 import { AccountName } from "../../Provider/AccountName.ts"
 import * as UserConfig from "../../UserConfig.ts"
-import { UserConfigLock } from "../../UserConfigLock.ts"
+import { withLock } from "../../UserConfigLock.ts"
 
 const selectionFlag = (role: string) =>
   Flag.String(role).pipe(
@@ -57,12 +57,11 @@ export const create = Command.make(
     decision: selectionFlag("decision"),
     replace: Flag.Boolean("replace").pipe(Flag.withDefault(false))
   },
-  Effect.fn("profile.create")(function* (params) {
-    const withLock = yield* UserConfigLock
-    const { name, language, embedding, decision, replace } = params
-    const profile = Profile.make({ language, embedding, decision })
-    const providerSelections = Array.filter([language, embedding, decision], ModelSelection.guards.Provider)
-    yield* Effect.gen(function* () {
+  Effect.fn("profile.create")(
+    function* (params) {
+      const { name, language, embedding, decision, replace } = params
+      const profile = Profile.make({ language, embedding, decision })
+      const providerSelections = Array.filter([language, embedding, decision], ModelSelection.guards.Provider)
       const config = yield* UserConfig.read.pipe(
         Effect.filterOrFail(
           (config) => replace || !Array.some(config.profiles, (entry) => entry.name === name),
@@ -83,9 +82,15 @@ export const create = Command.make(
         ...config,
         profiles: [...Array.filter(config.profiles, (entry) => entry.name !== name), { name, profile }]
       })
-    }).pipe(withLock)
-    yield* Console.log(
-      `Saved profile ${name}. Model availability and role capabilities are checked when models are resolved.`
-    )
-  })
+    },
+    withLock,
+    (effect, params) =>
+      effect.pipe(
+        Effect.andThen(
+          Console.log(
+            `Saved profile ${params.name}. Model availability and role capabilities are checked when models are resolved.`
+          )
+        )
+      )
+  )
 )

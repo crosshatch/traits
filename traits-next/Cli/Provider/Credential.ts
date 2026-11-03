@@ -4,17 +4,39 @@ import { Schema as S } from "effect"
 export type Credential = typeof Credential.Type
 export const Credential = S.TaggedUnion({
   ApiKey: {
-    apiKey: S.RedactedFromValue(S.NonEmptyString)
+    /** Provider API key, redacted in memory; encoding writes its plaintext value. */
+    apiKey: S.RedactedFromValue(S.NonEmptyString).annotateKey({
+      description: "Provider API key, redacted in memory; encoding writes its plaintext value."
+    })
   },
   OAuth: {
-    accessToken: S.RedactedFromValue(S.NonEmptyString),
-    refreshToken: S.RedactedFromValue(S.NonEmptyString).pipe(S.optionalKey),
-    /** Access token expiration as Unix epoch milliseconds. */
-    expiresAt: S.Natural.annotateKey({ description: "Access token expiration as Unix epoch milliseconds." }).pipe(
-      S.optionalKey
-    ),
-    scopes: S.Array(S.NonEmptyString).check(S.isUnique()).pipe(S.optionalKey),
-    metadata: S.Record(S.String, S.String).pipe(S.optionalKey)
+    /** OAuth access token used to authorize provider requests, redacted in memory. */
+    accessToken: S.RedactedFromValue(S.NonEmptyString).annotateKey({
+      description: "OAuth access token used to authorize provider requests, redacted in memory."
+    }),
+    /** Optional OAuth refresh token used to renew access, redacted in memory. */
+    refreshToken: S.RedactedFromValue(S.NonEmptyString)
+      .annotateKey({
+        description: "Optional OAuth refresh token used to renew access, redacted in memory."
+      })
+      .pipe(S.optionalKey),
+    /** Optional access token expiration as Unix epoch milliseconds. */
+    expiresAt: S.Natural.annotateKey({
+      description: "Optional access token expiration as Unix epoch milliseconds."
+    }).pipe(S.optionalKey),
+    /** Optional unique authorization scopes granted to this credential. */
+    scopes: S.Array(S.NonEmptyString)
+      .check(S.isUnique())
+      .annotateKey({
+        description: "Optional unique authorization scopes granted to this credential."
+      })
+      .pipe(S.optionalKey),
+    /** Optional provider-specific string metadata; values are not redacted. */
+    metadata: S.Record(S.String, S.String)
+      .annotateKey({
+        description: "Optional provider-specific string metadata; values are not redacted."
+      })
+      .pipe(S.optionalKey)
   }
 }).annotate({
   description: "Secret material for a saved provider account; encoding secrets produces plaintext, not encryption."

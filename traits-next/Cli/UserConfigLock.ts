@@ -5,6 +5,7 @@
  * Effect FileSystem does not expose the native descriptor required by the locking API.
  * Never unlink or replace the persistent lock file; closing its handle releases the lock.
  * Native modules are loaded on first lock use and memoized per service instance.
+ * The exported withLock helper resolves the current service for pipeable use.
  * UserConfigLockSetupError reports native-module setup failures.
  * UserConfigLockError reports lock-use failures; protected operation errors propagate unchanged.
  */
@@ -14,8 +15,10 @@ import { UserFileSecurity } from "./UserFileSecurity.ts"
 import { WorkspacePaths } from "./WorkspacePaths.ts"
 
 export class UserConfigLockSetupError extends S.TaggedError<UserConfigLockSetupError>()("UserConfigLockSetupError", {
-  module: S.String,
-  cause: S.Defect()
+  /** Native module whose lazy import failed. */
+  module: S.String.annotateKey({ description: "Native module whose lazy import failed." }),
+  /** Original native-module import failure. */
+  cause: S.Defect().annotateKey({ description: "Original native-module import failure." })
 }) {
   override get message() {
     return `Failed to load ${this.module} for user configuration locking.`
@@ -23,9 +26,14 @@ export class UserConfigLockSetupError extends S.TaggedError<UserConfigLockSetupE
 }
 
 export class UserConfigLockError extends S.TaggedError<UserConfigLockError>()("UserConfigLockError", {
-  path: S.String,
-  message: S.String,
-  cause: S.Defect().pipe(S.optional)
+  /** Lock-storage path affected by this failure. */
+  path: S.String.annotateKey({ description: "Lock-storage path affected by this failure." }),
+  /** Operation-specific explanation and recovery guidance. */
+  message: S.String.annotateKey({ description: "Operation-specific explanation and recovery guidance." }),
+  /** Optional underlying lock-storage or native-lock failure. */
+  cause: S.Defect()
+    .annotateKey({ description: "Optional underlying lock-storage or native-lock failure." })
+    .pipe(S.optional)
 }) {}
 
 export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-next/Cli/UserConfigLock", {
@@ -125,3 +133,5 @@ export class UserConfigLock extends Context.Service<UserConfigLock>()("traits-ne
 }) {
   static readonly layer = this.make.pipe(Layer.effect(UserConfigLock))
 }
+
+export const withLock = <A, E, R>(operation: Effect.Effect<A, E, R>) => UserConfigLock.use((lock) => lock(operation))
