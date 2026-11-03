@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Path } from "effect"
+import { Context, Effect, FileSystem, Layer, Path } from "effect"
 import { UserDirectories } from "effect/persistence"
 
 /** Workspace and user-level filesystem locations used by the local CLI. */
@@ -42,3 +42,26 @@ export const layer = Layer.effect(
     })
   })
 )
+
+/** Canonical nearest project root (.git or traits marker), falling back to the current directory. */
+export const root = Effect.gen(function* () {
+  const { cwd } = yield* WorkspacePaths
+  const fs = yield* FileSystem.FileSystem
+  const path = yield* Path.Path
+  const canonicalCwd = yield* fs.realPath(cwd)
+  let directory = canonicalCwd
+  while (true) {
+    const markers = yield* Effect.all(
+      [fs.exists(path.join(directory, ".git")), fs.exists(path.join(directory, "traits"))],
+      { concurrency: "unbounded" }
+    )
+    if (markers[0] || markers[1]) {
+      return directory
+    }
+    const parent = path.dirname(directory)
+    if (parent === directory) {
+      return canonicalCwd
+    }
+    directory = parent
+  }
+}).pipe(Effect.withSpan("WorkspacePaths.root"))

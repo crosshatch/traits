@@ -1,8 +1,8 @@
-import { Array, Console, Effect, Option } from "effect"
-import { Argument, CliError, Command } from "effect/cli"
+import { Console, Effect, Option } from "effect"
+import { Argument, Command } from "effect/cli"
 
-import { UserConfigStore } from "../../../UserConfigStore.ts"
 import { ProfileName } from "../../Profile/ProfileName.ts"
+import * as UserConfig from "../../UserConfig.ts"
 
 export const show = Command.make(
   "show",
@@ -10,18 +10,8 @@ export const show = Command.make(
     name: Argument.String("name").pipe(Argument.withSchema(ProfileName), Argument.optional)
   },
   Effect.fn("profile.show")(function* (params) {
-    const { readConfig } = yield* UserConfigStore
-    const config = yield* readConfig
-    const selected = Option.getOrElse(params.name, () => config.activeProfile)
-    const entry = Option.getOrUndefined(Array.findFirst(config.profiles, (profile) => profile.name === selected))
-    if (entry === undefined) {
-      return yield* CliError.UserError.make({
-        cause:
-          selected !== undefined
-            ? `Unknown profile: ${selected}`
-            : "No active profile. Run traits profile create first."
-      })
-    }
+    const config = yield* UserConfig.read
+    const entry = yield* UserConfig.resolveProfile(config, Option.getOrUndefined(params.name))
     yield* Console.log(JSON.stringify(entry, null, 2))
   })
 )

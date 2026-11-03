@@ -16,14 +16,13 @@ import {
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import * as FsUserConfigStore from "../Cli/FsUserConfigStore.ts"
+import * as Accounts from "../Cli/Accounts.ts"
 import { AccountName } from "../Cli/Provider/AccountName.ts"
 import { Credential } from "../Cli/Provider/Credential.ts"
 import { ProviderAccount } from "../Cli/Provider/ProviderAccount.ts"
 import { UserConfigLock, UserConfigLockError } from "../Cli/UserConfigLock.ts"
 import { UserFileSecurity, UserFileSecurityError } from "../Cli/UserFileSecurity.ts"
 import { WorkspacePaths } from "../Cli/WorkspacePaths.ts"
-import * as UserConfigStore from "../UserConfigStore.ts"
 
 const runtime = UserFileSecurity.layer.pipe(Layer.provideMerge(NodeServices.layer))
 const fixture = Effect.gen(function* () {
@@ -171,8 +170,7 @@ it.live(
         expect(error.message).toContain("legacy lock marker")
         yield* fs.writeFileString(paths.lock, "")
         yield* Effect.gen(function* () {
-          const { readAccounts, writeAccounts } = yield* UserConfigStore.UserConfigStore
-          const initial = yield* readAccounts
+          const initial = yield* Accounts.read
           expect(initial).toEqual([])
           const account = ProviderAccount.make({
             id: AccountName.make("test"),
@@ -180,18 +178,18 @@ it.live(
             method: "api-key",
             credential: Credential.cases.ApiKey.make({ apiKey: Redacted.make("fake-test-key") })
           })
-          yield* withLock(writeAccounts([account]))
-          const saved = yield* readAccounts
+          yield* withLock(Accounts.write([account]))
+          const saved = yield* Accounts.read
           expect(Array.map(saved, (entry) => entry.id)).toEqual([account.id])
-          yield* withLock(writeAccounts([]))
-          const removed = yield* readAccounts
+          yield* withLock(Accounts.write([]))
+          const removed = yield* Accounts.read
           expect(removed).toEqual([])
           if (process.platform !== "win32") {
             const info = yield* fs.stat(paths.accounts)
             expect(info.mode & 0o777).toBe(0o600)
             expect(Option.getOrUndefined(info.nlink)).toBe(1n)
           }
-        }).pipe(Effect.provide(FsUserConfigStore.layer), Effect.provideService(WorkspacePaths, paths))
+        }).pipe(Effect.provideService(WorkspacePaths, paths))
       })
     ).pipe(Effect.provide(runtime)),
   60000

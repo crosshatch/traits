@@ -1,14 +1,13 @@
 import { Console, Effect } from "effect"
 import { Command } from "effect/cli"
 
-import { UserConfigStore } from "../../../UserConfigStore.ts"
+import * as Accounts from "../../Accounts.ts"
 
 export const list = Command.make(
   "list",
   {},
   Effect.fn("auth.list")(function* () {
-    const { readAccounts } = yield* UserConfigStore
-    const accounts = yield* readAccounts
+    const accounts = yield* Accounts.read
     if (accounts.length === 0) {
       return yield* Console.log("No saved accounts. Run traits auth login <provider>.")
     }
