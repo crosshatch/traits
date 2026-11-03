@@ -3,7 +3,7 @@ import { Argument, CliError, Command, Flag } from "effect/cli"
 
 import { ProfileName } from "../../Profile/ProfileName.ts"
 import * as UserConfig from "../../UserConfig.ts"
-import { UserConfigLock } from "../../UserConfigLock.ts"
+import { withLock } from "../../UserConfigLock.ts"
 
 export const remove = Command.make(
   "remove",
@@ -14,10 +14,9 @@ export const remove = Command.make(
       Flag.withDefault(false)
     )
   },
-  Effect.fn("profile.remove")(function* (params) {
-    const withLock = yield* UserConfigLock
-    const { name } = params
-    yield* Effect.gen(function* () {
+  Effect.fn("profile.remove")(
+    function* (params) {
+      const { name } = params
       const config = yield* UserConfig.read.pipe(
         Effect.filterOrFail(
           (config) => Array.some(config.profiles, (entry) => entry.name === name),
@@ -37,7 +36,8 @@ export const remove = Command.make(
         profiles: Array.filter(config.profiles, (entry) => entry.name !== name),
         workspaceProfiles: Record.filter(config.workspaceProfiles, (selected) => selected !== name)
       })
-    }).pipe(withLock)
-    yield* Console.log(`Removed profile ${name}.`)
-  })
+    },
+    withLock,
+    (effect, params) => effect.pipe(Effect.andThen(Console.log(`Removed profile ${params.name}.`)))
+  )
 )

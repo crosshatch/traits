@@ -20,7 +20,7 @@ import * as Accounts from "../Cli/Accounts.ts"
 import { AccountName } from "../Cli/Provider/AccountName.ts"
 import { Credential } from "../Cli/Provider/Credential.ts"
 import { ProviderAccount } from "../Cli/Provider/ProviderAccount.ts"
-import { UserConfigLock, UserConfigLockError } from "../Cli/UserConfigLock.ts"
+import * as ConfigLock from "../Cli/UserConfigLock.ts"
 import { UserFileSecurity, UserFileSecurityError } from "../Cli/UserFileSecurity.ts"
 import { WorkspacePaths } from "../Cli/WorkspacePaths.ts"
 
@@ -115,10 +115,13 @@ it.live(
     Effect.scoped(
       Effect.gen(function* () {
         const { paths } = yield* fixture
-        const withLock = yield* UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
-        const independentLock = yield* UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
+        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
+        const independentLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
         const callerScope = yield* Scope.Scope
-        const observedScope = yield* withLock(Scope.Scope)
+        const observedScope = yield* Scope.Scope.pipe(
+          ConfigLock.withLock,
+          Effect.provideService(ConfigLock.UserConfigLock, withLock)
+        )
         expect(observedScope).toBe(callerScope)
         const entered = yield* Deferred.make<void>()
         const holder = yield* Deferred.succeed(entered, undefined).pipe(
@@ -162,11 +165,11 @@ it.live(
     Effect.scoped(
       Effect.gen(function* () {
         const { fs, paths } = yield* fixture
-        const withLock = yield* UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
+        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
         yield* fs.makeDirectory(paths.dataDirectory, { recursive: true })
         yield* fs.writeFileString(paths.lock, "legacy")
         const error = yield* withLock(Effect.void).pipe(Effect.flip)
-        expect(error).toBeInstanceOf(UserConfigLockError)
+        expect(error).toBeInstanceOf(ConfigLock.UserConfigLockError)
         expect(error.message).toContain("legacy lock marker")
         yield* fs.writeFileString(paths.lock, "")
         yield* Effect.gen(function* () {

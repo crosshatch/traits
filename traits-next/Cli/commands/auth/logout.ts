@@ -5,17 +5,16 @@ import * as Accounts from "../../Accounts.ts"
 import { ModelSelection } from "../../Profile/ModelSelection.ts"
 import { AccountName } from "../../Provider/AccountName.ts"
 import * as UserConfig from "../../UserConfig.ts"
-import { UserConfigLock } from "../../UserConfigLock.ts"
+import { withLock } from "../../UserConfigLock.ts"
 
 export const logout = Command.make(
   "logout",
   {
     account: Argument.String("account").pipe(Argument.withSchema(AccountName))
   },
-  Effect.fn("auth.logout")(function* (params) {
-    const withLock = yield* UserConfigLock
-    const { account } = params
-    yield* Effect.gen(function* () {
+  Effect.fn("auth.logout")(
+    function* (params) {
+      const { account } = params
       const accounts = yield* Accounts.read.pipe(
         Effect.filterOrFail(
           (accounts) => Array.some(accounts, (entry) => entry.id === account),
@@ -38,7 +37,13 @@ export const logout = Command.make(
         })
       }
       yield* Accounts.write(Array.filter(accounts, (entry) => entry.id !== account))
-    }).pipe(withLock)
-    yield* Console.log(`Removed local credentials for ${account}; the provider key has not been revoked.`)
-  })
+    },
+    withLock,
+    (effect, params) =>
+      effect.pipe(
+        Effect.andThen(
+          Console.log(`Removed local credentials for ${params.account}; the provider key has not been revoked.`)
+        )
+      )
+  )
 )
