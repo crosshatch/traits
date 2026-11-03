@@ -1,4 +1,4 @@
-import { Config, Effect, Option, Redacted, String } from "effect"
+import { Config, Effect, flow, Option, Redacted, String } from "effect"
 import { CliError, Prompt, TerminalCapabilities } from "effect/cli"
 
 export const read = Effect.fn("ApiKey.read")(
@@ -22,8 +22,7 @@ export const read = Effect.fn("ApiKey.read")(
     }
     return yield* Prompt.run(Prompt.Password({ message }))
   },
-  Effect.filterOrFail(
-    (value) => String.trim(Redacted.value(value)).length > 0,
-    () => CliError.UserError.make({ cause: "An API key is required." })
+  Effect.filterOrFail(flow(Redacted.value, String.trim, String.isNonEmpty), () =>
+    CliError.UserError.make({ cause: "An API key is required." })
   )
 )
