@@ -1,7 +1,9 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Path, Stream, String } from "effect"
+import { Effect, FileSystem, Path, pipe, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
+
+import { Profile } from "../Profile/Profile.ts"
 
 const runCli = Effect.fn("test.runCli")(function* (
   args: ReadonlyArray<string>,
@@ -132,6 +134,38 @@ it.live(
         expect(output).toContain("An API key is required")
       }
     }
+  }, Effect.provide(NodeServices.layer)),
+  60000
+)
+
+it.live(
+  "stores custom layer paths without reading credentials or executing the modules",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-custom-profile-" })
+    const env = { XDG_CONFIG_HOME: path.join(root, "config"), XDG_DATA_HOME: path.join(root, "data") }
+    const module = path.join(root, "custom layer.ts")
+    yield* fs.writeFileString(
+      module,
+      'throw new Error("PROFILE_MANAGEMENT_MUST_NOT_IMPORT_THIS"); export default undefined;'
+    )
+    const data = path.join(env.XDG_DATA_HOME, "traits")
+    yield* fs.makeDirectory(data, { recursive: true })
+    yield* fs.writeFileString(path.join(data, "credentials.json"), "not valid JSON")
+    const created = yield* runCli(
+      ["profile", "create", "custom", "--language", module, "--embedding", module, "--decision", module],
+      env
+    )
+    expect(created.code).toBe(0)
+    const shown = yield* runCli(["profile", "show", "custom"], env)
+    expect(shown.code).toBe(0)
+    const saved = yield* pipe(shown.stdout, S.decodeEffect(S.fromJsonString(S.Struct({ profile: Profile }))))
+    for (const selection of [saved.profile.language, saved.profile.embedding, saved.profile.decision]) {
+      expect(selection).toEqual({ _tag: "Custom", path: module })
+    }
+    const removed = yield* runCli(["profile", "remove", "custom"], env)
+    expect(removed.code).toBe(0)
   }, Effect.provide(NodeServices.layer)),
   60000
 )

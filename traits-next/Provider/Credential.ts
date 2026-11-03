@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-/** Secret material or an external credential reference; encoding secrets produces plaintext, not encryption. */
+/** Secret material for a saved provider account; encoding secrets produces plaintext, not encryption. */
 export type Credential = typeof Credential.Type
 export const Credential = S.TaggedUnion({
   ApiKey: {
@@ -15,11 +15,7 @@ export const Credential = S.TaggedUnion({
     ),
     scopes: S.Array(S.NonEmptyString).check(S.isUnique()).pipe(S.optionalKey),
     metadata: S.Record(S.String, S.String).pipe(S.optionalKey)
-  },
-  External: {
-    metadata: S.Record(S.String, S.String).pipe(S.optionalKey)
   }
 }).annotate({
-  description:
-    "Secret material or an external credential reference; encoding secrets produces plaintext, not encryption."
+  description: "Secret material for a saved provider account; encoding secrets produces plaintext, not encryption."
 })

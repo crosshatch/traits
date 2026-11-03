@@ -1,10 +1,10 @@
 import { Context, Effect, FileSystem, Layer, Path, pipe, Schema as S } from "effect"
 import { CliError } from "effect/cli"
 
+import { UserFileSecurity } from "../Cli/UserFileSecurity.ts"
 import { WorkspacePaths } from "../Cli/WorkspacePaths.ts"
 import { ProviderAccount } from "../Provider/index.ts"
 import { UserConfig } from "../UserConfig.ts"
-import { UserFileSecurity } from "../UserFileSecurity.ts"
 
 /** Fresh user configuration and account storage, independent of the host environment. */
 export class UserConfigStore extends Context.Service<

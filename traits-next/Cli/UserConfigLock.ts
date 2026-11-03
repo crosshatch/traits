@@ -10,7 +10,7 @@
  */
 import { Context, Duration, Effect, FileSystem, Layer, Option, Schedule, Schema as S, Scope, Semaphore } from "effect"
 
-import { UserFileSecurity } from "../UserFileSecurity.ts"
+import { UserFileSecurity } from "./UserFileSecurity.ts"
 import { WorkspacePaths } from "./WorkspacePaths.ts"
 
 export class UserConfigLockSetupError extends S.TaggedError<UserConfigLockSetupError>()("UserConfigLockSetupError", {

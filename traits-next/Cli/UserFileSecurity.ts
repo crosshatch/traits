@@ -7,7 +7,7 @@ export class UserFileSecurityError extends S.TaggedError<UserFileSecurityError>(
 }) {}
 
 /** Owner-only local storage. Windows requires PowerShell and an ACL-capable filesystem; fail closed otherwise. */
-export class UserFileSecurity extends Context.Service<UserFileSecurity>()("traits-next/UserFileSecurity", {
+export class UserFileSecurity extends Context.Service<UserFileSecurity>()("traits-next/Cli/UserFileSecurity", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
