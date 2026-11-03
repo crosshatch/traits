@@ -15,6 +15,7 @@ import {
   String
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
+import { TestClock } from "effect/testing"
 
 import * as Accounts from "../Cli/Accounts.ts"
 import { AccountName } from "../Cli/Provider/AccountName.ts"
@@ -160,6 +161,71 @@ it.live(
 )
 
 it.live(
+  "distinguishes storage preparation failures from lock identity failures",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { fs, paths } = yield* fixture
+        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(WorkspacePaths, paths))
+        yield* fs.writeFileString(paths.dataDirectory, "not a directory")
+        let ran = false
+        const operation = Effect.sync(() => {
+          ran = true
+        })
+        const storageError = yield* withLock(operation).pipe(Effect.flip)
+        expect(storageError).toBeInstanceOf(ConfigLock.UserConfigLockStorageError)
+        expect(storageError).toMatchObject({ path: paths.lock })
+        if (storageError._tag === "UserConfigLockStorageError") {
+          expect(storageError.cause).toBeDefined()
+        }
+        yield* fs.remove(paths.dataDirectory)
+        const mismatchedFs = FileSystem.FileSystem.of({
+          ...fs,
+          lstat: (path) => fs.lstat(path).pipe(Effect.map((info) => ({ ...info, dev: info.dev + 1n })))
+        })
+        const mismatchedLock = yield* ConfigLock.UserConfigLock.make.pipe(
+          Effect.provideService(WorkspacePaths, paths),
+          Effect.provideService(FileSystem.FileSystem, mismatchedFs)
+        )
+        const identityError = yield* mismatchedLock(operation).pipe(Effect.flip)
+        expect(identityError).toBeInstanceOf(ConfigLock.UserConfigLockIdentityError)
+        expect(identityError).toMatchObject({ path: paths.lock })
+        expect(ran).toBe(false)
+        yield* withLock(Effect.void)
+      })
+    ).pipe(Effect.provide(runtime)),
+  30000
+)
+
+it.effect("reports a distinct setup/acquisition timeout without running the protected operation", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { paths } = yield* fixture
+      const entered = yield* Deferred.make<void>()
+      const withLock = yield* ConfigLock.UserConfigLock.make.pipe(
+        Effect.provideService(WorkspacePaths, paths),
+        Effect.provideService(UserFileSecurity, () =>
+          Deferred.succeed(entered, undefined).pipe(Effect.andThen(Effect.never))
+        )
+      )
+      let ran = false
+      const waiting = yield* withLock(
+        Effect.sync(() => {
+          ran = true
+        })
+      ).pipe(Effect.flip, Effect.forkScoped)
+      yield* Deferred.await(entered)
+      yield* TestClock.adjust("1 minute")
+      const error = yield* Fiber.join(waiting)
+      expect(error).toBeInstanceOf(ConfigLock.UserConfigLockTimeoutError)
+      expect(error).toMatchObject({ path: paths.lock })
+      expect(error.message).toContain("do not delete the lock file")
+      expect(ran).toBe(false)
+    })
+  ).pipe(Effect.provide(runtime))
+)
+
+it.live(
   "rejects legacy lock markers and stores credentials with fresh reads",
   () =>
     Effect.scoped(
@@ -169,7 +235,8 @@ it.live(
         yield* fs.makeDirectory(paths.dataDirectory, { recursive: true })
         yield* fs.writeFileString(paths.lock, "legacy")
         const error = yield* withLock(Effect.void).pipe(Effect.flip)
-        expect(error).toBeInstanceOf(ConfigLock.UserConfigLockError)
+        expect(error).toBeInstanceOf(ConfigLock.UserConfigLockLegacyError)
+        expect(error).toMatchObject({ path: paths.lock })
         expect(error.message).toContain("legacy lock marker")
         yield* fs.writeFileString(paths.lock, "")
         yield* Effect.gen(function* () {

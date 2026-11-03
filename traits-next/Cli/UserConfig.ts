@@ -67,9 +67,7 @@ export const read = Effect.gen(function* () {
   )
 }).pipe(
   Effect.catch((cause) =>
-    WorkspacePaths.WorkspacePaths.pipe(
-      Effect.flatMap((paths) => UserConfigReadError.make({ path: paths.config, cause }))
-    )
+    WorkspacePaths.WorkspacePaths.use((paths) => UserConfigReadError.make({ path: paths.config, cause }))
   ),
   Effect.withSpan("UserConfig.read")
 )
@@ -82,9 +80,7 @@ export const write = Effect.fn("UserConfig.write")(
     yield* AtomicFile.write(paths.config, text)
   },
   Effect.catch((cause) =>
-    WorkspacePaths.WorkspacePaths.pipe(
-      Effect.flatMap((paths) => UserConfigWriteError.make({ path: paths.config, cause }))
-    )
+    WorkspacePaths.WorkspacePaths.use((paths) => UserConfigWriteError.make({ path: paths.config, cause }))
   )
 )
 

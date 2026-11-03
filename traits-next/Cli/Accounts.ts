@@ -57,9 +57,7 @@ export const read = Effect.gen(function* () {
     Effect.mapError(() => InvalidAccountsError.make({ path: paths.accounts }))
   )
 }).pipe(
-  Effect.catch((cause) =>
-    WorkspacePaths.pipe(Effect.flatMap((paths) => AccountsReadError.make({ path: paths.accounts, cause })))
-  ),
+  Effect.catch((cause) => WorkspacePaths.use((paths) => AccountsReadError.make({ path: paths.accounts, cause }))),
   Effect.withSpan("Accounts.read")
 )
 
@@ -78,7 +76,5 @@ export const write = Effect.fn("Accounts.write")(
     )
     yield* AtomicFile.write(paths.accounts, text)
   },
-  Effect.catch((cause) =>
-    WorkspacePaths.pipe(Effect.flatMap((paths) => AccountsWriteError.make({ path: paths.accounts, cause })))
-  )
+  Effect.catch((cause) => WorkspacePaths.use((paths) => AccountsWriteError.make({ path: paths.accounts, cause })))
 )
