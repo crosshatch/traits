@@ -1,7 +1,7 @@
 import { Array, Effect, Schema as S } from "effect"
 import { CliError } from "effect/cli"
 
-import { UserConfigStore } from "../../UserConfigStore.ts"
+import * as Accounts from "../Accounts.ts"
 import { UserConfigLock } from "../UserConfigLock.ts"
 import { AccountName } from "./AccountName.ts"
 import { Credential } from "./Credential.ts"
@@ -21,10 +21,9 @@ export const ProviderAccount = S.Struct({
 })
 
 export const save = Effect.fn("ProviderAccount.save")(function* (entry: ProviderAccount) {
-  const { readAccounts, writeAccounts } = yield* UserConfigStore
   const withLock = yield* UserConfigLock
   yield* Effect.gen(function* () {
-    const accounts = yield* readAccounts.pipe(
+    const accounts = yield* Accounts.read.pipe(
       Effect.filterOrFail(
         (accounts) => !Array.some(accounts, (saved) => saved.id === entry.id && saved.provider !== entry.provider),
         () =>
@@ -33,6 +32,6 @@ export const save = Effect.fn("ProviderAccount.save")(function* (entry: Provider
           })
       )
     )
-    yield* writeAccounts([...Array.filter(accounts, (saved) => saved.id !== entry.id), entry])
+    yield* Accounts.write([...Array.filter(accounts, (saved) => saved.id !== entry.id), entry])
   }).pipe(withLock)
 })

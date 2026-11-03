@@ -1,29 +1,41 @@
-import { Array, Console, Effect } from "effect"
-import { Argument, CliError, Command } from "effect/cli"
+import { Array, Console, Effect, Record } from "effect"
+import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import { UserConfigStore } from "../../../UserConfigStore.ts"
 import { ProfileName } from "../../Profile/ProfileName.ts"
+import * as UserConfig from "../../UserConfig.ts"
 import { UserConfigLock } from "../../UserConfigLock.ts"
 
 export const remove = Command.make(
   "remove",
-  { name: Argument.String("name").pipe(Argument.withSchema(ProfileName)) },
+  {
+    name: Argument.String("name").pipe(Argument.withSchema(ProfileName)),
+    force: Flag.Boolean("force").pipe(
+      Flag.withDescription("Allow removing the default profile or clearing workspace references"),
+      Flag.withDefault(false)
+    )
+  },
   Effect.fn("profile.remove")(function* (params) {
-    const { readConfig, writeConfig } = yield* UserConfigStore
     const withLock = yield* UserConfigLock
     const { name } = params
     yield* Effect.gen(function* () {
-      const config = yield* readConfig.pipe(
+      const config = yield* UserConfig.read.pipe(
         Effect.filterOrFail(
           (config) => Array.some(config.profiles, (entry) => entry.name === name),
           () => CliError.UserError.make({ cause: `Unknown profile: ${name}` })
         )
       )
-      yield* writeConfig({
+      if (
+        !params.force &&
+        (name === "default" || Record.some(config.workspaceProfiles, (selected) => selected === name))
+      ) {
+        return yield* CliError.UserError.make({
+          cause: `Profile ${name} is the default profile or selected by a workspace. Use --force to remove it and clear its workspace selections.`
+        })
+      }
+      yield* UserConfig.write({
+        ...config,
         profiles: Array.filter(config.profiles, (entry) => entry.name !== name),
-        ...(config.activeProfile !== undefined && config.activeProfile !== name
-          ? { activeProfile: config.activeProfile }
-          : {})
+        workspaceProfiles: Record.filter(config.workspaceProfiles, (selected) => selected !== name)
       })
     }).pipe(withLock)
     yield* Console.log(`Removed profile ${name}.`)

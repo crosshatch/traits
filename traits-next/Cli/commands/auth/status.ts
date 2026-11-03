@@ -1,7 +1,7 @@
 import { Array, Console, Effect, Option } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
 
-import { UserConfigStore } from "../../../UserConfigStore.ts"
+import * as Accounts from "../../Accounts.ts"
 import { AccountName } from "../../Provider/AccountName.ts"
 
 export const status = Command.make(
@@ -10,9 +10,8 @@ export const status = Command.make(
     account: Flag.String("account").pipe(Flag.withSchema(AccountName), Flag.optional)
   },
   Effect.fn("auth.status")(function* (params) {
-    const { readAccounts } = yield* UserConfigStore
     const account = Option.getOrUndefined(params.account)
-    const accounts = yield* readAccounts
+    const accounts = yield* Accounts.read
     const selected = account !== undefined ? Array.filter(accounts, (entry) => entry.id === account) : accounts
     if (account !== undefined && selected.length === 0) {
       return yield* CliError.UserError.make({ cause: `Unknown account: ${account}` })

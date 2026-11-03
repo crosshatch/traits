@@ -1,11 +1,12 @@
 import { Array, Console, Effect, FileSystem, Path, Schema as S } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import { UserConfigStore } from "../../../UserConfigStore.ts"
+import * as Accounts from "../../Accounts.ts"
 import { ModelSelection } from "../../Profile/ModelSelection.ts"
 import { Profile } from "../../Profile/Profile.ts"
 import { ProfileName } from "../../Profile/ProfileName.ts"
 import { AccountName } from "../../Provider/AccountName.ts"
+import * as UserConfig from "../../UserConfig.ts"
 import { UserConfigLock } from "../../UserConfigLock.ts"
 
 const selectionFlag = (role: string) =>
@@ -57,20 +58,19 @@ export const create = Command.make(
     replace: Flag.Boolean("replace").pipe(Flag.withDefault(false))
   },
   Effect.fn("profile.create")(function* (params) {
-    const { readConfig, readAccounts, writeConfig } = yield* UserConfigStore
     const withLock = yield* UserConfigLock
     const { name, language, embedding, decision, replace } = params
     const profile = Profile.make({ language, embedding, decision })
     const providerSelections = Array.filter([language, embedding, decision], ModelSelection.guards.Provider)
     yield* Effect.gen(function* () {
-      const config = yield* readConfig.pipe(
+      const config = yield* UserConfig.read.pipe(
         Effect.filterOrFail(
           (config) => replace || !Array.some(config.profiles, (entry) => entry.name === name),
           () => CliError.UserError.make({ cause: `Profile ${name} already exists. Use --replace to overwrite it.` })
         )
       )
       if (providerSelections.length > 0) {
-        const accounts = yield* readAccounts
+        const accounts = yield* Accounts.read
         for (const selection of providerSelections) {
           if (!Array.some(accounts, (account) => account.id === selection.account)) {
             return yield* CliError.UserError.make({
@@ -79,9 +79,9 @@ export const create = Command.make(
           }
         }
       }
-      yield* writeConfig({
-        profiles: [...Array.filter(config.profiles, (entry) => entry.name !== name), { name, profile }],
-        activeProfile: config.activeProfile ?? name
+      yield* UserConfig.write({
+        ...config,
+        profiles: [...Array.filter(config.profiles, (entry) => entry.name !== name), { name, profile }]
       })
     }).pipe(withLock)
     yield* Console.log(

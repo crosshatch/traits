@@ -41,7 +41,12 @@ export class UserFileSecurity extends Context.Service<UserFileSecurity>()("trait
       yield* ChildProcess.make(
         powershell,
         ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", windowsSecurityScript],
-        windowsProcessOptions(path.resolve(filename), type)
+        {
+          env: { TRAITS_SECURE_PATH: path.resolve(filename), TRAITS_SECURE_TYPE: type },
+          extendEnv: true,
+          stdout: "ignore",
+          stderr: "ignore"
+        }
       ).pipe(
         spawner.exitCode,
         Effect.filterOrFail(Equal.equals(0), () =>
@@ -56,13 +61,6 @@ export class UserFileSecurity extends Context.Service<UserFileSecurity>()("trait
 }) {
   static readonly layer = this.make.pipe(Layer.effect(UserFileSecurity))
 }
-
-const windowsProcessOptions = (filename: string, type: UserFileType) => ({
-  env: { TRAITS_SECURE_PATH: filename, TRAITS_SECURE_TYPE: type },
-  extendEnv: true,
-  stdout: "ignore" as const,
-  stderr: "ignore" as const
-})
 
 // Paths are passed as environment data, never interpolated into executable PowerShell.
 const windowsSecurityScript = String.stripMargin(`
