@@ -1,8 +1,8 @@
 import { Context, Effect, Schema as S } from "effect"
 import { CliError } from "effect/cli"
 
-import { ProviderAccount } from "./Cli/Provider/ProviderAccount.ts"
-import { UserConfig } from "./UserConfig.ts"
+import type { ProviderAccount } from "./Cli/Provider/ProviderAccount.ts"
+import type { UserConfig } from "./UserConfig.ts"
 
 /** Fresh user configuration and account storage, independent of the host environment. */
 export class UserConfigStore extends Context.Service<

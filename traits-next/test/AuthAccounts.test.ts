@@ -2,10 +2,9 @@ import { expect, it } from "@effect/vitest"
 import { Effect, Redacted, Ref } from "effect"
 import { CliError } from "effect/cli"
 
-import { saveAccount } from "../Cli/commands/auth/login/_common.ts"
 import { AccountName } from "../Cli/Provider/AccountName.ts"
 import { Credential } from "../Cli/Provider/Credential.ts"
-import { ProviderAccount } from "../Cli/Provider/ProviderAccount.ts"
+import { ProviderAccount, save } from "../Cli/Provider/ProviderAccount.ts"
 import { ProviderId } from "../Cli/Provider/ProviderId.ts"
 import { UserConfigLock } from "../Cli/UserConfigLock.ts"
 import { UserConfig } from "../UserConfig.ts"
@@ -35,7 +34,7 @@ it.effect(
   "rejects changing an account's provider without writing credentials",
   Effect.fnUntraced(function* () {
     const { original, accounts, store } = yield* fixture
-    const error = yield* saveAccount(account("openrouter", "fake-new-key")).pipe(
+    const error = yield* save(account("openrouter", "fake-new-key")).pipe(
       Effect.provideService(UserConfigStore, store),
       Effect.provideService(UserConfigLock, (operation) => operation.pipe(Effect.withSpan("test.withLock"))),
       Effect.flip
@@ -53,8 +52,8 @@ it.effect(
     const updated = account("openai", "fake-updated-key")
     const separate = account("openrouter", "fake-other-key", "router")
     yield* Effect.gen(function* () {
-      yield* saveAccount(updated)
-      yield* saveAccount(separate)
+      yield* save(updated)
+      yield* save(separate)
     }).pipe(
       Effect.provideService(UserConfigStore, store),
       Effect.provideService(UserConfigLock, (operation) => operation.pipe(Effect.withSpan("test.withLock")))
