@@ -1,16 +1,17 @@
 import { Effect, Option } from "effect"
 import { Command } from "effect/cli"
 
-import { AccountName } from "../../../../Provider/AccountName.ts"
-import { Credential } from "../../../../Provider/Credential.ts"
-import { ProviderAccount } from "../../../../Provider/ProviderAccount.ts"
-import { commonFlags, readApiKey, saveAccount } from "./_common.ts"
+import * as ApiKey from "../../../_util/ApiKey.ts"
+import { AccountName } from "../../../Provider/AccountName.ts"
+import { Credential } from "../../../Provider/Credential.ts"
+import { ProviderAccount } from "../../../Provider/ProviderAccount.ts"
+import { commonFlags, saveAccount } from "./_common.ts"
 
 export const anthropic = Command.make(
   "anthropic",
   commonFlags,
   Effect.fn("auth.login.anthropic")(function* (params) {
-    const apiKey = yield* readApiKey(params.keyEnv, "Anthropic API key")
+    const apiKey = yield* ApiKey.read(params.keyEnv, "Anthropic API key")
     yield* saveAccount(
       ProviderAccount.make({
         id: Option.getOrElse(params.account, () => AccountName.make("anthropic")),

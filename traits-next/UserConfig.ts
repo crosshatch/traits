@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { Profile, ProfileName } from "./Profile/index.ts"
+import { Profile, ProfileName } from "./Cli/Profile/Profile.ts"
 
 /** User-level profiles and the selected profile name; contains no credentials. */
 export type UserConfig = typeof UserConfig.Type

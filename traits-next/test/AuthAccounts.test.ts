@@ -3,13 +3,13 @@ import { Effect, Redacted, Ref } from "effect"
 import { CliError } from "effect/cli"
 
 import { saveAccount } from "../Cli/commands/auth/login/_common.ts"
+import { AccountName } from "../Cli/Provider/AccountName.ts"
+import { Credential } from "../Cli/Provider/Credential.ts"
+import { ProviderAccount } from "../Cli/Provider/ProviderAccount.ts"
+import { ProviderId } from "../Cli/Provider/ProviderId.ts"
 import { UserConfigLock } from "../Cli/UserConfigLock.ts"
-import { AccountName } from "../Provider/AccountName.ts"
-import { Credential } from "../Provider/Credential.ts"
-import { ProviderAccount } from "../Provider/ProviderAccount.ts"
-import { ProviderId } from "../Provider/ProviderId.ts"
 import { UserConfig } from "../UserConfig.ts"
-import { UserConfigStore } from "../UserConfigStore/UserConfigStore.ts"
+import { UserConfigStore } from "../UserConfigStore.ts"
 
 const account = (provider: ProviderId, key: string, name = "primary") =>
   ProviderAccount.make({

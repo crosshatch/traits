@@ -1,8 +1,8 @@
 import { Array, Console, Effect, Option } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
 
-import { AccountName } from "../../../Provider/AccountName.ts"
-import { UserConfigStore } from "../../../UserConfigStore/UserConfigStore.ts"
+import { UserConfigStore } from "../../../UserConfigStore.ts"
+import { AccountName } from "../../Provider/AccountName.ts"
 
 export const status = Command.make(
   "status",

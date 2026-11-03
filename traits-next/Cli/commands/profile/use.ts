@@ -1,8 +1,8 @@
 import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
-import { ProfileName } from "../../../Profile/ProfileName.ts"
-import { UserConfigStore } from "../../../UserConfigStore/UserConfigStore.ts"
+import { UserConfigStore } from "../../../UserConfigStore.ts"
+import { ProfileName } from "../../Profile/ProfileName.ts"
 import { UserConfigLock } from "../../UserConfigLock.ts"
 
 export const use = Command.make(
