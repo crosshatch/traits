@@ -16,13 +16,14 @@ import {
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
+import * as FsUserConfigStore from "../Cli/FsUserConfigStore.ts"
+import { AccountName } from "../Cli/Provider/AccountName.ts"
+import { Credential } from "../Cli/Provider/Credential.ts"
+import { ProviderAccount } from "../Cli/Provider/ProviderAccount.ts"
 import { UserConfigLock, UserConfigLockError } from "../Cli/UserConfigLock.ts"
 import { UserFileSecurity, UserFileSecurityError } from "../Cli/UserFileSecurity.ts"
 import { WorkspacePaths } from "../Cli/WorkspacePaths.ts"
-import { AccountName } from "../Provider/AccountName.ts"
-import { Credential } from "../Provider/Credential.ts"
-import { ProviderAccount } from "../Provider/ProviderAccount.ts"
-import * as UserConfigStore from "../UserConfigStore/UserConfigStore.ts"
+import * as UserConfigStore from "../UserConfigStore.ts"
 
 const runtime = UserFileSecurity.layer.pipe(Layer.provideMerge(NodeServices.layer))
 const fixture = Effect.gen(function* () {
@@ -187,7 +188,7 @@ it.live(
             expect(info.mode & 0o777).toBe(0o600)
             expect(Option.getOrUndefined(info.nlink)).toBe(1n)
           }
-        }).pipe(Effect.provide(UserConfigStore.layerFromFs), Effect.provideService(WorkspacePaths, paths))
+        }).pipe(Effect.provide(FsUserConfigStore.layer), Effect.provideService(WorkspacePaths, paths))
       })
     ).pipe(Effect.provide(runtime)),
   60000

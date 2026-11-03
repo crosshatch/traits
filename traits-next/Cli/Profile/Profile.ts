@@ -12,3 +12,6 @@ export const Profile = S.Struct({
   description:
     "User-level model selections by role, using saved provider accounts or custom layer modules; contains no credentials."
 })
+
+export * from "./ModelSelection.ts"
+export * from "./ProfileName.ts"

@@ -1,11 +1,11 @@
 import { Array, Console, Effect, FileSystem, Path, Schema as S } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import { ModelSelection } from "../../../Profile/ModelSelection.ts"
-import { Profile } from "../../../Profile/Profile.ts"
-import { ProfileName } from "../../../Profile/ProfileName.ts"
-import { AccountName } from "../../../Provider/AccountName.ts"
-import { UserConfigStore } from "../../../UserConfigStore/UserConfigStore.ts"
+import { UserConfigStore } from "../../../UserConfigStore.ts"
+import { ModelSelection } from "../../Profile/ModelSelection.ts"
+import { Profile } from "../../Profile/Profile.ts"
+import { ProfileName } from "../../Profile/ProfileName.ts"
+import { AccountName } from "../../Provider/AccountName.ts"
 import { UserConfigLock } from "../../UserConfigLock.ts"
 
 const selectionFlag = (role: string) =>

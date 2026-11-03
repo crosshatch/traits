@@ -1,9 +1,9 @@
-import { Array, Config, Console, Effect, Option, Redacted, String } from "effect"
-import { CliError, Flag, Prompt, TerminalCapabilities } from "effect/cli"
+import { Array, Console, Effect } from "effect"
+import { CliError, Flag } from "effect/cli"
 
-import { AccountName } from "../../../../Provider/AccountName.ts"
-import { ProviderAccount } from "../../../../Provider/ProviderAccount.ts"
-import { UserConfigStore } from "../../../../UserConfigStore/UserConfigStore.ts"
+import { UserConfigStore } from "../../../../UserConfigStore.ts"
+import { AccountName } from "../../../Provider/AccountName.ts"
+import { ProviderAccount } from "../../../Provider/ProviderAccount.ts"
 import { UserConfigLock } from "../../../UserConfigLock.ts"
 
 export const commonFlags = {
@@ -13,33 +13,6 @@ export const commonFlags = {
     Flag.optional
   )
 }
-
-export const readApiKey = Effect.fn("auth.readApiKey")(
-  function* (keyEnv: Option.Option<string>, message: string) {
-    const variable = Option.getOrUndefined(keyEnv)
-    if (variable !== undefined) {
-      return yield* Config.Redacted(variable).pipe(
-        Effect.catchTags({
-          ConfigError: () =>
-            CliError.UserError.make({
-              cause: `Could not read an API key from environment variable ${variable}. Set it to a nonblank API key and retry.`
-            })
-        })
-      )
-    }
-    const { canPrompt } = yield* TerminalCapabilities.TerminalCapabilities
-    if (!canPrompt) {
-      return yield* CliError.UserError.make({
-        cause: "Interactive API-key entry requires a terminal. Use --key-env <variable> in headless mode."
-      })
-    }
-    return yield* Prompt.run(Prompt.Password({ message }))
-  },
-  Effect.filterOrFail(
-    (value) => String.trim(Redacted.value(value)).length > 0,
-    () => CliError.UserError.make({ cause: "An API key is required." })
-  )
-)
 
 export const saveAccount = Effect.fn("auth.saveAccount")(function* (entry: ProviderAccount) {
   const { readAccounts, writeAccounts } = yield* UserConfigStore

@@ -3,7 +3,7 @@ import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Path, pipe, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { Profile } from "../Profile/Profile.ts"
+import { Profile } from "../Cli/Profile/Profile.ts"
 
 const runCli = Effect.fn("test.runCli")(function* (
   args: ReadonlyArray<string>,

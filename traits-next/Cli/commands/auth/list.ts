@@ -1,7 +1,7 @@
 import { Console, Effect } from "effect"
 import { Command } from "effect/cli"
 
-import { UserConfigStore } from "../../../UserConfigStore/UserConfigStore.ts"
+import { UserConfigStore } from "../../../UserConfigStore.ts"
 
 export const list = Command.make(
   "list",

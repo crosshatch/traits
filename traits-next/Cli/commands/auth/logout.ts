@@ -1,9 +1,9 @@
 import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
-import { ModelSelection } from "../../../Profile/ModelSelection.ts"
-import { AccountName } from "../../../Provider/AccountName.ts"
-import { UserConfigStore } from "../../../UserConfigStore/UserConfigStore.ts"
+import { UserConfigStore } from "../../../UserConfigStore.ts"
+import { ModelSelection } from "../../Profile/ModelSelection.ts"
+import { AccountName } from "../../Provider/AccountName.ts"
 import { UserConfigLock } from "../../UserConfigLock.ts"
 
 export const logout = Command.make(
