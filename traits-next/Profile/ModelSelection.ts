@@ -1,12 +1,21 @@
 import { Schema as S } from "effect"
 
-import { AccountName } from "../Provider/index.ts"
+import { AccountName } from "../Provider/AccountName.ts"
 
-/** A model selected through a saved provider account; capability is validated when resolved. */
+/** A saved provider model or custom Effect AI layer module; role capabilities are validated when resolved. */
 export type ModelSelection = typeof ModelSelection.Type
-export const ModelSelection = S.Struct({
-  account: AccountName,
-  model: S.NonEmptyString.check(S.isTrimmed())
+export const ModelSelection = S.TaggedUnion({
+  Provider: {
+    account: AccountName,
+    model: S.NonEmptyString.check(S.isTrimmed())
+  },
+  Custom: {
+    /** Path to a TypeScript file whose default export is an Effect AI layer; the CLI stores an absolute path. */
+    path: S.NonEmptyString.check(S.isTrimmed(), S.isPattern(/\.ts$/u)).annotate({
+      description:
+        "Path to a TypeScript file whose default export is an Effect AI layer; the CLI stores an absolute path."
+    })
+  }
 }).annotate({
-  description: "A model selected through a saved provider account; capability is validated when resolved."
+  description: "A saved provider model or custom Effect AI layer module; role capabilities are validated when resolved."
 })

@@ -17,12 +17,12 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { UserConfigLock, UserConfigLockError } from "../Cli/UserConfigLock.ts"
+import { UserFileSecurity, UserFileSecurityError } from "../Cli/UserFileSecurity.ts"
 import { WorkspacePaths } from "../Cli/WorkspacePaths.ts"
 import { AccountName } from "../Provider/AccountName.ts"
 import { Credential } from "../Provider/Credential.ts"
 import { ProviderAccount } from "../Provider/ProviderAccount.ts"
 import * as UserConfigStore from "../UserConfigStore/UserConfigStore.ts"
-import { UserFileSecurity, UserFileSecurityError } from "../UserFileSecurity.ts"
 
 const runtime = UserFileSecurity.layer.pipe(Layer.provideMerge(NodeServices.layer))
 const fixture = Effect.gen(function* () {

@@ -1,6 +1,7 @@
 import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
+import { ModelSelection } from "../../../Profile/ModelSelection.ts"
 import { AccountName } from "../../../Provider/AccountName.ts"
 import { UserConfigStore } from "../../../UserConfigStore/UserConfigStore.ts"
 import { UserConfigLock } from "../../UserConfigLock.ts"
@@ -25,7 +26,7 @@ export const logout = Command.make(
       const references = Array.filter(config.profiles, (entry) =>
         Array.some(
           [entry.profile.language, entry.profile.embedding, entry.profile.decision],
-          (selection) => selection.account === account
+          (selection) => ModelSelection.guards.Provider(selection) && selection.account === account
         )
       )
       if (references.length > 0) {
