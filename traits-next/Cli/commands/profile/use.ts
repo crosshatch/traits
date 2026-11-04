@@ -4,7 +4,7 @@ import { Argument, CliError, Command } from "effect/cli"
 import { ProfileName } from "../../Profile/ProfileName.ts"
 import * as UserConfig from "../../UserConfig.ts"
 import { withLock } from "../../UserConfigLock.ts"
-import * as WorkspacePaths from "../../WorkspacePaths.ts"
+import { WorkspacePaths } from "../../WorkspacePaths.ts"
 
 export const use = Command.make(
   "use",
@@ -20,15 +20,15 @@ export const use = Command.make(
           () => CliError.UserError.make({ cause: `Unknown profile: ${name}` })
         )
       )
-      const workspace = yield* WorkspacePaths.root
+      const { workspaceKey } = yield* WorkspacePaths
       yield* UserConfig.write({
         ...config,
         workspaceProfiles:
           name === "default"
-            ? Record.remove(config.workspaceProfiles, workspace)
-            : { ...config.workspaceProfiles, [workspace]: name }
+            ? Record.remove(config.workspaceProfiles, workspaceKey)
+            : { ...config.workspaceProfiles, [workspaceKey]: name }
       })
-      return `workspace ${workspace}`
+      return `workspace ${workspaceKey}`
     },
     withLock,
     (effect, params) =>

@@ -3,16 +3,18 @@ import { CliError } from "effect/cli"
 
 import * as AtomicFile from "./_util/AtomicFile.ts"
 import { Profile, ProfileName } from "./Profile/Profile.ts"
-import * as WorkspacePaths from "./WorkspacePaths.ts"
+import { WorkspacePaths } from "./WorkspacePaths.ts"
 
 /** User-level profiles and workspace overrides; the profile named default is the fallback. Contains no credentials. */
 export type UserConfig = typeof UserConfig.Type
 export const UserConfig = S.Struct({
   profiles: S.Array(S.Struct({ name: ProfileName, profile: Profile })),
-  /** Profile overrides keyed by canonical absolute workspace root. */
+  /** Profile overrides keyed by canonical Git common directory, or canonical cwd outside Git. */
   workspaceProfiles: S.Record(S.NonEmptyString.check(S.isTrimmed()), ProfileName)
     .pipe(S.withDecodingDefault(Effect.succeed({})))
-    .annotateKey({ description: "Profile overrides keyed by canonical absolute workspace root." })
+    .annotateKey({
+      description: "Profile overrides keyed by canonical Git common directory, or canonical cwd outside Git."
+    })
 }).annotate({
   description:
     "User-level profiles and workspace overrides; the profile named default is the fallback. Contains no credentials."
@@ -54,7 +56,7 @@ class InvalidConfigError extends S.TaggedError<InvalidConfigError>()("InvalidCon
 
 /** Reads fresh profile settings; missing configuration is empty. */
 export const read = Effect.gen(function* () {
-  const paths = yield* WorkspacePaths.WorkspacePaths
+  const paths = yield* WorkspacePaths
   const fs = yield* FileSystem.FileSystem
   if (!(yield* fs.exists(paths.config))) {
     return UserConfig.make({ profiles: [], workspaceProfiles: {} })
@@ -66,22 +68,18 @@ export const read = Effect.gen(function* () {
     Effect.mapError(() => InvalidConfigError.make({ path: paths.config }))
   )
 }).pipe(
-  Effect.catch((cause) =>
-    WorkspacePaths.WorkspacePaths.use((paths) => UserConfigReadError.make({ path: paths.config, cause }))
-  ),
+  Effect.catch((cause) => WorkspacePaths.use((paths) => UserConfigReadError.make({ path: paths.config, cause }))),
   Effect.withSpan("UserConfig.read")
 )
 
 /** Replaces the complete configuration; coordinate read-modify-write operations with UserConfigLock. */
 export const write = Effect.fn("UserConfig.write")(
   function* (config: UserConfig) {
-    const paths = yield* WorkspacePaths.WorkspacePaths
+    const paths = yield* WorkspacePaths
     const text = yield* pipe(config, S.encodeEffect(S.fromJsonString(UserConfig)))
     yield* AtomicFile.write(paths.config, text)
   },
-  Effect.catch((cause) =>
-    WorkspacePaths.WorkspacePaths.use((paths) => UserConfigWriteError.make({ path: paths.config, cause }))
-  )
+  Effect.catch((cause) => WorkspacePaths.use((paths) => UserConfigWriteError.make({ path: paths.config, cause })))
 )
 
 /** Resolves an explicit name, workspace override, or the profile named default; missing profiles fail. */
@@ -91,8 +89,8 @@ export const resolveProfile = Effect.fn("UserConfig.resolveProfile")(function* (
 ) {
   let selected = explicitName
   if (selected === undefined) {
-    const workspace = yield* WorkspacePaths.root
-    selected = config.workspaceProfiles[workspace] ?? ProfileName.make("default")
+    const { workspaceKey } = yield* WorkspacePaths
+    selected = config.workspaceProfiles[workspaceKey] ?? ProfileName.make("default")
   }
   return yield* Array.findFirst(config.profiles, (entry) => entry.name === selected).pipe(
     Option.match({

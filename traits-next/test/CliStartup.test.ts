@@ -182,15 +182,20 @@ it.live(
     const projectA = path.join(root, "project-a")
     const projectB = path.join(root, "project-b")
     const nested = path.join(projectA, "src")
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     yield* Effect.all(
       [
-        fs.makeDirectory(path.join(projectA, "traits"), { recursive: true }),
-        fs.makeDirectory(path.join(projectB, ".git"), { recursive: true }),
+        fs.makeDirectory(projectA, { recursive: true }),
+        fs.makeDirectory(projectB, { recursive: true }),
         fs.makeDirectory(nested, { recursive: true })
       ],
       { concurrency: "unbounded" }
     )
-    const canonicalA = yield* fs.realPath(projectA)
+    for (const project of [projectA, projectB]) {
+      const code = yield* spawner.exitCode(ChildProcess.make("git", ["init", "--quiet", project]))
+      expect(code).toBe(0)
+    }
+    const canonicalA = yield* fs.realPath(path.join(projectA, ".git"))
     const env = { XDG_CONFIG_HOME: path.join(root, "config"), XDG_DATA_HOME: path.join(root, "data") }
     const module = path.join(root, "layer.ts")
     yield* fs.writeFileString(module, "export default undefined;")
