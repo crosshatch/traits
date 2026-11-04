@@ -64,11 +64,12 @@ trait-file loading, module canonicalization, CLI profile-to-runtime wiring, and
 explicit in-place registry reset remain separate work.
 
 Checker phases return their data rather than preallocating mutable observations.
-`Check/Preparation.ts` collects unique extension references and returns
-read-only maps of setup/segmentation `Result`s: success values or safe
-diagnostics, not both an `Exit` and a derived diagnostic. Registry layers still
-own setup caching. `Check/Execution.ts` returns ordered trait/input results.
-Execution selects successful enrichment setups once per trait. The enrichment
+`Check/Preparation.ts` collects unique extension references and returns setup
+diagnostics, per-trait ready enrichment operations, and read-only maps of
+segmentation `Result`s. Successful segmenter setup functions are discarded once
+segmentation finishes. Registry layers still own setup caching.
+`Check/Execution.ts` returns ordered trait/input results without setup lookups.
+Selected source locations are targets; report entries are inputs. The enrichment
 registry validates extension output; typed error handlers use the existing
 `EnrichmentError.reason` to coordinate recovery, then return safe diagnostics.
 Recovery cancellation contributes no context or diagnostic, without constructing

@@ -1,57 +1,45 @@
 import { Array, Effect, Result } from "effect"
 
 import * as Report from "../Report/index.ts"
-import { type Change, fromSegment, type Input, Segment } from "../schema/index.ts"
-import type { Trait } from "../Trait.ts"
+import { fromSegment, Segment } from "../schema/index.ts"
+import type { CheckInput } from "./CheckInput.ts"
 import * as Execution from "./Execution.ts"
 import * as Preparation from "./Preparation.ts"
 
-/** Caller-ordered traits and text changes; traits must contain canonical extension references. */
-export interface CheckInput {
-  /** Static trait definitions in report order, with canonical extension references. */
-  readonly traits: ReadonlyArray<Trait>
-  /** Text snapshots in caller order; report change indices refer to this array. */
-  readonly changes: ReadonlyArray<Change>
-}
-
-/** A selected source input paired with its original change index. */
-export interface CheckTarget {
-  readonly change: number
-  readonly input: Input
-}
+export type { CheckInput } from "./CheckInput.ts"
+export type { CheckTarget } from "./CheckTarget.ts"
 
 /** Evaluates changes against traits. Keep registry layers alive across calls to share setup; execution results belong to one check. */
 export const check = Effect.fn("Check.check")(function* (input: CheckInput) {
   const preparation = yield* Preparation.make(input)
-  const targets = yield* Effect.forEach(
-    input.traits,
-    Effect.fnUntraced(function* (trait) {
-      const inputs = yield* Effect.forEach(
+  const traits = yield* Effect.forEach(
+    preparation.traits,
+    Effect.fnUntraced(function* (prepared) {
+      const { trait } = prepared
+      const targetsByChange = yield* Effect.forEach(
         input.changes,
         Effect.fnUntraced(function* (change, index) {
-          let segments: ReadonlyArray<Segment>
           if (trait.segment === undefined) {
-            segments = [
+            return yield* fromSegment(
+              change,
               change.after === undefined
                 ? Segment.cases.Before.make({ range: { start: 0, end: change.before!.text.length } })
                 : Segment.cases.After.make({ range: { start: 0, end: change.after.text.length } })
-            ]
-          } else {
-            const result = preparation.segmentations.get(trait.segment)?.[index]
-            if (result === undefined || Result.isFailure(result)) {
-              return []
-            }
-            segments = result.success
+            ).pipe(Effect.map((input) => [{ change: index, input }]))
           }
-          return yield* Effect.forEach(segments, (segment) =>
+          const result = preparation.segmentations.get(trait.segment)?.[index]
+          if (result === undefined || Result.isFailure(result)) {
+            return []
+          }
+          return yield* Effect.forEach(result.success, (segment) =>
             fromSegment(change, segment).pipe(Effect.map((input) => ({ change: index, input })))
           )
         })
       )
-      return { trait, inputs: Array.flatten(inputs) }
+      return { ...prepared, targets: Array.flatten(targetsByChange) }
     })
   )
-  const evaluation = yield* Execution.evaluate({ traits: targets, enrichmentSetups: preparation.enrichmentSetups })
+  const evaluation = yield* Execution.evaluate({ traits })
   return Report.Report.make({
     changes: Array.map(input.changes, (change) =>
       change.after === undefined
@@ -61,8 +49,7 @@ export const check = Effect.fn("Check.check")(function* (input: CheckInput) {
     interrupted: false,
     traits: evaluation.traits,
     diagnostics: [
-      ...Array.getFailures(preparation.segmenterSetups.values()),
-      ...Array.getFailures(preparation.enrichmentSetups.values()),
+      ...preparation.setupDiagnostics,
       ...Array.flatMap(Array.fromIterable(preparation.segmentations.values()), Array.getFailures),
       ...evaluation.diagnostics
     ]
