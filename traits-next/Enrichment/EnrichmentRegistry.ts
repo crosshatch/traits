@@ -15,7 +15,7 @@ export class EnrichmentRegistry extends Context.Service<EnrichmentRegistry>()(
         EnrichmentSetupError,
         EnrichmentError
       )
-      return flow(registry.get, Effect.map(registry.run))
+      return flow(registry.get, Effect.map(flow(registry.run, Effect.flatMap(S.decodeUnknownEffect(S.String)))))
     })
   }
 ) {
