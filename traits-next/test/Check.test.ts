@@ -178,6 +178,32 @@ it.effect("allows enrichment-only recovery to proceed, but blocks Input-scoped a
   })
 )
 
+it.effect("retains empty enrichment context and reports failed enrichment without exposing source", () =>
+  Effect.gen(function* () {
+    const empty = ModuleSpecifier.make("empty-context")
+    const registry = registryFrom({
+      ...unusedLoaders,
+      Enrichment: (module) =>
+        Effect.succeed(
+          module === empty
+            ? Effect.succeed("")
+            : Enrichment.EnrichmentError.make({
+                reason: Enrichment.EnrichmentErrorReason.cases.Enrichment.make({}),
+                instruction: "Restore the missing context."
+              })
+        )
+    })
+    const report = yield* check({
+      traits: [trait("example", { enrichments: [empty, context] })],
+      changes: [{ after: { path: "file.ts", text: "private-source" } }]
+    }).pipe(Effect.provide(Layer.merge(registry, model)))
+    expect(report.traits[0]!.inputs[0]!.enrichments).toEqual([{ module: empty, text: "" }])
+    expect(report.diagnostics).toHaveLength(1)
+    expect(JSON.stringify(report)).not.toContain("private-source")
+    yield* pipe(report, S.decodeEffect(Report.Report))
+  })
+)
+
 it.effect("Trait recovery cancels sibling input work without marking the check interrupted", () =>
   Effect.gen(function* () {
     const assessingSibling = yield* Deferred.make<void>()
