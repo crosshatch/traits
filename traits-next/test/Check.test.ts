@@ -2,7 +2,7 @@ import { expect, it } from "@effect/vitest"
 import { Array, Cause, Deferred, Effect, Exit, Fiber, Layer, pipe, Schema as S } from "effect"
 import { DecisionModel } from "effect/ai"
 
-import { check } from "../Check.ts"
+import { check } from "../Check/Check.ts"
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import * as Enrichment from "../Enrichment/index.ts"
 import * as Report from "../Report/index.ts"

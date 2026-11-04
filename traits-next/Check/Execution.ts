@@ -1,119 +1,117 @@
-import { Array, Cause, Deferred, Effect, Exit, Schema as S } from "effect"
+import { Deferred, Effect, Result, Schema as S } from "effect"
 
 import * as Enrichment from "../Enrichment/index.ts"
 import * as Report from "../Report/index.ts"
+import type { ModuleSpecifier } from "../schema/index.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
-import type { State } from "./State.ts"
+import * as State from "./CheckState.ts"
+import type { Preparation } from "./Preparation.ts"
 
-/** Keeps input/trait recovery races beside the work they cancel and records partial results on exit. */
-export const evaluate = (state: State) =>
+/** Returns ordered results; Deferreds coordinate recovery only, never store report state. */
+export const evaluate = (options: {
+  readonly traits: ReadonlyArray<State.TraitWork>
+  readonly enrichments: Preparation["enrichments"]
+}) =>
   Effect.forEach(
-    state.traits,
-    Effect.fnUntraced(function* (traitState, traitIndex) {
+    options.traits,
+    Effect.fnUntraced(function* (work, traitIndex) {
       const cancelTrait = yield* Deferred.make<void>()
-      yield* Effect.forEach(
-        traitState.inputs,
-        Effect.fnUntraced(function* (inputState, inputIndex) {
-          const cancelInput = yield* Deferred.make<void>()
-          const run = Effect.gen(function* () {
-            yield* Effect.forEach(
-              inputState.enrichments,
-              Effect.fnUntraced(function* (enrichmentState) {
-                const setup = state.enrichments.get(enrichmentState.module)!.exit
-                if (setup === undefined || Exit.isFailure(setup)) {
-                  return
-                }
-                const origin = Report.DiagnosticOrigin.cases.EnrichmentExecution.make({
-                  module: enrichmentState.module,
-                  trait: traitIndex,
-                  input: inputIndex
-                })
-                const exit = yield* setup.value.pipe(
-                  Effect.provideService(Enrichment.EnrichmentContext, {
-                    trait: traitState.trait,
-                    input: inputState.input
-                  }),
-                  Effect.flatMap(S.decodeUnknownEffect(S.String)),
-                  Effect.tapErrorTag(
-                    "EnrichmentError",
-                    Effect.fnUntraced(function* (error) {
-                      enrichmentState.diagnostic = Report.Diagnostic.cases.Instruction.make({
-                        origin,
-                        instruction: error.instruction
-                      })
-                      if (!Enrichment.EnrichmentErrorReason.guards.Enrichment(error.reason)) {
-                        inputState.status = "Failed"
-                        yield* Deferred.succeed(cancelInput, undefined)
-                        if (Enrichment.EnrichmentErrorReason.guards.Trait(error.reason)) {
-                          traitState.cancelled = true
-                          yield* Deferred.succeed(cancelTrait, undefined)
-                        }
-                      }
-                    }, Effect.uninterruptible)
-                  ),
-                  Effect.exit
-                )
-                if (Exit.isSuccess(exit)) {
-                  enrichmentState.text = exit.value
-                } else if (Cause.hasInterruptsOnly(exit.cause)) {
-                  state.interrupted ||= !traitState.cancelled && inputState.status !== "Failed"
-                } else {
-                  enrichmentState.diagnostic ??= Report.Diagnostic.cases.Error.make({
-                    origin,
-                    error: "Enrichment execution failed."
-                  })
-                }
-              }),
-              { concurrency: "unbounded", discard: true }
-            ).pipe(Effect.raceFirst(Deferred.await(cancelInput).pipe(Effect.andThen(Effect.interrupt))), Effect.exit)
-            if (inputState.status === "Failed" || traitState.cancelled || state.interrupted) {
-              return
-            }
-            if (traitState.trait.assertion === undefined) {
-              inputState.status = "Completed"
-              return
-            }
-            const contexts = Array.flatMap(inputState.enrichments, (entry) =>
-              entry.text === undefined ? [] : [{ module: entry.module, text: entry.text }]
-            )
-            const exit = yield* TraitAssertion.evaluate(
-              {
-                assertion: {
-                  assertion: traitState.trait.assertion,
-                  context: traitState.trait,
-                  enrichments: contexts
-                }
-              },
-              inputState.input
-            ).pipe(
-              Effect.flatMap((response) => Effect.fromResult(response.outcomes.assertion)),
-              Effect.map((answer) => answer.probabilities),
-              Effect.exit
-            )
-            if (Exit.isSuccess(exit)) {
-              inputState.assessment = exit.value
-              inputState.status = "Completed"
-            } else {
-              if (Cause.hasInterruptsOnly(exit.cause)) {
-                state.interrupted ||= !traitState.cancelled
-              } else {
-                inputState.diagnostic = Report.Diagnostic.cases.Error.make({
-                  origin: Report.DiagnosticOrigin.cases.AssessmentExecution.make({
-                    trait: traitIndex,
-                    input: inputIndex
-                  }),
-                  error: "Assertion assessment failed or returned invalid probabilities."
-                })
-                inputState.status = "Failed"
-              }
-            }
-          }).pipe(Effect.raceFirst(Deferred.await(cancelTrait).pipe(Effect.andThen(Effect.interrupt))), Effect.exit)
-          if (!traitState.cancelled) {
-            yield* run
+      const { trait } = work
+      const evaluateInput = Effect.fnUntraced(function* (input: State.InputWork, inputIndex: number) {
+        const cancelInput = yield* Deferred.make<void>()
+        const cancelled = State.EnrichmentOutcome.Cancelled()
+        const cancellation = Effect.raceFirst(Deferred.await(cancelInput), Deferred.await(cancelTrait))
+        const runEnrichment = Effect.fnUntraced(function* (
+          module: ModuleSpecifier
+        ): Effect.fn.Return<State.EnrichmentResult> {
+          const setup = options.enrichments.get(module)
+          if (setup === undefined || Result.isFailure(setup)) {
+            return { module, outcome: cancelled }
           }
-        }),
-        { concurrency: "unbounded", discard: true }
-      )
+          if ((yield* Deferred.isDone(cancelInput)) || (yield* Deferred.isDone(cancelTrait))) {
+            return { module, outcome: cancelled }
+          }
+          const origin = Report.DiagnosticOrigin.cases.EnrichmentExecution.make({
+            module,
+            trait: traitIndex,
+            input: inputIndex
+          })
+          const fallback = State.EnrichmentOutcome.Failed({
+            recovery: "Enrichment",
+            diagnostic: Report.Diagnostic.cases.Error.make({ origin, error: "Enrichment execution failed." })
+          })
+          // Race only the operation. Recovery is handled after it settles, so its own cancellation
+          // signal cannot replace the failing enrichment's diagnostic with a Cancelled result.
+          const outcome = yield* setup.success.pipe(
+            Effect.provideService(Enrichment.EnrichmentContext, { trait, input: input.input }),
+            Effect.flatMap(S.decodeUnknownEffect(S.String)),
+            Effect.map((text) => State.EnrichmentOutcome.Completed({ text })),
+            Effect.catchTags({
+              EnrichmentError: (error) =>
+                Effect.succeed(
+                  State.EnrichmentOutcome.Failed({
+                    recovery: error.reason._tag,
+                    diagnostic: Report.Diagnostic.cases.Instruction.make({ origin, instruction: error.instruction })
+                  })
+                ),
+              SchemaError: () => Effect.succeed(fallback)
+            }),
+            Effect.catchDefect(() => Effect.succeed(fallback)),
+            Effect.raceFirst(cancellation.pipe(Effect.as(cancelled)))
+          )
+          if (State.EnrichmentOutcome.$is("Failed")(outcome) && outcome.recovery !== "Enrichment") {
+            if (outcome.recovery === "Trait") {
+              yield* Deferred.succeed(cancelTrait, undefined)
+            }
+            yield* Deferred.succeed(cancelInput, undefined)
+          }
+          return { module, outcome }
+        })
+        const enrichments = yield* Effect.forEach(trait.enrichments ?? [], runEnrichment, { concurrency: "unbounded" })
+        if (yield* Deferred.isDone(cancelInput)) {
+          return { ...input, enrichments, status: "Failed" } satisfies State.InputResult
+        }
+        if (yield* Deferred.isDone(cancelTrait)) {
+          return { ...input, enrichments, status: "Cancelled" } satisfies State.InputResult
+        }
+        if (trait.assertion === undefined) {
+          return { ...input, enrichments, status: "Completed" } satisfies State.InputResult
+        }
+        const origin = Report.DiagnosticOrigin.cases.AssessmentExecution.make({ trait: traitIndex, input: inputIndex })
+        const diagnostic = Report.Diagnostic.cases.Error.make({
+          origin,
+          error: "Assertion assessment failed or returned invalid probabilities."
+        })
+        return yield* TraitAssertion.evaluate(
+          {
+            assertion: {
+              assertion: trait.assertion,
+              context: trait,
+              enrichments: State.successfulEnrichments(enrichments)
+            }
+          },
+          input.input
+        ).pipe(
+          Effect.flatMap((response) => Effect.fromResult(response.outcomes.assertion)),
+          Effect.map((answer): State.InputResult => ({
+            ...input,
+            enrichments,
+            assessment: answer.probabilities,
+            status: "Completed"
+          })),
+          Effect.orElseSucceed((): State.InputResult => ({ ...input, enrichments, diagnostic, status: "Failed" })),
+          Effect.catchDefect(() =>
+            Effect.succeed<State.InputResult>({ ...input, enrichments, diagnostic, status: "Failed" })
+          ),
+          Effect.raceFirst(
+            Deferred.await(cancelTrait).pipe(
+              Effect.as<State.InputResult>({ ...input, enrichments, status: "Cancelled" })
+            )
+          )
+        )
+      })
+      const inputs = yield* Effect.forEach(work.inputs, evaluateInput, { concurrency: "unbounded" })
+      return { trait, inputs } satisfies State.TraitResult
     }),
-    { concurrency: "unbounded", discard: true }
+    { concurrency: "unbounded" }
   )

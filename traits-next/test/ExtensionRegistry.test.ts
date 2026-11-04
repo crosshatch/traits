@@ -22,7 +22,7 @@ import { Digest, SecureRandom } from "effect/crypto"
 import { FetchHttpClient } from "effect/http"
 import { KeyValueStore } from "effect/persistence"
 
-import { check } from "../Check.ts"
+import { check } from "../Check/Check.ts"
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import { ModuleSpecifier } from "../schema/index.ts"
 import { SegmenterSetupError } from "../Segmenter/index.ts"
