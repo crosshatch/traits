@@ -2,12 +2,12 @@
 
 ## Runtime API
 
-`check({ traits, changes, signal? })` evaluates caller-ordered static traits and
-changes and returns a `Report`. It requires `SegmenterRegistry`,
-`EnrichmentRegistry`, and a `DecisionModel` when assertions are assessed.
-Guidance-only traits do not call the decision model. Success of the Effect means
-report assembly finished, not that its assessments satisfy a caller's acceptance
-policy; use `Report.isPass` for that interpretation.
+`check({ traits, changes })` evaluates caller-ordered static traits and changes
+and returns a `Report`. It requires `SegmenterRegistry`, `EnrichmentRegistry`,
+and a `DecisionModel` when assertions are assessed. Guidance-only traits do not
+call the decision model. Success of the Effect means report assembly finished,
+not that its assessments satisfy a caller's acceptance policy; use
+`Report.isPass` for that interpretation.
 
 Subject identification is also available independently as
 `TraitSubject.match(subjects, input)`, where subjects is a caller-keyed record.
@@ -63,11 +63,9 @@ Extension references must already be canonical, importable module specifiers;
 trait-file loading, module canonicalization, CLI profile-to-runtime wiring, and
 explicit in-place registry reset remain separate work.
 
-The optional `signal` supports cooperative cancellation: the evaluator stops
-pending work, waits for execution cleanup, and returns an interrupted partial
-report. Direct interruption of the calling Effect fiber retains normal Effect
-interruption semantics and may return no report. Neither cancellation path
-invents failure diagnostics.
+Cancellation uses normal Effect fiber interruption: pending work is interrupted
+and execution cleanup completes, without returning a partial report. Callers do
+not provide an `AbortSignal`. Cancellation does not invent failure diagnostics.
 
 ```text
 Static traits + provided inputs

@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Deferred, Effect, Exit, Fiber, Layer, pipe, Schema as S, Scope } from "effect"
+import { Array, Cause, Deferred, Effect, Exit, Fiber, Layer, pipe, Schema as S } from "effect"
 import { DecisionModel } from "effect/ai"
 
 import { check } from "../Check.ts"
@@ -254,18 +254,14 @@ it.effect("normalizes assessment defects and unanswered outcomes without leaking
   })
 )
 
-it.effect("returns an interrupted partial report while retaining completed assessments", () =>
+it.effect("uses normal fiber interruption and waits for execution cleanup", () =>
   Effect.gen(function* () {
     const waiting = yield* Deferred.make<void>()
     const firstAssessed = yield* Deferred.make<void>()
-    const cancellationScope = yield* Scope.make().pipe((acquire) =>
-      Effect.acquireRelease(acquire, (scope) => Scope.close(scope, Exit.void))
-    )
-    const signal = yield* Effect.abortSignal.pipe(Scope.provide(cancellationScope))
+    let cleaned = false
     const running = yield* check({
       traits: [trait("example", { assertion })],
-      changes: [{ after: { path: "one.ts", text: "one" } }, { after: { path: "two.ts", text: "two" } }],
-      signal
+      changes: [{ after: { path: "one.ts", text: "one" } }, { after: { path: "two.ts", text: "two" } }]
     }).pipe(
       Effect.provide(unused),
       Effect.provideServiceEffect(
@@ -279,19 +275,26 @@ it.effect("returns an interrupted partial report while retaining completed asses
               }
               yield* Deferred.await(firstAssessed)
               yield* Effect.yieldNow
-              yield* Deferred.succeed(waiting, undefined)
-              return yield* Effect.never
+              return yield* Deferred.succeed(waiting, undefined).pipe(
+                Effect.andThen(Effect.never),
+                Effect.ensuring(
+                  Effect.sync(() => {
+                    cleaned = true
+                  })
+                )
+              )
             })
         })
       ),
       Effect.forkChild
     )
     yield* Deferred.await(waiting)
-    yield* Scope.close(cancellationScope, Exit.void)
-    const report = yield* Fiber.join(running)
-    expect(report.interrupted).toBe(true)
-    expect(Array.map(report.traits[0]!.inputs, (input) => input.status)).toEqual(["Completed", "Cancelled"])
-    expect(report.diagnostics).toEqual([])
-    yield* pipe(report, S.decodeEffect(Report.Report))
+    yield* Fiber.interrupt(running)
+    const exit = yield* Fiber.await(running)
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      expect(Cause.hasInterruptsOnly(exit.cause)).toBe(true)
+    }
+    expect(cleaned).toBe(true)
   })
 )
