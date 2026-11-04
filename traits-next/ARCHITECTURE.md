@@ -63,6 +63,17 @@ Extension references must already be canonical, importable module specifiers;
 trait-file loading, module canonicalization, CLI profile-to-runtime wiring, and
 explicit in-place registry reset remain separate work.
 
+Checker phases return their data rather than preallocating mutable observations.
+`Check/Preparation.ts` collects unique extension references and returns
+read-only maps of setup/segmentation `Result`s: success values or safe
+diagnostics, not both an `Exit` and a derived diagnostic. Registry layers still
+own setup caching. `Check/Execution.ts` returns ordered trait/input results.
+Enrichment outcomes carry completed context, a failure diagnostic and recovery
+scope, or cancellation. Trait/input `Deferred`s coordinate recovery; they do not
+store report results. `Check/CheckState.ts` defines immutable work/results and
+projects completed phases into the report, sharing successful-context selection
+with assessment and omitting source text.
+
 Cancellation uses normal Effect fiber interruption: pending work is interrupted
 and execution cleanup completes, without returning a partial report. Callers do
 not provide an `AbortSignal`. Cancellation does not invent failure diagnostics.
