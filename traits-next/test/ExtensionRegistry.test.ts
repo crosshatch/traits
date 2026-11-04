@@ -253,7 +253,7 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
       |    probe.chats.push(chat);
       |    probe.scopes.push(scope);
       |    yield* Effect.addFinalizer(() => Effect.sync(() => { probe.executionsClosed++; }));
-      |    return context.input.change.after.path;
+       |    return context.input.change.after.path === "invalid.ts" ? { secret: "private-result" } : context.input.change.after.path;
       |  });
       |});
       `)
@@ -277,9 +277,22 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
           expect(report.traits[0]!.inputs[0]!.enrichments).toEqual([{ module, text: filename }])
           expect(report.traits[0]!.inputs[0]!.status).toBe("Completed")
         }
+        const invalid = yield* check({
+          traits: [
+            Trait.make({
+              name: TraitName.make("example"),
+              purpose: TraitPurpose.make("Protect correctness."),
+              enrichments: [module]
+            })
+          ],
+          changes: [{ after: { path: "invalid.ts", text: "" } }]
+        }).pipe(Effect.provideContext(services))
+        expect(invalid.traits[0]!.inputs[0]!.enrichments).toEqual([])
+        expect(invalid.diagnostics).toHaveLength(1)
+        expect(JSON.stringify(invalid)).not.toContain("private-result")
         expect(state.setups).toBe(1)
-        expect(state.executions).toBe(2)
-        expect(state.executionsClosed).toBe(2)
+        expect(state.executions).toBe(3)
+        expect(state.executionsClosed).toBe(3)
         expect(state.setupClosed).toBe(0)
         expect(state.chats[0]).not.toBe(state.chats[1])
         expect(state.scopes[0]).not.toBe(state.scopes[1])

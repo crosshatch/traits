@@ -68,13 +68,14 @@ Checker phases return their data rather than preallocating mutable observations.
 read-only maps of setup/segmentation `Result`s: success values or safe
 diagnostics, not both an `Exit` and a derived diagnostic. Registry layers still
 own setup caching. `Check/Execution.ts` returns ordered trait/input results.
-Enrichment execution settles into `Exit<EnrichmentReport, Diagnostic>` values;
-the existing `EnrichmentError.reason` controls recovery before errors are
-normalized to safe diagnostics. Recovery cancellation is an interrupted exit
-value; caller interruption still exits through Effect. Trait/input `Deferred`s
-coordinate recovery, not report storage. Evaluation returns the existing
-`InputReport` and `TraitReport` shapes with diagnostics alongside them; no
-parallel outcome/run/result hierarchy or report conversion layer is needed.
+Execution selects successful enrichment setups once per trait. The enrichment
+registry validates extension output; typed error handlers use the existing
+`EnrichmentError.reason` to coordinate recovery, then return safe diagnostics.
+Recovery cancellation contributes no context or diagnostic, without constructing
+interrupted exits. Caller interruption still exits through Effect. Trait/input
+`Deferred`s coordinate recovery, not report storage. Evaluation returns the
+existing `InputReport` and `TraitReport` shapes with diagnostics alongside them;
+no parallel outcome/run/result hierarchy or report conversion layer is needed.
 
 Cancellation uses normal Effect fiber interruption: pending work is interrupted
 and execution cleanup completes, without returning a partial report. Callers do
