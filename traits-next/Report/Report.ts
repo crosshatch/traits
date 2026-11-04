@@ -41,24 +41,33 @@ export const Report = S.Struct({
       (report) =>
         Array.every(report.diagnostics, (diagnostic) =>
           DiagnosticOrigin.match(diagnostic.origin, {
-            SegmenterSetup: () => Array.some(report.traits, (trait) => diagnostic.module === trait.trait.segment),
-            EnrichmentSetup: () =>
-              Array.some(report.traits, (trait) => trait.trait.enrichments?.includes(diagnostic.module) === true),
+            SegmenterSetup: (origin) => Array.some(report.traits, (trait) => origin.module === trait.trait.segment),
+            EnrichmentSetup: (origin) =>
+              Array.some(report.traits, (trait) => trait.trait.enrichments?.includes(origin.module) === true),
             SegmenterExecution: (origin) =>
               origin.change < report.changes.length &&
-              Array.some(report.traits, (trait) => diagnostic.module === trait.trait.segment),
+              Array.some(report.traits, (trait) => origin.module === trait.trait.segment),
             EnrichmentExecution: (origin) => {
               const trait = report.traits[origin.trait]
               return (
                 trait !== undefined &&
-                trait.trait.enrichments?.includes(diagnostic.module) === true &&
+                trait.trait.enrichments?.includes(origin.module) === true &&
                 origin.input < trait.inputs.length
+              )
+            },
+            AssessmentExecution: (origin) => {
+              const trait = report.traits[origin.trait]
+              return (
+                trait !== undefined &&
+                trait.trait.assertion !== undefined &&
+                trait.inputs[origin.input]?.status === "Failed"
               )
             }
           })
         ),
       {
-        message: "Diagnostics must name configured extensions with valid execution locations."
+        message:
+          "Extension diagnostics must name configured modules with valid locations; assessment diagnostics must identify a failed assertion input."
       }
     ),
     S.makeFilter(
@@ -81,7 +90,7 @@ export const Report = S.Struct({
     )
   )
 
-/** Whether a complete runner-produced report has no interruption, failures, or halt instructions and every required assessment is accepted by the supplied policy. */
+/** Whether a runner-produced report has no interruption, diagnostics, or halt instructions, every input Completed, and every required assessment is accepted by the supplied policy. */
 export const isPass: {
   (acceptsAssessment: (assessment: Assessment) => boolean): (report: Report) => boolean
   (report: Report, acceptsAssessment: (assessment: Assessment) => boolean): boolean
@@ -91,13 +100,13 @@ export const isPass: {
     !report.interrupted &&
     report.diagnostics.length === 0 &&
     report.instruction === undefined &&
-    Array.every(
-      report.traits,
-      (traitReport) =>
-        traitReport.trait.assertion === undefined ||
-        Array.every(
-          traitReport.inputs,
-          (input) => input.assessment !== undefined && acceptsAssessment(input.assessment)
-        )
+    Array.every(report.traits, (traitReport) =>
+      Array.every(
+        traitReport.inputs,
+        (input) =>
+          input.status === "Completed" &&
+          (traitReport.trait.assertion === undefined ||
+            (input.assessment !== undefined && acceptsAssessment(input.assessment)))
+      )
     )
 )

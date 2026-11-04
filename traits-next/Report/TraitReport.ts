@@ -25,12 +25,16 @@ export const TraitReport = S.Struct({
           report.inputs,
           (input) =>
             (report.trait.assertion !== undefined || input.assessment === undefined) &&
+            (input.status === "Completed"
+              ? report.trait.assertion === undefined || input.assessment !== undefined
+              : input.assessment === undefined) &&
             Array.every(input.enrichments, (enrichment) => enrichments.has(enrichment.module)) &&
             new Set(Array.map(input.enrichments, (enrichment) => enrichment.module)).size === input.enrichments.length
         )
       },
       {
-        message: "Input enrichments must be configured and unique, and assessments require an assertion."
+        message:
+          "Input enrichments must be configured and unique. Completed assertion inputs require assessments; other execution states and guidance-only inputs must not carry assessments."
       }
     )
   )

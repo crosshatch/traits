@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, pipe, Schema as S, String } from "effect"
-import { type Change, Input, Segment, Segmenter } from "traits-next"
+import { Array, Effect, pipe, String } from "effect"
+import { type Change, fromSegment, Segment, Segmenter } from "traits-next"
 
 import setup from "../segmenter/index.ts"
 
@@ -26,7 +26,7 @@ it.effect("selects nonoverlapping top-level statements with UTF-16 offsets and n
     for (const entry of segments) {
       expect(Segment.guards.After(entry)).toBe(true)
       expect("before" in entry).toBe(false)
-      yield* pipe({ change, segment: entry }, S.decodeEffect(Input))
+      yield* fromSegment(change, entry)
     }
   })
 )
