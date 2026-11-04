@@ -10,7 +10,7 @@ import type { ChildProcessSpawner } from "effect/process"
  * Each execution receives its own chat and scope. Setup is shared per extension across
  * the program lifecycle; its scope outlives dependent executions until shutdown or explicit reset.
  */
-export type TraitServices =
+export type ExtensionServices =
   | Chat.Chat
   | LanguageModel.LanguageModel
   | DecisionModel.DecisionModel

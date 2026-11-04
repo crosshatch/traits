@@ -1,7 +1,7 @@
 import type { Effect } from "effect"
 
+import type { ExtensionServices } from "../ExtensionServices.ts"
 import type { Change, Segment } from "../schema/index.ts"
-import type { TraitServices } from "../TraitServices.ts"
 import type { SegmenterError } from "./SegmenterError.ts"
 import type { SegmenterSetupError } from "./SegmenterSetupError.ts"
 
@@ -13,7 +13,7 @@ import type { SegmenterSetupError } from "./SegmenterSetupError.ts"
  * Interruption is cancellation, not an extension failure.
  */
 export type Segmenter = Effect.Effect<
-  (change: Change) => Effect.Effect<ReadonlyArray<Segment>, SegmenterError, TraitServices>,
+  (change: Change) => Effect.Effect<ReadonlyArray<Segment>, SegmenterError, ExtensionServices>,
   SegmenterSetupError,
-  TraitServices
+  ExtensionServices
 >

@@ -1,5 +1,74 @@
 # Trait evaluation lifecycle
 
+## Runtime API
+
+`check({ traits, changes, signal? })` evaluates caller-ordered static traits and
+changes and returns a `Report`. It requires `SegmenterRegistry`,
+`EnrichmentRegistry`, and a `DecisionModel` when assertions are assessed.
+Guidance-only traits do not call the decision model. Success of the Effect means
+report assembly finished, not that its assessments satisfy a caller's acceptance
+policy; use `Report.isPass` for that interpretation.
+
+Subject identification is also available independently as
+`TraitSubject.match(subjects, input)`, where subjects is a caller-keyed record.
+It submits one named `yes/no/uncertain` classification per subject over shared
+source context in one `DecisionModel.decideSettled` request. Its response
+retains keyed outcomes, request usage, and provider metadata. Each outcome is a
+validated answer (including probabilities) or an `Unanswered` result; missing,
+refused, or invalid answers do not discard valid siblings. Request-wide failures
+remain in the Effect error channel. An empty record makes no provider request
+and reports zero token usage. Single-subject requests use the same API, for
+example `TraitSubject.match({ subject }, input)`. Matching neither evaluates an
+assertion nor applies a gating policy. Callers choose appropriately sized
+subject groups for the selected provider; this API does not batch unrelated
+inputs or impose an unmeasured numeric batch limit.
+
+`TraitAssertion.evaluate(assertions, input)` similarly batches caller-keyed
+`TraitAssertionInput` values over shared source context with `decideSettled`.
+Each request carries its assertion, static context (subject, purpose, body), and
+its own successful enrichments. The model must not mix context across entries.
+The four existing `pass`, `fail`, `na`, and `uncertain` classifications remain
+unchanged. Responses preserve keyed outcomes, usage, and metadata; empty batches
+make no provider request. `Trait.ts` defines the static trait schema, not the
+evaluation operation.
+
+`check` delegates each ready trait/input assessment to this collection API,
+converting an unanswered outcome to an assessment-execution failure. It does not
+yet coalesce work across traits; their existing recovery and cancellation
+boundaries are unchanged. It does not automatically invoke subject matching,
+skip work based on a subject probability, or add matching results to the report.
+Callers may compose these independent APIs with an explicit policy.
+
+An enrichment setup failure is reported once and disables that enrichment for
+the check. Assessment still proceeds with remaining context unless an
+input-scoped or trait-scoped execution recovery signal prevents it. There is no
+required-enrichment policy flag in this API.
+
+Build `SegmenterRegistry.layer` and `EnrichmentRegistry.layer` once in the
+host's scoped runtime and reuse them across checks. They can be composed with
+`Layer.mergeAll`. Their host services provide the extension capabilities
+declared by `ExtensionServices`, excluding the chats and scopes the registry
+creates itself. Keep the same model/account bindings for the lifetime of those
+registries. Each registry owns its own typed cache; the internal
+`ExtensionRegistry.make` shares cache lifecycle, setup-scope ownership, service
+capture, and fresh execution contexts without a kind discriminator. It accepts
+setup-result, setup-error, and execution-error schemas; `ExtensionModule.load`
+owns importing, module/result validation, and rejection of undeclared setup
+errors. The shared execution transformer preserves declared execution errors and
+turns unexpected failures into defects. Each typed registry still owns its
+execution contract. Module-shape and setup-result validation failures remain
+typed `SchemaError`s alongside the declared setup error. Registry service types
+are inferred from their `make` effects, with host services provided internally.
+Extension references must already be canonical, importable module specifiers;
+trait-file loading, module canonicalization, CLI profile-to-runtime wiring, and
+explicit in-place registry reset remain separate work.
+
+The optional `signal` supports cooperative cancellation: the evaluator stops
+pending work, waits for execution cleanup, and returns an interrupted partial
+report. Direct interruption of the calling Effect fiber retains normal Effect
+interruption semantics and may return no report. Neither cancellation path
+invents failure diagnostics.
+
 ```text
 Static traits + provided inputs
   → initialize extensions
@@ -47,12 +116,23 @@ state must support concurrent executions across traits and evaluations.
 A failed initialization remains failed until explicit reset or program restart;
 starting another evaluation does not retry it. Reset must coordinate dependent
 executions before replacing setup resources. Registry, resolution, and reset
-implementation remain separate from these lifecycle contracts.
+implementation remain separate from these lifecycle contracts. The implemented
+registry retains setup fibers and their outcomes until its host scope closes;
+one interrupted waiter does not interrupt initialization shared by other checks.
+Creating a new registry after shutting down the owning runtime starts a new
+setup lifecycle. An in-place reset API is not implemented.
 
 Enrichment module references must be distinct within a trait, so each module
 unambiguously identifies its configured enrichment in results and failures.
 
 ## Select ranges within a change
+
+When a trait has no segmenter, the evaluator uses the entire after-source, or
+the entire before-source for a whole-file deletion, as one input. No parser or
+segmentation extension runs. Internally this is represented by a full-file
+`After` or `Before` range, including `{ start: 0, end: 0 }` for an empty file.
+Default whole-file selection does not compute historical correspondence, so
+`After.before` is omitted.
 
 Within one evaluation, the runner segments each caller-supplied change once per
 resolved segmenter module, sharing the validated result or failure across all
@@ -60,7 +140,9 @@ traits using that module. Concurrent consumers share the same invocation; an
 observed execution failure is recorded once for its module and change. This
 execution-sharing contract is separate from program-lifetime initialization and
 does not cache results across evaluations. Each shared invocation owns its own
-execution resources. Runner implementation remains deferred.
+execution resources. The evaluator implements this with invocation-local
+segmenter results, validating each complete result before allocating downstream
+inputs.
 
 Segmentation is intentionally trait-independent in this version. A segmenter
 receives no trait subject, assertion, or per-trait options; traits using the
@@ -97,13 +179,17 @@ A range must have nonnegative integer offsets, must not end before its start,
 and must fit within its source text. Neither boundary may split a UTF-16
 surrogate pair. This does not require grapheme-cluster boundaries.
 
-`Input` pairs the shared `change` with a `segment`. Its schema requires the
-selected side to exist and checks primary and historical range bounds and
-surrogate-pair boundaries against their respective source texts. Before and
-after offsets are independent: mapped correspondence must be established through
-diff analysis, not numeric overlap. Bounds validation alone does not establish
-correspondence. Simple segmenters may omit mappings; change-aware
-implementations may supply them.
+`Input` is a top-level `Before | After` tagged union containing the segment
+fields and shared `change`. Each case reuses `ChangeWithBefore` or
+`ChangeWithAfter` from `Change.ts`, so the selected source is present in both
+the runtime schema and the static type. Segment fields reuse the corresponding
+case in `Segment.ts`. `fromSegment` validates construction; `toSegment` returns
+the source-free shape used in reports. Its schema checks primary and historical
+range bounds and surrogate-pair boundaries against their respective source
+texts. Before and after offsets are independent: mapped correspondence must be
+established through diff analysis, not numeric overlap. Bounds validation alone
+does not establish correspondence. Simple segmenters may omit mappings;
+change-aware implementations may supply them.
 
 Mappings are supplied by the segmenter. The runner does not promise to compute
 missing mappings.
@@ -159,18 +245,18 @@ request.
 For each location selected for evaluation, enrichment receives:
 
 - `trait`: the unchanged static definition.
-- `input`: an `Input` containing the shared `change` and one `segment`. The
-  segment tag determines the primary side; `After.before` provides optional
-  historical context. Both complete source versions remain available when
-  present.
+- `input`: an `Input` containing the shared `change` and the selected segment's
+  fields. Its top-level tag determines the primary side; `After.before` provides
+  optional historical context. Both complete source versions remain available
+  when present.
 
 For an `After` segment, enrichments access mapped historical ranges through
-`input.segment.before` and resolve their text against
-`input.change.before.text`. These ranges may represent multiple historical
-regions and need not correspond to separately emitted `Before` segments. Mapping
-availability is optional: enrichments must not interpret an omitted mapping as
-evidence that no previous content exists. Before-only segments remain available
-for independently assessing deleted material.
+`input.before` and resolve their text against `input.change.before.text`. These
+ranges may represent multiple historical regions and need not correspond to
+separately emitted `Before` segments. Mapping availability is optional:
+enrichments must not interpret an omitted mapping as evidence that no previous
+content exists. Before-only segments remain available for independently
+assessing deleted material.
 
 The enrichment returns a string of context for that evaluation. An empty string
 is a valid completed result. The source remains available in full even when the
@@ -210,6 +296,23 @@ schema. These probabilities express relative certainty across outcomes;
 `uncertain` explicitly indicates insufficient evidence to decide.
 
 Guidance-only traits have no assertion and therefore no assertion assessment.
+
+Each input report has a required execution `status`, independent of assertion
+acceptance:
+
+- `Completed`: required work finished. Assertion inputs have an assessment;
+  guidance-only inputs do not. A high `fail` probability is still a completed
+  evaluation, not an execution failure.
+- `Failed`: this input could not finish, including an assessment failure or an
+  enrichment recovery signal preventing completion. It has no assessment.
+- `Cancelled`: this input was stopped before completion by interruption or
+  another input's trait-wide recovery. It has no assessment. Already completed
+  inputs retain their completed status and assessment.
+
+An enrichment-only recovery can still allow a `Completed` input with an
+assessment; its diagnostic independently prevents the report from passing.
+Status does not duplicate failure explanations: diagnostics explain failures,
+and report interruption or recovery provenance explains cancellation.
 
 The report retains probabilities rather than the provider-selected label.
 Consumers interpret them using explicit thresholds or decision policies; the
@@ -253,14 +356,15 @@ successful results or failures already observed. A later trait-wide failure does
 not invalidate assessments already completed. Cancelled work gets no invented
 failure or recovery instruction.
 
-All observed extension failures and defects are stored in `Report.diagnostics`,
-each recorded once per returned report with its configured module, origin, and
-explanation. Diagnostics help the client explain problems and remediation;
-recovery-control decisions remain internal to the runner. Recognized enrichment
-execution signals retain their `Enrichment`, `Input`, or `Trait` reason on
-`EnrichmentError`, but diagnostics serialize only the explanation tag, its text,
-module, and origin. Recognition remains stage-specific: an error from the wrong
-stage is an ordinary failure, not a recovery control signal.
+All observed extension and assessment failures and defects are stored in
+`Report.diagnostics`, each recorded once per returned report with its origin and
+explanation. Extension origins also contain the configured module. Diagnostics
+help the client explain problems and remediation; recovery-control decisions
+remain internal to the runner. Recognized enrichment execution signals retain
+their `Enrichment`, `Input`, or `Trait` reason on `EnrichmentError`, but
+diagnostics serialize only the explanation tag, its text, and the module-bearing
+origin. Recognition remains stage-specific: an error from the wrong stage is an
+ordinary failure, not a recovery control signal.
 
 Ordinary failures may also include actionable instructions; remediation text
 never implies cancellation. Unexpected enrichment execution defects or contract
@@ -269,8 +373,8 @@ cancellation. Siblings may continue and assessment proceeds with the remaining
 available context unless another outcome prevents assessment. Interruption is
 cancellation and never creates a diagnostic.
 
-Each diagnostic is a tagged union with shared `module` and `origin` fields and
-exactly one explanation: `Error { error }` for normalized failure details, or
+Each diagnostic is a tagged union with a shared `origin` field and exactly one
+explanation: `Error { error }` for normalized failure details, or
 `Instruction { instruction }` for actionable remediation including relevant
 failure context. Both alternatives require nonblank text; the tag selects the
 explanation, with normal unknown-property handling. The runner chooses
@@ -283,16 +387,20 @@ be bounded, readable text rather than serialized arbitrary payloads. A
 diagnostic explains what happened; it need not invent a remedy.
 
 Each diagnostic's `origin` is tagged `SegmenterSetup`, `SegmenterExecution`,
-`EnrichmentSetup`, or `EnrichmentExecution`. The explanation and shared `module`
-field live on the diagnostic itself. Setup origins have no trait or input
-reference. Segmenter execution failures reference `Report.changes` by index in
-original caller order, before filtering or scheduling. The report schema
-validates change indices against this path table. The configured module and
-change identify the shared segmentation invocation, without choosing an
-originating trait. Enrichment execution failures reference the originating trait
-by index in `Report.traits` and its inputs, preserving their before/after
-provenance. Setup failures do not fabricate inputs, and segmenter failures need
-no synthetic assessment target.
+`EnrichmentSetup`, `EnrichmentExecution`, or `AssessmentExecution`. The
+explanation lives on the diagnostic itself. The configured `module` lives inside
+each extension origin; assessment origins have no extension module. Setup
+origins have no trait or input reference. Segmenter execution failures reference
+`Report.changes` by index in original caller order, before filtering or
+scheduling. The report schema validates change indices against this path table.
+The configured module and change identify the shared segmentation invocation,
+without choosing an originating trait. Enrichment execution failures reference
+the originating trait by index in `Report.traits` and its inputs, preserving
+their before/after provenance. Assessment execution origins identify the trait
+and failed assertion input without inventing an extension module. Model failures
+produce safe, bounded diagnostics rather than erasing completed results or being
+confused with a negative assertion assessment. Setup failures do not fabricate
+inputs, and segmenter failures need no synthetic assessment target.
 
 Reports use deterministic ordering based on trait, source/location, and
 configured module order, not the timing of concurrent completions. Scheduling
@@ -308,12 +416,13 @@ Report
 ├── changes: ChangePaths[] ({ before?: string, after?: string }, at least one side)
 ├── interrupted: boolean
 ├── instruction?: string
-├── diagnostics: Diagnostic[] (Error | Instruction, with module and origin)
+├── diagnostics: Diagnostic[] (Error | Instruction, with origin)
 └── traits: TraitReport[]
     ├── static Trait
     └── inputs: InputReport[]
         ├── change: number
         ├── segment: Segment
+        ├── status: Completed | Failed | Cancelled
         ├── EnrichmentReport[]
         └── Assessment?
 ```
@@ -346,16 +455,18 @@ input. Setup failures do not fabricate input entries. The root report schema
 validates enrichment execution trait/input indices, requires enrichment failure
 modules to be configured enrichments, and requires segmenter failures to name
 the segmenter configured by at least one reported trait. Each input's enrichment
-modules must be configured and unique. The schemas require a trait assertion for
-assessments. The runner must prevent assessment of an input stopped by `Input`
-or `Trait` recovery while preserving completed assessments on other inputs. This
-execution invariant is not validated by the report schema because cancellation
-decisions are not serialized. Range ordering and nonnegative offsets are
-validated by the report schemas, along with change-index bounds and path
-presence for primary and historical source sides. Range bounds and surrogate
-boundaries against source text must be validated during execution before
-reporting. Input indices must remain stable when assembling partial results;
-completion order does not determine their values.
+modules must be configured and unique. Assessment diagnostics must identify a
+failed assertion input. Completed assertion inputs require an assessment;
+guidance-only, Failed, and Cancelled inputs cannot carry one. The runner must
+prevent assessment of an input stopped by `Input` or `Trait` recovery while
+preserving completed assessments on other inputs. The schemas enforce status and
+assessment consistency, but cannot establish whether the runner assigned the
+correct status in response to cancellation or recovery. Range ordering and
+nonnegative offsets are validated by the report schemas, along with change-index
+bounds and path presence for primary and historical source sides. Range bounds
+and surrogate boundaries against source text must be validated during execution
+before reporting. Input indices must remain stable when assembling partial
+results; completion order does not determine their values.
 
 Clients scan `Report.diagnostics` for problems and remediation. Setup failures
 name an extension configured by at least one reported trait; affected traits can
@@ -382,9 +493,10 @@ not produce enrichment entries. Absence does not distinguish these execution
 states. Failure details are stored in the report's shared diagnostics. Setup
 failures are recorded once, without fabricating per-input execution failures.
 
-A missing assessment alone does not indicate failure, since guidance-only traits
-also omit assessments. The overall report may carry evaluator-owned halt
-guidance alongside the shared diagnostic list.
+A missing assessment alone does not indicate failure, since completed
+guidance-only traits also omit assessments; the input status records execution
+completion. The overall report may carry evaluator-owned halt guidance alongside
+the shared diagnostic list.
 
 Partial results are preserved through skips and halts, so the final report
 contains completed work alongside any recovery instructions.
@@ -392,10 +504,10 @@ contains completed work alongside any recovery instructions.
 ## Reevaluate after remediation
 
 `Report.isPass` requires `interrupted: false`, the absence of diagnostics and
-evaluator halt instructions, and acceptance of every required assessment by a
-caller-supplied decision policy. Guidance-only traits require no assessment. No
-probability threshold or not-applicable acceptance rule is implicit in the
-helper.
+evaluator halt instructions, Completed status on every input, and acceptance of
+every required assessment by a caller-supplied decision policy. Guidance-only
+traits require no assessment. No probability threshold or not-applicable
+acceptance rule is implicit in the helper.
 
 This relies on a complete runner-produced report: all requested trait
 evaluations must be represented, and every failure, skip, cancellation, or

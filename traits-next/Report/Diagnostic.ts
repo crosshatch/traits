@@ -1,12 +1,13 @@
-import { Record, Schema as S, Tuple } from "effect"
+import { Schema as S } from "effect"
 
-import { ModuleSpecifier, RecoveryInstruction } from "../schema/index.ts"
+import { RecoveryInstruction } from "../schema/index.ts"
 import { DiagnosticOrigin } from "./DiagnosticOrigin.ts"
 
-/** A diagnostic for an observed extension failure; interruption is cancellation and creates no extension diagnostic. */
+/** A diagnostic for an observed extension or assessment failure; interruption is cancellation and creates no failure diagnostic. */
 export type Diagnostic = typeof Diagnostic.Type
 export const Diagnostic = S.TaggedUnion({
   Error: {
+    origin: DiagnosticOrigin,
     /** Safe, normalized failure details when remediation is unknown; excludes raw error objects and source excerpts. */
     error: S.NonEmptyString.check(S.isPattern(/\S/u)).annotate({
       description:
@@ -14,27 +15,13 @@ export const Diagnostic = S.TaggedUnion({
     })
   },
   Instruction: {
+    origin: DiagnosticOrigin,
     /** Actionable remediation including relevant failure context, replacing standalone error details. */
     instruction: RecoveryInstruction.annotateKey({
       description: "Actionable remediation including relevant failure context, replacing standalone error details."
     })
   }
+}).annotate({
+  description:
+    "A diagnostic for an observed extension or assessment failure; interruption is cancellation and creates no failure diagnostic."
 })
-  .pipe((schema) => S.Union(Record.values(schema.cases)))
-  .mapMembers(
-    Tuple.map(
-      S.fieldsAssign({
-        /** The configured segmenter or enrichment module that failed. */
-        module: ModuleSpecifier.annotateKey({
-          description: "The configured segmenter or enrichment module that failed."
-        }),
-        /** The extension kind and lifecycle stage: setup origins have no location, segmenter execution references a supplied change, and enrichment execution references a trait-local input. */
-        origin: DiagnosticOrigin
-      })
-    )
-  )
-  .annotate({
-    description:
-      "A diagnostic for an observed extension failure; interruption is cancellation and creates no extension diagnostic."
-  })
-  .pipe(S.toTaggedUnion("_tag"))
