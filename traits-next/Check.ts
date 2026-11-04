@@ -1,9 +1,6 @@
 import { Array, Cause, Effect, Exit } from "effect"
 
-import { awaitAbort } from "./Check/Cancellation.ts"
 import * as Execution from "./Check/Execution.ts"
-import { failure } from "./Check/Failure.ts"
-import { capture } from "./Check/Observation.ts"
 import * as State from "./Check/State.ts"
 import { EnrichmentRegistry } from "./Enrichment/EnrichmentRegistry.ts"
 import * as Report from "./Report/index.ts"
@@ -18,8 +15,6 @@ export interface CheckInput {
   readonly traits: ReadonlyArray<Trait>
   /** Text snapshots in caller order; report change indices refer to this array. */
   readonly changes: ReadonlyArray<Change>
-  /** Cooperative cancellation returns an interrupted partial report; directly interrupting the calling fiber retains normal Effect interruption semantics. */
-  readonly signal?: AbortSignal | undefined
 }
 
 /** Evaluates changes against traits. Keep the segmenter and enrichment registry layers alive across calls to share setup; execution results are never cached across checks. */
@@ -36,20 +31,29 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
           segmenters,
           Effect.fnUntraced(function* (entry) {
             const [module, setup] = entry
-            yield* capture(
-              segmenterRegistry(module),
-              Effect.fnUntraced(function* (exit) {
-                setup.exit = exit
-                if (Exit.isFailure(exit)) {
-                  const observed = yield* failure({
-                    cause: exit.cause,
-                    origin: Report.DiagnosticOrigin.cases.SegmenterSetup.make({ module })
+            const origin = Report.DiagnosticOrigin.cases.SegmenterSetup.make({ module })
+            const exit = yield* segmenterRegistry(module).pipe(
+              Effect.tapErrorTag("SegmenterSetupError", (error) =>
+                Effect.sync(() => {
+                  setup.diagnostic = Report.Diagnostic.cases.Instruction.make({
+                    origin,
+                    instruction: error.instruction
                   })
-                  setup.diagnostic = observed?.diagnostic
-                  state.interrupted ||= Cause.hasInterruptsOnly(exit.cause)
-                }
-              })
+                })
+              ),
+              Effect.exit
             )
+            setup.exit = exit
+            if (Exit.isFailure(exit)) {
+              if (Cause.hasInterruptsOnly(exit.cause)) {
+                state.interrupted = true
+              } else {
+                setup.diagnostic ??= Report.Diagnostic.cases.Error.make({
+                  origin,
+                  error: "Segmenter initialization failed."
+                })
+              }
+            }
           }),
           { concurrency: "unbounded", discard: true }
         ),
@@ -57,20 +61,29 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
           enrichments,
           Effect.fnUntraced(function* (entry) {
             const [module, setup] = entry
-            yield* capture(
-              enrichmentRegistry(module),
-              Effect.fnUntraced(function* (exit) {
-                setup.exit = exit
-                if (Exit.isFailure(exit)) {
-                  const observed = yield* failure({
-                    cause: exit.cause,
-                    origin: Report.DiagnosticOrigin.cases.EnrichmentSetup.make({ module })
+            const origin = Report.DiagnosticOrigin.cases.EnrichmentSetup.make({ module })
+            const exit = yield* enrichmentRegistry(module).pipe(
+              Effect.tapErrorTag("EnrichmentSetupError", (error) =>
+                Effect.sync(() => {
+                  setup.diagnostic = Report.Diagnostic.cases.Instruction.make({
+                    origin,
+                    instruction: error.instruction
                   })
-                  setup.diagnostic = observed?.diagnostic
-                  state.interrupted ||= Cause.hasInterruptsOnly(exit.cause)
-                }
-              })
+                })
+              ),
+              Effect.exit
             )
+            setup.exit = exit
+            if (Exit.isFailure(exit)) {
+              if (Cause.hasInterruptsOnly(exit.cause)) {
+                state.interrupted = true
+              } else {
+                setup.diagnostic ??= Report.Diagnostic.cases.Error.make({
+                  origin,
+                  error: "Enrichment initialization failed."
+                })
+              }
+            }
           }),
           { concurrency: "unbounded", discard: true }
         )
@@ -90,23 +103,29 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
           request.changes,
           Effect.fnUntraced(function* (change, index) {
             const result = segmented.get(module)![index]!
-            yield* capture(
-              Segmentation.execute(execute, change),
-              Effect.fnUntraced(function* (exit) {
-                result.exit = exit
-                if (Exit.isFailure(exit)) {
-                  const observed = yield* failure({
-                    cause: exit.cause,
-                    origin: Report.DiagnosticOrigin.cases.SegmenterExecution.make({
-                      module,
-                      change: index
-                    })
+            const origin = Report.DiagnosticOrigin.cases.SegmenterExecution.make({ module, change: index })
+            const exit = yield* Segmentation.execute(execute, change).pipe(
+              Effect.tapErrorTag("SegmenterError", (error) =>
+                Effect.sync(() => {
+                  result.diagnostic = Report.Diagnostic.cases.Instruction.make({
+                    origin,
+                    instruction: error.instruction
                   })
-                  result.diagnostic = observed?.diagnostic
-                  state.interrupted ||= Cause.hasInterruptsOnly(exit.cause)
-                }
-              })
+                })
+              ),
+              Effect.exit
             )
+            result.exit = exit
+            if (Exit.isFailure(exit)) {
+              if (Cause.hasInterruptsOnly(exit.cause)) {
+                state.interrupted = true
+              } else {
+                result.diagnostic ??= Report.Diagnostic.cases.Error.make({
+                  origin,
+                  error: "Segmentation failed or returned invalid inputs."
+                })
+              }
+            }
           }),
           { concurrency: "unbounded", discard: true }
         )
@@ -145,18 +164,6 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
     yield* Execution.evaluate(state)
   })
 
-  return yield* Effect.uninterruptibleMask((restore) =>
-    Effect.gen(function* () {
-      const exit = yield* restore(
-        work.pipe(Effect.raceFirst(awaitAbort(request.signal).pipe(Effect.andThen(Effect.interrupt))))
-      ).pipe(Effect.exit)
-      if (Exit.isFailure(exit)) {
-        if (!Cause.hasInterrupts(exit.cause)) {
-          return yield* Effect.failCause(exit.cause)
-        }
-        state.interrupted = true
-      }
-      return State.toReport(state)
-    })
-  )
+  yield* work
+  return State.toReport(state)
 })
