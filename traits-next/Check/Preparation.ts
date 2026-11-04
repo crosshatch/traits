@@ -9,15 +9,15 @@ import type { Trait } from "../Trait.ts"
 
 /** Completed setup and segmentation shared by all traits in one check. */
 export interface Preparation {
-  readonly segmenters: ReadonlyMap<
+  readonly segmenterSetups: ReadonlyMap<
     ModuleSpecifier,
     Result.Result<Effect.Success<ReturnType<SegmenterRegistry["Service"]>>, Report.Diagnostic>
   >
-  readonly enrichments: ReadonlyMap<
+  readonly enrichmentSetups: ReadonlyMap<
     ModuleSpecifier,
     Result.Result<Effect.Success<ReturnType<EnrichmentRegistry["Service"]>>, Report.Diagnostic>
   >
-  readonly segmented: ReadonlyMap<
+  readonly segmentations: ReadonlyMap<
     ModuleSpecifier,
     ReadonlyArray<Result.Result<ReadonlyArray<Segment>, Report.Diagnostic>>
   >
@@ -38,7 +38,7 @@ export const make = Effect.fnUntraced(function* (request: {
   }
   const setups = yield* Effect.all(
     {
-      segmenters: Effect.forEach(
+      segmenterSetups: Effect.forEach(
         modules.segmenters,
         Effect.fnUntraced(function* (module) {
           const origin = Report.DiagnosticOrigin.cases.SegmenterSetup.make({ module })
@@ -56,7 +56,7 @@ export const make = Effect.fnUntraced(function* (request: {
         }),
         { concurrency: "unbounded" }
       ),
-      enrichments: Effect.forEach(
+      enrichmentSetups: Effect.forEach(
         modules.enrichments,
         Effect.fnUntraced(function* (module) {
           const origin = Report.DiagnosticOrigin.cases.EnrichmentSetup.make({ module })
@@ -77,8 +77,8 @@ export const make = Effect.fnUntraced(function* (request: {
     },
     { concurrency: "unbounded" }
   )
-  const segmented = yield* Effect.forEach(
-    Array.flatMap(setups.segmenters, (entry) =>
+  const segmentations = yield* Effect.forEach(
+    Array.flatMap(setups.segmenterSetups, (entry) =>
       Result.isSuccess(entry[1]) ? [[entry[0], entry[1].success] as const] : []
     ),
     Effect.fnUntraced(function* (entry) {
@@ -108,8 +108,8 @@ export const make = Effect.fnUntraced(function* (request: {
     { concurrency: "unbounded" }
   )
   return {
-    segmenters: new Map(setups.segmenters),
-    enrichments: new Map(setups.enrichments),
-    segmented: new Map(segmented)
+    segmenterSetups: new Map(setups.segmenterSetups),
+    enrichmentSetups: new Map(setups.enrichmentSetups),
+    segmentations: new Map(segmentations)
   }
 })

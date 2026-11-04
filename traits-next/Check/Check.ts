@@ -1,8 +1,8 @@
 import { Array, Effect, Result } from "effect"
 
-import { type Change, fromSegment, Segment } from "../schema/index.ts"
+import * as Report from "../Report/index.ts"
+import { type Change, fromSegment, type Input, Segment } from "../schema/index.ts"
 import type { Trait } from "../Trait.ts"
-import * as State from "./CheckState.ts"
 import * as Execution from "./Execution.ts"
 import * as Preparation from "./Preparation.ts"
 
@@ -14,10 +14,16 @@ export interface CheckInput {
   readonly changes: ReadonlyArray<Change>
 }
 
+/** A selected source input paired with its original change index. */
+export interface CheckTarget {
+  readonly change: number
+  readonly input: Input
+}
+
 /** Evaluates changes against traits. Keep registry layers alive across calls to share setup; execution results belong to one check. */
 export const check = Effect.fn("Check.check")(function* (input: CheckInput) {
   const preparation = yield* Preparation.make(input)
-  const work = yield* Effect.forEach(
+  const targets = yield* Effect.forEach(
     input.traits,
     Effect.fnUntraced(function* (trait) {
       const inputs = yield* Effect.forEach(
@@ -31,7 +37,7 @@ export const check = Effect.fn("Check.check")(function* (input: CheckInput) {
                 : Segment.cases.After.make({ range: { start: 0, end: change.after.text.length } })
             ]
           } else {
-            const result = preparation.segmented.get(trait.segment)?.[index]
+            const result = preparation.segmentations.get(trait.segment)?.[index]
             if (result === undefined || Result.isFailure(result)) {
               return []
             }
@@ -45,6 +51,20 @@ export const check = Effect.fn("Check.check")(function* (input: CheckInput) {
       return { trait, inputs: Array.flatten(inputs) }
     })
   )
-  const traits = yield* Execution.evaluate({ traits: work, enrichments: preparation.enrichments })
-  return State.toReport({ changes: input.changes, preparation, traits })
+  const evaluation = yield* Execution.evaluate({ traits: targets, enrichmentSetups: preparation.enrichmentSetups })
+  return Report.Report.make({
+    changes: Array.map(input.changes, (change) =>
+      change.after === undefined
+        ? { before: change.before!.path }
+        : { after: change.after.path, ...(change.before === undefined ? {} : { before: change.before.path }) }
+    ),
+    interrupted: false,
+    traits: evaluation.traits,
+    diagnostics: [
+      ...Array.getFailures(preparation.segmenterSetups.values()),
+      ...Array.getFailures(preparation.enrichmentSetups.values()),
+      ...Array.flatMap(Array.fromIterable(preparation.segmentations.values()), Array.getFailures),
+      ...evaluation.diagnostics
+    ]
+  })
 })
