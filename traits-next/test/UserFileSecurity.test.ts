@@ -32,6 +32,7 @@ const fixture = Effect.gen(function* () {
   const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-security-" })
   const paths = WorkspacePaths.of({
     cwd: root,
+    workspaceKey: root,
     traitsDirectory: path.join(root, "traits"),
     environmentsDirectory: path.join(root, "traits", "environments"),
     configDirectory: path.join(root, "config"),

@@ -7,7 +7,7 @@ import { auth } from "./commands/auth/auth.ts"
 import { profile } from "./commands/profile/profile.ts"
 import { UserConfigLock } from "./UserConfigLock.ts"
 import { UserFileSecurity } from "./UserFileSecurity.ts"
-import * as WorkspacePaths from "./WorkspacePaths.ts"
+import { WorkspacePaths } from "./WorkspacePaths.ts"
 
 export const Cli = Command.make("traits").pipe(
   Command.withDescription("Manage trait checking credentials and model profiles"),

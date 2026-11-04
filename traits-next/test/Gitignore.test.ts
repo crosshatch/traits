@@ -22,6 +22,7 @@ const repository = Layer.effect(
     expect(exit).toBe(0)
     return WorkspacePaths.of({
       cwd,
+      workspaceKey: path.join(cwd, ".git"),
       traitsDirectory: path.join(cwd, "traits"),
       environmentsDirectory: path.join(cwd, "traits", "environments"),
       configDirectory: path.join(cwd, "config"),

@@ -1,4 +1,5 @@
 packages:
+  - "@traits/*"
   - traits
   - traits-next
   - traits.sh
