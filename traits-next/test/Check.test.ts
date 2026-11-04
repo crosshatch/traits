@@ -151,6 +151,32 @@ it.effect("retains empty segment selections and reports setup failures once with
   })
 )
 
+it.effect("reports failed enrichment setup once and omits it from every trait's executable work", () =>
+  Effect.gen(function* () {
+    let lookups = 0
+    const registry = registryFrom({
+      ...unusedLoaders,
+      Enrichment: () => {
+        lookups++
+        return Enrichment.EnrichmentSetupError.make({ instruction: "Restore the enrichment dependency." })
+      }
+    })
+    const report = yield* check({
+      traits: [trait("one", { enrichments: [context] }), trait("two", { enrichments: [context] })],
+      changes: [{ after: { path: "one.ts", text: "one" } }, { after: { path: "two.ts", text: "two" } }]
+    }).pipe(Effect.provide(Layer.merge(registry, model)))
+    expect(lookups).toBe(1)
+    expect(report.diagnostics).toHaveLength(1)
+    for (const trait of report.traits) {
+      expect(Array.map(trait.inputs, (input) => [input.status, input.enrichments])).toEqual([
+        ["Completed", []],
+        ["Completed", []]
+      ])
+    }
+    yield* pipe(report, S.decodeEffect(Report.Report))
+  })
+)
+
 it.effect("allows enrichment-only recovery to proceed, but blocks Input-scoped assessment", () =>
   Effect.gen(function* () {
     for (const reason of [

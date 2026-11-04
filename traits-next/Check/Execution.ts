@@ -3,29 +3,23 @@ import { Array, Deferred, Effect, Result } from "effect"
 import * as Enrichment from "../Enrichment/index.ts"
 import * as Report from "../Report/index.ts"
 import { toSegment } from "../schema/index.ts"
-import type { Trait } from "../Trait.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
-import type { CheckTarget } from "./Check.ts"
+import type { CheckTarget } from "./CheckTarget.ts"
 import type { Preparation } from "./Preparation.ts"
 
 /** Returns source-free report entries and diagnostics; Deferreds only coordinate recovery. */
 export const evaluate = Effect.fnUntraced(function* (options: {
-  readonly traits: ReadonlyArray<{ readonly trait: Trait; readonly inputs: ReadonlyArray<CheckTarget> }>
-  readonly enrichmentSetups: Preparation["enrichmentSetups"]
+  readonly traits: ReadonlyArray<Preparation["traits"][number] & { readonly targets: ReadonlyArray<CheckTarget> }>
 }) {
   const traits = yield* Effect.forEach(
     options.traits,
-    Effect.fnUntraced(function* (targets, traitIndex) {
+    Effect.fnUntraced(function* (prepared, traitIndex) {
       const traitStopped = yield* Deferred.make<void>()
-      const { trait } = targets
-      const enabledEnrichments = Array.flatMap(trait.enrichments ?? [], (module) => {
-        const setup = options.enrichmentSetups.get(module)
-        return setup !== undefined && Result.isSuccess(setup) ? [{ module, execute: setup.success }] : []
-      })
+      const { trait } = prepared
       const evaluateInput = Effect.fnUntraced(function* (target: CheckTarget, inputIndex: number) {
         const inputStopped = yield* Deferred.make<void>()
         const results = yield* Effect.forEach(
-          enabledEnrichments,
+          prepared.enrichments,
           Effect.fnUntraced(function* (enrichment) {
             if ((yield* Deferred.isDone(inputStopped)) || (yield* Deferred.isDone(traitStopped))) {
               return Result.succeed([])
@@ -110,7 +104,7 @@ export const evaluate = Effect.fnUntraced(function* (options: {
           )
         )
       })
-      const inputs = yield* Effect.forEach(targets.inputs, evaluateInput, { concurrency: "unbounded" })
+      const inputs = yield* Effect.forEach(prepared.targets, evaluateInput, { concurrency: "unbounded" })
       return {
         report: Report.TraitReport.make({ trait, inputs: Array.map(inputs, (input) => input.report) }),
         diagnostics: Array.flatMap(inputs, (input) => input.diagnostics)
