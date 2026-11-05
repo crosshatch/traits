@@ -1,17 +1,17 @@
 ---
 name: inline-small-single-use-helpers
-purpose: Keep local behavior easy to follow without unnecessary helper indirection.
-subject: Small single-use helpers, including React atom logic.
+subject: Small single-use helpers, including React atom logic, other than
+  trivial error-constructor forwarding helpers.
 requirement: Prefer inlining small single-use helper logic into the operation
-  that consumes it instead of introducing a separately named helper, such as
-  placing theme initialization directly inside its atom definition. Extract a
+  that consumes it instead of introducing a separately named helper. Extract a
   helper when reused, when naming materially improves readability, or when it
   defines a meaningful domain/API boundary. In React, inline into the relevant
   atom or Effect operation, not into component render or event handlers.
-applicability: |-
-  File types or languages: text/typescript, text/tsx, text/javascript, text/jsx.
-  Exception: When helper extraction materially improves readability through naming or defines a meaningful domain or API boundary.
+applicability: Applies to TypeScript, TSX, JavaScript, and JSX.
+purpose: Keep local behavior easy to follow without unnecessary helper indirection.
 ---
+For example, place theme initialization directly inside its atom definition.
+
 ```diff
 -const getName = (item) => item.name // Trivial single-use helper.
 -const names = Array.map(items, getName)

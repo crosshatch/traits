@@ -1,4 +1,4 @@
-import { Array, Crypto, Effect, FileSystem, flow, Path, pipe, Predicate, Schema as S, String } from "effect"
+import { Array, Effect, FileSystem, flow, Path, pipe, Predicate, Schema as S, String } from "effect"
 import { DecisionModel, Tool, Toolkit } from "effect/ai"
 import { ChildProcessSpawner } from "effect/process"
 
@@ -43,7 +43,6 @@ export const CheckTraits = Tool.make("check_traits", {
     FileSystem.FileSystem,
     Path.Path,
     ChildProcessSpawner.ChildProcessSpawner,
-    Crypto.Crypto,
     TraitsContext
   ]
 })

@@ -1,0 +1,36 @@
+{
+  "name": "@traits/typescript",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "files": [
+    "segmenter/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "!dist/test/**",
+    "!dist/vite.config.*"
+  ],
+  "type": "module",
+  "exports": {
+    "./segmenter": "./segmenter/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      "./segmenter": "./dist/segmenter/index.js"
+    },
+    "access": "public"
+  },
+  "dependencies": {
+    "oxc-parser": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "effect": "catalog:",
+    "traits-next": "workspace:*"
+  },
+  "peerDependencies": {
+    "effect": "catalog:",
+    "traits-next": "workspace:*"
+  }
+}

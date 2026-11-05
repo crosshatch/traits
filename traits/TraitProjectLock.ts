@@ -3,7 +3,6 @@ import { hostname } from "node:os"
 import {
   Array,
   Clock,
-  Crypto,
   Duration,
   Effect,
   FileSystem,
@@ -16,6 +15,7 @@ import {
   Schema as S,
   String
 } from "effect"
+import { SecureRandom } from "effect/crypto"
 
 import { ProjectPaths } from "./ProjectPaths.ts"
 
@@ -51,9 +51,8 @@ export const acquire = Effect.gen(function* () {
   const { traitsDirectory } = yield* ProjectPaths
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
-  const crypto = yield* Crypto.Crypto
+  const crypto = yield* SecureRandom.SecureRandom.pipe(Effect.provide(SecureRandom.layerWebCrypto))
   const lockDirectory = path.join(traitsDirectory, ".mcp-lock")
-  // `randomUUIDv4` changed from an Effect to a function within 4.0.x; `randomBytes` is stable.
   const token = yield* crypto.randomBytes(16).pipe(
     Effect.map((bytes) =>
       pipe(

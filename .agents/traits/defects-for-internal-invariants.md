@@ -1,19 +1,21 @@
 ---
 name: defects-for-internal-invariants
-purpose: Keep public error channels focused on actionable failures while exposing internal invariant violations as defects.
-subject: Library error channels for internal validation and encoding invariants.
-requirement: "In library code, distinguish internal invariant violations from
-  expected operational failures. Treat validation or encoding failures of
-  internally constructed, already-typed data as defects when consumers cannot
-  meaningfully recover: pipe(value, S.encodeEffect(schema), Effect.orDie),
-  rather than exposing SchemaError in the public error channel. Preserve typed
-  errors for invalid consumer input, configuration, network, storage, and other
-  actionable operational failures; a handler not catching an error does not make
-  it a defect."
-applicability: |-
-  Applies when designing library error channels for validation or encoding of internally constructed data.
-  File types or languages: text/typescript, text/tsx.
+subject: Classification of internal invariant violations and recoverable
+  failures in Effect error channels.
+requirement: Treat genuine internal invariant violations as defects, including
+  validation or encoding failures of internally constructed, already-typed data
+  when consumers cannot meaningfully recover. Preserve typed errors for
+  actionable failures such as invalid consumer input, configuration, network,
+  storage, and recoverable encoding failures. Neither typed input nor a
+  handler's failure to catch an error is sufficient reason to classify a
+  recoverable failure as a defect.
+applicability: Applies to Effect error-channel design, including library
+  validation and encoding of internally constructed data in TypeScript and TSX.
+purpose: Keep recoverable error channels focused on actionable failures while
+  exposing genuine internal invariant violations as defects.
 ---
+For encoding that genuinely checks an internal invariant with no meaningful consumer recovery, use `Effect.orDie` rather than exposing `SchemaError` in the public error channel. This example does not apply to recoverable encoding failures.
+
 ```diff
 -return pipe(internallyConstructed, S.encodeEffect(schema))
 +return pipe(internallyConstructed, S.encodeEffect(schema), Effect.orDie)

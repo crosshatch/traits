@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm"
-import { Array, Cause, Clock, Config, Crypto, Effect, Exit, Path, Runtime, Schema as S, Stdio } from "effect"
+import { Array, Cause, Clock, Config, Effect, Exit, Path, Runtime, Schema as S, Stdio } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
+import { SecureRandom } from "effect/crypto"
 import { Hex } from "effect/encoding"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
@@ -31,7 +32,7 @@ export const run = Command.make(
     const path = yield* Path.Path
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const { cwd, database } = yield* WorkspacePaths.resolve
-    const crypto = yield* Crypto.Crypto
+    const crypto = yield* SecureRandom.SecureRandom.pipe(Effect.provide(SecureRandom.layerWebCrypto))
     const runId = yield* crypto.randomBytes(16).pipe(Effect.map(Hex.encode))
     yield* Effect.gen(function* () {
       const db = yield* TraitDatabase.TraitDatabase

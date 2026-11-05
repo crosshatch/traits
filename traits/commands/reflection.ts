@@ -13,6 +13,7 @@ export const reflection = Command.make("reflection").pipe(
       name: "reflection",
       version: PackageJson.version,
       protocols: [McpProtocol.v2025_11_25],
+      registrations: toolkit.pipe(Layer.provide(TraitDatabase.layerLocal)),
       instructions: String.stripMargin(`
       | Query local OTLP data with the query tool using SQL. The worktree database is .agents/traits/traits.sqlite.
       | Tables: spans, logs, runs. Join spans/logs.runId to runs.id; filter runs.sectionId for a script.
@@ -21,6 +22,6 @@ export const reflection = Command.make("reflection").pipe(
       | record, resource, and scope are JSON text; use json_extract for nested fields. Nanosecond timestamps are decimal text; receivedAt is epoch milliseconds.
       | SQL controls projection, ordering, and limits. Results are JSON rows. Active spans appear only after ending and exporter flushing.
       `)
-    }).pipe(Layer.provide(toolkit.pipe(Layer.provide(TraitDatabase.layerLocal))), Layer.launch)
+    }).pipe(Layer.launch)
   )
 )
