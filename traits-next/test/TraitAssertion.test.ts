@@ -2,10 +2,10 @@ import { expect, it } from "@effect/vitest"
 import { Effect, pipe, Record, Result } from "effect"
 import { AiError, DecisionModel } from "effect/ai"
 
-import { Input, ModuleSpecifier } from "../schema/index.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import { TraitBody } from "../TraitBody.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
+import { Input, ModuleSpecifier } from "../util/index.ts"
 
 const probabilities = { pass: 0.1, fail: 0.8, na: 0.05, uncertain: 0.05 }
 const input = Input.cases.After.make({
@@ -16,7 +16,7 @@ const request = (text: string) =>
   TraitAssertion.TraitAssertionInput.make({
     assertion: TraitAssertion.TraitAssertion.make(text),
     context: { purpose: TraitPurpose.make("Protect correctness."), body: TraitBody.make(text) },
-    enrichments: [{ module: ModuleSpecifier.make("test-context"), text }]
+    enrichments: [{ module: ModuleSpecifier.make("file:///test/context.mjs"), text }]
   })
 
 it.effect("batches assertions with isolated context/enrichments and preserves assessment classifications", () =>

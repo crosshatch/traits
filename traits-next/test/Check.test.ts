@@ -6,12 +6,12 @@ import { check } from "../Check/Check.ts"
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import * as Enrichment from "../Enrichment/index.ts"
 import * as Report from "../Report/index.ts"
-import { type Change, ModuleSpecifier, Segment } from "../schema/index.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import { Trait } from "../Trait.ts"
 import { TraitAssertion } from "../TraitAssertion.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
+import { type Change, ModuleSpecifier, Segment } from "../util/index.ts"
 
 const trait = (name: string, options: Partial<Omit<Trait, "name" | "purpose">> = {}) =>
   Trait.make({
@@ -20,8 +20,8 @@ const trait = (name: string, options: Partial<Omit<Trait, "name" | "purpose">> =
     ...options
   })
 const assertion = TraitAssertion.make("The target is correct.")
-const module = ModuleSpecifier.make("test-segmenter")
-const context = ModuleSpecifier.make("test-context")
+const module = ModuleSpecifier.make("file:///test/segmenter.mjs")
+const context = ModuleSpecifier.make("file:///test/context.mjs")
 const response: DecisionModel.ProviderResponse = {
   answers: {
     assertion: { _tag: "Classify", label: "fail", probabilities: { pass: 0.1, fail: 0.8, na: 0.05, uncertain: 0.05 } }
@@ -128,7 +128,7 @@ it.effect("shares segmentation across traits and validates the entire result bef
 
 it.effect("retains empty segment selections and reports setup failures once without replacement inputs", () =>
   Effect.gen(function* () {
-    const failedModule = ModuleSpecifier.make("failed-segmenter")
+    const failedModule = ModuleSpecifier.make("file:///test/failed-segmenter.mjs")
     const registry = registryFrom({
       ...unusedLoaders,
       Segmenter: (reference) =>
@@ -194,7 +194,6 @@ it.effect("allows enrichment-only recovery to proceed, but blocks Input-scoped a
         traits: [trait("example", { assertion, enrichments: [context] })],
         changes: [{ after: { path: "file.ts", text: "source" } }]
       }).pipe(Effect.provide(Layer.merge(registry, model)))
-      expect(report.interrupted).toBe(false)
       expect(report.diagnostics).toHaveLength(1)
       const input = report.traits[0]!.inputs[0]!
       expect(input.status).toBe(reason._tag === "Input" ? "Failed" : "Completed")
@@ -206,7 +205,7 @@ it.effect("allows enrichment-only recovery to proceed, but blocks Input-scoped a
 
 it.effect("retains empty enrichment context and reports failed enrichment without exposing source", () =>
   Effect.gen(function* () {
-    const empty = ModuleSpecifier.make("empty-context")
+    const empty = ModuleSpecifier.make("file:///test/empty-context.mjs")
     const registry = registryFrom({
       ...unusedLoaders,
       Enrichment: (module) =>
@@ -230,7 +229,7 @@ it.effect("retains empty enrichment context and reports failed enrichment withou
   })
 )
 
-it.effect("Trait recovery cancels sibling input work without marking the check interrupted", () =>
+it.effect("Trait recovery cancels sibling input work without cancelling unrelated traits", () =>
   Effect.gen(function* () {
     const assessingSibling = yield* Deferred.make<void>()
     const registry = registryFrom({
@@ -269,7 +268,6 @@ it.effect("Trait recovery cancels sibling input work without marking the check i
         })
       )
     )
-    expect(report.interrupted).toBe(false)
     expect(Array.map(report.traits[0]!.inputs, (input) => input.status)).toEqual(["Failed", "Cancelled"])
     expect(report.traits[1]!.inputs[0]!.status).toBe("Completed")
     expect(report.diagnostics).toHaveLength(1)

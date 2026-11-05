@@ -2,8 +2,8 @@ import { expect, it } from "@effect/vitest"
 import { Effect, pipe, Record, Result } from "effect"
 import { AiError, DecisionModel } from "effect/ai"
 
-import { Input } from "../schema/index.ts"
 import * as TraitSubject from "../TraitSubject.ts"
+import { Input } from "../util/index.ts"
 
 const probabilities = { yes: 0.4, no: 0.35, uncertain: 0.25 }
 const subject = TraitSubject.TraitSubject.make("Function declarations.")

@@ -4,7 +4,7 @@ import { Chat } from "effect/ai"
 import { EnrichmentContext } from "./Enrichment/EnrichmentContext.ts"
 import * as ExtensionModule from "./ExtensionModule.ts"
 import type { ExtensionServices } from "./ExtensionServices.ts"
-import type { ModuleSpecifier } from "./schema/index.ts"
+import type { ModuleSpecifier } from "./util/index.ts"
 
 /** Shares program-scoped setup outcomes and provides isolated execution resources. */
 export const make = Effect.fnUntraced(function* <A, E, E2>(

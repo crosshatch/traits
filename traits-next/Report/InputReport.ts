@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { Segment } from "../schema/index.ts"
+import { Segment } from "../util/index.ts"
 import { Assessment } from "./Assessment.ts"
 import { EnrichmentReport } from "./EnrichmentReport.ts"
 import { InputStatus } from "./InputStatus.ts"

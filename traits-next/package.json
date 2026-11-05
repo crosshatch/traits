@@ -11,7 +11,8 @@
     ".": "./index.ts"
   },
   "dependencies": {
-    "fs-native-extensions": "catalog:"
+    "fs-native-extensions": "catalog:",
+    "import-meta-resolve": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

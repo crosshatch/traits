@@ -2,7 +2,7 @@ import { expect, it } from "@effect/vitest"
 import { Effect, pipe, Schema as S } from "effect"
 
 import * as Report from "../Report/index.ts"
-import { ModuleSpecifier, Segment } from "../schema/index.ts"
+import { ModuleSpecifier, Segment } from "../util/index.ts"
 
 const trait = { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." }
 const input = {
@@ -18,7 +18,6 @@ const reportWith = (
   diagnostics: ReadonlyArray<unknown> = []
 ) => ({
   changes: [{ after: "file.ts" }],
-  interrupted: false,
   diagnostics,
   traits: [{ trait: selectedTrait, inputs: [selectedInput] }]
 })
@@ -28,10 +27,8 @@ it.effect("separates completed execution from policy-dependent assessment accept
     const report = yield* pipe(reportWith(input), S.decodeUnknownEffect(Report.Report))
     expect(Report.isPass(report, (assessment) => assessment.pass >= 0.8)).toBe(true)
     expect(Report.isPass((assessment) => assessment.pass >= 0.99)(report)).toBe(false)
-    expect(Report.isPass({ ...report, interrupted: true }, () => true)).toBe(false)
-    expect(
-      Report.isPass({ ...report, instruction: "Restore the unavailable model and rerun evaluation." }, () => true)
-    ).toBe(false)
+    expect(report).not.toHaveProperty("interrupted")
+    expect(report).not.toHaveProperty("instruction")
   })
 )
 
@@ -83,7 +80,7 @@ it.effect("locates assessment failures without inventing an extension module", (
 )
 
 it("requires configured extension modules on extension origins", () => {
-  const module = ModuleSpecifier.make("example-segmenter")
+  const module = ModuleSpecifier.make("file:///test/example-segmenter.mjs")
   const origin = Report.DiagnosticOrigin.cases.SegmenterExecution.make({ module, change: 0 })
   const diagnostic = Report.Diagnostic.cases.Instruction.make({ origin, instruction: "Fix the syntax and rerun." })
   expect(S.is(Report.Report)(reportWith(input, { ...trait, segment: module }, [diagnostic]))).toBe(true)

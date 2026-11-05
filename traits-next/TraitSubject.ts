@@ -1,7 +1,7 @@
 import { Effect, Function, Record, Schema as S, String } from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
-import { Input, Probability, targetText } from "./schema/index.ts"
+import { Input, Probability, targetText } from "./util/index.ts"
 
 /** The kind of artifact, action, transaction, relationship, or situation to identify and assess. */
 export type TraitSubject = typeof TraitSubject.Type

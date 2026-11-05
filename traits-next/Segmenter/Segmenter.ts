@@ -1,7 +1,7 @@
 import type { Effect } from "effect"
 
 import type { ExtensionServices } from "../ExtensionServices.ts"
-import type { Change, Segment } from "../schema/index.ts"
+import type { Change, Segment } from "../util/index.ts"
 import type { SegmenterError } from "./SegmenterError.ts"
 import type { SegmenterSetupError } from "./SegmenterSetupError.ts"
 

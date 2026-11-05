@@ -1,7 +1,7 @@
 import { expect, it } from "@effect/vitest"
 import { pipe, Schema as S } from "effect"
 
-import { Input, Segment, targetText, toSegment } from "../schema/index.ts"
+import { Input, Segment, targetText, toSegment } from "../util/index.ts"
 
 it("selects the required source and preserves the source-free segment representation", () => {
   const before = { path: "old.ts", text: "😀old" }

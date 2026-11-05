@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { ModuleSpecifier } from "../schema/index.ts"
+import { ModuleSpecifier } from "../util/index.ts"
 
 /** Failure provenance: extensions identify their module and lifecycle stage; assessment execution identifies only a trait-local input. */
 export type DiagnosticOrigin = typeof DiagnosticOrigin.Type

@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { RecoveryInstruction } from "../schema/index.ts"
+import { RecoveryInstruction } from "../util/index.ts"
 
 /** A segmentation execution failure with required recovery guidance; dependent work for this change cannot proceed. */
 export class SegmenterError extends S.TaggedError<SegmenterError>()("SegmenterError", {

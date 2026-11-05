@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { RecoveryInstruction } from "../schema/index.ts"
+import { RecoveryInstruction } from "../util/index.ts"
 import { DiagnosticOrigin } from "./DiagnosticOrigin.ts"
 
 /** A diagnostic for an observed extension or assessment failure; interruption is cancellation and creates no failure diagnostic. */
