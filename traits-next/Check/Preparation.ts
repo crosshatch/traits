@@ -2,10 +2,10 @@ import { Array, Effect, pipe, Result } from "effect"
 
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import * as Report from "../Report/index.ts"
-import type { ModuleSpecifier, Segment } from "../schema/index.ts"
 import * as Segmentation from "../Segmenter/Execution.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import type { Trait } from "../Trait.ts"
+import type { Input, ModuleSpecifier } from "../util/index.ts"
 import type { CheckInput } from "./CheckInput.ts"
 
 /** Completed setup and segmentation shared by all traits in one check. */
@@ -20,7 +20,7 @@ export interface Preparation {
   readonly setupDiagnostics: ReadonlyArray<Report.Diagnostic>
   readonly segmentations: ReadonlyMap<
     ModuleSpecifier,
-    ReadonlyArray<Result.Result<ReadonlyArray<Segment>, Report.Diagnostic>>
+    ReadonlyArray<Result.Result<ReadonlyArray<Input>, Report.Diagnostic>>
   >
 }
 

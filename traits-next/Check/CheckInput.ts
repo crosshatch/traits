@@ -1,5 +1,5 @@
-import type { Change } from "../schema/index.ts"
 import type { Trait } from "../Trait.ts"
+import type { Change } from "../util/index.ts"
 
 /** Caller-ordered traits and text changes; traits must contain canonical extension references. */
 export interface CheckInput {

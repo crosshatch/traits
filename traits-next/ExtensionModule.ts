@@ -1,7 +1,7 @@
 import { Effect, pipe, Predicate, Schema as S } from "effect"
 
 import type { ExtensionServices } from "./ExtensionServices.ts"
-import type { ModuleSpecifier } from "./schema/index.ts"
+import type { ModuleSpecifier } from "./util/index.ts"
 
 /** A module whose default export initializes a trait extension. */
 export const ExtensionModule = <A, E>() =>

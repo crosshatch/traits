@@ -1,4 +1,4 @@
-import type { Input } from "../schema/index.ts"
+import type { Input } from "../util/index.ts"
 
 /** A selected source input paired with its original change index. */
 export interface CheckTarget {

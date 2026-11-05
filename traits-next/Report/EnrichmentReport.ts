@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { ModuleSpecifier } from "../schema/index.ts"
+import { ModuleSpecifier } from "../util/index.ts"
 
 /** Successful enrichment context only; failed, cancelled, and unstarted work has no entry here. */
 export type EnrichmentReport = typeof EnrichmentReport.Type

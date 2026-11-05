@@ -59,15 +59,25 @@ turns unexpected failures into defects. Each typed registry still owns its
 execution contract. Module-shape and setup-result validation failures remain
 typed `SchemaError`s alongside the declared setup error. Registry service types
 are inferred from their `make` effects, with host services provided internally.
-Extension references must already be canonical, importable module specifiers;
-trait-file loading, module canonicalization, CLI profile-to-runtime wiring, and
-explicit in-place registry reset remain separate work.
+Extension references must already be absolute file URLs. Hosts resolve script
+paths and package references with
+`ModuleSpecifier.resolve({ reference, baseUrl })` from `ModuleSpecifier.ts`
+before constructing static traits. `baseUrl` is the trait file URL, or an
+explicit host-module URL in the intended workspace for programmatic definitions.
+ESM package resolution uses that base and its import conditions, never the
+traits installation or an implicit working directory. `ModuleSpecifier` rejects
+unresolved references; the extension loader imports the already-validated file
+URL directly. Schema decoding uses `URLFromString` to normalize URL syntax and
+retain a branded href string; it does not resolve package references or
+filesystem symlinks. Query and fragment restrictions are extension-identity
+policy, not URL syntax rules. Trait-file loading, CLI profile-to-runtime wiring,
+and explicit in-place registry reset remain separate work.
 
 Checker phases return their data rather than preallocating mutable observations.
 `Check/Preparation.ts` collects unique extension references and returns setup
 diagnostics, per-trait ready enrichment operations, and read-only maps of
-segmentation `Result`s. Successful segmenter setup functions are discarded once
-segmentation finishes. Registry layers still own setup caching.
+validated input-selection `Result`s. Successful segmenter setup functions are
+discarded once segmentation finishes. Registry layers still own setup caching.
 `Check/Execution.ts` returns ordered trait/input results without setup lookups.
 Selected source locations are targets; report entries are inputs. The enrichment
 registry validates extension output; typed error handlers use the existing
@@ -120,11 +130,16 @@ each input or location.
 Initialization is shared across the entire program lifecycle, not repeated per
 trait or evaluation. A program-level registry identifies an extension by its
 kind (segmenter or enrichment) and resolved module identity. Module references
-are canonicalized when constructing static trait definitions, so aliases resolve
-to one registry entry and one report module reference. Concurrent callers await
-the same initialization outcome. Setup resources live until program shutdown or
-an explicit reset; each distinct execution owns its resources. Shared setup
-state must support concurrent executions across traits and evaluations.
+must be resolved by the host before constructing static trait definitions;
+schema construction does not perform resolution. For example, resolve
+`@traits/typescript/segmenter` with a parent URL for the trait file and pass the
+returned file URL as `segment` to `Trait.make`. The resolver canonicalizes
+existing file paths (including symlinks); equivalent resolved URLs share one
+registry entry and report module reference. Queries and fragments are
+disallowed. Concurrent callers await the same initialization outcome. Setup
+resources live until program shutdown or an explicit reset; each distinct
+execution owns its resources. Shared setup state must support concurrent
+executions across traits and evaluations.
 
 A failed initialization remains failed until explicit reset or program restart;
 starting another evaluation does not retry it. Reset must coordinate dependent
@@ -213,10 +228,10 @@ the complete segment and reference the caller's change, without source contents.
 An empty result successfully selects no targets for the change. It produces no
 input reports, enrichment, assessments, or diagnostics; requested trait reports
 remain represented even when their inputs are empty. This outcome may pass
-`Report.isPass` when no other failure or halt occurred. Failures and defects
-must not be converted into empty successful results.
+`Report.isPass` when no other failure occurred. Failures and defects must not be
+converted into empty successful results.
 
-Segmentation must succeed and cannot request skips or evaluation halts. Before
+Segmentation must succeed and cannot request recovery-based skips. Before
 scheduling any enrichments for a change, the runner validates the entire custom
 result: every segment combined with that change must validate as an `Input`. A
 malformed segment, unavailable selected side, or out-of-bounds primary or
@@ -250,8 +265,8 @@ them for execution. The runner recognizes each only at its matching stage and
 reports `Diagnostic.Instruction` with the corresponding segmenter origin.
 Unexpected defects and contract-violating failures follow ordinary failure
 normalization: `Error` unless the runner independently knows actionable
-remediation. Instructions never turn a segmenter failure into a skip or halt
-request.
+remediation. Instructions provide remediation only; they do not change execution
+control flow.
 
 ## Enrich each trait and source location
 
@@ -318,20 +333,21 @@ acceptance:
   evaluation, not an execution failure.
 - `Failed`: this input could not finish, including an assessment failure or an
   enrichment recovery signal preventing completion. It has no assessment.
-- `Cancelled`: this input was stopped before completion by interruption or
-  another input's trait-wide recovery. It has no assessment. Already completed
-  inputs retain their completed status and assessment.
+- `Cancelled`: this input was stopped before completion by another input's
+  trait-wide recovery. It has no assessment. Already completed inputs retain
+  their completed status and assessment.
 
 An enrichment-only recovery can still allow a `Completed` input with an
 assessment; its diagnostic independently prevents the report from passing.
 Status does not duplicate failure explanations: diagnostics explain failures,
-and report interruption or recovery provenance explains cancellation.
+and recovery provenance explains cancellation. Caller interruption returns no
+report.
 
 The report retains probabilities rather than the provider-selected label.
 Consumers interpret them using explicit thresholds or decision policies; the
 highest probability alone does not necessarily justify a definitive result.
 
-## Handle skips and halts
+## Handle failures and recovery
 
 Extensions map expected underlying failures into their stage-specific API
 errors: `SegmenterSetupError` or `EnrichmentSetupError` for initialization, and
@@ -360,8 +376,8 @@ assessment requires that enrichment is a separate policy, not a decision encoded
 by the setup error. After an `Enrichment`-scope skip, assessment proceeds with
 the remaining available context unless another outcome prevents assessment, such
 as `Input` or `Trait` cancellation. During execution, `Enrichment` affects only
-its current invocation. Enrichments cannot halt unrelated traits.
-Whole-evaluation halts belong to the evaluator rather than extensions.
+its current invocation. Enrichments cannot cancel unrelated traits. There is no
+whole-evaluation stop instruction in the report protocol.
 
 Parallel failures are collected rather than reduced to one winning error.
 Cancellation stops remaining work at the requested scope, but does not erase
@@ -427,8 +443,6 @@ Reports group results by trait, then by evaluated source location:
 ```text
 Report
 ├── changes: ChangePaths[] ({ before?: string, after?: string }, at least one side)
-├── interrupted: boolean
-├── instruction?: string
 ├── diagnostics: Diagnostic[] (Error | Instruction, with origin)
 └── traits: TraitReport[]
     ├── static Trait
@@ -448,7 +462,7 @@ omission means unknown, while an empty array means no counterpart. Required
 caller order, including changes with no inputs or failed segmentation. At least
 one path is required per change; separate paths preserve renames. Both input and
 segmentation diagnostic indices resolve through this table without the original
-request. The table remains complete in partial and interrupted reports. Full
+request. The table remains complete when recovery cancels some inputs. Full
 sources remain available internally during execution. Each trait definition
 appears once in its trait report. Generated enrichment text remains in the
 report, but should not routinely echo the source.
@@ -508,34 +522,30 @@ failures are recorded once, without fabricating per-input execution failures.
 
 A missing assessment alone does not indicate failure, since completed
 guidance-only traits also omit assessments; the input status records execution
-completion. The overall report may carry evaluator-owned halt guidance alongside
-the shared diagnostic list.
+completion. Recovery guidance is carried by diagnostics, not a top-level report
+instruction.
 
-Partial results are preserved through skips and halts, so the final report
-contains completed work alongside any recovery instructions.
+Completed results are preserved through input/trait recovery cancellation, so
+the returned report contains completed work alongside diagnostics explaining why
+other work did not finish. Caller interruption does not return a partial report.
 
 ## Reevaluate after remediation
 
-`Report.isPass` requires `interrupted: false`, the absence of diagnostics and
-evaluator halt instructions, Completed status on every input, and acceptance of
-every required assessment by a caller-supplied decision policy. Guidance-only
-traits require no assessment. No probability threshold or not-applicable
-acceptance rule is implicit in the helper.
+`Report.isPass` requires the absence of diagnostics, Completed status on every
+input, and acceptance of every required assessment by a caller-supplied decision
+policy. Guidance-only traits require no assessment. No probability threshold or
+not-applicable acceptance rule is implicit in the helper.
 
 This relies on a complete runner-produced report: all requested trait
 evaluations must be represented, and every failure, skip, cancellation, or
-unfinished check must be accounted for by a diagnostic, evaluator instruction,
-or evaluation interruption. A shared cancellation or halt explanation may cover
-multiple inputs without duplicate diagnostics. Every report has a required
-`interrupted` boolean. An interrupted evaluation returns `interrupted: true`,
-preserving completed results and already-observed diagnostics without inventing
-assessments or extension failures for cancelled work. No interruption message or
-instruction is required; `Report.instruction` remains available for actual
-evaluator halt guidance. Recovery-scope cancellation already explained by an
-enrichment diagnostic does not itself set `interrupted`. If no report is
-returned, success cannot be inferred. The helper cannot detect omitted work from
-the original request; zero scheduled inputs may legitimately pass when no work
-was applicable and no failure, halt, or interruption occurred.
+unfinished input must be accounted for by a diagnostic or its recovery
+provenance. A shared trait-recovery diagnostic may explain multiple cancelled
+inputs without duplicate diagnostics. Caller cancellation uses Effect fiber
+interruption and returns no report; the report has no interruption flag or
+top-level instruction. If no report is returned, success cannot be inferred. The
+helper cannot detect omitted work from the original request; zero scheduled
+inputs may legitimately pass when no work was applicable and no failure
+occurred.
 
 After the client follows recovery instructions, reevaluation starts from the
 affected sources or changes, not their previous segments. Reload the relevant

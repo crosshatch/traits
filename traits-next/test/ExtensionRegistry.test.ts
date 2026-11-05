@@ -12,6 +12,7 @@ import {
   Layer,
   Option,
   Path,
+  Result,
   Scope,
   Schema as S,
   String,
@@ -24,7 +25,7 @@ import { KeyValueStore } from "effect/persistence"
 
 import { check } from "../Check/Check.ts"
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
-import { ModuleSpecifier } from "../schema/index.ts"
+import * as ModuleSpecifier from "../ModuleSpecifier.ts"
 import { SegmenterSetupError } from "../Segmenter/index.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import { Trait } from "../Trait.ts"
@@ -59,6 +60,97 @@ const host = Layer.mergeAll(
   Layer.mock(SecureRandom.SecureRandom, {}),
   FetchHttpClient.layer,
   KeyValueStore.layerMemory
+)
+
+it.live("resolves relative and consumer-only import-condition packages before using real registries", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-consumer-resolution-" })
+      const traitDirectory = path.join(directory, "traits")
+      const packageDirectory = path.join(directory, "node_modules", "@traits-resolution-test", "consumer-only")
+      yield* fs.makeDirectory(traitDirectory, { recursive: true })
+      yield* fs.makeDirectory(packageDirectory, { recursive: true })
+      yield* fs.writeFileString(
+        path.join(directory, "package.json"),
+        JSON.stringify({
+          type: "module",
+          imports: { "#segmenter": "@traits-resolution-test/consumer-only/segmenter" }
+        })
+      )
+      yield* fs.writeFileString(
+        path.join(packageDirectory, "package.json"),
+        JSON.stringify({
+          name: "@traits-resolution-test/consumer-only",
+          type: "module",
+          exports: {
+            "./segmenter": { import: "./segmenter.mjs", require: "./wrong.cjs" },
+            "./enricher": { import: "./enricher.mjs" }
+          }
+        })
+      )
+      const effect = JSON.stringify(import.meta.resolve("effect"))
+      yield* fs.writeFileString(
+        path.join(packageDirectory, "segmenter.mjs"),
+        `import { Effect } from ${effect}; export default Effect.succeed((change) => Effect.succeed([{ _tag: "After", range: { start: 0, end: change.after.text.length } }]));`
+      )
+      yield* fs.writeFileString(
+        path.join(packageDirectory, "enricher.mjs"),
+        `import { Effect } from ${effect}; export default Effect.succeed(Effect.succeed("package context"));`
+      )
+      yield* fs.writeFileString(
+        path.join(packageDirectory, "wrong.cjs"),
+        `throw new Error("Wrong resolution conditions");`
+      )
+      yield* fs.writeFileString(
+        path.join(traitDirectory, "local.mjs"),
+        `import { Effect } from ${effect}; export default Effect.succeed(Effect.succeed("relative context"));`
+      )
+      const baseUrl = yield* path.toFileUrl(path.join(traitDirectory, "example.md"))
+      const segment = yield* ModuleSpecifier.resolve({
+        reference: "@traits-resolution-test/consumer-only/segmenter",
+        baseUrl
+      })
+      const enricher = yield* ModuleSpecifier.resolve({
+        reference: "@traits-resolution-test/consumer-only/enricher",
+        baseUrl
+      })
+      const local = yield* ModuleSpecifier.resolve({ reference: "./local.mjs", baseUrl })
+      const expectedSegment = yield* fs
+        .realPath(path.join(packageDirectory, "segmenter.mjs"))
+        .pipe(Effect.flatMap(path.toFileUrl))
+      expect(segment).toBe(expectedSegment.href)
+      const canonical = yield* ModuleSpecifier.resolve({ reference: segment, baseUrl })
+      expect(canonical).toBe(segment)
+      const alias = yield* ModuleSpecifier.resolve({ reference: "#segmenter", baseUrl })
+      expect(alias).toBe(segment)
+      const report = yield* check({
+        traits: [
+          Trait.make({
+            name: TraitName.make("consumer"),
+            purpose: TraitPurpose.make("Protect correctness."),
+            segment,
+            enrichments: [enricher, local]
+          })
+        ],
+        changes: [{ after: { path: "source.ts", text: "source" } }]
+      }).pipe(Effect.provide([SegmenterRegistry.layer, EnrichmentRegistry.layer]))
+      expect(report.diagnostics).toEqual([])
+      expect(report.traits[0]!.inputs[0]!.enrichments).toEqual([
+        { module: enricher, text: "package context" },
+        { module: local, text: "relative context" }
+      ])
+      const unavailable = yield* ModuleSpecifier.resolve({
+        reference: "@traits-resolution-test/consumer-only/segmenter",
+        baseUrl: new URL(import.meta.url)
+      }).pipe(Effect.result)
+      expect(Result.isFailure(unavailable)).toBe(true)
+      if (Result.isFailure(unavailable)) {
+        expect(unavailable.failure._tag).toBe("ModuleResolutionError")
+      }
+    })
+  ).pipe(Effect.provide(host))
 )
 
 it.live("closes resources from interrupted setup when the registry shuts down", () =>
@@ -120,7 +212,7 @@ const fixture = Effect.gen(function* () {
   `)
   )
   const url = yield* path.toFileUrl(filename)
-  return ModuleSpecifier.make(url.href)
+  return ModuleSpecifier.ModuleSpecifier.make(url.href)
 })
 
 const probe = () =>
@@ -259,7 +351,7 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
       `)
         )
         const url = yield* path.toFileUrl(filename)
-        const module = ModuleSpecifier.make(url.href)
+        const module = ModuleSpecifier.ModuleSpecifier.make(url.href)
         const services = yield* Layer.build(Layer.merge(SegmenterRegistry.layer, EnrichmentRegistry.layer)).pipe(
           Effect.provideService(Probe, state)
         )
@@ -318,7 +410,7 @@ it.live("preserves module/setup validation errors while rejecting wrong-stage se
         const filename = path.join(directory, `${index}.mjs`)
         yield* fs.writeFileString(filename, source)
         const url = yield* path.toFileUrl(filename)
-        const exit = yield* registry(ModuleSpecifier.make(url.href)).pipe(Effect.exit)
+        const exit = yield* registry(ModuleSpecifier.ModuleSpecifier.make(url.href)).pipe(Effect.exit)
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) {
           expect(Cause.hasDies(exit.cause)).toBe(index === 2)

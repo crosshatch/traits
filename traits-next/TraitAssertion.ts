@@ -2,10 +2,10 @@ import { Effect, Function, Record, Schema as S, String } from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
 import { EnrichmentReport } from "./Report/EnrichmentReport.ts"
-import { Input, targetText } from "./schema/index.ts"
 import { TraitBody } from "./TraitBody.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
+import { Input, targetText } from "./util/index.ts"
 
 /** The assertion to assess against the subject. */
 export type TraitAssertion = typeof TraitAssertion.Type

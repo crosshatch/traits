@@ -1,6 +1,5 @@
 import { Array, Function, Schema as S } from "effect"
 
-import { RecoveryInstruction } from "../schema/index.ts"
 import type { Assessment } from "./Assessment.ts"
 import { ChangePaths } from "./ChangePaths.ts"
 import { Diagnostic } from "./Diagnostic.ts"
@@ -14,11 +13,6 @@ export const Report = S.Struct({
   changes: S.Array(ChangePaths).annotate({
     description: "Paths for every supplied change in original caller order, including changes with no selected inputs."
   }),
-  /** Whether evaluation was interrupted; retained results may be incomplete. Recovery-scope cancellation alone does not count as interruption. */
-  interrupted: S.Boolean.annotate({
-    description:
-      "Whether evaluation was interrupted; retained results may be incomplete. Recovery-scope cancellation alone does not count as interruption."
-  }),
   /** Diagnostics included once per report, with locations and explanations for client remediation. */
   diagnostics: S.Array(Diagnostic).annotate({
     description: "Diagnostics included once per report, with locations and explanations for client remediation."
@@ -26,11 +20,7 @@ export const Report = S.Struct({
   /** Selected traits and their input-specific results in deterministic order. */
   traits: S.Array(TraitReport).annotate({
     description: "Selected traits and their input-specific results in deterministic order."
-  }),
-  /** Evaluator-owned halt guidance; enrichment failures cannot halt unrelated traits. */
-  instruction: RecoveryInstruction.annotateKey({
-    description: "Evaluator-owned halt guidance; enrichment failures cannot halt unrelated traits."
-  }).pipe(S.optionalKey)
+  })
 })
   .annotate({
     description:
@@ -90,16 +80,14 @@ export const Report = S.Struct({
     )
   )
 
-/** Whether a runner-produced report has no interruption, diagnostics, or halt instructions, every input Completed, and every required assessment is accepted by the supplied policy. */
+/** Whether a runner-produced report has no diagnostics, every input Completed, and every required assessment is accepted by the supplied policy. Interrupted checks return no report. */
 export const isPass: {
   (acceptsAssessment: (assessment: Assessment) => boolean): (report: Report) => boolean
   (report: Report, acceptsAssessment: (assessment: Assessment) => boolean): boolean
 } = Function.dual(
   2,
   (report: Report, acceptsAssessment: (assessment: Assessment) => boolean): boolean =>
-    !report.interrupted &&
     report.diagnostics.length === 0 &&
-    report.instruction === undefined &&
     Array.every(report.traits, (traitReport) =>
       Array.every(
         traitReport.inputs,

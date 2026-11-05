@@ -2,8 +2,8 @@ import { Array, Deferred, Effect, Result } from "effect"
 
 import * as Enrichment from "../Enrichment/index.ts"
 import * as Report from "../Report/index.ts"
-import { toSegment } from "../schema/index.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
+import { toSegment } from "../util/index.ts"
 import type { CheckTarget } from "./CheckTarget.ts"
 import type { Preparation } from "./Preparation.ts"
 

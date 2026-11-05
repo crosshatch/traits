@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { RecoveryInstruction } from "../schema/index.ts"
+import { RecoveryInstruction } from "../util/index.ts"
 
 /** An initialization failure with required recovery guidance. */
 export class EnrichmentSetupError extends S.TaggedError<EnrichmentSetupError>()("EnrichmentSetupError", {

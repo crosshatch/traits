@@ -221,6 +221,9 @@ catalogs:
     fs-native-extensions:
       specifier: ^1.5.3
       version: 1.5.3
+    import-meta-resolve:
+      specifier: ^4.2.0
+      version: 4.2.0
     oxc-parser:
       specifier: ^0.157.0
       version: 0.157.0
@@ -348,6 +351,9 @@ importers:
       fs-native-extensions:
         specifier: 'catalog:'
         version: 1.5.3
+      import-meta-resolve:
+        specifier: 'catalog:'
+        version: 4.2.0
     devDependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
