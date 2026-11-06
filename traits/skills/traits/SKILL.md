@@ -16,15 +16,22 @@ tool descriptions and returned errors provide operation-specific details.
 
 ## Capture a preference
 
-Before completing a response to user feedback, consider the whole exchange for a
-durable insight. Approval of a better idiom can establish a preference without
-the words “always” or “trait.” Skip one-off project decisions and transient
-facts.
+Before completing a response to a correction, reusable preference, approved
+alternative idiom, or request to remember a convention, evaluate the whole
+exchange across turns for durable guidance. Approval of a better idiom can
+establish a preference without the words “always” or “trait.” Err on the side of
+proposing a concise trait; skip only clearly one-off decisions, transient facts,
+or preferences verified as already covered in full.
 
 Read existing traits before drafting. Reuse a trait only when its complete rule
-and scope clearly cover the preference. If uncertain, propose the specific rule
-or a clarification rather than assuming broad guidance is sufficient. Apply and
-review requested code changes before proposing persistence.
+and scope clearly cover the preference. If coverage is uncertain, call
+`derive_trait` with the specific rule or a complete clarification; related broad
+guidance or a combination of general traits is not sufficient reason to skip.
+Let the tool assess coverage. Apply and review requested code changes before
+proposing persistence, then call `derive_trait` before the final response.
+Merely considering capture or mentioning a possible trait is not completion.
+Preference capture is a separate responsibility: do not stop after implementing
+the idiom and running code checks. Saving still requires the approval below.
 
 Traits live in `.agents/traits/<name>.md`. The unique kebab-case `name` is the
 canonical identity; use exact names in tool selections and ignore directives,
