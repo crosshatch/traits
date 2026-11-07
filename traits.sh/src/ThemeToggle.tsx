@@ -21,7 +21,7 @@ const toggleTheme = Effect.gen(function* () {
   yield* Effect.try({
     try: () => localStorage.setItem("traits-theme", theme),
     catch: (cause) => ThemeStorageError.make({ cause })
-  }).pipe(Effect.ignore)
+  })
 }).pipe(Effect.withSpan("ThemeToggle.toggle"))
 const toggleAtom = Atom.fn((_event: unknown) => toggleTheme)
 
