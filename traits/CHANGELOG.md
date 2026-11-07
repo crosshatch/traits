@@ -1,5 +1,18 @@
 # traits
 
+## 0.5.15
+
+### Patch Changes
+
+- [#104](https://github.com/crosshatch/traits/pull/104)
+  [`90b22a5`](https://github.com/crosshatch/traits/commit/90b22a5a52bacdd61dc695e36f546e05ef8aef1b) -
+  Restore proactive trait derivation for reusable user feedback and approved
+  idioms, including cross-turn preferences and uncertain existing coverage,
+  while preserving approval safeguards.
+
+  Update workspace dependencies and migrate cryptography and MCP registration to
+  Effect 4.1.2.
+
 ## 0.5.14
 
 ### Patch Changes
