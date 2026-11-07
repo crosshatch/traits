@@ -3,7 +3,6 @@ import { hostname } from "node:os"
 import {
   Array,
   Clock,
-  Crypto,
   Duration,
   Effect,
   FileSystem,
@@ -16,6 +15,7 @@ import {
   Schema as S,
   String
 } from "effect"
+import { SecureRandom } from "effect/crypto"
 
 import { ProjectPaths } from "./ProjectPaths.ts"
 
@@ -33,13 +33,12 @@ export class TraitProjectInUseError extends S.TaggedError<TraitProjectInUseError
 }
 
 // Signal 0 only checks existence; EPERM means the process exists but belongs to another user.
+class ProcessSignalError extends S.TaggedError<ProcessSignalError>()("ProcessSignalError", { cause: S.Defect() }) {}
+
 const isRunning = (pid: number) =>
-  Effect.try(() => process.kill(pid, 0)).pipe(
+  Effect.try({ try: () => process.kill(pid, 0), catch: (cause) => ProcessSignalError.make({ cause }) }).pipe(
     Effect.as(true),
-    Effect.catchTags({
-      UnknownError: (error) =>
-        Effect.succeed(Predicate.hasProperty(error.cause, "code") && error.cause.code === "EPERM")
-    })
+    Effect.catch((error) => Effect.succeed(Predicate.hasProperty(error.cause, "code") && error.cause.code === "EPERM"))
   )
 
 /**
@@ -51,9 +50,8 @@ export const acquire = Effect.gen(function* () {
   const { traitsDirectory } = yield* ProjectPaths
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
-  const crypto = yield* Crypto.Crypto
+  const crypto = yield* SecureRandom.SecureRandom
   const lockDirectory = path.join(traitsDirectory, ".mcp-lock")
-  // `randomUUIDv4` changed from an Effect to a function within 4.0.x; `randomBytes` is stable.
   const token = yield* crypto.randomBytes(16).pipe(
     Effect.map((bytes) =>
       pipe(

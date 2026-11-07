@@ -1,6 +1,8 @@
 import { useAtomSet } from "@effect/atom-react"
-import { Array, Effect } from "effect"
+import { Array, Effect, Schema as S } from "effect"
 import { Atom } from "effect/reactivity"
+
+class ThemeStorageError extends S.TaggedError<ThemeStorageError>()("ThemeStorageError", { cause: S.Defect() }) {}
 
 const toggleTheme = Effect.gen(function* () {
   const theme = yield* Effect.sync(() => {
@@ -16,9 +18,10 @@ const toggleTheme = Effect.gen(function* () {
     })
     return next
   })
-  yield* Effect.try(() => localStorage.setItem("traits-theme", theme)).pipe(
-    Effect.catchTags({ UnknownError: () => Effect.void })
-  )
+  yield* Effect.try({
+    try: () => localStorage.setItem("traits-theme", theme),
+    catch: (cause) => ThemeStorageError.make({ cause })
+  })
 }).pipe(Effect.withSpan("ThemeToggle.toggle"))
 const toggleAtom = Atom.fn((_event: unknown) => toggleTheme)
 

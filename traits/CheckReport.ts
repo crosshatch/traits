@@ -1,4 +1,5 @@
-import { Array, Crypto, Effect, HashSet, Order, pipe, Schema as S, String } from "effect"
+import { Array, Effect, HashSet, Order, pipe, Schema as S, String } from "effect"
+import { Digest } from "effect/crypto"
 import { Hex } from "effect/encoding"
 
 import { Assessment } from "./Assessment.ts"
@@ -32,9 +33,9 @@ export const CheckReport = S.Struct({
 
 /** Identifies the complete file snapshot read for evaluation, including line endings. */
 export const revision = Effect.fnUntraced(function* (text: string) {
-  const crypto = yield* Crypto.Crypto
-  return yield* crypto
-    .digest("SHA-256", new TextEncoder().encode(text))
+  const digest = yield* Digest.Digest
+  return yield* digest
+    .digest(Digest.sha256, new TextEncoder().encode(text))
     .pipe(Effect.map((bytes) => `sha256:${Hex.encode(bytes)}`))
 })
 

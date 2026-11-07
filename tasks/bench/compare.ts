@@ -25,6 +25,8 @@ interface Run extends Model.WorkerResult {
   readonly fixture: string | number
 }
 
+export class StatisticsError extends S.TaggedError<StatisticsError>()("StatisticsError", { cause: S.Defect() }) {}
+
 export const compare = Effect.fn("benchmarks.compare")(function* (options: Model.CompareOptions) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -223,9 +225,11 @@ export const compare = Effect.fn("benchmarks.compare")(function* (options: Model
                       Array.findFirst((result) => result.name === metric),
                       Option.getOrThrow
                     ).meanMs
-              return Effect.try(() =>
-                Stats.comparePairs({ base: Array.map(base, metricValue), head: Array.map(head, metricValue) })
-              ).pipe(
+              return Effect.try({
+                try: () =>
+                  Stats.comparePairs({ base: Array.map(base, metricValue), head: Array.map(head, metricValue) }),
+                catch: (cause) => StatisticsError.make({ cause })
+              }).pipe(
                 Effect.map((statistics) => ({
                   fixture: fixture.label,
                   count: fixture.count,
