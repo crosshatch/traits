@@ -3,7 +3,7 @@ import { LibsqlClient } from "@effect/sql-libsql"
 // Keep this adapter isolated; revisit when Drizzle offers a stable standalone schema-push API.
 import { pushSchema } from "drizzle-kit/payload/sqlite"
 import * as LibsqlDrizzle from "drizzle-orm/effect-libsql"
-import { Array, Context, Effect, FileSystem, Layer, Path } from "effect"
+import { Array, Context, Effect, FileSystem, Layer, Path, Schema as S } from "effect"
 
 import { relations, T } from "./tables/index.ts"
 import * as WorkspacePaths from "./WorkspacePaths.ts"
@@ -12,6 +12,8 @@ export class TraitDatabase extends Context.Service<
   TraitDatabase,
   LibsqlDrizzle.EffectLibsqlDatabase<typeof relations> & { readonly $client: LibsqlClient.LibsqlClient }
 >()("traits/TraitDatabase") {}
+
+export class SchemaPushError extends S.TaggedError<SchemaPushError>()("SchemaPushError", { cause: S.Defect() }) {}
 
 const make = Effect.fnUntraced(function* (url: string) {
   const client = yield* LibsqlClient.make({ url })
@@ -25,20 +27,22 @@ const make = Effect.fnUntraced(function* (url: string) {
   yield* Effect.gen(function* () {
     const services = yield* Effect.context<never>()
     const runPromise = Effect.runPromiseWith(services)
-    yield* Effect.tryPromise((signal) =>
-      pushSchema(T, {
-        query: <T>(query: string, params?: Array<unknown>) =>
-          client.unsafe(query, params).pipe(
-            Effect.map((rows) => Array.fromIterable(rows) as Array<T>),
-            (effect) => runPromise(effect, { signal })
-          ),
-        run: (query) => client.unsafe(query).pipe(Effect.asVoid, (effect) => runPromise(effect, { signal })),
-        batch: (statements) =>
-          Effect.forEach(statements, (query) => client.unsafe(query), { discard: true }).pipe((effect) =>
-            runPromise(effect, { signal })
-          )
-      }).then((migration) => migration.apply())
-    )
+    yield* Effect.tryPromise({
+      try: (signal) =>
+        pushSchema(T, {
+          query: <T>(query: string, params?: Array<unknown>) =>
+            client.unsafe(query, params).pipe(
+              Effect.map((rows) => Array.fromIterable(rows) as Array<T>),
+              (effect) => runPromise(effect, { signal })
+            ),
+          run: (query) => client.unsafe(query).pipe(Effect.asVoid, (effect) => runPromise(effect, { signal })),
+          batch: (statements) =>
+            Effect.forEach(statements, (query) => client.unsafe(query), { discard: true }).pipe((effect) =>
+              runPromise(effect, { signal })
+            )
+        }).then((migration) => migration.apply()),
+      catch: (cause) => SchemaPushError.make({ cause })
+    })
   }).pipe(client.withTransaction)
   return db
 })

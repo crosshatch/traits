@@ -2,6 +2,7 @@
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Console, Effect, Logger, Runtime } from "effect"
 import { Command } from "effect/cli"
+import { Digest, SecureRandom } from "effect/crypto"
 import { Reactivity } from "effect/reactivity"
 
 import * as Mcp from "./commands/mcp.ts"
@@ -14,7 +15,13 @@ Command.make("traits").pipe(
   Command.withHandler(() => Mcp.serve),
   Command.withSubcommands([Mcp.mcp, Run.run, reflection]),
   Command.run({ version: PackageJson.version }),
-  Effect.provide([NodeServices.layer, Reactivity.layer, Logger.layer([Logger.withConsoleError(Logger.formatSimple)])]),
+  Effect.provide([
+    NodeServices.layer,
+    Digest.layerWebCrypto,
+    SecureRandom.layerWebCrypto,
+    Reactivity.layer,
+    Logger.layer([Logger.withConsoleError(Logger.formatSimple)])
+  ]),
   Effect.tapCause((cause) =>
     Cause.hasInterruptsOnly(cause) || !Runtime.getErrorReported(Cause.squash(cause))
       ? Effect.void

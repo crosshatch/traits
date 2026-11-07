@@ -19,7 +19,12 @@ const tools = Toolkit.make(
   })
 )
 
+const database = McpServer.middleware<{ readonly provides: TraitDatabase }>()(
+  Effect.map(Effect.context<TraitDatabase>(), (context) => (effect) => Effect.provide(effect, context))
+)
+
 export const toolkit = McpServer.toolkit(tools).pipe(
+  Layer.provide(database.layer),
   Layer.provide(
     tools.toLayer({
       query: Effect.fnUntraced(

@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm"
-import { Cause, Clock, ConfigProvider, Crypto, Effect, Exit, Layer, Logger, Path, String } from "effect"
+import { Cause, Clock, ConfigProvider, Effect, Exit, Layer, Logger, Path, String } from "effect"
 import { McpProtocol, McpServer } from "effect/ai"
 import { Command } from "effect/cli"
+import { SecureRandom } from "effect/crypto"
 import { Hex } from "effect/encoding"
 import { FetchHttpClient } from "effect/http"
 import { OtlpLogger, OtlpSerialization, OtlpTracer } from "effect/observability"
@@ -25,6 +26,12 @@ const server = McpServer.layerStdio({
   name: "traits",
   version: PackageJson.version,
   protocols: [McpProtocol.v2025_11_25],
+  registrations: toolkit.pipe(
+    Layer.provide(TraitStore.layer),
+    Layer.provide(TraitsConfig.layer),
+    Layer.provide(TraitsConfigProvider.layer),
+    Layer.catchCause(ConfigurationError.layer)
+  ),
   instructions: String.stripMargin(`
   | Traits capture durable, domain-neutral preferences. Before completing a response to a correction, reusable preference, approved alternative idiom, or request to remember a convention, evaluate the whole exchange across turns and call derive_trait with the durable rule. Do not require the words "always" or "trait". Err on the side of proposing; skip only clearly one-off decisions, transient facts, or preferences whose complete rule and scope are verified as already covered by traits you have read. If coverage is uncertain, call derive_trait with the specific rule or a complete clarification and let the tool assess coverage; related broad guidance or a combination of general traits is not sufficient reason to skip. Apply and review requested edits first, then return to preference capture before the final response. Merely considering capture, mentioning a possible trait, or completing code checks does not complete this separate responsibility. Code-edit approval alone does not authorize saving a trait.
   | Author concise, independently applicable traits without losing requirements, exceptions, or useful examples. The unique descriptive kebab-case name (no redundant trait- prefix) is the canonical identity, not a separate id or path. Files live at .agents/traits/<name>.md; use exact names in traitNames and ignore directives and update references after renaming. Frontmatter contains name, subject, requirement, purpose, and optional natural-language applicability; the Markdown body is context. Do not add arbitrary metadata or a separate guidance field.
@@ -41,15 +48,6 @@ const server = McpServer.layerStdio({
   | Markdown synchronization is automatic; no manual refresh or server restart is needed after repairs.
   `)
 }).pipe(
-  Layer.provide(
-    toolkit.pipe(
-      Layer.provide(TraitStore.layer),
-      Layer.provide(TraitsConfig.layer),
-      Layer.provide(TraitsConfigProvider.layer),
-      Layer.catchCause(ConfigurationError.layer),
-      Layer.provideMerge(McpServer.McpServer.layer)
-    )
-  ),
   Layer.provide(Layer.effectDiscard(TraitProjectLock.acquire)),
   Layer.provide(ProjectPaths.layer),
   Layer.launch,
@@ -65,7 +63,7 @@ const server = McpServer.layerStdio({
 export const serve = Effect.gen(function* () {
   const db = yield* TraitDatabase.TraitDatabase
   const path = yield* Path.Path
-  const crypto = yield* Crypto.Crypto
+  const crypto = yield* SecureRandom.SecureRandom
   const runId = yield* crypto.randomBytes(16).pipe(Effect.map(Hex.encode))
   const startedAt = yield* Clock.currentTimeMillis
   yield* db
