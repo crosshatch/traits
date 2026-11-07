@@ -64,6 +64,8 @@ export const layer = toolkit.toLayer(
         const fs = yield* FileSystem.FileSystem
         const path = yield* Path.Path
         const cwd = path.resolve()
+        // Effect glob patterns use forward slashes, including on Windows.
+        const globPath = (value: string) => (path.sep === "\\" ? pipe(value, String.replaceAll("\\", "/")) : value)
         const includedFiles = yield* getIncludedFiles
         const traits = yield* params.traitNames === undefined
           ? store.ls
@@ -72,9 +74,9 @@ export const layer = toolkit.toLayer(
           params.include,
           (pattern) => {
             const absolute = path.isAbsolute(pattern) ? pattern : `${cwd}${path.sep}${pattern}`
-            return fs.glob(absolute, {
-              root: context.configRoot,
-              exclude: context.excludes
+            return fs.glob(globPath(absolute), {
+              root: globPath(context.configRoot),
+              exclude: Array.map(context.excludes, globPath)
             })
           },
           { concurrency: "unbounded" }
