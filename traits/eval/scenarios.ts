@@ -27,12 +27,6 @@ import { Trait } from "../Trait.ts"
 import { TraitName } from "../TraitName.ts"
 import { WorkspacePath } from "../util/util.ts"
 
-/** A scenario's trait and the expected verdicts for some of its files, keyed by path relative to the scenario. */
-const Scenario = S.Struct({
-  trait: TraitName,
-  labels: S.Record(S.String, S.Literals(["fail", "pass"]))
-})
-
 const policy = Report.DecisionPolicy.make({ fail: 0.5, pass: 0.5 })
 
 const program = Effect.gen(function* () {
@@ -53,9 +47,19 @@ const program = Effect.gen(function* () {
   const references = yield* ExtensionModule.resolve({ reference: "@traits/typescript/references", baseUrl })
   const totals = new Map<string, { readonly without: number; readonly with: number; readonly judgments: number }>()
   for (const id of ids) {
-    const scenario = yield* fs
-      .readFileString(path.join(scenarios, id, "scenario.json"))
-      .pipe(Effect.flatMap(S.decodeEffect(S.fromJsonString(Scenario))))
+    const scenario = yield* fs.readFileString(path.join(scenarios, id, "scenario.json")).pipe(
+      // The scenario's trait and the expected verdicts for some of its files, keyed by path relative to the scenario.
+      Effect.flatMap(
+        S.decodeEffect(
+          S.fromJsonString(
+            S.Struct({
+              trait: TraitName,
+              labels: S.Record(S.String, S.Literals(["fail", "pass"]))
+            })
+          )
+        )
+      )
+    )
     const loaded = yield* WorkspaceTraits.load(scenario.trait)
     const others = Array.filter(loaded.enrichments ?? [], (module) => module !== references)
     const { enrichments: _configured, ...definition } = loaded

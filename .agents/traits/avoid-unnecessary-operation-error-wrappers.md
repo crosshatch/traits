@@ -1,10 +1,10 @@
 ---
 name: avoid-unnecessary-operation-error-wrappers
-subject: Custom operation-specific error wrappers in Effect code, i.e. custom
-  errors constructed from an existing failure via mapError, catch, catchTag, or
-  an Effect.try/tryPromise catch. Excludes errors raised for new conditions
-  (e.g. Effect.filterOrFail, Effect.fail on a rejected value) and error channels
-  of abstract service/plugin contracts (see
+subject: Custom errors constructed from an existing Effect failure via mapError, catch,
+  catchTag, or an Effect.try/tryPromise catch. Excludes errors raised for new
+  conditions (e.g. Effect.filterOrFail), a try/tryPromise catch giving a raw
+  exception from a non-Effect API (such as localStorage) its first typed error,
+  and error channels of abstract service/plugin contracts (see
   operation-specific-service-error-channels).
 assertion: "Do not introduce a custom wrapper where the existing error suffices.
   A wrapper is justified only when it is needed for recovery (callers
@@ -57,3 +57,5 @@ OK (distinct stage): a lock helper failing with `LockError` for its own acquire/
 OK (transport/contract): an MCP tool handler mapping failures into its declared failure schema; a service interface declaring `StoreError` in its method signatures.
 
 OK (process boundary): `Effect.mapError((error) => CheckError.make({ message: error.message }))` where `CheckError` sets `[Runtime.errorExitCode] = 2`, because the command documents exit 2 for a check that could not run and the original errors would exit 1.
+
+OK (first typed error): `Effect.tryPromise({ try: () => navigator.clipboard.writeText(text), catch: (cause) => ClipboardWriteError.make({ cause }) })`, because the rejection is a raw exception with no Effect error to preserve.

@@ -26,6 +26,8 @@ it.live("lists the other files referencing each exported declaration", () =>
       path.join(root, "Parse.ts"),
       'import { Missing } from "./Errors.ts"\nexport const parse = () => new Missing()\nexport const again = () => new Missing()\n'
     )
+    yield* fs.writeFileString(path.join(root, "index.ts"), 'export { Missing } from "./Errors.ts"\n')
+    yield* fs.writeFileString(path.join(root, "all.ts"), 'export * from "./Errors.ts"\n')
     const enrich = yield* setup.pipe(Effect.provide(WorkspaceRoot.layer(root)))
     const describe = (change: Parameters<typeof fromSegment>[0], segment: Segment) =>
       Effect.gen(function* () {
@@ -38,8 +40,8 @@ it.live("lists the other files referencing each exported declaration", () =>
     const source = { path: WorkspacePath.make("Errors.ts"), text: errors }
     const whole = { start: 0, end: errors.length }
     const listed = yield* describe({ after: source }, Segment.cases.After.make({ range: whole }))
-    expect(listed).toContain("- Missing (class): Parse.ts (")
-    expect(listed).toContain("- unused (const): no references in other files")
+    expect(listed).toMatch(/- Missing \(class\): used by Parse\.ts \(\d\); re-exported by index\.ts/u)
+    expect(listed).toContain("- unused (const): no uses in other files")
     expect(listed).not.toContain("internal")
     const deleted = yield* describe({ before: source }, Segment.cases.Before.make({ range: whole }))
     expect(deleted).toBe("References are unavailable for a deleted file.")

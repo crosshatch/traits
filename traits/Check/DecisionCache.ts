@@ -41,15 +41,6 @@ const cachedResponse = (decision: CachedDecision) => ({
   ...(decision.modelId === undefined ? {} : { modelId: decision.modelId })
 })
 
-const SubjectAnswer = S.Struct({
-  label: S.Literals(["yes", "no", "uncertain"]),
-  probabilities: TraitSubject.TraitSubjectMatch
-})
-const AssertionAnswer = S.Struct({
-  label: S.Literals(["pass", "fail", "na", "uncertain"]),
-  probabilities: S.Struct({ pass: S.Finite, fail: S.Finite, na: S.Finite, uncertain: S.Finite })
-})
-
 /** Looks up a decision of the given answer shape; undefined without a cache, or when the entry is missing or no longer matches the shape. */
 const lookup = Effect.fnUntraced(function* <A>(key: TextDigest.TextDigest, answer: S.ConstraintDecoder<A>) {
   const cache = yield* Effect.serviceOption(DecisionCache).pipe(Effect.map(Option.getOrUndefined))
@@ -89,7 +80,13 @@ export const decideSubject = Effect.fn("DecisionCache.decideSubject")(function* 
   input: Input
 ) {
   const key = yield* keyOf("subject", [subject, decisionState(input)])
-  const hit = yield* lookup(key, SubjectAnswer)
+  const hit = yield* lookup(
+    key,
+    S.Struct({
+      label: S.Literals(["yes", "no", "uncertain"]),
+      probabilities: TraitSubject.TraitSubjectMatch
+    })
+  )
   if (hit !== undefined) {
     return {
       response: { ...cachedResponse(hit.decision), outcomes: {} },
@@ -107,7 +104,13 @@ export const evaluateAssertion = Effect.fn("DecisionCache.evaluateAssertion")(fu
   input: Input
 ) {
   const key = yield* keyOf("assertion", [assertion, decisionState(input)])
-  const hit = yield* lookup(key, AssertionAnswer)
+  const hit = yield* lookup(
+    key,
+    S.Struct({
+      label: S.Literals(["pass", "fail", "na", "uncertain"]),
+      probabilities: S.Struct({ pass: S.Finite, fail: S.Finite, na: S.Finite, uncertain: S.Finite })
+    })
+  )
   if (hit !== undefined) {
     return {
       ...cachedResponse(hit.decision),

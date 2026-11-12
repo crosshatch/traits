@@ -31,15 +31,6 @@ import { Trait } from "../Trait.ts"
 import { TraitName } from "../TraitName.ts"
 import { WorkspacePath } from "../util/util.ts"
 
-const Label = S.Literals(["fail", "pass", "unmatched"])
-
-/** Labeled fixtures: each fixture is a file snapshot checked at its logical path, labeled per trait. */
-const Cases = S.Struct({
-  traits: S.Array(TraitName),
-  fixtures: S.Array(S.Struct({ id: S.String, path: WorkspacePath })),
-  labels: S.Record(S.String, S.Record(S.String, Label))
-})
-
 const policies = [
   Report.DecisionPolicy.make({ fail: 0.5, pass: 0.5 }),
   Report.DecisionPolicy.make({ fail: 0.7, pass: 0.5 })
@@ -73,9 +64,20 @@ const layerCountedDecisions = (requests: Ref.Ref<number>) =>
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
-  const cases = yield* fs
-    .readFileString(path.join(import.meta.dirname, "cases.json"))
-    .pipe(Effect.flatMap(S.decodeEffect(S.fromJsonString(Cases))))
+  const cases = yield* fs.readFileString(path.join(import.meta.dirname, "cases.json")).pipe(
+    // Labeled fixtures: each fixture is a file snapshot checked at its logical path, labeled per trait.
+    Effect.flatMap(
+      S.decodeEffect(
+        S.fromJsonString(
+          S.Struct({
+            traits: S.Array(TraitName),
+            fixtures: S.Array(S.Struct({ id: S.String, path: WorkspacePath })),
+            labels: S.Record(S.String, S.Record(S.String, S.Literals(["fail", "pass", "unmatched"])))
+          })
+        )
+      )
+    )
+  )
   const configured = yield* TraitsConfig.load
   const modelIndex = process.argv.indexOf("--decision-model")
   const config =

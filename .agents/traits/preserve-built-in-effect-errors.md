@@ -1,10 +1,11 @@
 ---
 name: preserve-built-in-effect-errors
-subject: "Wrapping and mapping built-in Effect errors. In TypeScript or TSX
-  files. Exception: When every custom error or error mapping under assessment is
-  needed for recovery or a meaningful external boundary (as defined in the
-  assertion), or is required by whole-operation-operational-error-boundaries,
-  rather than merely wrapping a built-in Effect error."
+subject: "Wrapping and mapping built-in Effect errors in TypeScript or TSX files.
+  Excludes a try/tryPromise catch giving a raw exception from a non-Effect API
+  (such as localStorage) its first typed error. Exception: when every custom
+  error or error mapping under assessment is needed for recovery or a meaningful
+  external boundary (as defined in the assertion), or is required by
+  whole-operation-operational-error-boundaries."
 assertion: "Preserve Effect’s built-in error types and let errors propagate
   naturally: prefer `fs.readFileString(file)` over
   `fs.readFileString(file).pipe(Effect.mapError(wrapError))`. Avoid custom error
@@ -48,3 +49,5 @@ fs.readFileString(configPath).pipe(
 ```
 
 Also fine: mapping a `SchemaError` from decoding credentials to `InvalidAccountsError.make({ path })` so secret input is not retained (redaction), and converting a CLI operation's failures to `CliError.UserError({ cause, userMessage })` whose message identifies the user's file and the specific things to fix there (format, ownership, permissions, disk space), keeping the original cause.
+
+Also fine (first typed error): `Effect.tryPromise({ try: () => navigator.clipboard.writeText(text), catch: (cause) => ClipboardWriteError.make({ cause }) })`, because the rejection is a raw exception with no Effect error to preserve.
