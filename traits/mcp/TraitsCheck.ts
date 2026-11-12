@@ -17,6 +17,7 @@ export const TraitsCheck = Tool.make("traits.check", {
   description: pipe(
     String.stripMargin(`
     |Check files against this workspace's traits. Each file's current text is compared with its text at Git HEAD, so deleted files can be checked too.
+    |Call it before finishing any task that created, edited, or deleted files, rather than after each edit.
     |For the files a task created, edited, or deleted, pass all their paths in one call and omit traits, so every trait is checked. To recheck fixes, pass only the affected paths and traits.
     |For a created or changed trait, pass its name in traits and omit paths, so every project file is checked: tracked and untracked text files that Git does not ignore.
     |When passing paths, never pass dependencies, generated output, lockfiles, secrets, .env files, credentials, or binary files. Pass an environment or other trait names only when the user asks for them.
