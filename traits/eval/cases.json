@@ -5,7 +5,8 @@
     "direct-property-access-in-parameters",
     "provide-layer-arrays-directly",
     "omit-nominal-brands-on-schema-errors",
-    "module-named-files-over-internal-index"
+    "module-named-files-over-internal-index",
+    "shared-layers-at-program-boundaries"
   ],
   "fixtures": [
     {
@@ -115,6 +116,14 @@
     {
       "id": "enrichment-error-branded",
       "path": "traits/Enrichment/EnrichmentErrorBranded.ts"
+    },
+    {
+      "id": "workspace-check-local-infra",
+      "path": "traits/WorkspaceCheck.ts"
+    },
+    {
+      "id": "workspace-check",
+      "path": "traits/local/WorkspaceCheck.ts"
     }
   ],
   "labels": {
@@ -280,6 +289,10 @@
       "traits-config-test": "pass",
       "architecture": "unmatched",
       "package-json": "unmatched"
+    },
+    "shared-layers-at-program-boundaries": {
+      "workspace-check-local-infra": "fail",
+      "workspace-check": "pass"
     }
   }
 }
