@@ -162,23 +162,6 @@ it.effect("marks changes NotSegmented exactly when a shared segmenter diagnostic
   })
 )
 
-it.effect("records ignored changes without affecting verdicts", () =>
-  Effect.gen(function* () {
-    const twoChanges = {
-      ...reportWith(),
-      changes: [{ after: { path: "file.ts", digest } }, { after: { path: "generated.ts", digest } }]
-    }
-    const withChanges = (changes: ReadonlyArray<unknown>) => ({ ...twoChanges, traits: [{ trait, changes }] })
-    const report = yield* decode(withChanges([evaluated(completed), { _tag: "Ignored", reason: "Generated code." }]))
-    expect(Report.verdicts(report, policy)).toEqual({
-      verdict: "Pass",
-      traits: [{ verdict: "Pass", changes: [{ verdict: "Pass", inputs: ["Pass"] }, { inputs: [] }] }]
-    })
-    expect(S.is(Report.Report)(withChanges([evaluated(completed)]))).toBe(false)
-    expect(S.is(Report.Report)(withChanges([evaluated(completed), { _tag: "Ignored", reason: " " }]))).toBe(false)
-  })
-)
-
 it("requires portable, unambiguous identities", () => {
   const valid = reportWith()
   expect(S.is(Report.Report)(valid)).toBe(true)
@@ -195,6 +178,7 @@ it("requires portable, unambiguous identities", () => {
     traits: [{ trait, changes: [evaluated(completed), evaluated(completed)] }]
   }
   expect(S.is(Report.Report)({ ...valid, ...copy })).toBe(true)
+  expect(S.is(Report.Report)({ ...valid, ...copy, traits: [{ trait, changes: [evaluated(completed)] }] })).toBe(false)
   for (const path of ["/abs/file.ts", "./file.ts", "../file.ts", "dir\\file.ts", "C:/file.ts"]) {
     expect(S.is(Report.Report)({ ...valid, changes: [{ after: { path, digest } }] })).toBe(false)
   }

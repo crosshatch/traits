@@ -3,7 +3,7 @@ import { CloudflareClient, CloudflareDecisionModel } from "@effect/ai-cloudflare
 import { OpenAiClient, OpenAiDecisionModel, OpenAiLanguageModel } from "@effect/ai-openai"
 import * as OpenAiCompatible from "@effect/ai-openai-compat"
 import { OpenRouterClient, OpenRouterDecisionModel, OpenRouterLanguageModel } from "@effect/ai-openrouter"
-import { Config, Duration, Effect, Layer, Schedule, Schema as S, Semaphore } from "effect"
+import { Array, Config, type Context, Duration, Effect, Layer, Schedule, Schema as S, Semaphore } from "effect"
 import { type AiError, DecisionModel } from "effect/ai"
 
 const model = S.NonEmptyString.check(S.isTrimmed()).annotate({ description: "The provider's model ID." })
@@ -63,15 +63,49 @@ export const Models = S.Struct({
     "The models a workspace checks traits with, kept in version control so reviewers can see which models are used."
 })
 
-const openAiClient = OpenAiClient.layerConfig({ apiKey: Config.Redacted("OPENAI_API_KEY") })
-const anthropicClient = AnthropicClient.layerConfig({ apiKey: Config.Redacted("ANTHROPIC_API_KEY") })
-const openRouterClient = OpenRouterClient.layerConfig({ apiKey: Config.Redacted("OPENROUTER_API_KEY") })
-const cloudflareClient = CloudflareClient.layerConfig()
+/** A selected provider's credentials are missing from the environment and the workspace's .env files. */
+export class ModelCredentialsError extends S.TaggedError<ModelCredentialsError>()("ModelCredentialsError", {
+  /** The provider whose client could not be configured. */
+  provider: S.String.annotateKey({ description: "The provider whose client could not be configured." }),
+  /** The environment variables the provider reads its credentials from. */
+  variables: S.NonEmptyArray(S.String).annotateKey({
+    description: "The environment variables the provider reads its credentials from."
+  })
+}) {
+  override get message(): string {
+    return `The ${this.provider} model needs ${Array.join(this.variables, " and ")}. Set it in the environment or in a Git-ignored .env at the workspace root (linked worktrees also read the main checkout's .env), never in chat or committed files, then retry.`
+  }
+}
+
+/** Reports a provider client's missing configuration as the credentials it needs. */
+const requiring =
+  <I, S>(tag: Context.Key<I, S>, provider: string, variables: Array.NonEmptyReadonlyArray<string>) =>
+  <R>(client: Layer.Layer<I, Config.ConfigError, R>) =>
+    client.pipe(
+      Layer.catchTag("ConfigError", () => Layer.effect(tag, ModelCredentialsError.make({ provider, variables })))
+    )
+
+const openAiClient = OpenAiClient.layerConfig({ apiKey: Config.Redacted("OPENAI_API_KEY") }).pipe(
+  requiring(OpenAiClient.OpenAiClient, "OpenAI", ["OPENAI_API_KEY"])
+)
+const anthropicClient = AnthropicClient.layerConfig({ apiKey: Config.Redacted("ANTHROPIC_API_KEY") }).pipe(
+  requiring(AnthropicClient.AnthropicClient, "Anthropic", ["ANTHROPIC_API_KEY"])
+)
+const openRouterClient = OpenRouterClient.layerConfig({ apiKey: Config.Redacted("OPENROUTER_API_KEY") }).pipe(
+  requiring(OpenRouterClient.OpenRouterClient, "OpenRouter", ["OPENROUTER_API_KEY"])
+)
+const cloudflareClient = CloudflareClient.layerConfig().pipe(
+  requiring(CloudflareClient.CloudflareClient, "Cloudflare", ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"])
+)
 const openAiCompatibleClient = (selection: typeof OpenAiCompatibleModel.Type) =>
   OpenAiCompatible.OpenAiClient.layerConfig({
     apiUrl: Config.succeed(selection.url),
     ...(selection.apiKeyEnv === undefined ? {} : { apiKey: Config.Redacted(selection.apiKeyEnv) })
-  })
+  }).pipe(
+    requiring(OpenAiCompatible.OpenAiClient.OpenAiClient, `OpenAI-compatible (${selection.url})`, [
+      selection.apiKeyEnv ?? "an API key variable"
+    ])
+  )
 
 /** Language and decision model services for the selected providers; credentials are read from the active ConfigProvider. */
 export const layer = (models: Models) =>

@@ -4,6 +4,7 @@
   "license": "Apache-2.0",
   "files": [
     "segmenter/**/*.ts",
+    "package-exports/**/*.ts",
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
@@ -13,11 +14,13 @@
   ],
   "type": "module",
   "exports": {
-    "./segmenter": "./segmenter/index.ts"
+    "./segmenter": "./segmenter/index.ts",
+    "./package-exports": "./package-exports/index.ts"
   },
   "publishConfig": {
     "exports": {
-      "./segmenter": "./dist/segmenter/index.js"
+      "./segmenter": "./dist/segmenter/index.js",
+      "./package-exports": "./dist/package-exports/index.js"
     },
     "access": "public"
   },
@@ -25,6 +28,7 @@
     "oxc-parser": "catalog:"
   },
   "devDependencies": {
+    "@effect/platform-node": "catalog:",
     "@effect/vitest": "catalog:",
     "effect": "catalog:",
     "traits": "workspace:*"

@@ -5,7 +5,10 @@ import { HttpClient } from "effect/http"
 import { KeyValueStore } from "effect/persistence"
 import { ChildProcessSpawner } from "effect/process"
 
+import { WorkspaceRoot } from "./WorkspaceRoot.ts"
+
 /** Services the host provides once to every extension; registries capture exactly these from the host context. */
+export type HostServices = Context.Service.Identifier<(typeof HostServices)[number]>
 export const HostServices = [
   LanguageModel.LanguageModel,
   DecisionModel.DecisionModel,
@@ -16,11 +19,9 @@ export const HostServices = [
   HttpClient.HttpClient,
   FileSystem.FileSystem,
   Path.Path,
-  ChildProcessSpawner.ChildProcessSpawner
+  ChildProcessSpawner.ChildProcessSpawner,
+  WorkspaceRoot
 ] as const
-
-/** Services the host provides once to every extension. */
-export type HostServices = Context.Service.Identifier<(typeof HostServices)[number]>
 
 /**
  * Services available during trait extension setup and execution: host services plus a chat and scope

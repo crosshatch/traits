@@ -28,7 +28,12 @@ const failureReason = (failure: AiError.AiError | Decision.Unanswered | undefine
     return `unanswered (${failure.reason})`
   }
   const kind = "kind" in failure.reason ? ` (${globalThis.String(failure.reason.kind)})` : ""
-  return `${failure.reason._tag}${kind}${failure.isRetryable ? " after retries" : ""}`
+  // Provider descriptions stay out of reports, so name the likeliest cause and its remedy instead.
+  const remedy =
+    failure.reason._tag === "InvalidRequestError"
+      ? "; the provider rejected the request, often because the file exceeds the model's context. Exclude the file in traits.json, or check a smaller file"
+      : ""
+  return `${failure.reason._tag}${kind}${failure.isRetryable ? " after retries" : ""}${remedy}`
 }
 
 /** A decision failure explanation naming the reason when known. */
@@ -207,30 +212,24 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
       })
       const changes = yield* Effect.forEach(
         request.changes,
-        (supplied, index) => {
-          const ignored = supplied.ignores?.[trait.name]
-          if (ignored !== undefined) {
-            return Effect.succeed<ChangeResult>({
-              report: Report.ChangeReport.cases.Ignored.make({ reason: ignored }),
-              responses: []
-            })
-          }
-          const { change } = supplied
+        (entry, index) => {
           const inputs =
             trait.segment === undefined
               ? // Without a segmenter, the whole after source, or the before source of a deletion, is one input.
                 Result.succeed([
-                  change.after === undefined
+                  entry.change.after === undefined
                     ? Input.cases.Before.make({
-                        change: { before: change.before! },
-                        segment: Segment.cases.Before.make({ range: { start: 0, end: change.before!.text.length } })
+                        change: { before: entry.change.before! },
+                        segment: Segment.cases.Before.make({
+                          range: { start: 0, end: entry.change.before!.text.length }
+                        })
                       })
                     : Input.cases.After.make({
-                        change: { ...change, after: change.after },
-                        segment: Segment.cases.After.make({ range: { start: 0, end: change.after.text.length } })
+                        change: { ...entry.change, after: entry.change.after },
+                        segment: Segment.cases.After.make({ range: { start: 0, end: entry.change.after.text.length } })
                       })
                 ])
-              : // Missing results mean the segmenter's setup failed, so it never ran for any change.
+              : // Missing results mean the segmenter's setup failed, so it never ran for any entry.change.
                 (preparation.segmentations.get(trait.segment)?.[index] ?? Result.fail(undefined))
           return Result.isFailure(inputs)
             ? Effect.succeed<ChangeResult>({ report: Report.ChangeReport.cases.NotSegmented.make({}), responses: [] })

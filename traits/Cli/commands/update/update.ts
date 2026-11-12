@@ -21,8 +21,8 @@ export interface UpdateContext {
 
 const sourceLabel = {
   flag: "--from",
-  workspace: ".agents/traits/_traits.json",
-  installed: "installed version; .agents/traits/_traits.json has no readable version"
+  workspace: "traits.json",
+  installed: "installed version; traits.json has no readable version"
 } as const
 
 /** Renders migration context as Markdown for an agent to act on; the agent, not this command, performs the migration. */
@@ -52,8 +52,8 @@ export const render = (context: UpdateContext): string => {
       ...(Version.isNewer(latest, installed)
         ? [`1. Upgrade traits to ${latest}.`]
         : [`1. Keep traits at ${latest} or later.`]),
-      `2. Read each release below, oldest first, and apply every change it describes to .agents/traits/_traits.json and the workspace's trait files, validating them against the upgraded package's schemas.`,
-      `3. Set "version" in .agents/traits/_traits.json to ${latest}.`,
+      `2. Read each release below, oldest first, and apply every change it describes to traits.json and the workspace's trait files, validating them against the upgraded package's schemas.`,
+      `3. Set "version" in traits.json to ${latest}.`,
       "",
       `## Releases after ${from.version}`,
       ...Array.flatMap(releases, (release) => [
@@ -68,7 +68,7 @@ export const render = (context: UpdateContext): string => {
   )
 }
 
-/** Reads only the version from .agents/traits/_traits.json, since the rest may not match the current schema yet. */
+/** Reads only the version from traits.json, since the rest may not match the current schema yet. */
 const workspaceVersion = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -91,7 +91,7 @@ export const update = Command.make(
   {
     from: Flag.String("from").pipe(
       Flag.withSchema(Version.Version),
-      Flag.withDescription("Version to migrate from instead of the one in .agents/traits/_traits.json"),
+      Flag.withDescription("Version to migrate from instead of the one in traits.json"),
       Flag.optional
     )
   },

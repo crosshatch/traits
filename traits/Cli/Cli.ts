@@ -4,6 +4,7 @@ import { UserDirectories } from "effect/persistence"
 
 import PackageJson from "../package.json" with { type: "json" }
 import { WorkspaceCheck } from "../WorkspaceCheck.ts"
+import { WorkspaceDerive } from "../WorkspaceDerive.ts"
 import { WorkspaceRoot } from "../WorkspaceRoot.ts"
 import { CliPaths } from "./CliPaths.ts"
 import { auth } from "./commands/auth/auth.ts"
@@ -21,8 +22,14 @@ const userConfiguration = UserConfigLock.layer.pipe(
   Layer.provideMerge(UserDirectories.layer)
 )
 
-/** Checking against the current directory's workspace; only commands that check files build it. */
-const workspace = WorkspaceCheck.layer.pipe(Layer.provide(WorkspaceRoot.layer(".")))
+/** The current directory's workspace root; only commands that work on the workspace build it. */
+const root = WorkspaceRoot.layer(".")
+
+/** Checking against the current directory's workspace. */
+const workspace = WorkspaceCheck.layer.pipe(Layer.provide(root))
+
+/** Checking and deriving traits in the current directory's workspace, for the MCP server. */
+const server = Layer.mergeAll(WorkspaceCheck.layer, WorkspaceDerive.layer).pipe(Layer.provide(root))
 
 export const Cli = Command.make("traits").pipe(
   Command.withDescription(
@@ -32,7 +39,7 @@ export const Cli = Command.make("traits").pipe(
     auth.pipe(Command.provide(userConfiguration)),
     profile.pipe(Command.provide(userConfiguration)),
     check.pipe(Command.provide(workspace)),
-    mcp.pipe(Command.provide(workspace)),
+    mcp.pipe(Command.provide(server)),
     update
   ]),
   Command.run({ version: PackageJson.version })

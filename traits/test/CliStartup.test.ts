@@ -194,7 +194,7 @@ it.live(
       const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-check-exit-" })
       const missing = yield* runCli(["check", "src/a.ts"], {}, false, cwd)
       expect(missing).toMatchObject({ code: 2, stdout: "" })
-      expect(missing.stderr).toContain(".agents/traits/_traits.json")
+      expect(missing.stderr).toContain("traits.json")
       expect(missing.stderr).not.toContain("    at ")
       const partialPolicy = yield* runCli(["check", "--fail", "0.5", "src/a.ts"], {}, false, cwd)
       expect(partialPolicy).toMatchObject({ code: 2, stdout: "" })

@@ -71,13 +71,12 @@ const workspace = (contents: string | undefined) =>
     const path = yield* Path.Path
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-config-" })
     if (contents !== undefined) {
-      yield* fs.makeDirectory(path.join(directory, ".agents", "traits"), { recursive: true })
-      yield* fs.writeFileString(path.join(directory, ".agents", "traits", "_traits.json"), contents)
+      yield* fs.writeFileString(path.join(directory, "traits.json"), contents)
     }
     return WorkspaceRoot.layer(directory)
   })
 
-it.effect("loads .agents/traits/_traits.json and explains read, schema, and version failures", () =>
+it.effect("loads traits.json and explains read, schema, and version failures", () =>
   Effect.gen(function* () {
     const configured = yield* workspace(JSON.stringify(config))
     const loaded = yield* TraitsConfig.load.pipe(Effect.provide(configured))
@@ -102,7 +101,7 @@ it.effect("loads .agents/traits/_traits.json and explains read, schema, and vers
       const root = yield* workspace(contents)
       const error = yield* TraitsConfig.load.pipe(Effect.provide(root), Effect.flip)
       expect(error._tag).toBe(tag)
-      expect(error.message).toContain("_traits.json")
+      expect(error.message).toContain("traits.json")
     }
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
@@ -120,7 +119,10 @@ it.effect("builds each role's model from configured credentials and reads the wo
     expect(Context.getOption(services, LanguageModel.LanguageModel)._tag).toBe("Some")
     expect(Context.getOption(services, DecisionModel.DecisionModel)._tag).toBe("Some")
     const missing = yield* build(ConfigProvider.fromUnknown({})).pipe(Effect.flip)
-    expect(missing._tag).toBe("ConfigError")
+    expect(missing._tag).toBe("ModelCredentialsError")
+    expect(missing.message).toContain(
+      "The OpenAI model needs OPENAI_API_KEY. Set it in the environment or in a Git-ignored .env"
+    )
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 

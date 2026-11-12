@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Layer, Path, pipe, Schema as S } from "effect"
+import { Array, Effect, FileSystem, Layer, Order, Path, pipe, Schema as S } from "effect"
 import { DecisionModel } from "effect/ai"
 import { Digest } from "effect/crypto"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
@@ -45,7 +45,7 @@ const workspace = Effect.gen(function* () {
   yield* fs.makeDirectory(path.join(directory, ".agents", "traits"), { recursive: true })
   yield* fs.makeDirectory(path.join(directory, "src"))
   yield* fs.writeFileString(
-    path.join(directory, ".agents", "traits", "_traits.json"),
+    path.join(directory, "traits.json"),
     JSON.stringify({ version: PackageJson.version, models })
   )
   yield* fs.writeFileString(path.join(directory, ".agents", "traits", "correct.md"), traitFile("correct"))
@@ -97,6 +97,46 @@ it.live("checks working-tree files against their text at HEAD and reports trait 
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 
+it.live("checks every project file Git does not ignore when no paths are given, skipping binaries", () =>
+  Effect.gen(function* () {
+    const directory = yield* workspace
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    yield* fs.writeFileString(path.join(directory, ".gitignore"), "ignored.ts\n")
+    yield* fs.writeFileString(path.join(directory, "ignored.ts"), "export const ignored = true\n")
+    yield* fs.writeFile(path.join(directory, "image.png"), new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01]))
+    const check = (request: WorkspaceCheck.WorkspaceCheckRequest) =>
+      Effect.gen(function* () {
+        const config = yield* TraitsConfig.load
+        return yield* WorkspaceCheck.run(config, request)
+      })
+    const report = yield* check({ traits: [TraitName.make("small")] }).pipe(Effect.provide(services(directory)))
+    const checked = Array.flatMap(report.changes, (change) => (change.after === undefined ? [] : [change.after.path]))
+    expect(Array.sort(checked, Order.String)).toEqual([
+      ".agents/traits/correct.md",
+      ".agents/traits/small.md",
+      ".gitignore",
+      "src/modified.ts",
+      "src/untracked.ts",
+      "traits.json"
+    ])
+    yield* fs.writeFileString(
+      path.join(directory, "traits.json"),
+      JSON.stringify({ version: PackageJson.version, models, exclude: [".agents/**", "traits.json"] })
+    )
+    const narrowed = yield* check({ traits: [TraitName.make("small")] }).pipe(Effect.provide(services(directory)))
+    const kept = Array.flatMap(narrowed.changes, (change) => (change.after === undefined ? [] : [change.after.path]))
+    expect(Array.sort(kept, Order.String)).toEqual([".gitignore", "src/modified.ts", "src/untracked.ts"])
+    // Outside Git there is no project file listing, so the request explains how to proceed.
+    const outside = yield* fs.makeTempDirectoryScoped({ prefix: "traits-no-git-" })
+    yield* fs.makeDirectory(path.join(outside, ".agents", "traits"), { recursive: true })
+    yield* fs.copyFile(path.join(directory, "traits.json"), path.join(outside, "traits.json"))
+    const unlisted = yield* check({}).pipe(Effect.provide(services(outside)), Effect.flip)
+    expect(unlisted._tag).toBe("ProjectFilesError")
+    expect(unlisted.message).toContain("pass the paths")
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+)
+
 it.live("explains requests and workspaces it cannot check", () =>
   Effect.gen(function* () {
     const directory = yield* workspace
@@ -124,7 +164,7 @@ it.live("explains requests and workspaces it cannot check", () =>
     expect(outdated._tag).toBe("TraitFileParseError")
     expect(outdated.message).toContain("traits update")
     yield* fs.writeFileString(
-      path.join(directory, ".agents", "traits", "_traits.json"),
+      path.join(directory, "traits.json"),
       JSON.stringify({
         version: PackageJson.version,
         models,
@@ -188,7 +228,7 @@ it.live(
       expect(unreadable.message).toContain("cannot be read")
       yield* fs.remove(path.join(environments, "ci.json"), { recursive: true })
 
-      // Names start with a letter, so the underscored configuration and environments sort before every trait file.
+      // Names start with a letter, so the underscored environments directory sorts before every trait file.
       expect(S.is(TraitName)("2-space-indent")).toBe(false)
       expect(S.is(WorkspaceTraits.EnvironmentName)("2-ci")).toBe(false)
       for (const file of ["README.md", "2-space-indent.md"]) {

@@ -46,7 +46,7 @@ OK (not a wrapper): an error raised for a new condition.
 Effect.filterOrFail((exit) => exit === 0, (exit) => GitFailed.make({ exit }))
 ```
 
-OK (remediation): `Effect.mapError((cause) => ConfigMissing.make({ cause, message: "Create .agents/traits/_traits.json with …" }))`.
+OK (remediation): `Effect.mapError((cause) => ConfigMissing.make({ cause, message: "Create traits.json with …" }))`.
 
 OK (remediation): converting a CLI operation's failures to `CliError.UserError({ cause, userMessage })` whose message identifies the user's file and the specific things to fix there (format, ownership, permissions), keeping the original cause.
 

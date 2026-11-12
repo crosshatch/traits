@@ -92,7 +92,6 @@ export const Report = S.Struct({
             const change = report.changes[index]!
             const segmenter = trait.trait.segment
             return ChangeReport.match(result, {
-              Ignored: () => true,
               NotSegmented: () => segmenter !== undefined && failedSegmentation(segmenter, index),
               Evaluated: (evaluated) =>
                 (segmenter === undefined || !failedSegmentation(segmenter, index)) &&
@@ -162,9 +161,8 @@ export const verdicts: {
   const traits = Array.map(report.traits, (trait) => {
     const changes = Array.map(
       trait.changes,
-      (change): { readonly verdict?: Verdict; readonly inputs: ReadonlyArray<Verdict> } =>
+      (change): { readonly verdict: Verdict; readonly inputs: ReadonlyArray<Verdict> } =>
         ChangeReport.match(change, {
-          Ignored: () => ({ inputs: [] }),
           NotSegmented: () => ({ verdict: "Incomplete" as const, inputs: [] }),
           Evaluated: (evaluated) => {
             const inputs = Array.map(evaluated.inputs, inputVerdict)
@@ -173,9 +171,7 @@ export const verdicts: {
         })
     )
     return {
-      verdict: combineVerdicts(
-        Array.flatMap(changes, (change) => (change.verdict === undefined ? [] : [change.verdict]))
-      ),
+      verdict: combineVerdicts(Array.map(changes, (change) => change.verdict)),
       changes
     }
   })

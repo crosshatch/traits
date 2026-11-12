@@ -1,4 +1,17 @@
-import { Array, Context, DateTime, Effect, FileSystem, Layer, Path, pipe, Schema as S, Stream, String } from "effect"
+import {
+  Array,
+  Context,
+  DateTime,
+  Effect,
+  FileSystem,
+  Layer,
+  Path,
+  pipe,
+  Predicate,
+  Schema as S,
+  Stream,
+  String
+} from "effect"
 import { Digest, SecureRandom } from "effect/crypto"
 import { FetchHttpClient } from "effect/http"
 import { KeyValueStore } from "effect/persistence"
@@ -6,13 +19,12 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { check } from "./Check/Check.ts"
 import { EnrichmentRegistry } from "./Enrichment/EnrichmentRegistry.ts"
-import * as Models from "./Models.ts"
 import { SegmenterRegistry } from "./Segmenter/SegmenterRegistry.ts"
 import * as TraitFile from "./TraitFile.ts"
 import * as TraitsConfig from "./TraitsConfig.ts"
 import { WorkspacePath } from "./util/util.ts"
-import * as WorkspaceConfigProvider from "./WorkspaceConfigProvider.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
+import * as WorkspaceModels from "./WorkspaceModels.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 import * as WorkspaceTraits from "./WorkspaceTraits.ts"
 
@@ -21,14 +33,24 @@ const fileConcurrency = 16
 
 /** Which workspace files to check, and which of the workspace's traits to check them against; every trait by default. */
 export interface WorkspaceCheckRequest extends WorkspaceTraits.TraitSelection {
-  /** Files to check, relative to the workspace root or absolute within it. */
-  readonly paths: ReadonlyArray<string>
+  /** Files to check, relative to the workspace root or absolute within it; every project file when omitted. */
+  readonly paths?: ReadonlyArray<string> | undefined
 }
 
-/** .agents/traits/_traits.json extends trait collections, which checking does not support yet. */
+/** Project files could not be listed, because `git ls-files` failed. */
+export class ProjectFilesError extends S.TaggedError<ProjectFilesError>()("ProjectFilesError", {
+  /** git ls-files' exit code. */
+  exitCode: S.Int.annotateKey({ description: "git ls-files' exit code." })
+}) {
+  override get message(): string {
+    return `Could not list project files (git ls-files exited with ${this.exitCode}). Checking every project file requires the workspace to be in a Git repository; otherwise pass the paths to check.`
+  }
+}
+
+/** The workspace configuration extends trait collections, which checking does not support yet. */
 export class ExtendsUnsupportedError extends S.TaggedError<ExtendsUnsupportedError>()("ExtendsUnsupportedError", {}) {
   override get message(): string {
-    return ".agents/traits/_traits.json extends other trait collections, which checking does not support yet. Remove extends to check the workspace's own traits."
+    return "traits.json extends other trait collections, which checking does not support yet. Remove extends to check the workspace's own traits."
   }
 }
 
@@ -76,8 +98,43 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
     // Untracked files, new files, and workspaces outside Git have no committed text.
     return exitCode === 0 ? text : undefined
   }, Effect.scoped)
+  // Tracked and untracked files that Git does not ignore or the configuration excludes, relative to the workspace root; submodules and deleted files are dropped below.
+  const projectFiles = Effect.gen(function* () {
+    const excluded = Array.map(config.exclude ?? [], (pattern) => `:(exclude,glob)${pattern}`)
+    const handle = yield* spawner.spawn(
+      ChildProcess.make(
+        "git",
+        ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", ".", ...excluded],
+        {
+          cwd: directory,
+          stdin: "ignore",
+          stdout: "pipe",
+          stderr: "ignore"
+        }
+      )
+    )
+    const { exitCode, listing } = yield* Effect.all(
+      { exitCode: handle.exitCode, listing: handle.stdout.pipe(Stream.decodeText(), Stream.mkString) },
+      { concurrency: "unbounded" }
+    )
+    if (exitCode !== 0) {
+      return yield* ProjectFilesError.make({ exitCode })
+    }
+    const listed = pipe(listing, String.split("\0"), Array.filter(String.isNonEmpty), Array.dedupe)
+    return yield* Effect.filter(
+      listed,
+      (file) =>
+        fs.stat(path.join(directory, file)).pipe(
+          Effect.map((info) => info.type === "File"),
+          Effect.orElseSucceed(() => false)
+        ),
+      { concurrency: fileConcurrency }
+    )
+  }).pipe(Effect.scoped)
+  const listing = request.paths === undefined
+  const requestedPaths = listing ? yield* projectFiles : request.paths
   const workspacePaths = yield* Effect.forEach(
-    request.paths,
+    requestedPaths,
     Effect.fnUntraced(function* (requested) {
       const absolute = path.resolve(directory, requested)
       // The workspace root is canonical, so canonicalize the parent too; it exists even for deleted files.
@@ -101,6 +158,10 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
           WorkspaceFileError.make({ path: file, problem: `it cannot be read: ${cause.message}`, cause })
         )
       )
+      // Listed files include binaries such as images, which have no text to assess.
+      if (listing && current !== undefined && String.includes("\u0000")(current)) {
+        return undefined
+      }
       const committed = yield* committedText(file).pipe(Effect.orElseSucceed(() => undefined))
       const before = committed === undefined ? undefined : { path: file, text: committed }
       if (current === undefined) {
@@ -114,7 +175,7 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
       return { change: { after: { path: file, text: current }, ...(before === undefined ? {} : { before }) } }
     }),
     { concurrency: fileConcurrency }
-  )
+  ).pipe(Effect.map(Array.filter(Predicate.isNotUndefined)))
   const traits = yield* Effect.forEach(
     names,
     (name) =>
@@ -127,13 +188,12 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
   return yield* check({ traits, changes })
 })
 
-/** Loads .agents/traits/_traits.json, builds its models and fresh extension registries, and checks the requested files. */
+/** Loads traits.json, builds its models and fresh extension registries, and checks the requested files. */
 const checkWorkspace = Effect.fn("WorkspaceCheck.check")(function* (request: WorkspaceCheckRequest) {
   const config = yield* TraitsConfig.load
-  const models = Models.layerDecisionLimit(config.concurrency).pipe(
-    Layer.provideMerge(Models.layer(config.models).pipe(Layer.provide(WorkspaceConfigProvider.layer)))
+  const registries = Layer.mergeAll(SegmenterRegistry.layer, EnrichmentRegistry.layer).pipe(
+    Layer.provideMerge(WorkspaceModels.layer(config))
   )
-  const registries = Layer.mergeAll(SegmenterRegistry.layer, EnrichmentRegistry.layer).pipe(Layer.provideMerge(models))
   return yield* run(config, request).pipe(Effect.provide(registries))
 })
 
@@ -142,7 +202,7 @@ export class WorkspaceCheck extends Context.Service<WorkspaceCheck>()("traits/Wo
   make: Effect.gen(function* () {
     const services = yield* Effect.context<Effect.Services<ReturnType<typeof checkWorkspace>>>()
     return {
-      /** Checks the requested files, reloading .agents/traits/_traits.json and trait files on every call. */
+      /** Checks the requested files, reloading the workspace configuration and trait files on every call. */
       check: (request: WorkspaceCheckRequest) => checkWorkspace(request).pipe(Effect.provideContext(services))
     }
   })

@@ -1,9 +1,7 @@
-import { Array, Record, Schema as S } from "effect"
+import { Array, Schema as S } from "effect"
 
-import { ChangeReport } from "../Report/ChangeReport.ts"
 import { TraitOrigin } from "../Report/TraitOrigin.ts"
 import { Trait } from "../Trait.ts"
-import { TraitName } from "../TraitName.ts"
 import { Change } from "../util/util.ts"
 
 /** A static trait to evaluate, with where the host loaded it from. */
@@ -17,18 +15,12 @@ export const CheckTrait = S.Struct({
   }).pipe(S.optionalKey)
 }).annotate({ description: "A static trait to evaluate, with where the host loaded it from." })
 
-/** A text change to evaluate, with any traits it excludes, such as by ignore directives in the file. */
+/** A text change to evaluate against every supplied trait. */
 export type CheckChange = typeof CheckChange.Type
 export const CheckChange = S.Struct({
   /** The supplied before and/or after text snapshots. */
-  change: Change.annotateKey({ description: "The supplied before and/or after text snapshots." }),
-  /** Reasons keyed by the names of supplied traits that exclude this change. */
-  ignores: S.Record(TraitName, ChangeReport.cases.Ignored.fields.reason)
-    .annotate({ description: "Reasons keyed by the names of supplied traits that exclude this change." })
-    .pipe(S.optionalKey)
-}).annotate({
-  description: "A text change to evaluate, with any traits it excludes, such as by ignore directives in the file."
-})
+  change: Change.annotateKey({ description: "The supplied before and/or after text snapshots." })
+}).annotate({ description: "A text change to evaluate against every supplied trait." })
 
 /** Caller-ordered, uniquely named traits and text changes with distinct after paths. */
 export type CheckInput = typeof CheckInput.Type
@@ -57,14 +49,5 @@ export const CheckInput = S.Struct({
         return Array.dedupe(afterPaths).length === afterPaths.length
       },
       { message: "No two changes may share an after path." }
-    ),
-    S.makeFilter(
-      (input) =>
-        Array.every(input.changes, (entry) =>
-          Array.every(Record.keys(entry.ignores ?? {}), (name) =>
-            Array.some(input.traits, (candidate) => candidate.trait.name === name)
-          )
-        ),
-      { message: "Ignores must name supplied traits." }
     )
   )

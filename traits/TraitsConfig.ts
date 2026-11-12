@@ -7,7 +7,7 @@ import * as Version from "./Version.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
-/** The workspace configuration in .agents/traits/_traits.json: plain JSON, so it loads without executing code or installing JavaScript dependencies. Every .agents/traits/<name>.md file is a trait; environments narrow which are checked. Unknown keys are rejected so outdated files are reported rather than misread. */
+/** The workspace configuration in traits.json at the workspace root: plain JSON, so it loads without executing code or installing JavaScript dependencies. Every .agents/traits/<name>.md file is a trait; environments narrow which are checked. Unknown keys are rejected so outdated files are reported rather than misread. */
 export type TraitsConfig = typeof TraitsConfig.Type
 export const TraitsConfig = S.Struct({
   /** A JSON Schema URL for editor validation and completion; ignored by traits. */
@@ -24,16 +24,23 @@ export const TraitsConfig = S.Struct({
       "Trait collections from other repositories to check in addition to the workspace's own traits; not supported yet."
   }).pipe(S.optionalKey),
   models: Models,
+  /** Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; explicitly requested paths are always checked. */
+  exclude: S.Array(S.NonEmptyString)
+    .annotateKey({
+      description:
+        "Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; explicitly requested paths are always checked."
+    })
+    .pipe(S.optionalKey),
   /** The maximum number of simultaneous decision model requests; 16 when omitted. */
   concurrency: S.Int.check(S.isGreaterThanOrEqualTo(1))
     .pipe(S.withDecodingDefaultKey(Effect.succeed(16)))
     .annotateKey({ description: "The maximum number of simultaneous decision model requests; 16 when omitted." })
 }).annotate({
   description:
-    "The workspace configuration in .agents/traits/_traits.json: plain JSON, so it loads without executing code or installing JavaScript dependencies."
+    "The workspace configuration in traits.json at the workspace root: plain JSON, so it loads without executing code or installing JavaScript dependencies."
 })
 
-/** .agents/traits/_traits.json could not be read. */
+/** The configuration file could not be read. */
 export class TraitsConfigReadError extends S.TaggedError<TraitsConfigReadError>()("TraitsConfigReadError", {
   /** The configuration file path. */
   path: S.String.annotateKey({ description: "The configuration file path." }),
@@ -41,11 +48,11 @@ export class TraitsConfigReadError extends S.TaggedError<TraitsConfigReadError>(
   cause: S.Defect().annotateKey({ description: "The underlying filesystem failure." })
 }) {
   override get message(): string {
-    return `Could not read ${this.path}. Create it with a version and models for language and decision.`
+    return `Could not read ${this.path}. Create it at the workspace root with a version and models for language and decision.`
   }
 }
 
-/** .agents/traits/_traits.json is not valid JSON or does not match the current schema. */
+/** The configuration file is not valid JSON or does not match the current schema. */
 export class TraitsConfigDecodeError extends S.TaggedError<TraitsConfigDecodeError>()("TraitsConfigDecodeError", {
   /** The configuration file path. */
   path: S.String.annotateKey({ description: "The configuration file path." }),
@@ -57,7 +64,7 @@ export class TraitsConfigDecodeError extends S.TaggedError<TraitsConfigDecodeErr
   }
 }
 
-/** .agents/traits/_traits.json was written for a traits version incompatible with the installed one. */
+/** The configuration file was written for a traits version incompatible with the installed one. */
 export class TraitsConfigVersionError extends S.TaggedError<TraitsConfigVersionError>()("TraitsConfigVersionError", {
   /** The configuration file path. */
   path: S.String.annotateKey({ description: "The configuration file path." }),
@@ -69,11 +76,11 @@ export class TraitsConfigVersionError extends S.TaggedError<TraitsConfigVersionE
   override get message(): string {
     return Version.status(this.configured, this.installed) === "Newer"
       ? `${this.path} requires traits ${this.configured}, but ${this.installed} is installed. Upgrade traits before checking.`
-      : `${this.path} was migrated for traits ${this.configured}, but ${this.installed} is installed and may read configuration or trait files differently. Run \`traits update\` and follow its migration steps for .agents/traits/_traits.json and every trait file.`
+      : `${this.path} was migrated for traits ${this.configured}, but ${this.installed} is installed and may read configuration or trait files differently. Run \`traits update\` and follow its migration steps for ${this.path} and every trait file.`
   }
 }
 
-/** Loads and validates .agents/traits/_traits.json from the workspace root, failing when it was written for an incompatible traits version. */
+/** Loads and validates traits.json from the workspace root, failing when it was written for an incompatible traits version. */
 export const load = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path

@@ -1,8 +1,8 @@
-/** The workspace directory holding traits configuration, trait files, and environments, relative to the workspace root. */
+/** The workspace directory holding trait files and environments, relative to the workspace root. */
 export const directory = ".agents/traits"
 
-/** The workspace configuration file; the underscore sorts it before trait files. */
-export const config = `${directory}/_traits.json`
+/** The workspace configuration file, at the workspace root. */
+export const config = "traits.json"
 
 /** Named environment configurations; the underscore sorts them before trait files. */
 export const environments = `${directory}/_environments`

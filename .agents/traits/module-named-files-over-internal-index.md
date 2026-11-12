@@ -12,7 +12,7 @@ assertion: Use the module's name instead of index.ts for internal modules,
 purpose: Make module identity and ownership visible in filenames and import
   paths while preserving package export entrypoints.
 enrichments:
-  - ./_enrichments/package-exports.ts
+  - "@traits/typescript/package-exports"
 ---
 ```diff
 -import { Cli } from "./Cli/index.ts"

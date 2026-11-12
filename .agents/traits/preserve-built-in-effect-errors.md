@@ -42,7 +42,7 @@ Fine: the message tells the user exactly what to do, which `PlatformError` canno
 ```ts
 fs.readFileString(configPath).pipe(
   Effect.mapError((cause) =>
-    ConfigError.make({ cause, message: "Create .agents/traits/_traits.json with a `traits` array, or run `traits update`" })
+    ConfigError.make({ cause, message: "Create traits.json with a `traits` array, or run `traits update`" })
   ),
 )
 ```

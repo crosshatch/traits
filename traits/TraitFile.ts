@@ -35,6 +35,36 @@ export const TraitFrontmatter = S.Struct({
     "The YAML frontmatter of a trait file; unknown keys are rejected so outdated files are reported rather than misread."
 })
 
+/** A trait as written to its file: frontmatter with extension references as written, and an optional Markdown body of supporting context. */
+export type TraitDocument = typeof TraitDocument.Type
+export const TraitDocument = S.Struct({
+  ...TraitFrontmatter.fields,
+  /** Supporting context, such as examples; not hidden requirements. */
+  body: TraitBody.annotateKey({ description: "Supporting context, such as examples; not hidden requirements." }).pipe(
+    S.optionalKey
+  )
+}).annotate({
+  description:
+    "A trait as written to its file: frontmatter with extension references as written, and an optional Markdown body of supporting context."
+})
+
+/** Renders a trait file: YAML frontmatter in canonical key order, then the body. */
+export const serialize = (document: TraitDocument): string => {
+  const { body, ...frontmatter } = document
+  const yaml = Yaml.stringify(
+    {
+      name: frontmatter.name,
+      subject: frontmatter.subject,
+      assertion: frontmatter.assertion,
+      purpose: frontmatter.purpose,
+      segment: frontmatter.segment,
+      enrichments: frontmatter.enrichments
+    },
+    { lineWidth: 80 }
+  )
+  return body === undefined ? `---\n${yaml}---\n` : `---\n${yaml}---\n\n${body}\n`
+}
+
 /** A trait file could not be read. */
 export class TraitFileReadError extends S.TaggedError<TraitFileReadError>()("TraitFileReadError", {
   /** The trait file path. */
@@ -43,7 +73,7 @@ export class TraitFileReadError extends S.TaggedError<TraitFileReadError>()("Tra
   cause: S.Defect().annotateKey({ description: "The underlying filesystem failure." })
 }) {
   override get message(): string {
-    return `Could not read trait file ${this.path}. Every trait named in .agents/traits/_traits.json needs a .agents/traits/<name>.md file.`
+    return `Could not read trait file ${this.path}. Every checked trait needs a .agents/traits/<name>.md file.`
   }
 }
 
@@ -63,8 +93,8 @@ const Delimiter = S.Literals(["---\r\n", "---\n"])
 /** Frontmatter lines up to the first closing delimiter, so a later --- in the Markdown body stays in the body. */
 const FrontmatterLines = S.String.check(S.isPattern(/^(?:(?!---(?:\r?\n|$))[^\n]*\n)*$/u))
 
-/** A trait document: YAML frontmatter between --- lines, then an optional Markdown body. */
-const TraitDocument = S.Union([
+/** A trait file's text: YAML frontmatter between --- lines, then an optional Markdown body. */
+const TraitText = S.Union([
   S.TemplateLiteralParser([Delimiter, FrontmatterLines, Delimiter, S.String]),
   S.TemplateLiteralParser([Delimiter, FrontmatterLines, "---", ""])
 ])
@@ -73,7 +103,7 @@ const TraitDocument = S.Union([
 export const parse = Effect.fn("TraitFile.parse")(function* (input: { readonly path: string; readonly text: string }) {
   const [, frontmatterText, , bodyText] = yield* pipe(
     input.text,
-    S.decodeUnknownEffect(TraitDocument),
+    S.decodeUnknownEffect(TraitText),
     Effect.mapError(() =>
       TraitFileParseError.make({ path: input.path, problem: "it must start with YAML frontmatter between --- lines." })
     )
@@ -100,15 +130,9 @@ export const parse = Effect.fn("TraitFile.parse")(function* (input: { readonly p
   return { frontmatter, body: body === "" ? undefined : TraitBody.make(body) }
 })
 
-/** Loads .agents/traits/<name>.md and resolves its extension references relative to the file. */
-export const load = Effect.fn("TraitFile.load")(function* (name: TraitName) {
-  const fs = yield* FileSystem.FileSystem
+/** Parses a trait file's text and resolves its extension references relative to the file, which must be named for the trait. */
+export const decode = Effect.fn("TraitFile.decode")(function* (name: TraitName, file: string, text: string) {
   const path = yield* Path.Path
-  const { directory } = yield* WorkspaceRoot
-  const file = path.join(directory, WorkspaceLayout.traitFile(name))
-  const text = yield* fs
-    .readFileString(file)
-    .pipe(Effect.mapError((cause) => TraitFileReadError.make({ path: file, cause })))
   const { frontmatter, body } = yield* parse({ path: file, text })
   if (frontmatter.name !== name) {
     return yield* TraitFileParseError.make({
@@ -116,6 +140,7 @@ export const load = Effect.fn("TraitFile.load")(function* (name: TraitName) {
       problem: `its name is "${frontmatter.name}", but the file is named for "${name}".`
     })
   }
+  // The file path is absolute, so it always converts to a URL.
   const baseUrl = yield* path.toFileUrl(file).pipe(Effect.orDie)
   const resolve = (reference: string) => ExtensionModule.resolve({ reference, baseUrl })
   const segment = frontmatter.segment === undefined ? undefined : yield* resolve(frontmatter.segment)
@@ -133,4 +158,16 @@ export const load = Effect.fn("TraitFile.load")(function* (name: TraitName) {
     ...(enrichments === undefined ? {} : { enrichments }),
     ...(body === undefined ? {} : { body })
   })
+})
+
+/** Loads .agents/traits/<name>.md and resolves its extension references relative to the file. */
+export const load = Effect.fn("TraitFile.load")(function* (name: TraitName) {
+  const fs = yield* FileSystem.FileSystem
+  const path = yield* Path.Path
+  const { directory } = yield* WorkspaceRoot
+  const file = path.join(directory, WorkspaceLayout.traitFile(name))
+  const text = yield* fs
+    .readFileString(file)
+    .pipe(Effect.mapError((cause) => TraitFileReadError.make({ path: file, cause })))
+  return yield* decode(name, file, text)
 })

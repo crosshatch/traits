@@ -35,8 +35,10 @@ export const check = Command.make(
   "check",
   {
     paths: Argument.String("paths").pipe(
-      Argument.withDescription("Files to check, relative to the workspace root"),
-      Argument.atLeast(1)
+      Argument.withDescription(
+        "Files to check, relative to the workspace root; every project file Git does not ignore when omitted"
+      ),
+      Argument.atLeast(0)
     ),
     traits: Flag.String("trait").pipe(
       Flag.withSchema(TraitName),
@@ -65,7 +67,7 @@ export const check = Command.make(
       }
       const report = yield* WorkspaceCheck.use((workspace) =>
         workspace.check({
-          paths: params.paths,
+          ...(params.paths.length > 0 ? { paths: params.paths } : {}),
           ...(Option.isSome(params.environment) ? { environment: params.environment.value } : {}),
           ...(params.traits.length > 0 ? { traits: params.traits } : {})
         })

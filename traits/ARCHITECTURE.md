@@ -4,16 +4,14 @@
 
 `check({ traits, changes })` evaluates caller-ordered traits and changes and
 returns a `Report`. Each trait entry is `{ trait, origin? }`, so a trait's
-origin travels with it; each change entry is `{ change, ignores? }`, where
-`ignores` maps names of traits that exclude the change to reasons, so an ignore
-directive travels with the file it appears in. It requires `SegmenterRegistry`,
-`EnrichmentRegistry`, `Digest` for report text digests, and a `DecisionModel`
-when assertions are assessed. Guidance-only traits do not call the decision
-model. The request is decoded first: duplicate trait names, two changes sharing
-an after path, or ignores naming unknown traits fail with a `SchemaError` before
-any extension or model work. Success of the Effect means report assembly
-finished, not that its assessments satisfy a caller's acceptance policy; use
-`Report.verdicts` with a `DecisionPolicy` for that interpretation.
+origin travels with it; each change entry is `{ change }`. It requires
+`SegmenterRegistry`, `EnrichmentRegistry`, `Digest` for report text digests, and
+a `DecisionModel` when assertions are assessed. Guidance-only traits do not call
+the decision model. The request is decoded first: duplicate trait names or two
+changes sharing an after path fail with a `SchemaError` before any extension or
+model work. Success of the Effect means report assembly finished, not that its
+assessments satisfy a caller's acceptance policy; use `Report.verdicts` with a
+`DecisionPolicy` for that interpretation.
 
 Subject identification is also available independently as
 `TraitSubject.match(subjects, input)`, where subjects is a caller-keyed record.
@@ -87,21 +85,22 @@ host's scoped runtime and reuse them across checks. They can be composed with
 `Layer.mergeAll`. The host provides the services listed in
 `ExtensionServices.HostServices`; registries capture exactly those from the host
 context, so no other host service, such as the host's own `Scope`, reaches an
-extension. `ExtensionServices` is `HostServices` plus the chat and scope the
-registry creates for each execution. Keep the same model/account bindings for
-the lifetime of those registries. Each registry owns its own typed cache; the
-internal `ExtensionRegistry.make` shares cache lifecycle, setup-scope ownership,
-service capture, and fresh execution contexts without a kind discriminator. It
-accepts setup-result, setup-error, and execution-error schemas;
-`ExtensionModule.load` owns importing, module/result validation, and rejection
-of undeclared setup errors. The shared execution transformer preserves declared
-execution errors and turns unexpected failures into defects. Each typed registry
-still owns its execution contract. Module-shape and setup-result validation
-failures remain typed `SchemaError`s alongside the declared setup error.
-Registry service types are inferred from their `make` effects, with host
-services provided internally. Registries also require `WorkspaceRoot`, the
-canonical workspace directory built with `WorkspaceRoot.layer(directory)`, and
-import each module from that root.
+extension. `HostServices` includes `WorkspaceRoot`, so extensions can read
+workspace files that change paths are relative to. `ExtensionServices` is
+`HostServices` plus the chat and scope the registry creates for each execution.
+Keep the same model/account bindings for the lifetime of those registries. Each
+registry owns its own typed cache; the internal `ExtensionRegistry.make` shares
+cache lifecycle, setup-scope ownership, service capture, and fresh execution
+contexts without a kind discriminator. It accepts setup-result, setup-error, and
+execution-error schemas; `ExtensionModule.load` owns importing, module/result
+validation, and rejection of undeclared setup errors. The shared execution
+transformer preserves declared execution errors and turns unexpected failures
+into defects. Each typed registry still owns its execution contract.
+Module-shape and setup-result validation failures remain typed `SchemaError`s
+alongside the declared setup error. Registry service types are inferred from
+their `make` effects, with host services provided internally. Registries also
+require `WorkspaceRoot`, the canonical workspace directory built with
+`WorkspaceRoot.layer(directory)`, and import each module from that root.
 
 Extension references must already be resolved. Hosts resolve script paths and
 package references with `ExtensionModule.resolve({ reference, baseUrl })` from
@@ -130,17 +129,16 @@ diagnostics, a read-only map of initialized enrichments by module, and read-only
 maps of validated input-selection `Result`s. Successful segmenter setup
 functions are discarded once segmentation finishes. Registry layers still own
 setup caching. `Check/Evaluation.ts` builds each trait's `ChangeReport` directly
-from the request and preparation: `Ignored` when the change names the trait,
-`NotSegmented` when its segmentation failed, and otherwise `Evaluated` inputs.
-It also totals run usage and models from the responses it received. The
-enrichment registry validates extension output; typed error handlers use the
-existing `EnrichmentError.reason` to coordinate recovery, then record a safe
-explanation on the enrichment outcome. Recovery cancellation records a
-`Cancelled` outcome without context or explanation, and without constructing
-interrupted exits. Caller interruption still exits through Effect. Trait/input
-`Deferred`s coordinate recovery, not report storage. Evaluation returns the
-report's own `TraitReport`, `ChangeReport`, and `InputReport` shapes; no
-parallel result hierarchy or conversion layer is needed.
+from the request and preparation: `NotSegmented` when its segmentation failed,
+and otherwise `Evaluated` inputs. It also totals run usage and models from the
+responses it received. The enrichment registry validates extension output; typed
+error handlers use the existing `EnrichmentError.reason` to coordinate recovery,
+then record a safe explanation on the enrichment outcome. Recovery cancellation
+records a `Cancelled` outcome without context or explanation, and without
+constructing interrupted exits. Caller interruption still exits through Effect.
+Trait/input `Deferred`s coordinate recovery, not report storage. Evaluation
+returns the report's own `TraitReport`, `ChangeReport`, and `InputReport`
+shapes; no parallel result hierarchy or conversion layer is needed.
 
 Cancellation uses normal Effect fiber interruption: pending work is interrupted
 and execution cleanup completes, without returning a partial report. Callers do
@@ -157,13 +155,15 @@ Static traits + provided inputs
 
 ## Check a workspace
 
-A workspace keeps its configuration and traits under `.agents/traits/`:
+A workspace keeps its configuration at its root and its traits under
+`.agents/traits/`:
 
-- `.agents/traits/_traits.json` is plain JSON, so it loads without executing
-  code or installing JavaScript dependencies. It records the traits `version`
-  the workspace was last migrated to, optional `extends`, the `models` for the
-  language and decision roles, and an optional `concurrency`: the maximum number
-  of simultaneous decision requests, 16 by default. It lists no traits, and
+- `traits.json` at the workspace root is plain JSON, so it loads without
+  executing code or installing JavaScript dependencies. It records the traits
+  `version` the workspace was last migrated to, optional `extends`, the `models`
+  for the language and decision roles, an optional `concurrency`: the maximum
+  number of simultaneous decision requests, 16 by default, and optional
+  `exclude` patterns for checks of every project file. It lists no traits, and
   unknown keys are rejected, so a trait list from an earlier version is reported
   rather than ignored. Credentials come from the environment, falling back to
   the workspace's `.env` and then to the main checkout's `.env`, so linked Git
@@ -195,15 +195,44 @@ its file as `origin`. `extends` is not supported yet and fails the check rather
 than silently checking fewer traits.
 
 The `WorkspaceCheck` service owns the complete pipeline, independent of any
-front end: `check(request)` loads `.agents/traits/_traits.json` and the trait
-files, builds the configured models and fresh extension registries, and returns
-the full report. `WorkspaceCheck.layer` supplies default host services (HTTP,
-WebCrypto digests and randomness, an in-memory key-value store, and the local
-time zone); the host provides the platform and `WorkspaceRoot`. The
-`traits check` CLI command prints the report as JSON, and the `traits.check` MCP
-tool returns it, turning any failure into its message so the agent can act, for
-example by running `traits update`. Both use the current directory as the
+front end: `check(request)` loads `traits.json` and the trait files, builds the
+configured models and fresh extension registries, and returns the full report.
+`WorkspaceCheck.layer` supplies default host services (HTTP, WebCrypto digests
+and randomness, an in-memory key-value store, and the local time zone); the host
+provides the platform and `WorkspaceRoot`. The `traits check` CLI command prints
+the report as JSON, and the `traits.check` MCP tool returns it, turning any
+failure, including unexpected defects, into its message so the agent can act,
+for example by running `traits update`. Both use the current directory as the
 workspace.
+
+Without paths, a check covers every project file: tracked and untracked files
+that Git does not ignore, listed by `git ls-files`, minus the configuration's
+`exclude` patterns (Git glob pathspecs, relative to the workspace root), deleted
+files, submodules, and files containing NUL bytes. Explicit paths are always
+checked as requested.
+
+## Derive traits
+
+`TraitDerivation.derive(document, approve)` turns one proposed trait file into a
+saved one. It validates the proposal as its file would be read, including
+extension references, then asks the decision model how each existing trait
+relates to it: distinct, covered, clarification, conflict, or inconclusive,
+deciding up to 32 existing traits per request. Conflicting or inconclusive
+traits, or several clarification targets, return `Unresolved`; covering traits
+return `Covered`; an unrelated trait with the same name returns `NameTaken`.
+Otherwise it calls `approve` once with the complete file text, and with the
+current file when a clarification replaces an existing trait under its name. The
+user's answer yields `Created` or `Updated` after writing, or
+`RevisionRequested` or `Skipped` without writing. A target file that changed
+while waiting for approval fails with `TraitChangedError` rather than
+overwriting it.
+
+The `WorkspaceDerive` service runs derivations one at a time with the configured
+models. The `traits.derive` MCP tool supplies `approve` as one form elicitation
+per proposal, offering Save, Revise with feedback, or Skip, and returns every
+outcome in the same call; declining or dismissing the form skips the proposal.
+Clients that cannot show forms get a failure carrying the proposals, since
+saving requires the user's approval.
 
 `traits check` writes only the report to stdout; verdicts and errors go to
 stderr. Without a policy it exits 0 whenever the check runs, because the report
@@ -579,7 +608,6 @@ Report
     ├── trait: Trait
     ├── origin?: TraitOrigin ({ path?, collection? }, at least one)
     └── changes: ChangeReport[] (aligned with Report.changes)
-        ├── Ignored      { reason }
         ├── NotSegmented {}
         └── Evaluated    { inputs: InputReport[] }
             ├── Completed { segment, digest, enrichments, assessment? }
@@ -659,17 +687,6 @@ entry: the workspace path of the trait's definition file, the extended
 collection environment (`TraitsSource`) that supplied it, or both. Hosts omit it
 when unknown, such as for programmatic definitions; the runner never infers it.
 
-## Ignore changes per trait
-
-A caller may exclude a change from a trait by naming the trait in that change's
-`ignores` with a reason, for example from an ignore directive in the file. The
-trait reports that change as `Ignored` with its reason and creates no inputs for
-it. The reason is untrusted caller text, not an instruction. A change is
-segmented only when at least one trait using that segmenter does not ignore it,
-so a segmenter failure on an ignored file cannot block anything. Subject gating
-has its own `Unmatched` input case rather than reusing `Ignored`, since it is a
-model decision per input, not a caller exclusion per change.
-
 ## Enrichment outcomes
 
 Each input records one `EnrichmentOutcome` per configured enrichment, in
@@ -712,13 +729,12 @@ enrichment outcome other than `Succeeded`, because it was assessed with reduced
 context. Otherwise an input takes its assessment's verdict, and completed
 guidance-only inputs are `Pass`. An `Evaluated` change combines its inputs, so a
 change whose segmenter selected nothing passes; a `NotSegmented` change is
-`Incomplete`; an `Ignored` change has no verdict. A trait combines its
-non-ignored changes. The report combines its traits and is `Incomplete` whenever
-any shared diagnostic exists. Verdicts combine by the precedence `Fail`,
-`Incomplete`, `Inconclusive`, `Pass`, and an empty selection is `Pass`. `Fail`
-takes precedence over `Incomplete`, so CI can distinguish "the code violates a
-trait, so block" from "a check failed to run, so retry". Ignored changes do not
-contribute. No probability threshold is implicit in the helper.
+`Incomplete`. A trait combines its changes. The report combines its traits and
+is `Incomplete` whenever any shared diagnostic exists. Verdicts combine by the
+precedence `Fail`, `Incomplete`, `Inconclusive`, `Pass`, and an empty selection
+is `Pass`. `Fail` takes precedence over `Incomplete`, so CI can distinguish "the
+code violates a trait, so block" from "a check failed to run, so retry". No
+probability threshold is implicit in the helper.
 
 This relies on a complete runner-produced report. Structure guarantees that
 every trait/change pair and every configured enrichment is represented; the

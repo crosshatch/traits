@@ -12,10 +12,10 @@ export interface Preparation {
   readonly setupDiagnostics: ReadonlyArray<Report.Diagnostic>
   /** Executions of successfully initialized enrichments, by module. */
   readonly enrichments: ReadonlyMap<WorkspacePath, Effect.Success<ReturnType<EnrichmentRegistry["Service"]>>>
-  /** Per-module results in change order; undefined where every trait using the module ignores the change. */
+  /** Per-module results in change order. */
   readonly segmentations: ReadonlyMap<
     WorkspacePath,
-    ReadonlyArray<Result.Result<ReadonlyArray<Input>, Report.Diagnostic> | undefined>
+    ReadonlyArray<Result.Result<ReadonlyArray<Input>, Report.Diagnostic>>
   >
 }
 
@@ -100,14 +100,6 @@ export const make = Effect.fnUntraced(function* (
       return Effect.forEach(
         request.changes,
         (entry, index) => {
-          if (
-            !Array.some(
-              request.traits,
-              (candidate) => candidate.trait.segment === module && entry.ignores?.[candidate.trait.name] === undefined
-            )
-          ) {
-            return Effect.undefined
-          }
           const origin = Report.DiagnosticOrigin.cases.SegmenterExecution.make({ module, change: index })
           const fallback = Report.Diagnostic.make({
             origin,

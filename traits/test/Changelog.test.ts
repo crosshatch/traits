@@ -51,9 +51,9 @@ it("renders migration context for an agent, nesting each release's headings unde
     latest: "0.6.0",
     releases
   })
-  expect(text).toContain("- Workspace version (.agents/traits/_traits.json): 0.5.14")
+  expect(text).toContain("- Workspace version (traits.json): 0.5.14")
   expect(text).toContain("1. Upgrade traits to 0.6.0.")
-  expect(text).toContain('3. Set "version" in .agents/traits/_traits.json to 0.6.0.')
+  expect(text).toContain('3. Set "version" in traits.json to 0.6.0.')
   expect(text).toMatch(/### 0\.5\.15[\s\S]*### 0\.6\.0/u)
   expect(text).toContain("### 0.6.0\n\n#### Minor Changes")
   const installedLatest = render({

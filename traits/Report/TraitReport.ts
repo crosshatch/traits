@@ -31,7 +31,6 @@ export const TraitReport = S.Struct({
           Array.every(enrichments, (enrichment, index) => enrichment.module === configured[index])
         return Array.every(report.changes, (change) =>
           ChangeReport.match(change, {
-            Ignored: () => true,
             NotSegmented: () => trait.segment !== undefined,
             Evaluated: (evaluated) =>
               Array.every(evaluated.inputs, (input) =>

@@ -10,15 +10,13 @@ export const ReportVerdicts = S.Struct({
   /** Per-trait verdicts aligned with Report.traits. */
   traits: S.Array(
     S.Struct({
-      /** Combined verdict for the trait across its non-ignored changes. */
-      verdict: Verdict.annotateKey({ description: "Combined verdict for the trait across its non-ignored changes." }),
+      /** Combined verdict for the trait across its changes. */
+      verdict: Verdict.annotateKey({ description: "Combined verdict for the trait across its changes." }),
       /** Per-change verdicts aligned with the trait report's changes. */
       changes: S.Array(
         S.Struct({
-          /** Combined verdict for the change; omitted when the change is ignored. */
-          verdict: Verdict.annotateKey({
-            description: "Combined verdict for the change; omitted when the change is ignored."
-          }).pipe(S.optionalKey),
+          /** Combined verdict for the change. */
+          verdict: Verdict.annotateKey({ description: "Combined verdict for the change." }),
           /** Per-input verdicts aligned with the change's evaluated inputs; empty unless evaluated. */
           inputs: S.Array(Verdict).annotate({
             description: "Per-input verdicts aligned with the change's evaluated inputs; empty unless evaluated."

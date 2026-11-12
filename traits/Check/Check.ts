@@ -1,4 +1,4 @@
-import { Array, Effect, flow, pipe, Predicate, Schema as S } from "effect"
+import { Array, Effect, pipe, Schema as S } from "effect"
 import type { Digest } from "effect/crypto"
 
 import PackageJson from "../package.json" with { type: "json" }
@@ -54,11 +54,7 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
     traits,
     diagnostics: [
       ...preparation.setupDiagnostics,
-      ...pipe(
-        preparation.segmentations.values(),
-        Array.fromIterable,
-        Array.flatMap(flow(Array.filter(Predicate.isNotUndefined), Array.getFailures))
-      )
+      ...pipe(preparation.segmentations.values(), Array.fromIterable, Array.flatMap(Array.getFailures))
     ]
   })
 })

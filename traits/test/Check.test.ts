@@ -369,7 +369,7 @@ it.effect("explains assessment failures by reason without leaking provider text,
       ],
       [
         () => providerError(AiError.InvalidRequestError.make({ description: "rejected private-error secret-source" })),
-        "Assertion assessment failed: InvalidRequestError."
+        "Assertion assessment failed: InvalidRequestError; the provider rejected the request, often because the file exceeds the model's context. Exclude the file in traits.json, or check a smaller file."
       ],
       [
         () => providerError(AiError.AuthenticationError.make({ kind: "InvalidKey", description: "private-error" })),
@@ -455,11 +455,7 @@ it.effect("rejects ambiguous requests before any extension or model work", () =>
     const source = { after: { path: WorkspacePath.make("file.ts"), text: "source" } }
     for (const request of [
       { traits: [{ trait: trait("same") }, { trait: trait("same") }], changes: [{ change: source }] },
-      { traits: [{ trait: trait("one") }], changes: [{ change: source }, { change: source }] },
-      {
-        traits: [{ trait: trait("one") }],
-        changes: [{ change: source, ignores: Record.singleton(TraitName.make("missing"), "x") }]
-      }
+      { traits: [{ trait: trait("one") }], changes: [{ change: source }, { change: source }] }
     ]) {
       const error = yield* check(request).pipe(
         Effect.provide(unused),
@@ -471,38 +467,6 @@ it.effect("rejects ambiguous requests before any extension or model work", () =>
       )
       expect(S.isSchemaError(error)).toBe(true)
     }
-  })
-)
-
-it.effect("records ignored changes and skips segmentation needed only by ignoring traits", () =>
-  Effect.gen(function* () {
-    const segmented: Array<string> = []
-    const registry = hostFrom({
-      ...unusedLoaders,
-      Segmenter: () =>
-        Effect.succeed((change: Change) =>
-          Effect.sync(() => {
-            segmented.push(change.after!.path)
-            return [Segment.cases.After.make({ range: { start: 0, end: 1 } })]
-          })
-        )
-    })
-    const report = yield* check({
-      traits: [{ trait: trait("segmented", { assertion, segment: module }) }, { trait: trait("whole", { assertion }) }],
-      changes: [
-        { change: { after: { path: WorkspacePath.make("source.ts"), text: "source" } } },
-        {
-          change: { after: { path: WorkspacePath.make("generated.ts"), text: "generated" } },
-          ignores: Record.singleton(TraitName.make("segmented"), "Generated code.")
-        }
-      ]
-    }).pipe(Effect.provide(Layer.merge(registry, model)))
-    expect(segmented).toEqual(["source.ts"])
-    expect(report.diagnostics).toEqual([])
-    expect(Array.map(report.traits[0]!.changes, (change) => change._tag)).toEqual(["Evaluated", "Ignored"])
-    expect(report.traits[0]!.changes[1]).toEqual(Report.ChangeReport.cases.Ignored.make({ reason: "Generated code." }))
-    expect(Array.map(report.traits[1]!.changes, (change) => change._tag)).toEqual(["Evaluated", "Evaluated"])
-    yield* pipe(report, S.decodeEffect(Report.Report))
   })
 )
 

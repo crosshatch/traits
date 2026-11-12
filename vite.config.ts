@@ -60,7 +60,6 @@ export default defineConfig({
     projects: [
       "@traits/typescript/vite.config.ts",
       "oxlints/vite.config.ts",
-      "traits-prev/vite.config.ts",
       "traits/vite.config.ts"
     ]
   }
