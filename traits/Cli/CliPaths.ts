@@ -45,7 +45,7 @@ export class CliPaths extends Context.Service<CliPaths>()("traits/Cli/CliPaths",
         },
         { concurrency: "unbounded" }
       )
-      if (exitCode === 128 && stderr.startsWith("fatal: not a git repository (or any ")) {
+      if (exitCode === 128 && pipe(stderr, String.startsWith("fatal: not a git repository (or any "))) {
         return canonicalCwd
       }
       if (exitCode !== 0) {

@@ -26,20 +26,21 @@ export class LayerModuleLoadError extends S.TaggedError<LayerModuleLoadError>()(
 }
 
 /** Imports a module's default Layer without building it or validating its provided services. */
-export const load = Effect.fn("LayerModule.load")(
-  function* (filename: string) {
-    const path = yield* Path.Path
-    const url = yield* path.toFileUrl(path.resolve(filename)).pipe(Effect.orDie)
-    const module = yield* Effect.tryPromise((): Promise<unknown> => import(url.href))
-    // The decode failure is dropped so that a module's export values, such as secrets, are not retained.
-    return yield* pipe(
-      module,
-      S.decodeUnknownEffect(LayerModule),
-      Effect.mapBoth({ onSuccess: (module) => module.default, onFailure: () => undefined })
-    )
-  },
-  (effect, filename) =>
-    Effect.mapError(effect, (cause) =>
-      LayerModuleLoadError.make({ path: filename, ...(cause === undefined ? {} : { cause }) })
-    )
-)
+export const load = Effect.fn("LayerModule.load")(function* (filename: string) {
+  const path = yield* Path.Path
+  // The path is resolved to an absolute one, so it always converts to a URL.
+  const url = yield* path.toFileUrl(path.resolve(filename)).pipe(Effect.orDie)
+  const module = yield* Effect.tryPromise({
+    try: (): Promise<unknown> => import(url.href),
+    catch: (cause) => LayerModuleLoadError.make({ path: filename, cause })
+  })
+  // The decode failure is dropped so that a module's export values, such as secrets, are not retained.
+  return yield* pipe(
+    module,
+    S.decodeUnknownEffect(LayerModule),
+    Effect.mapBoth({
+      onSuccess: (module) => module.default,
+      onFailure: () => LayerModuleLoadError.make({ path: filename })
+    })
+  )
+})

@@ -62,6 +62,7 @@ it.effect("fails the entire selection on syntax errors without exposing source t
       expect(error.instruction).not.toContain("do-not-report-this")
     }
     // Other file types have no statements to assess, so checking them against TypeScript traits stays complete.
-    expect(yield* segment({ after: { path: WorkspacePath.make("data.json"), text: "{}" } })).toEqual([])
+    const unsegmented = yield* segment({ after: { path: WorkspacePath.make("data.json"), text: "{}" } })
+    expect(unsegmented).toEqual([])
   })
 )
