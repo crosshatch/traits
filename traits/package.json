@@ -17,6 +17,7 @@
     "Check/**/*.ts",
     "Cli/**/*.ts",
     "Enrichment/**/*.ts",
+    "local/**/*.ts",
     "mcp/**/*.ts",
     "Report/**/*.ts",
     "Segmenter/**/*.ts",
@@ -34,11 +35,13 @@
   "type": "module",
   "exports": {
     ".": "./index.ts",
+    "./local": "./local/index.ts",
     "./mcp": "./mcp/index.ts"
   },
   "publishConfig": {
     "exports": {
       ".": "./dist/index.js",
+      "./local": "./dist/local/index.js",
       "./mcp": "./dist/mcp/index.js"
     },
     "access": "public"

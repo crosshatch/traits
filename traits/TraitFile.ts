@@ -1,15 +1,11 @@
-import { Array, Effect, FileSystem, Path, pipe, Schema as S, String } from "effect"
+import { Effect, pipe, Schema as S, String } from "effect"
 import * as Yaml from "yaml"
 
-import * as ExtensionModule from "./ExtensionModule.ts"
-import { Trait } from "./Trait.ts"
 import { TraitAssertion } from "./TraitAssertion.ts"
 import { TraitBody } from "./TraitBody.ts"
 import { TraitName } from "./TraitName.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
-import * as WorkspaceLayout from "./WorkspaceLayout.ts"
-import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
 const reference = S.NonEmptyString.annotate({
   description: "A path relative to the trait file, or an ESM package reference, resolved from the trait file."
@@ -65,18 +61,6 @@ export const serialize = (document: TraitDocument): string => {
   return body === undefined ? `---\n${yaml}---\n` : `---\n${yaml}---\n\n${body}\n`
 }
 
-/** A trait file could not be read. */
-export class TraitFileReadError extends S.TaggedError<TraitFileReadError>()("TraitFileReadError", {
-  /** The trait file path. */
-  path: S.String.annotateKey({ description: "The trait file path." }),
-  /** The underlying filesystem failure. */
-  cause: S.Defect().annotateKey({ description: "The underlying filesystem failure." })
-}) {
-  override get message(): string {
-    return `Could not read trait file ${this.path}. Every checked trait needs a .agents/traits/<name>.md file.`
-  }
-}
-
 /** A trait file is not Markdown with valid trait frontmatter. */
 export class TraitFileParseError extends S.TaggedError<TraitFileParseError>()("TraitFileParseError", {
   /** The trait file path. */
@@ -128,46 +112,4 @@ export const parse = Effect.fn("TraitFile.parse")(function* (input: { readonly p
   )
   const body = pipe(bodyText, String.trim)
   return { frontmatter, body: body === "" ? undefined : TraitBody.make(body) }
-})
-
-/** Parses a trait file's text and resolves its extension references relative to the file, which must be named for the trait. */
-export const decode = Effect.fn("TraitFile.decode")(function* (name: TraitName, file: string, text: string) {
-  const path = yield* Path.Path
-  const { frontmatter, body } = yield* parse({ path: file, text })
-  if (frontmatter.name !== name) {
-    return yield* TraitFileParseError.make({
-      path: file,
-      problem: `its name is "${frontmatter.name}", but the file is named for "${name}".`
-    })
-  }
-  // The file path is absolute, so it always converts to a URL.
-  const baseUrl = yield* path.toFileUrl(file).pipe(Effect.orDie)
-  const resolve = (reference: string) => ExtensionModule.resolve({ reference, baseUrl })
-  const segment = frontmatter.segment === undefined ? undefined : yield* resolve(frontmatter.segment)
-  const enrichments =
-    frontmatter.enrichments === undefined
-      ? undefined
-      : // A trait lists few enrichments, and resolving one only locates a module file, so resolve them together.
-        yield* Effect.all(Array.map(frontmatter.enrichments, resolve), { concurrency: "unbounded" })
-  return Trait.make({
-    name: frontmatter.name,
-    purpose: frontmatter.purpose,
-    ...(frontmatter.subject === undefined ? {} : { subject: frontmatter.subject }),
-    ...(frontmatter.assertion === undefined ? {} : { assertion: frontmatter.assertion }),
-    ...(segment === undefined ? {} : { segment }),
-    ...(enrichments === undefined ? {} : { enrichments }),
-    ...(body === undefined ? {} : { body })
-  })
-})
-
-/** Loads .agents/traits/<name>.md and resolves its extension references relative to the file. */
-export const load = Effect.fn("TraitFile.load")(function* (name: TraitName) {
-  const fs = yield* FileSystem.FileSystem
-  const path = yield* Path.Path
-  const { directory } = yield* WorkspaceRoot
-  const file = path.join(directory, WorkspaceLayout.traitFile(name))
-  const text = yield* fs
-    .readFileString(file)
-    .pipe(Effect.mapError((cause) => TraitFileReadError.make({ path: file, cause })))
-  return yield* decode(name, file, text)
 })

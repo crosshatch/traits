@@ -18,11 +18,11 @@ import { AiError, Decision, DecisionModel, LanguageModel } from "effect/ai"
 import { FetchHttpClient } from "effect/http"
 import { TestClock } from "effect/testing"
 
+import * as TraitsConfig from "../local/TraitsConfig.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as Models from "../Models.ts"
 import PackageJson from "../package.json" with { type: "json" }
-import * as TraitsConfig from "../TraitsConfig.ts"
 import * as Version from "../Version.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
 
 const models = {
   language: { provider: "openai-compatible", model: "llama-3", url: "http://localhost:11434/v1" },

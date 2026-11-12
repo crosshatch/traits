@@ -131,6 +131,13 @@ A check reports an input as failed with `InvalidRequestError` when the provider
 rejects the request, usually because the file exceeds the model's context. Add
 the file to `exclude` in `traits.json`, or check smaller files.
 
+### Results do not change after a re-check
+
+Checks remember each completed decision in `.agents/traits/.cache/`, so
+re-checking unchanged traits and files reuses earlier answers instead of asking
+the model again. Delete that directory to have every decision made afresh. The
+directory ignores itself in Git.
+
 ### Outdated workspace
 
 When `traits.json`'s `version` is incompatible with the installed package,

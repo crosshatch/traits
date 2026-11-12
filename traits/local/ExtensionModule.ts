@@ -1,8 +1,8 @@
 import { Array, Effect, Path, pipe, Predicate, Schema as S, String } from "effect"
 import { resolve as resolveImport } from "import-meta-resolve"
 
-import type { ExtensionServices } from "./ExtensionServices.ts"
-import { WorkspacePath } from "./util/WorkspacePath.ts"
+import type { ExtensionServices } from "../ExtensionServices.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
 /** A module whose default export initializes a trait extension. */

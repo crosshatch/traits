@@ -1,11 +1,7 @@
-import { Array, Effect, FileSystem, Option, Path, pipe, Record, Result, Schema as S, String } from "effect"
+import { Array, Effect, Record, Result, Schema as S, String } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 
-import * as TraitFile from "./TraitFile.ts"
 import { TraitName } from "./TraitName.ts"
-import * as WorkspaceLayout from "./WorkspaceLayout.ts"
-import { WorkspaceRoot } from "./WorkspaceRoot.ts"
-import * as WorkspaceTraits from "./WorkspaceTraits.ts"
 
 /** The user's answer to a request to save a proposed trait. */
 export type Approval = typeof Approval.Type
@@ -96,16 +92,6 @@ export class TraitComparisonError extends S.TaggedError<TraitComparisonError>()(
   }
 }
 
-/** The trait file to be written changed while the user was deciding, so the approval may not match it. */
-export class TraitChangedError extends S.TaggedError<TraitChangedError>()("TraitChangedError", {
-  /** The trait file, relative to the workspace root. */
-  path: S.String.annotateKey({ description: "The trait file, relative to the workspace root." })
-}) {
-  override get message(): string {
-    return `${this.path} changed while waiting for approval, so nothing was saved. Derive the trait again so the user approves it against the current file.`
-  }
-}
-
 const relationships = {
   distinct: "The proposal is an independent rule that the existing trait neither covers nor contradicts.",
   covered:
@@ -119,8 +105,8 @@ const relationships = {
 /** The most existing traits compared in one provider request; more are split across requests. */
 const traitsPerRequest = 32
 
-/** Labels how each existing trait relates to the proposal, using the decision model's label. */
-const compare = Effect.fn("TraitDerivation.compare")(function* (
+/** Labels how each existing trait relates to the proposal, given the proposal's name and serialized text and the existing traits' names and texts, using the decision model's label. */
+export const compare = Effect.fn("TraitDerivation.compare")(function* (
   name: TraitName,
   proposal: string,
   existing: ReadonlyArray<{ readonly name: TraitName; readonly text: string }>
@@ -166,87 +152,4 @@ const compare = Effect.fn("TraitDerivation.compare")(function* (
     { concurrency: "unbounded" }
   )
   return Array.flatten(labelled)
-})
-
-/** Validates a proposed trait, compares it with the workspace's traits, asks the user to approve saving it, and writes it when approved. */
-export const derive = Effect.fn("TraitDerivation.derive")(function* <E, R>(
-  document: TraitFile.TraitDocument,
-  approve: (request: ApprovalRequest) => Effect.Effect<Approval, E, R>
-) {
-  const fs = yield* FileSystem.FileSystem
-  const path = yield* Path.Path
-  const { directory } = yield* WorkspaceRoot
-  const read = (name: TraitName) => fs.readFileString(path.join(directory, WorkspaceLayout.traitFile(name)))
-  const proposal = TraitFile.serialize(document)
-  // Validates the proposal as its saved file would be read, including its extension references.
-  yield* TraitFile.decode(document.name, path.join(directory, WorkspaceLayout.traitFile(document.name)), proposal)
-  const names = yield* WorkspaceTraits.all
-  const existing = yield* Effect.forEach(
-    names,
-    (name) => Effect.map(read(name), (text) => ({ name, text })),
-    // Trait files are small, but a workspace can have hundreds.
-    { concurrency: 16 }
-  )
-  const related = yield* compare(document.name, proposal, existing)
-  const blocking = Array.flatMap(related, (entry) =>
-    entry.label === "conflict" || entry.label === "inconclusive"
-      ? [{ name: entry.name, relationship: entry.label }]
-      : []
-  )
-  if (Array.isArrayNonEmpty(blocking)) {
-    return TraitDerivation.cases.Unresolved.make({ name: document.name, traits: blocking })
-  }
-  const covering = Array.flatMap(related, (entry) => (entry.label === "covered" ? [entry.name] : []))
-  if (Array.isArrayNonEmpty(covering)) {
-    return TraitDerivation.cases.Covered.make({ name: document.name, by: covering })
-  }
-  const clarified = Array.flatMap(related, (entry) =>
-    entry.label === "clarification" ? [{ name: entry.name, relationship: "clarification" as const }] : []
-  )
-  if (Array.isArrayNonEmpty(clarified) && clarified.length > 1) {
-    return TraitDerivation.cases.Unresolved.make({ name: document.name, traits: clarified })
-  }
-  const target = clarified[0]?.name
-  if (target === undefined && Array.contains(names, document.name)) {
-    return TraitDerivation.cases.NameTaken.make({ name: document.name })
-  }
-  // A clarification replaces the existing trait under its name.
-  const saved = target === undefined ? document : { ...document, name: target }
-  const text = TraitFile.serialize(saved)
-  const relative = WorkspaceLayout.traitFile(saved.name)
-  const current = Array.findFirst(existing, (entry) => entry.name === target).pipe(
-    Option.map((entry) => entry.text),
-    Option.getOrUndefined
-  )
-  const approval = yield* approve({
-    name: saved.name,
-    action: current === undefined ? "Create" : "Update",
-    message:
-      current === undefined
-        ? `Save this new trait as ${relative}?\n\n${text}`
-        : `Replace ${relative} with this clarified version?\n\nCurrent:\n\n${current}\nReplacement:\n\n${text}`
-  })
-  if (Approval.guards.Revise(approval)) {
-    return TraitDerivation.cases.RevisionRequested.make({
-      name: saved.name,
-      ...(approval.feedback === undefined || pipe(approval.feedback, String.trim, String.isEmpty)
-        ? {}
-        : { feedback: approval.feedback })
-    })
-  }
-  if (Approval.guards.Skip(approval)) {
-    return TraitDerivation.cases.Skipped.make({ name: saved.name })
-  }
-  const file = path.join(directory, relative)
-  const now = yield* fs
-    .exists(file)
-    .pipe(Effect.flatMap((exists) => (exists ? fs.readFileString(file) : Effect.undefined)))
-  if (now !== current) {
-    return yield* TraitChangedError.make({ path: relative })
-  }
-  yield* fs.makeDirectory(path.dirname(file), { recursive: true })
-  yield* fs.writeFileString(file, text)
-  return current === undefined
-    ? TraitDerivation.cases.Created.make({ name: saved.name, path: relative })
-    : TraitDerivation.cases.Updated.make({ name: saved.name, path: relative })
 })

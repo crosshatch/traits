@@ -1,11 +1,10 @@
 import { Array, Console, Effect, FileSystem, Option, Path, pipe, Schema as S, String } from "effect"
 import { Command, Flag } from "effect/cli"
-import { FetchHttpClient } from "effect/http"
 
-import * as Changelog from "../../../Changelog.ts"
+import * as WorkspaceLayout from "../../../local/WorkspaceLayout.ts"
 import PackageJson from "../../../package.json" with { type: "json" }
 import * as Version from "../../../Version.ts"
-import * as WorkspaceLayout from "../../../WorkspaceLayout.ts"
+import * as Changelog from "../../Changelog.ts"
 
 /** Everything an agent needs to migrate a workspace from one traits version to the latest release. */
 export interface UpdateContext {
@@ -112,7 +111,4 @@ export const update = Command.make(
     }
     yield* Console.log(render({ from, installed: PackageJson.version, latest, releases }))
   })
-).pipe(
-  Command.withDescription("Print the changes since this workspace's traits version so an agent can migrate it"),
-  Command.provide(FetchHttpClient.layer)
-)
+).pipe(Command.withDescription("Print the changes since this workspace's traits version so an agent can migrate it"))

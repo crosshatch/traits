@@ -1,9 +1,9 @@
 import { Effect, FileSystem, Path, pipe, Schema as S } from "effect"
 
-import { Models } from "./Models.ts"
-import PackageJson from "./package.json" with { type: "json" }
-import { TraitSources } from "./TraitsEnvironment/TraitSources.ts"
-import * as Version from "./Version.ts"
+import { Models } from "../Models.ts"
+import PackageJson from "../package.json" with { type: "json" }
+import { TraitSources } from "../TraitsEnvironment/TraitSources.ts"
+import * as Version from "../Version.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 

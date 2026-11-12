@@ -5,7 +5,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import * as Selection from "../Cli/Profile/ModelSelection.ts"
 import { AccountName } from "../Cli/Provider/AccountName.ts"
-import * as LayerModule from "../LayerModule.ts"
+import * as LayerModule from "../local/LayerModule.ts"
 
 it.effect(
   "round-trips provider and custom model selections and rejects untagged selections",
@@ -74,7 +74,7 @@ it.live(
     const script = String.stripMargin(`
     |import { NodeServices } from ${JSON.stringify(import.meta.resolve("@effect/platform-node"))};
     |import { Effect, Layer } from ${JSON.stringify(import.meta.resolve("effect"))};
-    |import { load } from ${JSON.stringify(new URL("../LayerModule.ts", import.meta.url).href)};
+    |import { load } from ${JSON.stringify(new URL("../local/LayerModule.ts", import.meta.url).href)};
     |const layer = await Effect.runPromise(load(process.env.TRAITS_TEST_CUSTOM_LAYER).pipe(Effect.provide(NodeServices.layer)));
     |if (!Layer.isLayer(layer)) { throw new Error("Expected an Effect Layer"); }
     `)

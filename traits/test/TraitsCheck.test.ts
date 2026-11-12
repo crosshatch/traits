@@ -1,8 +1,8 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, Layer, Stream } from "effect"
 
+import * as WorkspaceCheck from "../local/WorkspaceCheck.ts"
 import * as TraitsCheck from "../mcp/TraitsCheck.ts"
-import * as WorkspaceCheck from "../WorkspaceCheck.ts"
 
 const handle = (check: WorkspaceCheck.WorkspaceCheck["Service"]["check"]) =>
   Effect.gen(function* () {

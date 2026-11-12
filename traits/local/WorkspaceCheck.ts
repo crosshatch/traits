@@ -1,28 +1,12 @@
-import {
-  Array,
-  Context,
-  DateTime,
-  Effect,
-  FileSystem,
-  Layer,
-  Path,
-  pipe,
-  Predicate,
-  Schema as S,
-  Stream,
-  String
-} from "effect"
-import { Digest, SecureRandom } from "effect/crypto"
-import { FetchHttpClient } from "effect/http"
-import { KeyValueStore } from "effect/persistence"
+import { Array, Context, Effect, FileSystem, Layer, Path, pipe, Predicate, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { check } from "./Check/Check.ts"
-import { EnrichmentRegistry } from "./Enrichment/EnrichmentRegistry.ts"
-import { SegmenterRegistry } from "./Segmenter/SegmenterRegistry.ts"
-import * as TraitFile from "./TraitFile.ts"
+import { check } from "../Check/Check.ts"
+import { WorkspacePath } from "../util/util.ts"
+import * as LocalDecisionCache from "./LocalDecisionCache.ts"
+import * as LocalEnrichmentRegistry from "./LocalEnrichmentRegistry.ts"
+import * as LocalSegmenterRegistry from "./LocalSegmenterRegistry.ts"
 import * as TraitsConfig from "./TraitsConfig.ts"
-import { WorkspacePath } from "./util/util.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import * as WorkspaceModels from "./WorkspaceModels.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
@@ -179,7 +163,7 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
   const traits = yield* Effect.forEach(
     names,
     (name) =>
-      Effect.map(TraitFile.load(name), (trait) => ({
+      Effect.map(WorkspaceTraits.load(name), (trait) => ({
         trait,
         origin: { path: WorkspacePath.make(WorkspaceLayout.traitFile(name)) }
       })),
@@ -188,17 +172,20 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
   return yield* check({ traits, changes })
 })
 
-/** Loads traits.json, builds its models and fresh extension registries, and checks the requested files. */
+/** Loads traits.json, builds its models, fresh extension registries, and the workspace's decision cache, and checks the requested files. */
 const checkWorkspace = Effect.fn("WorkspaceCheck.check")(function* (request: WorkspaceCheckRequest) {
   const config = yield* TraitsConfig.load
-  const registries = Layer.mergeAll(SegmenterRegistry.layer, EnrichmentRegistry.layer).pipe(
-    Layer.provideMerge(WorkspaceModels.layer(config))
-  )
+  const registries = Layer.mergeAll(
+    LocalSegmenterRegistry.layer,
+    LocalEnrichmentRegistry.layer,
+    // Unchanged traits and inputs reuse earlier decisions by the same decision model instead of asking it again.
+    LocalDecisionCache.layer(JSON.stringify(config.models.decision))
+  ).pipe(Layer.provideMerge(WorkspaceModels.layer(config)))
   return yield* run(config, request).pipe(Effect.provide(registries))
 })
 
 /** Checks workspace files against the workspace's traits and configured models; shared by the CLI and the MCP server. */
-export class WorkspaceCheck extends Context.Service<WorkspaceCheck>()("traits/WorkspaceCheck", {
+export class WorkspaceCheck extends Context.Service<WorkspaceCheck>()("traits/local/WorkspaceCheck", {
   make: Effect.gen(function* () {
     const services = yield* Effect.context<Effect.Services<ReturnType<typeof checkWorkspace>>>()
     return {
@@ -207,15 +194,6 @@ export class WorkspaceCheck extends Context.Service<WorkspaceCheck>()("traits/Wo
     }
   })
 }) {
-  /** The checker with default host services; the host provides the platform (filesystem, paths, processes) and WorkspaceRoot. */
-  static readonly layer = this.make.pipe(
-    Layer.effect(this),
-    Layer.provide([
-      FetchHttpClient.layer,
-      Digest.layerWebCrypto,
-      SecureRandom.layerWebCrypto,
-      KeyValueStore.layerMemory,
-      DateTime.layerCurrentZoneLocal
-    ])
-  )
+  /** The checker; the program provides the platform (filesystem, paths, processes), HTTP, crypto, key-value storage, the time zone, and WorkspaceRoot. */
+  static readonly layer = this.make.pipe(Layer.effect(this))
 }

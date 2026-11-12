@@ -2,10 +2,10 @@ import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Layer, Path, pipe, Result, Schema as S } from "effect"
 
-import * as ExtensionModule from "../ExtensionModule.ts"
+import * as ExtensionModule from "../local/ExtensionModule.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import { Trait } from "../Trait.ts"
 import { WorkspacePath } from "../util/util.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
 
 const services = Layer.merge(NodeServices.layer, WorkspaceRoot.layer(".").pipe(Layer.provide(NodeServices.layer)))
 

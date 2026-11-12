@@ -1,20 +1,22 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Layer, Order, Path, pipe, Schema as S } from "effect"
+import { Array, DateTime, Effect, FileSystem, Layer, Order, Path, pipe, Schema as S } from "effect"
 import { DecisionModel } from "effect/ai"
-import { Digest } from "effect/crypto"
+import { Digest, SecureRandom } from "effect/crypto"
+import { FetchHttpClient } from "effect/http"
+import { KeyValueStore } from "effect/persistence"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
+import * as TraitsConfig from "../local/TraitsConfig.ts"
+import * as WorkspaceCheck from "../local/WorkspaceCheck.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
+import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import * as Report from "../Report/Report.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
-import * as TraitsConfig from "../TraitsConfig.ts"
-import * as WorkspaceCheck from "../WorkspaceCheck.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
-import * as WorkspaceTraits from "../WorkspaceTraits.ts"
 
 const traitFile = (name: string, extra = "") =>
   `---\nname: ${name}\npurpose: Protect correctness.\nassertion: The code is correct.\n${extra}---\n\nPrefer small functions.\n`
@@ -264,14 +266,14 @@ it.effect("parses trait frontmatter, rejects outdated or malformed files, and re
     )
     yield* fs.writeFileString(path.join(directory, ".agents", "traits", "b.md"), traitFile("a"))
     const workspaceRoot = WorkspaceRoot.layer(directory)
-    const trait = yield* TraitFile.load(TraitName.make("a")).pipe(Effect.provide(workspaceRoot))
+    const trait = yield* WorkspaceTraits.load(TraitName.make("a")).pipe(Effect.provide(workspaceRoot))
     expect(trait.segment).toBe(".agents/traits/segmenter.mjs")
-    const mismatch = yield* TraitFile.load(TraitName.make("b")).pipe(Effect.provide(workspaceRoot), Effect.flip)
+    const mismatch = yield* WorkspaceTraits.load(TraitName.make("b")).pipe(Effect.provide(workspaceRoot), Effect.flip)
     expect(mismatch._tag).toBe("TraitFileParseError")
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 
-it.live("provides the shared checker from platform services and a workspace root", () =>
+it.live("builds the shared checker from the program's infrastructure and a workspace root", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-workspace-checker-" })
@@ -281,5 +283,15 @@ it.live("provides the shared checker from platform services and a workspace root
       Effect.flip
     )
     expect(error._tag).toBe("TraitsConfigReadError")
-  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+  }).pipe(
+    Effect.scoped,
+    Effect.provide([
+      NodeServices.layer,
+      FetchHttpClient.layer,
+      Digest.layerWebCrypto,
+      SecureRandom.layerWebCrypto,
+      KeyValueStore.layerMemory,
+      DateTime.layerCurrentZoneLocal
+    ])
+  )
 )

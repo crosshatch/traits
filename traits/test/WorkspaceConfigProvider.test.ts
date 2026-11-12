@@ -3,8 +3,8 @@ import { expect, it } from "@effect/vitest"
 import { ConfigProvider, Effect, FileSystem, Layer, Path } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import * as WorkspaceConfigProvider from "../WorkspaceConfigProvider.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
+import * as WorkspaceConfigProvider from "../local/WorkspaceConfigProvider.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 
 const load = (directory: string, key: string) =>
   ConfigProvider.ConfigProvider.pipe(

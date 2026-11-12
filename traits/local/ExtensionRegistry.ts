@@ -1,9 +1,9 @@
 import { Cache, Context, Effect, Exit, Fiber, flow, Path, Predicate, Schema as S, Scope } from "effect"
 import { Chat } from "effect/ai"
 
+import type { WorkspacePath } from "../util/util.ts"
 import * as ExtensionModule from "./ExtensionModule.ts"
-import { HostServices } from "./ExtensionServices.ts"
-import type { WorkspacePath } from "./util/util.ts"
+import { HostServices } from "./HostServices.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
 /** Shares program-scoped setup outcomes and provides isolated execution resources; modules load from the workspace root. */

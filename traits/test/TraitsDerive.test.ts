@@ -2,13 +2,13 @@ import { expect, it } from "@effect/vitest"
 import { Effect, Layer, Stream } from "effect"
 import { McpSchema } from "effect/ai"
 
+import { WorkspaceDerive } from "../local/WorkspaceDerive.ts"
 import * as TraitsDerive from "../mcp/TraitsDerive.ts"
 import { TraitAssertion } from "../TraitAssertion.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
-import { WorkspaceDerive } from "../WorkspaceDerive.ts"
 
 const proposal = TraitFile.TraitDocument.make({
   name: TraitName.make("proposed"),

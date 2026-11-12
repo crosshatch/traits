@@ -17,20 +17,19 @@ import { FetchHttpClient } from "effect/http"
 import { KeyValueStore } from "effect/persistence"
 
 import { check } from "../Check/Check.ts"
-import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
-import * as ExtensionModule from "../ExtensionModule.ts"
+import * as ExtensionModule from "../local/ExtensionModule.ts"
+import * as LocalEnrichmentRegistry from "../local/LocalEnrichmentRegistry.ts"
+import * as LocalSegmenterRegistry from "../local/LocalSegmenterRegistry.ts"
+import * as TraitsConfig from "../local/TraitsConfig.ts"
+import * as WorkspaceConfigProvider from "../local/WorkspaceConfigProvider.ts"
+import * as WorkspaceLayout from "../local/WorkspaceLayout.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
+import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
 import * as Models from "../Models.ts"
 import * as Report from "../Report/Report.ts"
-import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import { Trait } from "../Trait.ts"
-import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
-import * as TraitsConfig from "../TraitsConfig.ts"
 import { WorkspacePath } from "../util/util.ts"
-import * as WorkspaceConfigProvider from "../WorkspaceConfigProvider.ts"
-import * as WorkspaceLayout from "../WorkspaceLayout.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
-import * as WorkspaceTraits from "../WorkspaceTraits.ts"
 
 const Label = S.Literals(["fail", "pass", "unmatched"])
 
@@ -102,7 +101,7 @@ const program = Effect.gen(function* () {
             )
           )
   const traits = yield* Effect.forEach(names, (name) =>
-    Effect.map(TraitFile.load(name), (trait) => ({
+    Effect.map(WorkspaceTraits.load(name), (trait) => ({
       trait: segment !== undefined && Array.contains(cases.traits, name) ? Trait.make({ ...trait, segment }) : trait
     }))
   )
@@ -118,7 +117,9 @@ const program = Effect.gen(function* () {
   )
   const started = yield* Clock.currentTimeMillis
   const report = yield* check({ traits, changes }).pipe(
-    Effect.provide(Layer.mergeAll(SegmenterRegistry.layer, EnrichmentRegistry.layer).pipe(Layer.provideMerge(models)))
+    Effect.provide(
+      Layer.mergeAll(LocalSegmenterRegistry.layer, LocalEnrichmentRegistry.layer).pipe(Layer.provideMerge(models))
+    )
   )
   const seconds = yield* Clock.currentTimeMillis.pipe(Effect.map((finished) => (finished - started) / 1000))
   const requestCount = yield* Ref.get(requests)

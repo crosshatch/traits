@@ -1,8 +1,8 @@
 import { Array, Effect, Function, Option, Order, pipe, Schema as S, String } from "effect"
 import { HttpClient, HttpIncomingMessage } from "effect/http"
 
-import PackageJson from "./package.json" with { type: "json" }
-import * as Version from "./Version.ts"
+import PackageJson from "../package.json" with { type: "json" }
+import * as Version from "../Version.ts"
 
 /** One released version and its changelog notes. */
 export type Release = typeof Release.Type

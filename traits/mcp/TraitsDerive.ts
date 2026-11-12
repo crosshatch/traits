@@ -1,9 +1,9 @@
 import { Array, Cause, Effect, Option, pipe, Schema as S, String } from "effect"
 import { McpSchema, McpServer, Tool, Toolkit } from "effect/ai"
 
+import { WorkspaceDerive } from "../local/WorkspaceDerive.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
-import { WorkspaceDerive } from "../WorkspaceDerive.ts"
 
 /** Deriving could not finish; the message says what happened to each proposal and how to proceed. */
 export class TraitsDeriveFailure extends S.TaggedError<TraitsDeriveFailure>()("TraitsDeriveFailure", {

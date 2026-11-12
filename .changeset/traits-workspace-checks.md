@@ -44,5 +44,7 @@ migrate a workspace:
   `--fail <p> --pass <p>`, exits 0 for Pass, 1 for Fail, 2 for Incomplete, and 3
   for Inconclusive. `traits update` prints these migration steps for later
   releases.
+- Checks remember completed decisions in `.agents/traits/.cache/`, which ignores
+  itself in Git, so re-checking unchanged traits and files is nearly free.
 - `@traits/typescript/package-exports` is a new enrichment that tells
   assessments whether a file is a package entry point.

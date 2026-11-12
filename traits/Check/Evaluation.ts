@@ -7,6 +7,7 @@ import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
 import { Input, Segment, targetText, TextDigest } from "../util/util.ts"
 import type { CheckInput } from "./CheckInput.ts"
+import * as DecisionCache from "./DecisionCache.ts"
 import type { Preparation } from "./Preparation.ts"
 
 type DecisionResponse = TraitAssertion.TraitAssertionEvaluations<"assertion"> | TraitSubject.TraitSubjectMatches
@@ -81,7 +82,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
         const gate =
           trait.subject === undefined
             ? undefined
-            : yield* TraitSubject.decide(trait.subject, input).pipe(
+            : yield* DecisionCache.decideSubject(trait.subject, input).pipe(
                 Effect.catchDefect(() => Effect.fail(undefined)),
                 Effect.match({
                   onFailure: (error) => ({ responses: [], failure: failureReason(error) }),
@@ -180,13 +181,11 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
             ...fields,
             explanation: decisionFailed("Assertion assessment", reason)
           })
-        return yield* TraitAssertion.evaluate(
+        return yield* DecisionCache.evaluateAssertion(
           {
-            assertion: {
-              assertion: trait.assertion,
-              context: trait,
-              enrichments: Array.filter(enrichments, Report.EnrichmentOutcome.guards.Succeeded)
-            }
+            assertion: trait.assertion,
+            context: trait,
+            enrichments: Array.filter(enrichments, Report.EnrichmentOutcome.guards.Succeeded)
           },
           input
         ).pipe(

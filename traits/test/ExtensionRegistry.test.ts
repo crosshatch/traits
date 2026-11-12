@@ -27,8 +27,10 @@ import { FetchHttpClient } from "effect/http"
 import { KeyValueStore } from "effect/persistence"
 
 import { check } from "../Check/Check.ts"
-import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
-import * as ExtensionModule from "../ExtensionModule.ts"
+import * as ExtensionModule from "../local/ExtensionModule.ts"
+import * as LocalEnrichmentRegistry from "../local/LocalEnrichmentRegistry.ts"
+import * as LocalSegmenterRegistry from "../local/LocalSegmenterRegistry.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as Report from "../Report/Report.ts"
 import { SegmenterSetupError } from "../Segmenter/Segmenter.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
@@ -36,7 +38,6 @@ import { Trait } from "../Trait.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
 import { WorkspacePath } from "../util/util.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
 
 const allInputsOf = (trait: Report.TraitReport) =>
   Array.flatMap(trait.changes, (change) => (Report.ChangeReport.guards.Evaluated(change) ? change.inputs : []))
@@ -155,7 +156,7 @@ it.live("resolves relative and consumer-only import-condition packages before us
           }
         ],
         changes: [{ change: { after: { path: WorkspacePath.make("source.ts"), text: "source" } } }]
-      }).pipe(Effect.provide([SegmenterRegistry.layer, EnrichmentRegistry.layer]))
+      }).pipe(Effect.provide([LocalSegmenterRegistry.layer, LocalEnrichmentRegistry.layer]))
       expect(report.diagnostics).toEqual([])
       expect(inputsOf(report.traits[0]!)[0]!.enrichments).toEqual([
         { _tag: "Succeeded", module: enricher, text: "package context" },
@@ -183,7 +184,7 @@ it.live("closes resources from interrupted setup when the registry shuts down", 
       state.gate = Effect.never
       const parent = yield* Scope.Scope
       const registryScope = yield* Scope.fork(parent)
-      const registry = yield* Layer.build(SegmenterRegistry.layer).pipe(
+      const registry = yield* Layer.build(LocalSegmenterRegistry.layer).pipe(
         Effect.map(Context.get(SegmenterRegistry)),
         Effect.provideService(Probe, state),
         Scope.provide(registryScope)
@@ -251,7 +252,9 @@ it.live("shares setup while isolating execution chats/scopes and owning setup re
     yield* Effect.scoped(
       Effect.gen(function* () {
         const module = yield* fixture
-        const registry = yield* Layer.build(SegmenterRegistry.layer).pipe(Effect.map(Context.get(SegmenterRegistry)))
+        const registry = yield* Layer.build(LocalSegmenterRegistry.layer).pipe(
+          Effect.map(Context.get(SegmenterRegistry))
+        )
         const { one, two } = yield* Effect.all(
           { one: registry(module), two: registry(module) },
           { concurrency: "unbounded" }
@@ -285,11 +288,11 @@ it.live("shares setup while isolating execution chats/scopes and owning setup re
         }
         yield* check(request).pipe(
           Effect.provideService(SegmenterRegistry, registry),
-          Effect.provide(EnrichmentRegistry.layer)
+          Effect.provide(LocalEnrichmentRegistry.layer)
         )
         yield* check(request).pipe(
           Effect.provideService(SegmenterRegistry, registry),
-          Effect.provide(EnrichmentRegistry.layer)
+          Effect.provide(LocalEnrichmentRegistry.layer)
         )
         expect(state.setups).toBe(1)
         expect(state.executions).toBe(4)
@@ -308,7 +311,7 @@ it.live("retains setup failures and does not cancel shared initialization when o
       const gate = yield* Deferred.make<void>()
       state.started = Deferred.succeed(started, undefined).pipe(Effect.asVoid)
       state.gate = Deferred.await(gate)
-      const registry = yield* Layer.build(SegmenterRegistry.layer).pipe(
+      const registry = yield* Layer.build(LocalSegmenterRegistry.layer).pipe(
         Effect.map(Context.get(SegmenterRegistry)),
         Effect.provideService(Probe, state)
       )
@@ -371,9 +374,9 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
         `)
         yield* fs.writeFileString(filename, source)
         const module = yield* moduleAt(filename)
-        const services = yield* Layer.build(Layer.merge(SegmenterRegistry.layer, EnrichmentRegistry.layer)).pipe(
-          Effect.provideService(Probe, state)
-        )
+        const services = yield* Layer.build(
+          Layer.merge(LocalSegmenterRegistry.layer, LocalEnrichmentRegistry.layer)
+        ).pipe(Effect.provideService(Probe, state))
         for (const filename of ["one.ts", "two.ts"]) {
           const report = yield* check({
             traits: [
@@ -426,7 +429,7 @@ it.live("preserves module/setup validation errors while rejecting wrong-stage se
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-invalid-extension-" })
-      const registry = yield* Layer.build(SegmenterRegistry.layer).pipe(Effect.map(Context.get(SegmenterRegistry)))
+      const registry = yield* Layer.build(LocalSegmenterRegistry.layer).pipe(Effect.map(Context.get(SegmenterRegistry)))
       const sources = [
         "export default {};",
         `import { Effect } from ${JSON.stringify(import.meta.resolve("effect"))}; export default Effect.succeed(null);`,

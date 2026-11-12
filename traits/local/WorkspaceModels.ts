@@ -1,6 +1,6 @@
 import { Layer } from "effect"
 
-import * as Models from "./Models.ts"
+import * as Models from "../Models.ts"
 import type { TraitsConfig } from "./TraitsConfig.ts"
 import * as WorkspaceConfigProvider from "./WorkspaceConfigProvider.ts"
 

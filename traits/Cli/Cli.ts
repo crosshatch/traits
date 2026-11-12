@@ -1,11 +1,10 @@
 import { Layer } from "effect"
 import { Command } from "effect/cli"
-import { UserDirectories } from "effect/persistence"
 
+import { WorkspaceCheck } from "../local/WorkspaceCheck.ts"
+import { WorkspaceDerive } from "../local/WorkspaceDerive.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import PackageJson from "../package.json" with { type: "json" }
-import { WorkspaceCheck } from "../WorkspaceCheck.ts"
-import { WorkspaceDerive } from "../WorkspaceDerive.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
 import { CliPaths } from "./CliPaths.ts"
 import { auth } from "./commands/auth/auth.ts"
 import { check } from "./commands/check/check.ts"
@@ -18,8 +17,7 @@ import { UserFileSecurity } from "./UserFileSecurity.ts"
 /** Locked access to user-level accounts and profiles; only commands that manage them build it. */
 const userConfiguration = UserConfigLock.layer.pipe(
   Layer.provideMerge(UserFileSecurity.layer),
-  Layer.provideMerge(CliPaths.layer),
-  Layer.provideMerge(UserDirectories.layer)
+  Layer.provideMerge(CliPaths.layer)
 )
 
 /** The current directory's workspace root; only commands that work on the workspace build it. */

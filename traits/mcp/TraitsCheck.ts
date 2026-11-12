@@ -1,10 +1,10 @@
 import { Cause, Effect, pipe, Schema as S, String } from "effect"
 import { Tool, Toolkit } from "effect/ai"
 
+import * as WorkspaceCheck from "../local/WorkspaceCheck.ts"
+import { EnvironmentName } from "../local/WorkspaceTraits.ts"
 import { Report } from "../Report/Report.ts"
 import { TraitName } from "../TraitName.ts"
-import * as WorkspaceCheck from "../WorkspaceCheck.ts"
-import { EnvironmentName } from "../WorkspaceTraits.ts"
 
 /** A check could not run; the message says what to fix. */
 export class TraitsCheckFailure extends S.TaggedError<TraitsCheckFailure>()("TraitsCheckFailure", {
@@ -17,7 +17,7 @@ export const TraitsCheck = Tool.make("traits.check", {
   description: pipe(
     String.stripMargin(`
     |Check files against this workspace's traits. Each file's current text is compared with its text at Git HEAD, so deleted files can be checked too.
-    |For files you created, edited, or deleted, pass their paths and omit traits, so every trait is checked.
+    |For the files a task created, edited, or deleted, pass all their paths in one call and omit traits, so every trait is checked. To recheck fixes, pass only the affected paths and traits.
     |For a created or changed trait, pass its name in traits and omit paths, so every project file is checked: tracked and untracked text files that Git does not ignore.
     |When passing paths, never pass dependencies, generated output, lockfiles, secrets, .env files, credentials, or binary files. Pass an environment or other trait names only when the user asks for them.
     |Returns the full report: for each trait and file, the targets with their subject-match and pass, fail, na, and uncertain probabilities, plus any failures that prevented complete checking.

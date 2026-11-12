@@ -1,7 +1,8 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Path } from "effect"
-import { Enrichment, fromSegment, Segment, Trait, TraitName, TraitPurpose, WorkspacePath, WorkspaceRoot } from "traits"
+import { Enrichment, fromSegment, Segment, Trait, TraitName, TraitPurpose, WorkspacePath } from "traits"
+import { WorkspaceRoot } from "traits/local"
 
 import setup from "../package-exports/index.ts"
 

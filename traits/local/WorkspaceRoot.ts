@@ -7,7 +7,7 @@ export class WorkspaceRoot extends Context.Service<
     /** The canonical absolute directory, with symlinks resolved to match resolver output. */
     readonly directory: string
   }
->()("traits/WorkspaceRoot") {
+>()("traits/local/WorkspaceRoot") {
   /** Canonicalizes a host-selected workspace directory, so module paths match canonical resolver output. */
   static readonly layer = (directory: string) =>
     Layer.effect(

@@ -1,5 +1,6 @@
 import { Array, Effect, FileSystem, flow, Option, Path, pipe, Predicate, Record, Schema as S, String } from "effect"
-import { Enrichment, WorkspaceRoot } from "traits"
+import { Enrichment } from "traits"
+import { WorkspaceRoot } from "traits/local"
 
 /** Every file target in an exports value: a path, an array of fallbacks, or nested subpath and condition objects. */
 const exportTargets = (value: unknown): ReadonlyArray<string> =>

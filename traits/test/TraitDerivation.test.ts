@@ -3,6 +3,9 @@ import { expect, it } from "@effect/vitest"
 import { Array, Effect, FileSystem, Layer, Path, Record } from "effect"
 import { DecisionModel } from "effect/ai"
 
+import * as WorkspaceDerive from "../local/WorkspaceDerive.ts"
+import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
+import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
 import { TraitAssertion } from "../TraitAssertion.ts"
 import { TraitBody } from "../TraitBody.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
@@ -10,7 +13,6 @@ import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
 import { TraitSubject } from "../TraitSubject.ts"
-import { WorkspaceRoot } from "../WorkspaceRoot.ts"
 
 const existing = "---\nname: existing\nassertion: Functions are small.\npurpose: Keep code readable.\n---\n"
 const proposal = TraitFile.TraitDocument.make({
@@ -57,7 +59,7 @@ it.live("saves an approved distinct proposal as a trait file that loads back unc
   Effect.gen(function* () {
     const { exists, read, services } = yield* workspace("distinct")
     const requests: Array<TraitDerivation.ApprovalRequest> = []
-    const result = yield* TraitDerivation.derive(proposal, (request) =>
+    const result = yield* WorkspaceDerive.derive(proposal, (request) =>
       Effect.sync(() => {
         requests.push(request)
         return TraitDerivation.Approval.cases.Save.make({})
@@ -69,7 +71,7 @@ it.live("saves an approved distinct proposal as a trait file that loads back unc
     expect(Array.map(requests, (request) => request.action)).toEqual(["Create"])
     const saved = yield* read("proposed")
     expect(requests[0]!.message).toContain(saved)
-    const loaded = yield* TraitFile.load(proposal.name).pipe(Effect.provide(services))
+    const loaded = yield* WorkspaceTraits.load(proposal.name).pipe(Effect.provide(services))
     expect(loaded).toEqual(proposal)
     const untouched = yield* exists("existing")
     expect(untouched).toBe(true)
@@ -80,7 +82,7 @@ it.live("replaces a clarified trait under its existing name after approval", () 
   Effect.gen(function* () {
     const { exists, read, services } = yield* workspace("clarification")
     const requests: Array<TraitDerivation.ApprovalRequest> = []
-    const result = yield* TraitDerivation.derive(proposal, (request) =>
+    const result = yield* WorkspaceDerive.derive(proposal, (request) =>
       Effect.sync(() => {
         requests.push(request)
         return TraitDerivation.Approval.cases.Save.make({})
@@ -106,19 +108,19 @@ it.live("saves nothing when the proposal is covered, unresolved, renamed onto an
       ["inconclusive", "Unresolved"]
     ] as const) {
       const { exists, services } = yield* workspace(label)
-      const result = yield* TraitDerivation.derive(proposal, unexpected).pipe(Effect.provide(services))
+      const result = yield* WorkspaceDerive.derive(proposal, unexpected).pipe(Effect.provide(services))
       expect(result._tag).toBe(tag)
       const saved = yield* exists("proposed")
       expect(saved).toBe(false)
     }
     const { exists, read, services } = yield* workspace("distinct")
-    const taken = yield* TraitDerivation.derive({ ...proposal, name: TraitName.make("existing") }, unexpected).pipe(
+    const taken = yield* WorkspaceDerive.derive({ ...proposal, name: TraitName.make("existing") }, unexpected).pipe(
       Effect.provide(services)
     )
     expect(taken._tag).toBe("NameTaken")
     const kept = yield* read("existing")
     expect(kept).toBe(existing)
-    const revised = yield* TraitDerivation.derive(proposal, () =>
+    const revised = yield* WorkspaceDerive.derive(proposal, () =>
       Effect.succeed(TraitDerivation.Approval.cases.Revise.make({ feedback: "Allow two parameters." }))
     ).pipe(Effect.provide(services))
     expect(revised).toEqual(
@@ -127,7 +129,7 @@ it.live("saves nothing when the proposal is covered, unresolved, renamed onto an
         feedback: "Allow two parameters."
       })
     )
-    const skipped = yield* TraitDerivation.derive(proposal, () =>
+    const skipped = yield* WorkspaceDerive.derive(proposal, () =>
       Effect.succeed(TraitDerivation.Approval.cases.Skip.make({}))
     ).pipe(Effect.provide(services))
     expect(skipped._tag).toBe("Skipped")
@@ -141,12 +143,12 @@ it.live("rejects invalid proposals before asking, and files changed while waitin
     const { directory, read, services } = yield* workspace("clarification")
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const unresolvable = yield* TraitDerivation.derive({ ...proposal, enrichments: ["../../../outside.ts"] }, () =>
+    const unresolvable = yield* WorkspaceDerive.derive({ ...proposal, enrichments: ["../../../outside.ts"] }, () =>
       Effect.die("approval must not be requested")
     ).pipe(Effect.provide(services), Effect.flip)
     expect(unresolvable._tag).toBe("ModuleResolutionError")
     const edited = "---\nname: existing\nassertion: Edited meanwhile.\npurpose: Keep code readable.\n---\n"
-    const changed = yield* TraitDerivation.derive(proposal, () =>
+    const changed = yield* WorkspaceDerive.derive(proposal, () =>
       fs
         .writeFileString(path.join(directory, ".agents", "traits", "existing.md"), edited)
         .pipe(Effect.as(TraitDerivation.Approval.cases.Save.make({})), Effect.orDie)

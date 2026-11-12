@@ -2,7 +2,7 @@ import { Context, Effect, FileSystem, Layer, Path, pipe, Schema as S, Stream, St
 import { UserDirectories } from "effect/persistence"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import * as WorkspaceLayout from "../WorkspaceLayout.ts"
+import * as WorkspaceLayout from "../local/WorkspaceLayout.ts"
 
 /** Git could not resolve the workspace's common directory from the invocation directory. */
 export class WorkspaceGitError extends S.TaggedError<WorkspaceGitError>()("WorkspaceGitError", {

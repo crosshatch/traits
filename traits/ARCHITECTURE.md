@@ -1,5 +1,12 @@
 # Trait evaluation lifecycle
 
+The package root (`traits`) is the portable core: trait schemas, the `check`
+engine, `Report`, extension contracts and registry tags, model selection, the
+trait-file format, and derivation comparison. Everything tied to a local
+workspace, its filesystem, and extension loading lives in `local/`, exported as
+`traits/local`; the CLI and MCP server build on it, and core modules never
+import from `local/`, `Cli/`, or `mcp/`.
+
 ## Runtime API
 
 `check({ traits, changes })` evaluates caller-ordered traits and changes and
@@ -80,32 +87,34 @@ the check. Assessment still proceeds with remaining context unless an
 input-scoped or trait-scoped execution recovery signal prevents it. There is no
 required-enrichment policy flag in this API.
 
-Build `SegmenterRegistry.layer` and `EnrichmentRegistry.layer` once in the
-host's scoped runtime and reuse them across checks. They can be composed with
-`Layer.mergeAll`. The host provides the services listed in
-`ExtensionServices.HostServices`; registries capture exactly those from the host
-context, so no other host service, such as the host's own `Scope`, reaches an
-extension. `HostServices` includes `WorkspaceRoot`, so extensions can read
-workspace files that change paths are relative to. `ExtensionServices` is
-`HostServices` plus the chat and scope the registry creates for each execution.
-Keep the same model/account bindings for the lifetime of those registries. Each
-registry owns its own typed cache; the internal `ExtensionRegistry.make` shares
-cache lifecycle, setup-scope ownership, service capture, and fresh execution
-contexts without a kind discriminator. It accepts setup-result, setup-error, and
-execution-error schemas; `ExtensionModule.load` owns importing, module/result
-validation, and rejection of undeclared setup errors. The shared execution
-transformer preserves declared execution errors and turns unexpected failures
-into defects. Each typed registry still owns its execution contract.
-Module-shape and setup-result validation failures remain typed `SchemaError`s
-alongside the declared setup error. Registry service types are inferred from
-their `make` effects, with host services provided internally. Registries also
-require `WorkspaceRoot`, the canonical workspace directory built with
-`WorkspaceRoot.layer(directory)`, and import each module from that root.
+`SegmenterRegistry` and `EnrichmentRegistry` are core tags with explicit service
+shapes. Local hosts build `LocalSegmenterRegistry.layer` and
+`LocalEnrichmentRegistry.layer` (in `local/`) once in the host's scoped runtime
+and reuse them across checks. They can be composed with `Layer.mergeAll`. The
+host provides the services listed in `HostServices` (`local/HostServices`);
+registries capture exactly those from the host context, so no other host
+service, such as the host's own `Scope`, reaches an extension.
+`ExtensionServices` (core) is the contract: the portable host services plus the
+chat and scope the registry creates for each execution. Local hosts additionally
+provide `WorkspaceRoot`, so extensions can read workspace files that change
+paths are relative to. Keep the same model/account bindings for the lifetime of
+those registries. Each registry owns its own typed cache; the internal
+`ExtensionRegistry.make` shares cache lifecycle, setup-scope ownership, service
+capture, and fresh execution contexts without a kind discriminator. It accepts
+setup-result, setup-error, and execution-error schemas; `ExtensionModule.load`
+owns importing, module/result validation, and rejection of undeclared setup
+errors. The shared execution transformer preserves declared execution errors and
+turns unexpected failures into defects. Each typed registry still owns its
+execution contract. Module-shape and setup-result validation failures remain
+typed `SchemaError`s alongside the declared setup error. Host services are
+provided internally. The registry layers also require `WorkspaceRoot`, the
+canonical workspace directory built with `WorkspaceRoot.layer(directory)`, and
+import each module from that root.
 
 Extension references must already be resolved. Hosts resolve script paths and
 package references with `ExtensionModule.resolve({ reference, baseUrl })` from
-`ExtensionModule.ts` before constructing static traits. `baseUrl` is the trait
-file URL, or an explicit host-module URL in the intended workspace for
+`local/ExtensionModule.ts` before constructing static traits. `baseUrl` is the
+trait file URL, or an explicit host-module URL in the intended workspace for
 programmatic definitions. ESM package resolution uses that base and its import
 conditions, never the traits installation or an implicit working directory. The
 resolved URL must be a file URL, and the canonical module file must lie within
@@ -177,22 +186,26 @@ A workspace keeps its configuration at its root and its traits under
   rejected, so outdated files are reported rather than misread. Extension
   references resolve relative to the trait file. Every `.md` file in the
   directory is a trait, and its file name must be its kebab-case trait name.
+  `TraitFile` (core) parses and serializes the format; `WorkspaceTraits.load`
+  (`local/WorkspaceTraits`) reads a workspace trait file and resolves its
+  extension references.
 - `.agents/traits/_environments/<name>.json` defines an optional environment,
   `{ "traits": [...] }`, naming a subset of the workspace's traits to check,
   such as a smaller set for CI. Unknown keys are rejected, and `extends` is not
   supported yet.
 
-`WorkspaceCheck.run(config, { paths, environment?, traits? })` checks files
-against the selected traits. `WorkspaceTraits.select` checks every trait by
-default, narrows to an environment's traits when one is given, and then to the
-requested trait names. Names without trait files, requested traits outside the
-environment, and unknown or invalid environments fail with a message saying what
-to fix. Each path becomes a change pairing the working-tree text (after) with
-the text at Git `HEAD` (before): untracked files are new, deleted tracked files
-are deletions, and workspaces outside Git have no before text. Paths may be
-workspace-relative or absolute within the workspace. Each trait's report records
-its file as `origin`. `extends` is not supported yet and fails the check rather
-than silently checking fewer traits.
+`WorkspaceCheck.run(config, { paths, environment?, traits? })`
+(`local/WorkspaceCheck`) checks files against the selected traits.
+`WorkspaceTraits.select` checks every trait by default, narrows to an
+environment's traits when one is given, and then to the requested trait names.
+Names without trait files, requested traits outside the environment, and unknown
+or invalid environments fail with a message saying what to fix. Each path
+becomes a change pairing the working-tree text (after) with the text at Git
+`HEAD` (before): untracked files are new, deleted tracked files are deletions,
+and workspaces outside Git have no before text. Paths may be workspace-relative
+or absolute within the workspace. Each trait's report records its file as
+`origin`. `extends` is not supported yet and fails the check rather than
+silently checking fewer traits.
 
 The `WorkspaceCheck` service owns the complete pipeline, independent of any
 front end: `check(request)` loads `traits.json` and the trait files, builds the
@@ -211,18 +224,30 @@ that Git does not ignore, listed by `git ls-files`, minus the configuration's
 files, submodules, and files containing NUL bytes. Explicit paths are always
 checked as requested.
 
+Completed subject and assertion decisions are remembered by the optional
+`DecisionCache` service, keyed by a digest of the traits version, the decision's
+kind, and everything sent to the model: the subject or assertion with its
+context and enrichment outputs, and the input's decision state. A repeated check
+of unchanged traits and files therefore asks the model nothing, reports zero
+tokens for those decisions, and still lists the model that made them. Failed or
+unanswered decisions are never cached. `LocalDecisionCache` stores entries under
+`.agents/traits/.cache/`, which ignores itself in Git, and scopes keys to the
+configured decision model. The evaluation runner uses no cache, so accuracy
+measurements always ask the model.
+
 ## Derive traits
 
-`TraitDerivation.derive(document, approve)` turns one proposed trait file into a
-saved one. It validates the proposal as its file would be read, including
-extension references, then asks the decision model how each existing trait
-relates to it: distinct, covered, clarification, conflict, or inconclusive,
-deciding up to 32 existing traits per request. Conflicting or inconclusive
-traits, or several clarification targets, return `Unresolved`; covering traits
-return `Covered`; an unrelated trait with the same name returns `NameTaken`.
-Otherwise it calls `approve` once with the complete file text, and with the
-current file when a clarification replaces an existing trait under its name. The
-user's answer yields `Created` or `Updated` after writing, or
+`WorkspaceDerive.derive(document, approve)` (`local/WorkspaceDerive`) turns one
+proposed trait file into a saved one. It validates the proposal as its file
+would be read, including extension references, then uses
+`TraitDerivation.compare` (core) to ask the decision model how each existing
+trait relates to it: distinct, covered, clarification, conflict, or
+inconclusive, deciding up to 32 existing traits per request. Conflicting or
+inconclusive traits, or several clarification targets, return `Unresolved`;
+covering traits return `Covered`; an unrelated trait with the same name returns
+`NameTaken`. Otherwise it calls `approve` once with the complete file text, and
+with the current file when a clarification replaces an existing trait under its
+name. The user's answer yields `Created` or `Updated` after writing, or
 `RevisionRequested` or `Skipped` without writing. A target file that changed
 while waiting for approval fails with `TraitChangedError` rather than
 overwriting it.
