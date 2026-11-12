@@ -8,5 +8,7 @@ assertion: Name directory-specific shared utility modules _common.ts and
   directory-local helpers.
 purpose: Make directory-local sharing explicit and distinguish helpers from the
   directory's primary modules.
+enrichments:
+  - "@traits/typescript/references"
 ---
 For example, provider login commands share flags and credential helpers through auth/login/_common.ts.

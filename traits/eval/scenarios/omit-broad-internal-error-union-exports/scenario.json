@@ -1,0 +1,7 @@
+{
+  "trait": "omit-broad-internal-error-union-exports",
+  "labels": {
+    "data/Repository.ts": "fail",
+    "data/Queue.ts": "pass"
+  }
+}

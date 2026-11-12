@@ -8,4 +8,6 @@ assertion: Define the utilities directly within the consuming layer's
   establishes a meaningful resource-lifecycle or abstraction boundary.
 purpose: Keep dependencies and implementation logic together without redundant
   initialization, context binding, or intermediate utility objects.
+enrichments:
+  - "@traits/typescript/references"
 ---
