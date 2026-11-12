@@ -1,7 +1,11 @@
 ---
 name: effect-based-exception-handling
-subject: Throwable synchronous operations and Promise failures in application
-  code. In TypeScript, TSX, JavaScript, or JSX files.
+subject: Application code, including React components and event handlers, that
+  contains JavaScript try/catch/finally, Promise .catch or rejection handlers,
+  or calls that can throw (such as JSON.parse, decodeURIComponent, or new URL)
+  outside Effect.try. In TypeScript, TSX, JavaScript, or JSX files. Test files
+  and build-tool configuration files (see native-promises-in-build-hooks) are
+  not application code.
 assertion: "Do not use JavaScript try/catch in application code. Model throwable
   synchronous operations with Effect.try and Promise failures with the
   appropriate Effect Promise adapter, then recover with Effect error-handling

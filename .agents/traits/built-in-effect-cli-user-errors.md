@@ -1,10 +1,14 @@
 ---
 name: built-in-effect-cli-user-errors
-subject: Message-only user-facing failures in Effect CLI command handlers.
-  Applies when neither a domain-specific error identity (for recovery) nor
-  custom runtime behavior, such as a distinct Runtime.errorExitCode, is needed.
+subject: Effect CLI command modules (effect/cli Command handlers) that define
+  or fail with their own error class or schema whose only payload is a
+  user-facing message.
 assertion: Use CliError.UserError from effect/cli instead of defining a custom
-  equivalent error schema.
+  equivalent error schema for message-only user-facing failures. As an
+  exception, keep a custom error when callers need its domain-specific identity
+  for recovery (they match it by tag or type) or when it adds custom runtime
+  behavior, such as a distinct Runtime.errorExitCode. An unexported error that
+  no code matches with catchTag or catchTags has no recovery identity.
 purpose: Reuse the CLI runner's established error formatting without maintaining
   redundant error schemas.
 ---

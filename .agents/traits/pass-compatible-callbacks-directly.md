@@ -1,11 +1,15 @@
 ---
 name: pass-compatible-callbacks-directly
-subject: "Callbacks, forwarding functions, and service method definitions. In
-  TypeScript, TSX, JavaScript, or JSX files. Exception: When a wrapper is
-  necessary to control forwarded arguments or preserve the receiver."
+subject: Functions passed as callbacks (such as to map, flatMap, forEach,
+  filter, or pipe stages) and function or service-method definitions that
+  delegate to another function. In TypeScript, TSX, JavaScript, or JSX files.
 assertion: "Prefer passing a function directly as a callback when its signature
   and behavior are compatible with the caller: Effect.map(String.trim), not
-  Effect.map((text) => String.trim(text)). Apply the same preference to
+  Effect.map((text) => String.trim(text)). Effect combinators such as
+  Effect.map and Effect.flatMap pass their callback exactly one argument, and
+  static functions such as Math.round or String.trim do not depend on a
+  receiver, so an arrow that only forwards its parameter to such a function,
+  like Effect.map((n) => Math.round(n)), is a violation. Apply the same preference to
   forwarding function definitions and service methods: use a curried library
   overload that produces the required function instead of an arrow that only
   passes its parameter to the data-first overload, such as rm:

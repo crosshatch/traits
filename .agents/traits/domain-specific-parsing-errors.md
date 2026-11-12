@@ -1,9 +1,9 @@
 ---
 name: domain-specific-parsing-errors
-subject: "Recoverable domain errors at parsing boundaries. Applies when defining
-  recoverable custom domain errors or modeling parsing failures. In TypeScript
-  or TSX files. Exception: When the parsing failure is already represented by
-  SchemaError from input-schema validation."
+subject: Non-test modules that parse external text, files, or documents and
+  handle the failures, such as Effect.try around JSON.parse or a YAML or TOML
+  parser, custom parse error definitions, or mapping of decode errors. In
+  TypeScript or TSX files. Test files are out of scope.
 assertion: At parsing boundaries with recoverable domain-specific failures, use
   schema-backed tagged errors rather than Effect.try's generic UnknownError.
   Give distinct custom domain failure situations separate tags instead of a
@@ -13,8 +13,9 @@ assertion: At parsing boundaries with recoverable domain-specific failures, use
   adding unrelated or redundant fields. Retain SchemaError for input-schema
   validation failures, unless its issues would retain sensitive input values;
   then map it to a tagged error carrying only non-sensitive context, such as
-  the path, and document why the cause is dropped. Do not wrap unrelated built-in operational errors
-  merely for consistency.
+  the path, and document why the cause is dropped. A parsing failure already
+  represented by SchemaError from input-schema validation is not a violation.
+  Do not wrap unrelated built-in operational errors merely for consistency.
 purpose: Give callers meaningful recovery choices and actionable diagnostics
   without losing the original failure cause.
 ---

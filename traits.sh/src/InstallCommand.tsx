@@ -1,17 +1,20 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Effect } from "effect"
+import { Effect, Schema as S } from "effect"
 import { Atom } from "effect/reactivity"
 
 import { setupPrompt } from "./SetupPrompt.ts"
+
+class ClipboardWriteError extends S.TaggedError<ClipboardWriteError>()("ClipboardWriteError", { cause: S.Defect() }) {}
 
 const statusAtom = Atom.family((_compact: boolean) => Atom.make("Paste into your coding agent"))
 const copyAtom = Atom.family((compact: boolean) =>
   Atom.fn(
     Effect.fn("InstallCommand.copy")(function* (_event, ctx) {
       const prompt = setupPrompt(new URL("/SETUP.md", window.location.href).href)
-      const status = yield* Effect.promise(() => navigator.clipboard.writeText(prompt)).pipe(
-        Effect.matchCause({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" })
-      )
+      const status = yield* Effect.tryPromise({
+        try: () => navigator.clipboard.writeText(prompt),
+        catch: (cause) => ClipboardWriteError.make({ cause })
+      }).pipe(Effect.match({ onSuccess: () => "Copied", onFailure: () => "Copy unavailable" }))
       ctx.set(statusAtom(compact), status)
       yield* Effect.sleep("2 seconds")
       ctx.set(statusAtom(compact), "Paste into your coding agent")

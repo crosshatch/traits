@@ -11,8 +11,11 @@ assertion: Prefer namespace imports when multiple members of an external
   exports from umbrella packages such as effect. Aliasing a namespace export of
   an umbrella package, such as `import { Schema as S } from "effect"`, is the
   preferred style, not a module-name alias, and must not be converted to a
-  namespace import. Do not introduce namespaces solely because of member counts
-  or alias prefixes; choose based on API cohesion and call-site clarity.
+  namespace import. Renaming two or more members of one package with aliases
+  that embed the package name, such as parse as parseToml and stringify as
+  stringifyToml, is a violation; use a namespace import such as Toml.parse.
+  Do not introduce namespaces solely because of member counts; otherwise choose
+  based on API cohesion and call-site clarity.
 purpose: Clarify API ownership without adding namespace noise to unrelated exports.
 ---
 Violation: functions of one cohesive package API renamed with module-name aliases.
@@ -20,6 +23,8 @@ Violation: functions of one cohesive package API renamed with module-name aliase
 ```diff
 -import { parse as parseYaml, stringify as stringifyYaml } from "yaml"
 +import * as Yaml from "yaml"
+-import { parse as parseToml, stringify as stringifyToml } from "smol-toml"
++import * as Toml from "smol-toml"
 ```
 
 Correct:

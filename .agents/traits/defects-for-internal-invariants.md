@@ -10,7 +10,10 @@ assertion: Treat genuine internal invariant violations as defects, including
   actionable failures such as invalid consumer input, configuration, network,
   storage, and recoverable encoding failures. Neither typed input nor a
   handler's failure to catch an error is sufficient reason to classify a
-  recoverable failure as a defect.
+  recoverable failure as a defect. Encoding or validating values built solely
+  from module constants or already-typed internal data, where the schema cannot
+  reject them, checks an internal invariant; exposing its SchemaError in the
+  typed error channel is a violation.
 purpose: Keep recoverable error channels focused on actionable failures while
   exposing genuine internal invariant violations as defects.
 ---
@@ -22,6 +25,13 @@ For encoding that genuinely checks an internal invariant with no meaningful cons
 ```
 
 Using `Schema.Defect()` (e.g. `cause: S.Defect()`) as the schema of an error's cause field does not classify a failure as a defect; it only describes how an arbitrary cause value is encoded. Judge only what is placed in the typed error channel versus the defect channel (`Effect.die`, `Effect.orDie`, thrown exceptions). An interface-only contract declaring typed storage errors in its method signatures is not a violation.
+
+Violation: a manifest built only from constants exposes `SchemaError` in the typed error channel.
+
+```diff
+-return yield* S.encodeEffect(Manifest)({ version: 1, entries: builtInEntries })
++return yield* S.encodeEffect(Manifest)({ version: 1, entries: builtInEntries }).pipe(Effect.orDie)
+```
 
 Violation: a recoverable storage failure is converted to a defect.
 
