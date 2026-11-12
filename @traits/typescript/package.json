@@ -5,6 +5,7 @@
   "files": [
     "segmenter/**/*.ts",
     "package-exports/**/*.ts",
+    "references/**/*.ts",
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/**/*.d.ts",
@@ -15,17 +16,20 @@
   "type": "module",
   "exports": {
     "./segmenter": "./segmenter/index.ts",
-    "./package-exports": "./package-exports/index.ts"
+    "./package-exports": "./package-exports/index.ts",
+    "./references": "./references/index.ts"
   },
   "publishConfig": {
     "exports": {
       "./segmenter": "./dist/segmenter/index.js",
-      "./package-exports": "./dist/package-exports/index.js"
+      "./package-exports": "./dist/package-exports/index.js",
+      "./references": "./dist/references/index.js"
     },
     "access": "public"
   },
   "dependencies": {
-    "oxc-parser": "catalog:"
+    "oxc-parser": "catalog:",
+    "typescript": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
