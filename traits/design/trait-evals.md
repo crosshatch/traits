@@ -14,15 +14,15 @@ measurement part of the library:
 2. **`traits eval`** checks traits against their cases with a chosen model and
    reports how reliably each one behaves.
 3. **`traits.derive`** builds cases for a proposal, evaluates it, and rewrites
-   its wording until it behaves as intended. Only then does it show the
-   proposal to the user, together with the workspace files it would flag.
+   its wording until it behaves as intended. Only then does it show the proposal
+   to the user, together with the workspace files it would flag.
 
 ## Why one mechanism covers the existing scripts
 
-| Script | Cases | What it found |
-| --- | --- | --- |
-| `eval/run.ts` | Real files, labelled by hand | False positives on real code |
-| `eval/misses.ts` | Generated violating and fixed pairs | Misses, and subjects too narrow to match |
+| Script              | Cases                                                     | What it found                                         |
+| ------------------- | --------------------------------------------------------- | ----------------------------------------------------- |
+| `eval/run.ts`       | Real files, labelled by hand                              | False positives on real code                          |
+| `eval/misses.ts`    | Generated violating and fixed pairs                       | Misses, and subjects too narrow to match              |
 | `eval/scenarios.ts` | Small multi-file projects, with and without an enrichment | Whether an enrichment is needed, and whether it helps |
 
 All three check a set of files against one trait several times, without the
@@ -57,6 +57,7 @@ design keeps that core and makes the case source a detail.
 
   Files without a label are context only, such as the consumers that the
   `references` enrichment reads.
+
 - `source` records where the case came from:
   - `feedback`: code behind the user's feedback, supplied by the agent.
   - `workspace`: copied from the workspace.
@@ -64,8 +65,9 @@ design keeps that core and makes the case source a detail.
 
   Labels on `feedback` cases are ground truth. Labels on `generated` cases are
   the generator's intent and can be wrong (see Derivation).
-- `note` says why the label holds. Refinement and people reviewing the case
-  both read it.
+
+- `note` says why the label holds. Refinement and people reviewing the case both
+  read it.
 - A case may include a `tsconfig.json` or `package.json` when an enrichment
   needs one.
 
@@ -95,8 +97,8 @@ Case files are deliberately non-compliant code inside the repository.
     run.
   - The evaluation report.
 - **Local (`traits/local/LocalEval.ts`):**
-  - Writes each case to a temporary directory, which becomes the
-    `WorkspaceRoot` for that check.
+  - Writes each case to a temporary directory, which becomes the `WorkspaceRoot`
+    for that check.
   - Resolves extensions against the real workspace, so a case uses the
     workspace's installed enrichments. `eval/scenarios.ts` does the same today.
   - Runs `check` with the decision cache off, so that repeat runs are
@@ -107,16 +109,16 @@ Case files are deliberately non-compliant code inside the repository.
 A run of a labelled file has one verdict under the policy (by default
 `--fail 0.5 --pass 0.5`). Each verdict compares with its label as follows:
 
-| Label | Correct | Wrong |
-| --- | --- | --- |
-| `fail` | Fail | Missed by the subject gate (Unmatched), or by the assertion (Pass or Inconclusive) |
-| `pass` | Pass or Unmatched | False positive (Fail), or Inconclusive |
-| `unmatched` | Unmatched or Pass | False positive (Fail), or Inconclusive |
+| Label       | Correct           | Wrong                                                                              |
+| ----------- | ----------------- | ---------------------------------------------------------------------------------- |
+| `fail`      | Fail              | Missed by the subject gate (Unmatched), or by the assertion (Pass or Inconclusive) |
+| `pass`      | Pass or Unmatched | False positive (Fail), or Inconclusive                                             |
+| `unmatched` | Unmatched or Pass | False positive (Fail), or Inconclusive                                             |
 
 A `pass` case that comes back Unmatched, or an `unmatched` case that comes back
-Pass, still counts as correct. Neither flags code, but both are reported as
-gate disagreements, because they show the subject is drawn in a different place
-than intended.
+Pass, still counts as correct. Neither flags code, but both are reported as gate
+disagreements, because they show the subject is drawn in a different place than
+intended.
 
 For each trait the evaluation reports:
 
@@ -141,23 +143,23 @@ traits eval [--trait <name>]... [--environment <name>] [--runs 3]
   like `traits check`.
 - **Exit codes:**
 
-  | Code | Meaning |
-  | --- | --- |
-  | 0 | Every evaluated trait meets the bar |
-  | 1 | Some trait falls short |
-  | 2 | The evaluation could not run |
+  | Code | Meaning                             |
+  | ---- | ----------------------------------- |
+  | 0    | Every evaluated trait meets the bar |
+  | 1    | Some trait falls short              |
+  | 2    | The evaluation could not run        |
 
-- **Traits without cases:** they are listed as unevaluated and do not affect
-  the exit code.
+- **Traits without cases:** they are listed as unevaluated and do not affect the
+  exit code.
 - **Cache:** results are cached by trait digest, case digest, models, runs, and
   traits version. CI only re-evaluates traits or cases that changed.
-- **`--decision-model`:** evaluates the same cases with another model, such as
-  a cheaper one, without editing `traits.json`.
-- **`--generate`:** writes generated cases for traits that have too few.
-  Enough means at least one `fail`, one `pass`, and one near miss, which is
-  compliant code that resembles a violation. It writes files, so it only runs
-  when asked. It replaces `eval/misses.ts`, and adds near misses, which were the
-  main source of false positives that generated pairs did not cover.
+- **`--decision-model`:** evaluates the same cases with another model, such as a
+  cheaper one, without editing `traits.json`.
+- **`--generate`:** writes generated cases for traits that have too few. Enough
+  means at least one `fail`, one `pass`, and one near miss, which is compliant
+  code that resembles a violation. It writes files, so it only runs when asked.
+  It replaces `eval/misses.ts`, and adds near misses, which were the main source
+  of false positives that generated pairs did not cover.
 
 ## Derivation
 
@@ -167,8 +169,8 @@ What changes is the work before the form.
 ### Input
 
 Each proposal gains `cases`: the concrete code behind the feedback. Each case
-gives a workspace path, or inline text for code that was never saved (such as
-a rejected draft), and its label. At least one `fail` case is required. The
+gives a workspace path, or inline text for code that was never saved (such as a
+rejected draft), and its label. At least one `fail` case is required. The
 corrected code, labelled `pass`, is strongly recommended. The tool description
 tells agents to supply both.
 
@@ -178,9 +180,9 @@ tells agents to supply both.
    and Unresolved still return before any evaluation is spent.
 2. **Build cases:**
    - **Feedback cases** from the agent's input.
-   - **Generated cases:** the language model writes about two violations and
-     two compliant files, at least one of them a near miss, in scenarios
-     different from the feedback cases.
+   - **Generated cases:** the language model writes about two violations and two
+     compliant files, at least one of them a near miss, in scenarios different
+     from the feedback cases.
    - **Existing cases** of a trait being clarified are included, so that a
      clarification cannot break behaviour that was already verified.
 3. **Evaluate** the draft, with 2 runs per case.
@@ -192,24 +194,24 @@ tells agents to supply both.
 
    A generated case whose label the refiner judges wrong may be dropped, with
    the reason recorded. Feedback cases are never dropped.
+
 5. **Measure workspace impact:** check the refined trait against the workspace,
    using the decision cache, and collect the files it would flag and the count
    of Inconclusive files.
 6. **Ask for approval.** The form message shows the trait, its evaluation
-   ("correct on 7 of 7 cases over 2 runs"), and its impact ("would flag
-   `a.ts`, `b.ts`, and 3 more files"). The form fields stay Save, Revise, and
-   Skip.
-7. **On Save,** write the trait file and its kept cases to
-   `_cases/<trait>/`. Files from the workspace-impact step are not saved as
-   cases, because no one confirmed their labels.
+   ("correct on 7 of 7 cases over 2 runs"), and its impact ("would flag `a.ts`,
+   `b.ts`, and 3 more files"). The form fields stay Save, Revise, and Skip.
+7. **On Save,** write the trait file and its kept cases to `_cases/<trait>/`.
+   Files from the workspace-impact step are not saved as cases, because no one
+   confirmed their labels.
 
 ### Outcomes
 
 - `Created` and `Updated` also carry the evaluation summary and the flagged
   files, so the agent can go on to fix them.
-- New outcome **`Unreliable`:** the trait still falls short after refinement.
-  It carries the remaining wrong cases. Nothing is shown to the user, and the
-  agent revises the proposal with the user or narrows it.
+- New outcome **`Unreliable`:** the trait still falls short after refinement. It
+  carries the remaining wrong cases. Nothing is shown to the user, and the agent
+  revises the proposal with the user or narrows it.
 
 ### Circularity
 
@@ -224,18 +226,17 @@ measures keep that from approving a trait that only agrees with itself:
 ### Latency
 
 A derivation now makes a few dozen decision requests: about 7 cases × 2 runs ×
-up to 4 rounds, plus the workspace check, which the cache makes cheap on
-repeat. Expect tens of seconds instead of about 2.5 s. The server sends MCP
-progress notifications at every step. Some clients time out tool calls after
-about 60 s, so this must be measured against real clients.
+up to 4 rounds, plus the workspace check, which the cache makes cheap on repeat.
+Expect tens of seconds instead of about 2.5 s. The server sends MCP progress
+notifications at every step. Some clients time out tool calls after about 60 s,
+so this must be measured against real clients.
 
 ## Migrating this repository
 
 - `eval/scenarios.ts` projects become cases as they are. The
   with-and-without-enrichment comparison becomes
   `traits eval --compare-enrichments` (phase 4).
-- `eval/generated/*.json` become `generated` cases. `eval/misses.ts` is
-  removed.
+- `eval/generated/*.json` become `generated` cases. `eval/misses.ts` is removed.
 - `eval/run.ts` stays as a benchmark of the check engine itself (batching,
   tokens, and policies across every trait at once), not of individual traits.
   Its `fail` fixtures are also copied into cases for their traits.
@@ -263,11 +264,11 @@ is the preparation; nothing else needs to change for it to stay valid.
 
 These were written without `traits eval` and need no generation:
 
-| Content | Traits | Status |
-| --- | --- | --- |
-| `eval/scenarios/`: 10 multi-file projects | 10 | Ready. Written and labelled by hand. The traits need cross-file judgment, so they are the least likely to become lint rules. |
-| `eval/cases.json`: 29 real files with labels | 7 | Ready. Several are lint candidates, such as `always-brace-if-bodies`. |
-| `eval/generated/`: violating and compliant pairs | 167 | Not ground truth. The labels are only the generator's intent and no one has reviewed them. About 14 disagreed with the decision model in the last full run. |
+| Content                                          | Traits | Status                                                                                                                                                      |
+| ------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eval/scenarios/`: 10 multi-file projects        | 10     | Ready. Written and labelled by hand. The traits need cross-file judgment, so they are the least likely to become lint rules.                                |
+| `eval/cases.json`: 29 real files with labels     | 7      | Ready. Several are lint candidates, such as `always-brace-if-bodies`.                                                                                       |
+| `eval/generated/`: violating and compliant pairs | 167    | Not ground truth. The labels are only the generator's intent and no one has reviewed them. About 14 disagreed with the decision model in the last full run. |
 
 The generated pairs are also ready-made tests for the lint rules that replace
 traits: the violating file is an invalid case, and the compliant one a valid

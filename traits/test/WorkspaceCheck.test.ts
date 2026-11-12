@@ -31,7 +31,7 @@ const response: DecisionModel.ProviderResponse = {
   usage: { inputTokens: undefined, outputTokens: undefined }
 }
 
-/** A Git workspace with two traits, one committed file that is then modified, one deleted, and one untracked. */
+/** A Git workspace with two traits, one committed file that is then modified, one deleted, and one untracked, and two committed symbolic links, one then deleted. */
 const workspace = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -54,6 +54,8 @@ const workspace = Effect.gen(function* () {
   yield* fs.writeFileString(path.join(directory, ".agents", "traits", "small.md"), traitFile("small"))
   yield* fs.writeFileString(path.join(directory, "src", "modified.ts"), "export const a = 1\n")
   yield* fs.writeFileString(path.join(directory, "src", "deleted.ts"), "export const b = 2\n")
+  yield* fs.symlink("modified.ts", path.join(directory, "src", "link.ts"))
+  yield* fs.symlink("modified.ts", path.join(directory, "src", "unlinked.ts"))
   const init = yield* git("init", "--quiet")
   expect(init).toBe(0)
   const add = yield* git("add", ".")
@@ -62,6 +64,7 @@ const workspace = Effect.gen(function* () {
   expect(commit).toBe(0)
   yield* fs.writeFileString(path.join(directory, "src", "modified.ts"), "export const a = 2\n")
   yield* fs.remove(path.join(directory, "src", "deleted.ts"))
+  yield* fs.remove(path.join(directory, "src", "unlinked.ts"))
   yield* fs.writeFileString(path.join(directory, "src", "untracked.ts"), "export const c = 3\n")
   return directory
 })
@@ -82,7 +85,15 @@ it.live("checks working-tree files against their text at HEAD and reports trait 
     const report = yield* Effect.gen(function* () {
       const config = yield* TraitsConfig.load
       return yield* WorkspaceCheck.run(config, {
-        paths: ["src/modified.ts", path.join(directory, "src", "deleted.ts"), "src/untracked.ts", "./src/modified.ts"],
+        paths: [
+          "src/modified.ts",
+          path.join(directory, "src", "deleted.ts"),
+          "src/untracked.ts",
+          "./src/modified.ts",
+          // Symbolic links, present or deleted, have no text of their own and are skipped.
+          "src/link.ts",
+          "src/unlinked.ts"
+        ],
         traits: [TraitName.make("small")]
       })
     }).pipe(Effect.provide(services(directory)))
@@ -99,7 +110,7 @@ it.live("checks working-tree files against their text at HEAD and reports trait 
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 
-it.live("checks every project file Git does not ignore when no paths are given, skipping binaries", () =>
+it.live("checks every project file Git does not ignore when no paths are given, skipping binaries and links", () =>
   Effect.gen(function* () {
     const directory = yield* workspace
     const fs = yield* FileSystem.FileSystem

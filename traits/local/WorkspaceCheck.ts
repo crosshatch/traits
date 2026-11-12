@@ -1,4 +1,17 @@
-import { Array, Context, Effect, FileSystem, Layer, Path, pipe, Predicate, Schema as S, Stream, String } from "effect"
+import {
+  Array,
+  Context,
+  Effect,
+  FileSystem,
+  flow,
+  Layer,
+  Path,
+  pipe,
+  Predicate,
+  Schema as S,
+  Stream,
+  String
+} from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { check } from "../Check/Check.ts"
@@ -115,6 +128,30 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
       { concurrency: fileConcurrency }
     )
   }).pipe(Effect.scoped)
+  // Symbolic links at HEAD, whose committed text is the path they point to rather than content of their own.
+  const committedLinks = yield* Effect.gen(function* () {
+    const handle = yield* spawner.spawn(
+      ChildProcess.make("git", ["ls-tree", "-r", "-z", "HEAD", "--", "."], {
+        cwd: directory,
+        stdin: "ignore",
+        stdout: "pipe",
+        stderr: "ignore"
+      })
+    )
+    const tree = yield* handle.stdout.pipe(Stream.decodeText(), Stream.mkString)
+    // Each entry is "<mode> <type> <object>\t<path>", with paths relative to the workspace root.
+    return pipe(
+      tree,
+      String.split("\0"),
+      Array.filter(String.startsWith("120000 ")),
+      Array.map(flow(String.split("\t"), Array.drop(1), Array.join("\t"))),
+      (paths) => new Set(paths)
+    )
+  }).pipe(
+    Effect.scoped,
+    // Workspaces outside Git, or without commits, have no committed links.
+    Effect.orElseSucceed(() => new Set<string>())
+  )
   const listing = request.paths === undefined
   const requestedPaths = listing ? yield* projectFiles : request.paths
   const workspacePaths = yield* Effect.forEach(
@@ -136,6 +173,15 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
     Array.dedupe(workspacePaths),
     Effect.fnUntraced(function* (file) {
       const working = path.join(directory, file)
+      // A symbolic link's text is the file it points to, which is checked under its own path, so links are skipped.
+      const linked = yield* fs.lstat(working).pipe(
+        Effect.map((info) => info.type === "SymbolicLink"),
+        Effect.orElseSucceed(() => false)
+      )
+      const committedLink = committedLinks.has(file)
+      if (linked || (committedLink && !(yield* fs.exists(working)))) {
+        return undefined
+      }
       const current = yield* fs.exists(working).pipe(
         Effect.flatMap((exists) => (exists ? fs.readFileString(working) : Effect.undefined)),
         Effect.mapError((cause) =>
@@ -146,7 +192,9 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
       if (listing && current !== undefined && String.includes("\u0000")(current)) {
         return undefined
       }
-      const committed = yield* committedText(file).pipe(Effect.orElseSucceed(() => undefined))
+      const committed = committedLink
+        ? undefined
+        : yield* committedText(file).pipe(Effect.orElseSucceed(() => undefined))
       const before = committed === undefined ? undefined : { path: file, text: committed }
       if (current === undefined) {
         return before === undefined

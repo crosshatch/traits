@@ -222,7 +222,9 @@ Without paths, a check covers every project file: tracked and untracked files
 that Git does not ignore, listed by `git ls-files`, minus the configuration's
 `exclude` patterns (Git glob pathspecs, relative to the workspace root), deleted
 files, submodules, and files containing NUL bytes. Explicit paths are always
-checked as requested.
+checked as requested. Symbolic links are skipped either way, present or deleted:
+their working-tree text is the file they point to, which is checked under its
+own path, and their text at `HEAD` is only that file's path.
 
 Completed subject and assertion decisions are remembered by the optional
 `DecisionCache` service, keyed by a digest of the traits version, the decision's
