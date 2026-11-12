@@ -1,6 +1,7 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Path } from "effect"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Enrichment, fromSegment, Segment, Trait, TraitName, TraitPurpose, WorkspacePath } from "traits"
 import { WorkspaceRoot } from "traits/local"
 
@@ -26,8 +27,18 @@ it.live("lists the other files referencing each exported declaration", () =>
       path.join(root, "Parse.ts"),
       'import { Missing } from "./Errors.ts"\nexport const parse = () => new Missing()\nexport const again = () => new Missing()\n'
     )
-    yield* fs.writeFileString(path.join(root, "index.ts"), 'export { Missing } from "./Errors.ts"\n')
+    yield* fs.writeFileString(
+      path.join(root, "package.json"),
+      JSON.stringify({ name: "example", exports: { ".": "./index.ts" } })
+    )
+    yield* fs.writeFileString(
+      path.join(root, "index.ts"),
+      'export { Missing } from "./Errors.ts"\nexport * from "./all.ts"\n'
+    )
     yield* fs.writeFileString(path.join(root, "all.ts"), 'export * from "./Errors.ts"\n')
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+    // Git finds the projects and package manifests to read.
+    yield* spawner.exitCode(ChildProcess.make("git", ["init", "-q"], { cwd: root }))
     const enrich = yield* setup.pipe(Effect.provide(WorkspaceRoot.layer(root)))
     const describe = (change: Parameters<typeof fromSegment>[0], segment: Segment) =>
       Effect.gen(function* () {
@@ -40,8 +51,12 @@ it.live("lists the other files referencing each exported declaration", () =>
     const source = { path: WorkspacePath.make("Errors.ts"), text: errors }
     const whole = { start: 0, end: errors.length }
     const listed = yield* describe({ after: source }, Segment.cases.After.make({ range: whole }))
-    expect(listed).toMatch(/- Missing \(class\): used by Parse\.ts \(\d\); re-exported by index\.ts/u)
-    expect(listed).toContain("- unused (const): no uses in other files")
+    expect(listed).toMatch(
+      /- Missing \(class\): used by Parse\.ts \(2\); re-exported by all\.ts, index\.ts; public API of package example through index\.ts/u
+    )
+    expect(listed).toContain(
+      "- unused (const): no uses in other files; re-exported by all.ts; public API of package example through index.ts"
+    )
     expect(listed).not.toContain("internal")
     const deleted = yield* describe({ before: source }, Segment.cases.Before.make({ range: whole }))
     expect(deleted).toBe("References are unavailable for a deleted file.")

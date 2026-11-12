@@ -1,4 +1,4 @@
-import { Array, Effect, FileSystem, flow, Path, pipe, Record, Stream, String } from "effect"
+import { Array, Effect, FileSystem, flow, Option, Path, pipe, Record, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Enrichment } from "traits"
 import { WorkspaceRoot } from "traits/local"
@@ -54,29 +54,71 @@ export default Effect.gen(function* () {
   const path = yield* Path.Path
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
   const { directory } = yield* WorkspaceRoot
+  /** Workspace files with the given name that Git tracks or would track, relative to the workspace root. */
+  const gitFiles = (fileName: string) =>
+    spawner
+      .spawn(
+        ChildProcess.make("git", ["ls-files", "--cached", "--others", "--exclude-standard", "--", `*${fileName}`], {
+          cwd: directory,
+          stdin: "ignore",
+          stderr: "ignore"
+        })
+      )
+      .pipe(
+        Effect.flatMap((handle) => handle.stdout.pipe(Stream.decodeText(), Stream.mkString)),
+        Effect.map(
+          flow(
+            String.split("\n"),
+            Array.filter((file) => file === fileName || pipe(file, String.endsWith(`/${fileName}`)))
+          )
+        ),
+        Effect.scoped,
+        Effect.orElseSucceed((): ReadonlyArray<string> => [])
+      )
   // Every project is opened, so uses from other packages in the workspace are counted too.
-  const configs = yield* spawner
-    .spawn(
-      ChildProcess.make("git", ["ls-files", "--cached", "--others", "--exclude-standard", "--", "*tsconfig.json"], {
-        cwd: directory,
-        stdin: "ignore",
-        stderr: "ignore"
-      })
+  const configs = yield* gitFiles("tsconfig.json")
+  // Package entry points, by lower-cased absolute path, so re-export chains that reach one can be reported as public API.
+  const entries = new Map<string, string>()
+  for (const manifest of yield* gitFiles("package.json")) {
+    const parsed = yield* fs.readFileString(path.join(directory, manifest)).pipe(
+      Effect.flatMap(
+        S.decodeEffect(
+          S.fromJsonString(
+            S.Struct({
+              name: S.String.pipe(S.optionalKey),
+              exports: S.Unknown.pipe(S.optionalKey),
+              main: S.String.pipe(S.optionalKey)
+            })
+          )
+        )
+      ),
+      Effect.option
     )
-    .pipe(
-      Effect.flatMap((handle) => handle.stdout.pipe(Stream.decodeText(), Stream.mkString)),
-      Effect.map(flow(String.split("\n"), Array.filter(String.endsWith("tsconfig.json")))),
-      Effect.scoped,
-      Effect.orElseSucceed((): ReadonlyArray<string> => [])
-    )
+    if (Option.isNone(parsed) || parsed.value.name === undefined) {
+      continue
+    }
+    const targets: Array<string> = []
+    const collect = (value: unknown): void => {
+      if (typeof value === "string") {
+        targets.push(value)
+      } else if (typeof value === "object" && value !== null) {
+        Array.forEach(Record.values(value as Record.ReadonlyRecord<string, unknown>), collect)
+      }
+    }
+    collect([parsed.value.exports, parsed.value.main])
+    for (const target of targets) {
+      entries.set(String.toLowerCase(path.resolve(directory, path.dirname(manifest), target)), parsed.value.name)
+    }
+  }
   const api = yield* Effect.sync(() => new API({ cwd: directory })).pipe((acquire) =>
     Effect.acquireRelease(acquire, (api) => Effect.sync(() => api.close()))
   )
   const opened = new Set(Array.map(configs, (config) => path.join(directory, config)))
   let snapshot = yield* Effect.sync(() => api.updateSnapshot({ openProjects: [...opened] }))
-  // Wildcard re-exports (export * from, export * as X from) produce no references, so they are indexed once by target file.
-  const wildcards = yield* Effect.sync(() => {
-    const index = new Map<string, Set<string>>()
+  // Re-exports by target file: wildcard ones (export * from, export * as X from) produce no references, and all of them are followed to find package entry points.
+  const { wildcards, reexporters } = yield* Effect.sync(() => {
+    const wildcards = new Map<string, Set<string>>()
+    const reexporters = new Map<string, Set<string>>()
     for (const project of snapshot.getProjects()) {
       for (const name of project.program.getSourceFileNames()) {
         if (pipe(name, String.includes("/node_modules/")) || pipe(name, String.endsWith(".d.ts"))) {
@@ -86,18 +128,38 @@ export default Effect.gen(function* () {
           if (
             !isExportDeclaration(statement) ||
             statement.moduleSpecifier === undefined ||
-            !isStringLiteral(statement.moduleSpecifier) ||
-            (statement.exportClause !== undefined && statement.exportClause.kind !== SyntaxKind.NamespaceExport)
+            !isStringLiteral(statement.moduleSpecifier)
           ) {
             continue
           }
           const target = String.toLowerCase(path.resolve(path.dirname(name), statement.moduleSpecifier.text))
-          index.set(target, (index.get(target) ?? new Set<string>()).add(name))
+          reexporters.set(target, (reexporters.get(target) ?? new Set<string>()).add(name))
+          if (statement.exportClause === undefined || statement.exportClause.kind === SyntaxKind.NamespaceExport) {
+            wildcards.set(target, (wildcards.get(target) ?? new Set<string>()).add(name))
+          }
         }
       }
     }
-    return index
+    return { wildcards, reexporters }
   })
+  /** The package entry point a module's exports reach by following re-exports, if any. */
+  const publicEntry = (from: Iterable<string>) => {
+    const seen = new Set<string>()
+    const queue = [...from]
+    for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
+      const key = String.toLowerCase(next)
+      if (seen.has(key)) {
+        continue
+      }
+      seen.add(key)
+      const name = entries.get(key)
+      if (name !== undefined) {
+        return { name, file: next }
+      }
+      queue.push(...(reexporters.get(key) ?? []))
+    }
+    return undefined
+  }
   /** The nearest tsconfig.json above a workspace file, for files no listed project includes, such as outside Git. */
   const nearestConfig = Effect.fnUntraced(function* (file: string) {
     const segments = String.split(file, "/")
@@ -160,9 +222,11 @@ export default Effect.gen(function* () {
               if (String.toLowerCase(referencing) === String.toLowerCase(absolute)) {
                 continue
               }
-              if (reference.resolve(project)?.parent.kind === SyntaxKind.ExportSpecifier) {
+              const parent = reference.resolve(project)?.parent.kind
+              if (parent === SyntaxKind.ExportSpecifier) {
                 entry.referencing.reexports.add(referencing)
-              } else {
+              } else if (parent !== SyntaxKind.ImportSpecifier && parent !== SyntaxKind.ImportClause) {
+                // Imports bring a declaration into scope; only the sites that then use it are counted.
                 uses.set(referencing, (uses.get(referencing) ?? 0) + 1)
               }
             }
@@ -200,8 +264,11 @@ export default Effect.gen(function* () {
       const reexported = Array.isArrayEmpty([...entry.referencing.reexports])
         ? ""
         : `; re-exported by ${Array.join(Array.map([...entry.referencing.reexports].sort(), relative), ", ")}`
-      return `- ${name} (${Array.join([...entry.kinds], ", ")}): ${used}${reexported}`
+      const reached = publicEntry([absolute, ...entry.referencing.reexports])
+      const exposed =
+        reached === undefined ? "" : `; public API of package ${reached.name} through ${relative(reached.file)}`
+      return `- ${name} (${Array.join([...entry.kinds], ", ")}): ${used}${reexported}${exposed}`
     })
-    return `Uses of the declarations ${file} exports in other files of the workspace, with counts. Re-exports, including wildcard export * re-exports, are listed separately and are not uses.\n${Array.join(lines, "\n")}`
+    return `Uses of the declarations ${file} exports in other files of the workspace, with counts. Re-exports, including wildcard export * re-exports, are listed separately and are not uses. Public API marks a declaration that a package entry point exports, directly or through a chain of re-exporting modules.\n${Array.join(lines, "\n")}`
   })
 })

@@ -150,7 +150,7 @@ it.effect("shares segmentation across traits and validates the entire result bef
         { change: { after: { path: WorkspacePath.make("invalid.ts"), text: "ab" } } },
         { change: { after: { path: WorkspacePath.make("valid.ts"), text: "ab" } } }
       ]
-    }).pipe(Effect.provide(Layer.merge(registry, model)))
+    }).pipe(Effect.provide([registry, model]))
     expect(setups).toBe(1)
     expect(executions).toBe(2)
     expect(
@@ -188,7 +188,7 @@ it.effect("retains empty segment selections and reports setup failures once with
         { trait: trait("failed-two", { segment: failedModule }) }
       ],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
-    }).pipe(Effect.provide(Layer.merge(registry, model)))
+    }).pipe(Effect.provide([registry, model]))
     expect(Array.map(report.traits, (entry) => entry.changes)).toEqual([
       [Report.ChangeReport.cases.Evaluated.make({ inputs: [] })],
       [Report.ChangeReport.cases.NotSegmented.make({})],
@@ -226,7 +226,7 @@ it.effect("reports failed enrichment setup once and omits it from every trait's 
         { change: { after: { path: WorkspacePath.make("one.ts"), text: "one" } } },
         { change: { after: { path: WorkspacePath.make("two.ts"), text: "two" } } }
       ]
-    }).pipe(Effect.provide(Layer.merge(registry, model)))
+    }).pipe(Effect.provide([registry, model]))
     expect(lookups).toBe(1)
     expect(report.diagnostics).toHaveLength(1)
     for (const trait of report.traits) {
@@ -256,7 +256,7 @@ it.effect("allows enrichment-only recovery to proceed, but blocks Input-scoped a
       const report = yield* check({
         traits: [{ trait: trait("example", { assertion, enrichments: [context] }) }],
         changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
-      }).pipe(Effect.provide(Layer.merge(registry, model)))
+      }).pipe(Effect.provide([registry, model]))
       expect(report.diagnostics).toEqual([])
       const input = inputsOf(report.traits[0]!)[0]!
       const inputScoped = Enrichment.EnrichmentErrorReason.guards.Input(reason)
@@ -293,7 +293,7 @@ it.effect("retains empty enrichment context and reports failed enrichment withou
     const report = yield* check({
       traits: [{ trait: trait("example", { enrichments: [empty, context] }) }],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "private-source" } } }]
-    }).pipe(Effect.provide(Layer.merge(registry, model)))
+    }).pipe(Effect.provide([registry, model]))
     expect(inputsOf(report.traits[0]!)[0]!.enrichments).toEqual([
       Report.EnrichmentOutcome.cases.Succeeded.make({ module: empty, text: "" }),
       Report.EnrichmentOutcome.cases.Failed.make({
@@ -516,7 +516,7 @@ it.effect("records enrichments cancelled by another enrichment's Input recovery"
     const report = yield* check({
       traits: [{ trait: trait("example", { assertion, enrichments: [context, slow] }) }],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
-    }).pipe(Effect.provide(Layer.merge(registry, model)))
+    }).pipe(Effect.provide([registry, model]))
     const input = inputsOf(report.traits[0]!)[0]!
     expect(input._tag).toBe("Failed")
     expect(input.enrichments).toEqual([
@@ -539,7 +539,7 @@ it.effect("reports host-supplied trait origins", () =>
     const report = yield* check({
       traits: [{ trait: trait("with-origin"), origin }, { trait: trait("without-origin") }],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
-    }).pipe(Effect.provide(Layer.merge(unused, model)))
+    }).pipe(Effect.provide([unused, model]))
     expect(report.traits[0]!.origin).toEqual(origin)
     expect(report.traits[1]!).not.toHaveProperty("origin")
     yield* pipe(report, S.decodeEffect(Report.Report))

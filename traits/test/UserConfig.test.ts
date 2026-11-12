@@ -6,21 +6,6 @@ import { ModelSelection } from "../Cli/Profile/ModelSelection.ts"
 import { Profile, ProfileName } from "../Cli/Profile/Profile.ts"
 import * as UserConfig from "../Cli/UserConfig.ts"
 
-const paths = (workspaceKey: string) =>
-  Layer.succeed(
-    CliPaths,
-    CliPaths.of({
-      cwd: "/workspace",
-      workspaceKey,
-      traitsDirectory: "/workspace/.agents/traits",
-      environmentsDirectory: "/workspace/.agents/traits/_environments",
-      configDirectory: "/config",
-      dataDirectory: "/data",
-      config: "/config/profiles.json",
-      accounts: "/data/credentials.json",
-      lock: "/data/cli.lock"
-    })
-  )
 const layer = ModelSelection.cases.Custom.make({ path: "layer.ts" })
 const profile = Profile.make({ language: layer, decision: layer })
 const config = UserConfig.UserConfig.make({
@@ -34,7 +19,24 @@ const config = UserConfig.UserConfig.make({
 it.effect("resolves an explicit profile, then the workspace override, then the profile named default", () =>
   Effect.gen(function* () {
     const resolve = (workspaceKey: string, explicitName?: ProfileName) =>
-      UserConfig.resolveProfile(config, explicitName).pipe(Effect.provide(paths(workspaceKey)))
+      UserConfig.resolveProfile(config, explicitName).pipe(
+        Effect.provide(
+          Layer.succeed(
+            CliPaths,
+            CliPaths.of({
+              cwd: "/workspace",
+              workspaceKey,
+              traitsDirectory: "/workspace/.agents/traits",
+              environmentsDirectory: "/workspace/.agents/traits/_environments",
+              configDirectory: "/config",
+              dataDirectory: "/data",
+              config: "/config/profiles.json",
+              accounts: "/data/credentials.json",
+              lock: "/data/cli.lock"
+            })
+          )
+        )
+      )
     const overridden = yield* resolve("/a/.git")
     expect(overridden.name).toBe("work")
     const fallback = yield* resolve("/c/.git")

@@ -1,21 +1,26 @@
 ---
 name: inline-small-single-use-helpers
-subject: Small named helpers, including exported ones and React atom logic,
-  other than trivial error-constructor forwarding helpers. Applies to
-  TypeScript, TSX, JavaScript, and JSX.
-assertion: Prefer inlining small single-use helper logic into the operation that consumes
+subject: Small named helper functions, including exported ones and React atom logic.
+  Excludes trivial error-constructor forwarding helpers, named constant values,
+  and helpers used only within React component render or event handlers, such as
+  a JSX row callback. Applies to TypeScript, TSX, JavaScript, and JSX.
+assertion: "Prefer inlining small single-use helper logic into the operation that consumes
   it instead of introducing a separately named helper. A helper is single-use
-  when exactly one site in the codebase calls or references it, including an
-  exported helper whose only use is in one other file; inline it into that
-  consumer. Uses in other files, when supplied as context, decide this. Re-
-  exports are not uses, and a helper with no uses is unused rather than single-
-  use. Out of scope are exports of entry modules that tools load by path or
-  dynamic import, such as a server-side rendering module, and helpers a barrel or package entry point re-exports, by name or with export *,
-  as public API. Extract a helper when reused,
+  when exactly one call or reference site in the codebase uses it. Count each
+  site separately: two calls in one file, or three calls in one other file, are
+  not single-use. An exported helper whose one use is in another file is
+  single-use; inline it there. Uses in other files, when supplied as context,
+  decide this. Re-exports are not uses, and a helper with no uses is unused
+  rather than single-use. Small means a few lines,
+  such as a one-line transformation; multi-step logic, logic with its own nested
+  helpers, and code longer than about ten lines are not small. Out of scope are exports of entry modules
+  that tools load by path or dynamic import, such as a server-side rendering
+  module, and helpers that are public API: exported by a package entry point
+  directly or through any chain of re-exports. Extract a helper when reused,
   when naming materially improves readability, or when it defines a meaningful
   domain or API boundary; a separate module alone is not such a boundary. In
-  React, inline into the relevant atom or Effect operation, not into component
-  render or event handlers.
+  React, inline atom logic into its atom definition or Effect operation; never
+  inline into component render or event handlers."
 purpose: Keep local behavior easy to follow without unnecessary helper indirection.
 enrichments:
   - "@traits/typescript/references"

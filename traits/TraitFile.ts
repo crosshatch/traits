@@ -77,17 +77,17 @@ const Delimiter = S.Literals(["---\r\n", "---\n"])
 /** Frontmatter lines up to the first closing delimiter, so a later --- in the Markdown body stays in the body. */
 const FrontmatterLines = S.String.check(S.isPattern(/^(?:(?!---(?:\r?\n|$))[^\n]*\n)*$/u))
 
-/** A trait file's text: YAML frontmatter between --- lines, then an optional Markdown body. */
-const TraitText = S.Union([
-  S.TemplateLiteralParser([Delimiter, FrontmatterLines, Delimiter, S.String]),
-  S.TemplateLiteralParser([Delimiter, FrontmatterLines, "---", ""])
-])
-
 /** Parses a trait file into its frontmatter and trimmed body; extension references are not resolved yet. */
 export const parse = Effect.fn("TraitFile.parse")(function* (input: { readonly path: string; readonly text: string }) {
   const [, frontmatterText, , bodyText] = yield* pipe(
     input.text,
-    S.decodeUnknownEffect(TraitText),
+    // YAML frontmatter between --- lines, then an optional Markdown body.
+    S.decodeUnknownEffect(
+      S.Union([
+        S.TemplateLiteralParser([Delimiter, FrontmatterLines, Delimiter, S.String]),
+        S.TemplateLiteralParser([Delimiter, FrontmatterLines, "---", ""])
+      ])
+    ),
     Effect.mapError(() =>
       TraitFileParseError.make({ path: input.path, problem: "it must start with YAML frontmatter between --- lines." })
     )

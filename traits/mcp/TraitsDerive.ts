@@ -44,25 +44,22 @@ export const TraitsDerive = Tool.make("traits.derive", {
 /** The traits.derive toolkit. */
 export const toolkit = Toolkit.make(TraitsDerive)
 
-/** The approval form shown for each proposal. */
-const ApprovalForm = S.Struct({
-  /** Save the trait as shown, ask for changes, or skip it. */
-  decision: S.Literals(["Save", "Revise", "Skip"]).annotate({
-    title: "Decision",
-    description: "Save the trait as shown, ask for changes, or skip it."
-  }),
-  /** What to change, when revising. */
-  feedback: S.String.annotate({ title: "Feedback", description: "What to change, when revising." }).pipe(S.optionalKey)
-})
-
-/** Whether the client can show form elicitations; an empty elicitation capability means forms. */
-const supportsForms = (capabilities: McpSchema.ClientCapabilities) =>
-  capabilities.elicitation !== undefined &&
-  (capabilities.elicitation.form !== undefined || capabilities.elicitation.url === undefined)
-
 /** Asks the user through an elicitation form; dismissing or declining the form skips the proposal. */
-const approve = (client: McpSchema.McpServerClient["Service"]) => (request: TraitDerivation.ApprovalRequest) =>
-  McpServer.elicit({ message: request.message, schema: ApprovalForm }).pipe(
+const approve = (request: TraitDerivation.ApprovalRequest) =>
+  McpServer.elicit({
+    message: request.message,
+    schema: S.Struct({
+      /** Save the trait as shown, ask for changes, or skip it. */
+      decision: S.Literals(["Save", "Revise", "Skip"]).annotate({
+        title: "Decision",
+        description: "Save the trait as shown, ask for changes, or skip it."
+      }),
+      /** What to change, when revising. */
+      feedback: S.String.annotate({ title: "Feedback", description: "What to change, when revising." }).pipe(
+        S.optionalKey
+      )
+    })
+  }).pipe(
     Effect.map((answer): TraitDerivation.Approval =>
       answer.decision === "Save"
         ? TraitDerivation.Approval.cases.Save.make({})
@@ -81,8 +78,7 @@ const approve = (client: McpSchema.McpServerClient["Service"]) => (request: Trai
             })
     }),
     // A dismissed form interrupts the request; treat it as skipping this proposal.
-    Effect.catchCauseIf(Cause.hasInterruptsOnly, () => Effect.succeed(TraitDerivation.Approval.cases.Skip.make({}))),
-    Effect.provideService(McpSchema.McpServerClient, client)
+    Effect.catchCauseIf(Cause.hasInterruptsOnly, () => Effect.succeed(TraitDerivation.Approval.cases.Skip.make({})))
   )
 
 /** The traits.derive handler, asking for approval through the calling client's forms. */
@@ -93,12 +89,20 @@ export const layer = toolkit.toLayer(
       "traits.derive": (parameters) =>
         Effect.gen(function* () {
           const client = yield* Effect.serviceOption(McpSchema.McpServerClient).pipe(Effect.map(Option.getOrUndefined))
-          if (client === undefined || !supportsForms(client.clientCapabilities)) {
+          const elicitation = client?.clientCapabilities.elicitation
+          // An empty elicitation capability means forms.
+          if (
+            client === undefined ||
+            elicitation === undefined ||
+            (elicitation.form === undefined && elicitation.url !== undefined)
+          ) {
             return yield* TraitsDeriveFailure.make({
               message: `This client cannot show approval forms (MCP form elicitation), so nothing was saved. Show the user these proposals instead; saving requires a client that supports elicitation.\n\n${pipe(parameters.traits, Array.map(TraitFile.serialize), Array.join("\n"))}`
             })
           }
-          const results = yield* derive(parameters.traits, approve(client))
+          const results = yield* derive(parameters.traits, (request) =>
+            approve(request).pipe(Effect.provideService(McpSchema.McpServerClient, client))
+          )
           return { results }
         }).pipe(
           Effect.mapError((error) =>

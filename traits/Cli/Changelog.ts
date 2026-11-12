@@ -69,9 +69,8 @@ export const latestVersion = Effect.gen(function* () {
 /** Fetches the complete changelog as of a published version, from the repository at that version's release tag. */
 export const fetchReleases = Effect.fn("Changelog.fetchReleases")(function* (version: string) {
   const client = yield* HttpClient.HttpClient.pipe(Effect.map(HttpClient.filterStatusOk))
-  const response = yield* client.get(changelogUrl(version))
+  const response = yield* client.get(
+    `https://raw.githubusercontent.com/crosshatch/traits/${PackageJson.name}%40${version}/${PackageJson.repository.directory}/CHANGELOG.md`
+  )
   return yield* response.text.pipe(Effect.map(parse))
 })
-
-const changelogUrl = (version: string) =>
-  `https://raw.githubusercontent.com/crosshatch/traits/${PackageJson.name}%40${version}/${PackageJson.repository.directory}/CHANGELOG.md`
