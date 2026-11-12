@@ -1,6 +1,7 @@
 # Trait evaluation: design
 
-Status: proposed. Nothing here is implemented yet.
+Status: deferred. Nothing here is implemented yet (see Status and when to
+resume).
 
 A trait is only useful if the configured decision model applies it to code the
 way its author intends. It should fail the code it targets, and it should not
@@ -249,6 +250,51 @@ about 60 s, so this must be measured against real clients.
    `Unreliable`, saving cases, and progress notifications.
 4. Comparisons: enrichments on and off, and several decision models in one
    report.
+
+## Status and when to resume
+
+This work is deferred until many current traits are replaced by deterministic
+lint rules. Cases written now for those traits would be wasted. Shipping the
+case layout and `traits eval` before the format is settled would make both a
+public contract. Code that nothing runs would also drift from `check`. This note
+is the preparation; nothing else needs to change for it to stay valid.
+
+### Content that exists now
+
+These were written without `traits eval` and need no generation:
+
+| Content | Traits | Status |
+| --- | --- | --- |
+| `eval/scenarios/`: 10 multi-file projects | 10 | Ready. Written and labelled by hand. The traits need cross-file judgment, so they are the least likely to become lint rules. |
+| `eval/cases.json`: 29 real files with labels | 7 | Ready. Several are lint candidates, such as `always-brace-if-bodies`. |
+| `eval/generated/`: violating and compliant pairs | 167 | Not ground truth. The labels are only the generator's intent and no one has reviewed them. About 14 disagreed with the decision model in the last full run. |
+
+The generated pairs are also ready-made tests for the lint rules that replace
+traits: the violating file is an invalid case, and the compliant one a valid
+case.
+
+### Until then
+
+Run the existing scripts only for traits that have content:
+
+- `node traits/eval/scenarios.ts --only <trait>` after changing a scenario
+  trait.
+- `node traits/eval/run.ts` after changing a labelled trait, the check engine,
+  or the models.
+
+Do not run `eval/misses.ts`, so that no cases are generated. Its
+`generated/results.json` keeps only the latest run.
+
+### Resuming
+
+Resume after the lint-rule pass, in its own pull request:
+
+1. Implement phase 1.
+2. Migrate the scenarios and the `cases.json` labels for the traits that remain
+   traits.
+3. Review the generated pairs for those traits only.
+4. Leave the derivation work (phase 3) until `traits eval` has been used on real
+   traits.
 
 ## Open questions
 
