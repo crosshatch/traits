@@ -20,7 +20,7 @@ const sourceIdentity = (source: InputSource) =>
 /** Simultaneous source digests; each holds an encoded copy of its source text. */
 const digestConcurrency = 8
 
-/** Evaluates changes against traits. Keep registry layers alive across calls to share setup; execution results belong to one check. Fails only for an invalid request, before any extension or model work. */
+/** Evaluates changes against traits. Keep registry layers alive across calls to share setup; execution results belong to one check. Fails for an invalid request, before any extension or model work, or with the decision model's AiError when its provider rejects the account (credentials, permissions, or quota), since no further decision could succeed; other decision failures are recorded on their inputs. */
 export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
   const input = yield* pipe(request, S.decodeEffect(CheckInput))
   const preparation = yield* Preparation.make(input)

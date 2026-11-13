@@ -4,6 +4,7 @@ import { McpSchema, McpServer, Tool, Toolkit } from "effect/ai"
 import { WorkspaceDerive } from "../local/WorkspaceDerive.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
+import * as ToolFailure from "./ToolFailure.ts"
 
 /** Deriving could not finish; the message says what happened to each proposal and how to proceed. */
 export class TraitsDeriveFailure extends S.TaggedError<TraitsDeriveFailure>()("TraitsDeriveFailure", {
@@ -102,19 +103,23 @@ export const layer = toolkit.toLayer(
           }
           const results = yield* derive(parameters.traits, (request) =>
             approve(request).pipe(Effect.provideService(McpSchema.McpServerClient, client))
+          ).pipe(
+            // Every failure, expected or not, reaches the client serialized; otherwise it sees only a generic internal error.
+            Effect.catchCause((cause) =>
+              Cause.hasInterruptsOnly(cause)
+                ? Effect.interrupt
+                : TraitsDeriveFailure.make({
+                    message: ToolFailure.describe(cause, {
+                      outcome:
+                        "Deriving stopped before returning its results. Proposals approved before the failure may already be saved, so read .agents/traits before deriving them again.",
+                      recovery:
+                        "Once it is fixed, derive the remaining proposals again; configuration and trait files are reloaded on every call, so no restart is needed."
+                    })
+                  })
+            )
           )
           return { results }
-        }).pipe(
-          Effect.mapError((error) =>
-            error._tag === "TraitsDeriveFailure" ? error : TraitsDeriveFailure.make({ message: error.message })
-          ),
-          // Without this, the client sees only a generic internal error and cannot act on it.
-          Effect.catchDefect((defect) =>
-            TraitsDeriveFailure.make({
-              message: `Deriving stopped on an unexpected error. Proposals already reported as saved were saved; the rest were not. Report this to the user:\n${Cause.pretty(Cause.die(defect))}`
-            })
-          )
-        )
+        })
     }
   })
 )

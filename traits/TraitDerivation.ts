@@ -2,6 +2,7 @@ import { Array, Effect, Record, Result, Schema as S, String } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 
 import { TraitName } from "./TraitName.ts"
+import { rejectsAccount } from "./util/util.ts"
 
 /** The user's answer to a request to save a proposed trait. */
 export type Approval = typeof Approval.Type
@@ -138,7 +139,11 @@ export const compare = Effect.fn("TraitDerivation.compare")(function* (
         }),
         { input: { proposal } }
       ).pipe(
-        Effect.mapError((error) => TraitComparisonError.make({ trait: name, reason: error.reason._tag })),
+        // A rejected account propagates as is, since retrying cannot help until the user fixes it.
+        Effect.catchIf(
+          (error) => !rejectsAccount(error),
+          (error) => TraitComparisonError.make({ trait: name, reason: error.reason._tag })
+        ),
         Effect.flatMap((response) =>
           Effect.forEach(group, (entry, index) => {
             const outcome = response.outcomes[`${index}`]!

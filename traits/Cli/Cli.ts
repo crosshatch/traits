@@ -2,7 +2,6 @@ import { Layer } from "effect"
 import { Command } from "effect/cli"
 
 import { WorkspaceCheck } from "../local/WorkspaceCheck.ts"
-import { WorkspaceDerive } from "../local/WorkspaceDerive.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { CliPaths } from "./CliPaths.ts"
@@ -26,9 +25,6 @@ const root = WorkspaceRoot.layer(".")
 /** Checking against the current directory's workspace. */
 const workspace = WorkspaceCheck.layer.pipe(Layer.provide(root))
 
-/** Checking and deriving traits in the current directory's workspace, for the MCP server. */
-const server = Layer.mergeAll(WorkspaceCheck.layer, WorkspaceDerive.layer).pipe(Layer.provide(root))
-
 export const Cli = Command.make("traits").pipe(
   Command.withDescription(
     "Check files against traits, serve traits over MCP, and manage credentials and model profiles"
@@ -37,7 +33,7 @@ export const Cli = Command.make("traits").pipe(
     auth.pipe(Command.provide(userConfiguration)),
     profile.pipe(Command.provide(userConfiguration)),
     check.pipe(Command.provide(workspace)),
-    mcp.pipe(Command.provide(server)),
+    mcp,
     update
   ]),
   Command.run({ version: PackageJson.version })

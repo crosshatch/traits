@@ -5,7 +5,7 @@ import * as Enrichment from "../Enrichment/Enrichment.ts"
 import * as Report from "../Report/Report.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
-import { Input, Segment, targetText, TextDigest } from "../util/util.ts"
+import { Input, rejectsAccount, Segment, targetText, TextDigest } from "../util/util.ts"
 import type { CheckInput } from "./CheckInput.ts"
 import * as DecisionCache from "./DecisionCache.ts"
 import type { Preparation } from "./Preparation.ts"
@@ -84,12 +84,18 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
             ? undefined
             : yield* DecisionCache.decideSubject(trait.subject, input).pipe(
                 Effect.catchDefect(() => Effect.fail(undefined)),
-                Effect.match({
-                  onFailure: (error) => ({ responses: [], failure: failureReason(error) }),
+                Effect.matchEffect({
+                  // A rejected account fails every request, so it ends the check instead of failing each input.
+                  onFailure: (error) =>
+                    error !== undefined && rejectsAccount(error)
+                      ? Effect.fail(error)
+                      : Effect.succeed({ responses: [], failure: failureReason(error) }),
                   onSuccess: (decided) =>
-                    Result.isSuccess(decided.outcome)
-                      ? { responses: [decided.response], decision: decided.outcome.success }
-                      : { responses: [decided.response], failure: failureReason(decided.outcome.failure) }
+                    Effect.succeed(
+                      Result.isSuccess(decided.outcome)
+                        ? { responses: [decided.response], decision: decided.outcome.success }
+                        : { responses: [decided.response], failure: failureReason(decided.outcome.failure) }
+                    )
                 }),
                 Effect.raceFirst(Deferred.await(traitStopped).pipe(Effect.as({ responses: [], cancelled: true }))),
                 Effect.map((gate): SubjectGate => gate)
@@ -190,17 +196,20 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
           input
         ).pipe(
           Effect.catchDefect(() => Effect.fail(undefined)),
-          Effect.match({
+          Effect.matchEffect({
             onSuccess: (response) => {
               const outcome = response.outcomes.assertion
-              return {
+              return Effect.succeed({
                 report: Result.isSuccess(outcome)
                   ? Report.InputReport.cases.Completed.make({ ...fields, assessment: outcome.success.probabilities })
                   : assessmentFailed(failureReason(outcome.failure)),
                 responses: [...responses, response]
-              }
+              })
             },
-            onFailure: (error) => ({ report: assessmentFailed(failureReason(error)), responses })
+            onFailure: (error) =>
+              error !== undefined && rejectsAccount(error)
+                ? Effect.fail(error)
+                : Effect.succeed({ report: assessmentFailed(failureReason(error)), responses })
           }),
           Effect.raceFirst(
             Deferred.await(traitStopped).pipe(

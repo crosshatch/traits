@@ -35,7 +35,7 @@ export class ModuleResolutionError extends S.TaggedError<ModuleResolutionError>(
   })
 }) {
   override get message(): string {
-    return `Could not resolve extension ${this.input.reference} from ${this.input.baseUrl.href} to a module within the workspace.`
+    return `Could not resolve extension ${this.input.reference} from ${this.input.baseUrl.href} to a module within the workspace. If it names a package, such as @traits/typescript/references, install that package as a dependency of the workspace; otherwise fix the reference in the trait file.`
   }
 }
 

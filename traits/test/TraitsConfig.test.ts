@@ -84,7 +84,7 @@ it.effect("loads traits.json and explains read, schema, and version failures", (
     expect(loaded.concurrency).toBe(16)
     for (const [contents, tag] of [
       [undefined, "TraitsConfigReadError"],
-      ["{", "TraitsConfigDecodeError"],
+      ["{", "TraitsConfigSyntaxError"],
       [JSON.stringify({ ...config, models: undefined }), "TraitsConfigDecodeError"],
       // Trait lists from earlier versions are reported rather than silently ignored.
       [JSON.stringify({ ...config, traits: ["direct-callbacks"] }), "TraitsConfigDecodeError"],

@@ -16,10 +16,15 @@ and/or after text. It requires `SegmenterRegistry`, `EnrichmentRegistry`,
 `Digest` for report text digests, and a `DecisionModel` when assertions are
 assessed. Guidance-only traits do not call the decision model. The request is
 decoded first: duplicate trait names or two changes sharing an after path fail
-with a `SchemaError` before any extension or model work. Success of the Effect
-means report assembly finished, not that its assessments satisfy a caller's
-acceptance policy; use `Report.verdicts` with a `DecisionPolicy` for that
-interpretation.
+with a `SchemaError` before any extension or model work. The check also fails,
+with the decision model's `AiError`, when the provider rejects the account
+itself (`AuthenticationError` or `QuotaExhaustedError`, per `rejectsAccount`):
+no further decision could succeed, so a report of failed inputs would only hide
+the cause. Other decision failures are recorded on their inputs. Decisions
+completed before the failure stay in the decision cache, so the check after the
+fix is cheap. Success of the Effect means report assembly finished, not that its
+assessments satisfy a caller's acceptance policy; use `Report.verdicts` with a
+`DecisionPolicy` for that interpretation.
 
 Subject identification is also available independently as
 `TraitSubject.match(subjects, input)`, where subjects is a caller-keyed record.
@@ -215,16 +220,36 @@ configured models and fresh extension registries, and returns the full report.
 and randomness, an in-memory key-value store, and the local time zone); the host
 provides the platform and `WorkspaceRoot`. The `traits check` CLI command prints
 the report as JSON, and the `traits.check` MCP tool returns it as
-`{ report, notice? }`, turning any failure, including unexpected defects, into
-its message so the agent can act, for example by running `traits update`. The
-notice keeps the agent informed about the package itself. When the server
-starts, it looks up the latest traits release on npm once, giving up silently
-after 3 seconds or on any failure, and the first check after that announces a
-newer release. Every check also compares the `package.json` installed beside the
-server with the version it is running. When the package was upgraded under a
-running server, the notice, or the failure message, asks the user to restart it,
-rather than reporting a version mismatch the upgrade already fixed. Both use the
-current directory as the workspace.
+`{ report, notice? }`. The notice keeps the agent informed about the package
+itself. When the server starts, it looks up the latest traits release on npm
+once, giving up silently after 3 seconds or on any failure, and the first check
+after that announces a newer release. Every check also compares the
+`package.json` installed beside the server with the version it is running. When
+the package was upgraded under a running server, the notice, or the failure
+message, asks the user to restart it, rather than reporting a version mismatch
+the upgrade already fixed. Both use the current directory as the workspace.
+
+### MCP failures
+
+The MCP server lets errors propagate and serializes them for the client, rather
+than mapping each kind to its own message, so failures nobody anticipated reach
+the agent too. Configuration, credentials, trait files, and extensions are
+loaded on every tool call, so almost every failure happens inside a call. Each
+tool catches the call's whole cause and returns it as its failure
+(`ToolFailure.describe`): `Cause.pretty` of the cause, what happened to the
+call's work, and what to do next. An expected failure, an error in the cause, is
+the user's to fix: the agent relays it, and retries the call once it is fixed,
+without restarting the server. An unexpected failure, a defect, is most likely a
+bug in traits: the agent tells the user and asks whether it may open an issue in
+crosshatch/traits with the error, the traits version, and the failed call,
+leaving out secrets and private source, and opens it only if the user agrees.
+
+If the tool handlers or the workspace services they use cannot be built when the
+server starts, `Layer.catchCause` replaces the handlers with stand-ins that
+return the serialized cause from every call, so the client still connects and
+can tell the user what to fix. Since the real handlers were never built, the
+stand-ins ask the user to restart the server once it is fixed. Interruption
+while starting is shutdown, not a failure, and is not reported.
 
 Without paths, a check covers every project file: tracked and untracked files
 that Git does not ignore, listed by `git ls-files`, minus the configuration's

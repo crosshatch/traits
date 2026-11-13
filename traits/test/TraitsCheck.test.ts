@@ -37,6 +37,8 @@ const call = Effect.gen(function* () {
   const results = yield* toolkit.handle("traits.check", { paths: ["src/a.ts"] })
   return yield* Stream.runLast(results).pipe(Effect.flatMap(Effect.fromOption))
 })
+const messageOf = (result: { readonly encodedResult: unknown }) =>
+  (result.encodedResult as { readonly message: string }).message
 const report = Report.Report.make({
   version: PackageJson.version,
   run: { models: [], usage: {} },
@@ -59,15 +61,21 @@ it.effect("returns check failures and unexpected errors to the client as actiona
       )
     )
     expect(declared.isFailure).toBe(true)
-    expect(declared.encodedResult).toMatchObject({ message: "Cannot check src/a.ts: it is outside the workspace." })
+    expect(messageOf(declared)).toContain("Cannot check src/a.ts: it is outside the workspace.")
+    expect(messageOf(declared)).toContain("neither a pass nor a finding")
+    expect(messageOf(declared)).toContain("no restart is needed")
+    expect(messageOf(declared)).not.toContain("crosshatch/traits")
     const unexpected = yield* call.pipe(
       Effect.provide(server(() => Effect.die(new Error("model layer exploded")), PackageJson.version))
     )
     expect(unexpected.isFailure).toBe(true)
     expect(unexpected.encodedResult).toMatchObject({ _tag: "TraitsCheckFailure" })
-    const { message } = unexpected.encodedResult as { readonly message: string }
-    expect(message).toContain("not a pass")
+    const message = messageOf(unexpected)
+    expect(message).toContain("neither a pass nor a finding")
     expect(message).toContain("model layer exploded")
+    // An unexpected error is likely a bug, so the agent offers to report it instead of asking the user to fix it.
+    expect(message).toContain("crosshatch/traits")
+    expect(message).toContain("Open it only if they agree")
   })
 )
 
@@ -76,7 +84,7 @@ it.effect("announces a newer traits release once per server, beside the report",
     const first = yield* call
     const second = yield* call
     expect(first.encodedResult).toMatchObject({ report: { version: PackageJson.version } })
-    const { notice } = first.encodedResult as { readonly notice?: string }
+    const { notice } = first.encodedResult as { readonly notice?: string | undefined }
     expect(notice).toContain("traits 999.0.0 is available")
     expect(notice).toContain("traits update")
     expect(second.encodedResult).not.toHaveProperty("notice")
@@ -95,7 +103,7 @@ it.effect("asks for a server restart when the installed package changed under it
     const succeeded = yield* call.pipe(
       Effect.provide(server(() => Effect.succeed(report), PackageJson.version, "999.0.0"))
     )
-    const { notice } = succeeded.encodedResult as { readonly notice?: string }
+    const { notice } = succeeded.encodedResult as { readonly notice?: string | undefined }
     expect(notice).toContain("traits 999.0.0 is now installed")
     expect(notice).toContain("restart the traits MCP server")
     const failed = yield* call.pipe(
@@ -111,7 +119,7 @@ it.effect("asks for a server restart when the installed package changed under it
       )
     )
     expect(failed.isFailure).toBe(true)
-    const { message } = failed.encodedResult as { readonly message: string }
+    const message = messageOf(failed)
     expect(message).toContain("Cannot check src/a.ts")
     expect(message).toContain("restart the traits MCP server")
   })

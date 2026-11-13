@@ -210,3 +210,77 @@ it.live(
     Effect.provide(NodeServices.layer)
   )
 )
+
+it.live(
+  "connects over MCP even when the workspace is unusable, and returns what to fix from the failing call",
+  Effect.fnUntraced(
+    function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+      // A workspace without traits.json.
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-mcp-failure-" })
+      const messages = [
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "test", version: "0" } }
+        },
+        { jsonrpc: "2.0", method: "notifications/initialized" },
+        {
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "traits.check", arguments: { paths: ["a.ts"] } }
+        }
+      ]
+      const handle = yield* spawner.spawn(
+        ChildProcess.make(process.execPath, [path.resolve(import.meta.dirname, "..", "main.ts"), "mcp"], {
+          cwd,
+          // Stdin stays open, since the server stops when the client disconnects.
+          stdin: {
+            stream: Stream.concat(
+              Stream.make(
+                ...Array.map(messages, (message) => new TextEncoder().encode(`${JSON.stringify(message)}\n`))
+              ),
+              Stream.never
+            ),
+            endOnDone: false
+          }
+        })
+      )
+      const response = yield* handle.stdout.pipe(
+        Stream.decodeText(),
+        Stream.splitLines,
+        Stream.mapEffect((line) =>
+          S.decodeEffect(
+            S.fromJsonString(
+              S.Struct({
+                id: S.Finite.pipe(S.optionalKey),
+                result: S.Struct({
+                  isError: S.Boolean.pipe(S.optionalKey),
+                  content: S.Array(S.Struct({ text: S.String })).pipe(S.optionalKey)
+                }).pipe(S.optionalKey)
+              })
+            )
+          )(line)
+        ),
+        Stream.filter((message) => message.id === 2),
+        Stream.runHead,
+        Effect.flatMap(Effect.fromOption),
+        Effect.timeout("30 seconds")
+      )
+      expect(response.result?.isError).toBe(true)
+      const text = pipe(
+        response.result?.content ?? [],
+        Array.map((part) => part.text),
+        Array.join("\n")
+      )
+      expect(text).toContain("traits.json")
+      expect(text).toContain("no restart is needed")
+    },
+    Effect.scoped,
+    Effect.provide(NodeServices.layer)
+  )
+)

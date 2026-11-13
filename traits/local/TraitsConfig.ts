@@ -52,12 +52,24 @@ export class TraitsConfigReadError extends S.TaggedError<TraitsConfigReadError>(
   }
 }
 
-/** The configuration file is not valid JSON or does not match the current schema. */
+/** The configuration file is not valid JSON. */
+export class TraitsConfigSyntaxError extends S.TaggedError<TraitsConfigSyntaxError>()("TraitsConfigSyntaxError", {
+  /** The configuration file path. */
+  path: S.String.annotateKey({ description: "The configuration file path." }),
+  /** The JSON parser's failure, with the position of the problem. */
+  cause: S.Defect().annotateKey({ description: "The JSON parser's failure, with the position of the problem." })
+}) {
+  override get message(): string {
+    return `${this.path} is not valid JSON: ${this.cause instanceof Error ? this.cause.message : globalThis.String(this.cause)}. Fix the syntax there; traits.json is plain JSON, without comments or trailing commas.`
+  }
+}
+
+/** The configuration file is valid JSON but does not match the current schema. */
 export class TraitsConfigDecodeError extends S.TaggedError<TraitsConfigDecodeError>()("TraitsConfigDecodeError", {
   /** The configuration file path. */
   path: S.String.annotateKey({ description: "The configuration file path." }),
-  /** The JSON or schema validation failure. */
-  cause: S.Defect().annotateKey({ description: "The JSON or schema validation failure." })
+  /** The schema validation failure. */
+  cause: S.Defect().annotateKey({ description: "The schema validation failure." })
 }) {
   override get message(): string {
     return `${this.path} does not match the schema expected by traits ${PackageJson.version}: ${globalThis.String(this.cause)}\nIf it was written for an earlier version, run \`traits update\` and follow its migration steps.`
@@ -89,9 +101,14 @@ export const load = Effect.gen(function* () {
   const text = yield* fs
     .readFileString(file)
     .pipe(Effect.mapError((cause) => TraitsConfigReadError.make({ path: file, cause })))
+  // JSON.parse's own error gives the position of a syntax error, which a schema's JSON decoding does not.
+  const json = yield* Effect.try({
+    try: (): unknown => JSON.parse(text),
+    catch: (cause) => TraitsConfigSyntaxError.make({ path: file, cause })
+  })
   const config = yield* pipe(
-    text,
-    S.decodeEffect(S.fromJsonString(TraitsConfig), { onExcessProperty: "error" }),
+    json,
+    S.decodeUnknownEffect(TraitsConfig, { onExcessProperty: "error" }),
     Effect.mapError((cause) => TraitsConfigDecodeError.make({ path: file, cause }))
   )
   if (Version.status(config.version, PackageJson.version) !== "Compatible") {

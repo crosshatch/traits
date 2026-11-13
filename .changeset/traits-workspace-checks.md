@@ -40,6 +40,12 @@ migrate a workspace:
   per server when a newer traits release is published, and on every check when
   the package was upgraded while the MCP server kept running, so the user can
   restart it.
+- MCP tool failures return the serialized error and what to do next: the user
+  fixes an expected error and the agent retries, while an unexpected one is
+  likely a bug, which the agent offers to report in crosshatch/traits. If the
+  server cannot start its tools, it still connects and every call returns why. A
+  provider rejecting the account (invalid key or no credits) fails the check
+  with the provider's error, instead of failing every input.
 - Remove installed copies of the bundled `traits` skill, such as
   `.agents/skills/traits` and `.claude/skills/traits`, and unlink
   package-managed skills; the server's instructions replace it.

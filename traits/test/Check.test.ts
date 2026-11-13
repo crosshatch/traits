@@ -369,25 +369,12 @@ it.effect("explains assessment failures by reason without leaking provider text,
       ],
       [
         () =>
-          Effect.fail(
-            AiError.make({
-              module: "Test",
-              method: "decide",
-              reason: AiError.InvalidRequestError.make({ description: "rejected private-error secret-source" })
-            })
-          ),
+          AiError.make({
+            module: "Test",
+            method: "decide",
+            reason: AiError.InvalidRequestError.make({ description: "rejected private-error secret-source" })
+          }),
         "Assertion assessment failed: InvalidRequestError; the provider rejected the request, often because the file exceeds the model's context. Exclude the file in traits.json, or check a smaller file."
-      ],
-      [
-        () =>
-          Effect.fail(
-            AiError.make({
-              module: "Test",
-              method: "decide",
-              reason: AiError.AuthenticationError.make({ kind: "InvalidKey", description: "private-error" })
-            })
-          ),
-        "Assertion assessment failed: AuthenticationError (InvalidKey)."
       ]
     ] as const
     for (const [decide, expected] of cases) {
@@ -412,6 +399,40 @@ it.effect("explains assessment failures by reason without leaking provider text,
       expect(JSON.stringify(report)).not.toContain("private-error")
       expect(JSON.stringify(report)).not.toContain("secret-source")
       yield* pipe(report, S.decodeEffect(Report.Report))
+    }
+  })
+)
+
+it.effect("fails the whole check when the provider rejects the account, instead of failing each input", () =>
+  Effect.gen(function* () {
+    for (const reason of [
+      AiError.AuthenticationError.make({ kind: "InvalidKey", description: "Invalid API key." }),
+      AiError.QuotaExhaustedError.make({})
+    ]) {
+      let requests = 0
+      const failure = yield* check({
+        traits: [{ origin, trait: trait("example", { assertion }) }],
+        changes: [
+          { after: { path: WorkspacePath.make("one.ts"), text: "one" } },
+          { after: { path: WorkspacePath.make("two.ts"), text: "two" } }
+        ]
+      }).pipe(
+        Effect.provide(unused),
+        Effect.provideServiceEffect(
+          DecisionModel.DecisionModel,
+          DecisionModel.make({
+            decide: () =>
+              Effect.suspend(() => {
+                requests++
+                return AiError.make({ module: "Test", method: "decide", reason })
+              })
+          })
+        ),
+        Effect.flip
+      )
+      expect(failure._tag).toBe("AiError")
+      expect(AiError.isAiError(failure) ? failure.reason : undefined).toEqual(reason)
+      expect(requests).toBeGreaterThanOrEqual(1)
     }
   })
 )

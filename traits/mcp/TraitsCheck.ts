@@ -8,6 +8,7 @@ import PackageJson from "../package.json" with { type: "json" }
 import { Report } from "../Report/Report.ts"
 import { TraitName } from "../TraitName.ts"
 import * as Version from "../Version.ts"
+import * as ToolFailure from "./ToolFailure.ts"
 
 /** A check could not run; the message says what to fix. */
 export class TraitsCheckFailure extends S.TaggedError<TraitsCheckFailure>()("TraitsCheckFailure", {
@@ -105,12 +106,17 @@ export const layer = toolkit.toLayer(
     return {
       "traits.check": (parameters) =>
         check(parameters).pipe(
-          Effect.mapError((error) => TraitsCheckFailure.make({ message: error.message })),
-          // Without this, the client sees only a generic internal error and cannot act on it.
-          Effect.catchDefect((defect) =>
-            TraitsCheckFailure.make({
-              message: `The check stopped on an unexpected error, so its results are incomplete and it is not a pass. Report this to the user:\n${Cause.pretty(Cause.die(defect))}`
-            })
+          // Every failure, expected or not, reaches the client serialized; otherwise it sees only a generic internal error.
+          Effect.catchCause((cause) =>
+            Cause.hasInterruptsOnly(cause)
+              ? Effect.interrupt
+              : TraitsCheckFailure.make({
+                  message: ToolFailure.describe(cause, {
+                    outcome: "The check did not finish, so it is neither a pass nor a finding.",
+                    recovery:
+                      "Once it is fixed, run the same check again; configuration and trait files are reloaded on every call, so no restart is needed."
+                  })
+                })
           ),
           Effect.matchEffect({
             onSuccess: (report) =>
