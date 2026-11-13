@@ -1,4 +1,5 @@
 packages:
+  - "@traits/*"
   - traits
   - traits.sh
 
@@ -12,11 +13,13 @@ catalog:
   "@alchemy.run/github": ^2.0.0-beta.85
   "@changesets/changelog-github": ^1.0.1
   "@changesets/cli": ^3.0.3
-  "@effect/ai-openrouter": ^4.1.2
+  "@effect/ai-anthropic": 4.1.2
+  "@effect/ai-cloudflare": 4.1.2
+  "@effect/ai-openai": 4.1.2
+  "@effect/ai-openai-compat": 4.1.2
+  "@effect/ai-openrouter": 4.1.2
   "@effect/atom-react": ^4.1.2
-  "@effect/platform-browser": ^4.1.2
   "@effect/platform-node": ^4.1.2
-  "@effect/sql-libsql": ^4.1.2
   "@effect/tsgo": 0.67.3
   "@effect/vitest": ^4.1.2
   "@fontsource/libre-baskerville": ^5.3.0
@@ -24,13 +27,13 @@ catalog:
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
   alchemy: ^2.0.0-beta.85
-  drizzle-kit: ^1.0.0-rc.5-ab785fc
-  drizzle-orm: ^1.0.0-rc.5-ab785fc
   effect: ^4.1.2
+  fs-native-extensions: ^1.5.3
+  import-meta-resolve: ^4.2.0
+  oxc-parser: ^0.157.0
   pkg-pr-new: ^0.0.93
   react: ^19.3.1
   react-dom: ^19.3.1
-  tinybench: ^6.2.3
   typescript: ^7.0.2
   vite: npm:@voidzero-dev/vite-plus-core@^1.5.0
   vite-plus: ^1.5.0
@@ -39,14 +42,6 @@ catalog:
 
 minimumReleaseAgeExclude:
   - "@cloudflare/workers-types@5.20260930.2"
-  - "@effect/tsgo-darwin-arm64@0.59.0"
-  - "@effect/tsgo-darwin-x64@0.59.0"
-  - "@effect/tsgo-linux-arm@0.59.0"
-  - "@effect/tsgo-linux-arm64@0.59.0"
-  - "@effect/tsgo-linux-x64@0.59.0"
-  - "@effect/tsgo-win32-arm64@0.59.0"
-  - "@effect/tsgo-win32-x64@0.59.0"
-  - "@effect/tsgo@0.59.0"
 
 overrides:
   "@effect/sql-d1": ^4.1.2

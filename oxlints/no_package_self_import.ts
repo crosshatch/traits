@@ -12,8 +12,6 @@ type PackageInfo = {
 
 const packageInfoByDirectory = MutableHashMap.empty<string, PackageInfo | null>()
 
-const decodePackageName = S.Struct({ name: S.String }).pipe(S.fromJsonString, S.decodeUnknownOption)
-
 const normalizePath = (value: string) => (pipe(value, String.startsWith("file://")) ? fileURLToPath(value) : value)
 
 const findPackageInfo = (context: Context): PackageInfo | null => {
@@ -24,20 +22,30 @@ const findPackageInfo = (context: Context): PackageInfo | null => {
   while (directory !== root) {
     const cached = pipe(MutableHashMap.get(packageInfoByDirectory, directory), Option.getOrUndefined)
 
-    if (cached !== undefined && cached !== null) return cached
+    if (cached !== undefined && cached !== null) {
+      return cached
+    }
     const packageJsonPath = Path.join(directory, "package.json")
 
     if (Fs.existsSync(packageJsonPath)) {
-      const packageJson = pipe(decodePackageName(Fs.readFileSync(packageJsonPath, "utf8")), Option.getOrUndefined)
+      const packageJson = pipe(
+        Fs.readFileSync(packageJsonPath, "utf8"),
+        S.decodeOption(S.fromJsonString(S.Struct({ name: S.String }))),
+        Option.getOrUndefined
+      )
       const packageInfo = packageJson !== undefined ? { directory, name: packageJson.name } : null
       MutableHashMap.set(packageInfoByDirectory, directory, packageInfo)
 
-      if (packageInfo !== null) return packageInfo
+      if (packageInfo !== null) {
+        return packageInfo
+      }
     } else {
       MutableHashMap.set(packageInfoByDirectory, directory, null)
     }
 
-    if (directory === cwd) return null
+    if (directory === cwd) {
+      return null
+    }
     directory = Path.dirname(directory)
   }
 
@@ -58,12 +66,18 @@ export const noPackageSelfImport: Rule = {
   create: (context) => {
     const packageInfo = findPackageInfo(context)
 
-    if (packageInfo === null) return {}
+    if (packageInfo === null) {
+      return {}
+    }
 
     const checkSource = (source: ESTree.StringLiteral | null) => {
-      if (source === null) return
+      if (source === null) {
+        return
+      }
 
-      if (source.value !== packageInfo.name && !pipe(source.value, String.startsWith(`${packageInfo.name}/`))) return
+      if (source.value !== packageInfo.name && !pipe(source.value, String.startsWith(`${packageInfo.name}/`))) {
+        return
+      }
 
       context.report({
         node: source,

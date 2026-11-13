@@ -9,8 +9,8 @@ Follow these instructions inside the consumer's Git checkout.
 
 **Every package-manager operation must respect the consumer's specific
 configuration—not merely their choice of package manager.** This applies to
-dependency checks, installs, updates, approvals, package runners, and skill
-installation, including the manual examples below.
+dependency checks, installs, updates, and package runners, including the
+examples below.
 
 Read the project's instructions, `packageManager`, lockfiles, package manifests,
 and applicable project/workspace configuration before running commands. Examples
@@ -27,234 +27,120 @@ configuration to make installation succeed. If setup conflicts with those
 settings, explain the conflict and ask before changing them. Never expose
 registry credentials.
 
-Ensure `traits`, `effect`, and `@effect/platform-node` are available to the
-checkout that runs Traits. Reuse compatible dependencies already supplied by the
-workspace; install only what is missing. Check resolution from the config's
-location, not just whether a dependency appears in a manifest. Do not introduce
+Install `traits` as a development dependency, with its peer dependencies
+`effect` and `@effect/platform-node`. Reuse compatible dependencies already
+supplied by the workspace; install only what is missing. Do not introduce
 another lockfile, duplicate workspace dependencies, or silently upgrade an
-existing Effect version. Check the installed Traits package's peer requirements
-and ask before any compatibility migration.
-
-The shared local database is `.agents/traits/traits.sqlite`. Create or update
-`.agents/traits/.gitignore`, preserving existing entries, to include:
-
-```gitignore
-traits.sqlite
-traits.sqlite-*
-```
-
-This ignores the database and SQLite sidecar files while keeping trait Markdown
-files version-controlled.
+existing Effect version. Ask before any compatibility migration.
 
 ### 2. Ask about providers and models
 
-Before installing provider packages or writing `traits.ts`, ask the user which
-providers and models to use for decisions and language generation. Offer
-`@effect/ai-openrouter` as the default: one package and one API key supply both
-services. Install only the selected provider packages, using the project's
-dependency conventions and compatible versions.
+Ask the user which providers and models to use. Traits uses two roles:
 
-```ts
-import {
-  OpenRouterClient,
-  OpenRouterDecisionModel,
-  OpenRouterLanguageModel
-} from "@effect/ai-openrouter"
-import { Config, Layer } from "effect"
-import type { TraitsConfig } from "traits"
+- **decision**: classifies whether code is in a trait's subject and whether it
+  satisfies the assertion. Providers: `openrouter`, `openai`, or `cloudflare`.
+- **language**: free-form generation for extensions. Providers: `openrouter`,
+  `openai`, `anthropic`, or `openai-compatible` (any OpenAI-compatible server,
+  with a `url` and optional `apiKeyEnv`).
 
-const layerClient = OpenRouterClient.layerConfig({
-  apiKey: Config.Redacted("OPENROUTER_API_KEY")
-})
+Offer OpenRouter as the default: one API key supplies both roles. Decision
+models run on OpenRouter's Decisions API, so choose them from
+`https://openrouter.ai/api/v1/models?output_modalities=decisions`.
 
-export default {
-  layerDecisionModel: OpenRouterDecisionModel.layer({
-    model: "~typesafe/jev-latest"
-  }).pipe(Layer.provide(layerClient)),
-  layerLanguageModel: OpenRouterLanguageModel.layer({
-    model: "openai/gpt-6.1-sol",
-    config: { strictJsonSchema: true, reasoning: { effort: "low" } }
-  }).pipe(Layer.provide(layerClient))
-} satisfies TraitsConfig
+### 3. Configure the checkout
+
+Create `traits.json` at the checkout root, or update it while preserving
+existing settings and asking before replacing them. Set `version` to the
+installed Traits version:
+
+```json
+{
+  "version": "0.6.0",
+  "models": {
+    "decision": { "provider": "openrouter", "model": "liquid/d1-ultra" },
+    "language": { "provider": "openrouter", "model": "openai/gpt-6.1-sol" }
+  }
+}
 ```
 
-Decision models run on OpenRouter's Decisions API, not chat completions, so
-choose them from
-`https://openrouter.ai/api/v1/models?output_modalities=decisions`. Choose
-language models that support structured output.
+Optional fields:
 
-**Advanced: separate providers.** Users who already hold provider keys or want
-direct provider access can use `@effect/ai-typesafe` for decisions and
-`@effect/ai-openai` for language generation, or other Effect providers. Consult
-current Effect provider documentation and check that each choice supplies the
-required `DecisionModel` or `LanguageModel` service.
+- `concurrency`: the maximum number of simultaneous decision requests; 16 by
+  default.
+- `exclude`: Git glob patterns, relative to the checkout root, for files to skip
+  when every project file is checked, such as lockfiles or large generated
+  assets. Git-ignored files are always skipped.
 
-### 3. Configure the current checkout
-
-Create `traits.ts` at the current Git worktree root. Import `TraitsConfig` from
-`traits` and use `export default { ... } satisfies TraitsConfig`. Build
-`layerDecisionModel` and `layerLanguageModel` from the selected providers and
-models, checking their installed APIs. Preserve existing configuration and ask
-before replacing it. The selected providers determine the config's imports and
-model layers.
-
-Git-ignored files are excluded by default. Explicit `excludes` can omit other
-files; use patterns such as `**/dist/**` and `node_modules/**`. Keep the default
-Git filter unless the user requests otherwise.
+Keep `traits.json` in version control so reviewers can see which models check
+the code. Traits are Markdown files in `.agents/traits/<name>.md`; environments
+in `.agents/traits/_environments/<name>.json` list subsets of traits to check,
+such as a faster set for CI.
 
 ### 4. Keep credentials private
 
-Explain which credentials the selected providers require. The OpenRouter default
-uses `OPENROUTER_API_KEY`; the separate TypeSafe and OpenAI providers use
-`TYPESAFE_API_KEY` and `OPENAI_API_KEY`. Use the MCP process environment or a
-Git-ignored `.env` at the checkout root. Check that the file is ignored before
-writing secrets; never request secret values in chat, print them, or commit
-them.
+Explain which credentials the selected providers require: `OPENROUTER_API_KEY`,
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN`. Use the MCP process environment or a Git-ignored `.env`
+at the checkout root. Check that the file is ignored before writing secrets;
+never request secret values in chat, print them, or commit them.
 
-Process environment values take precedence, followed by the worktree's `.env`,
-then the main checkout's `.env`. Reconnect the server after changing
-credentials.
+Process environment values take precedence, followed by the checkout's `.env`,
+then the main checkout's `.env`, so linked Git worktrees share credentials.
 
-### 5. Install the skill where the current agent discovers it
+### 5. Connect and verify
 
-Identify the coding agent performing setup and default to configuring that
-agent. Ask if its identity is unclear or the user wants additional agents
-configured. Install the Traits package's bundled skill
-(`skills/traits/SKILL.md`) in the project-local skill directory that the current
-agent actually discovers—for example, `.agents/skills/traits/SKILL.md` for
-OpenCode or `.claude/skills/traits/SKILL.md` for Claude Code. For other agents,
-consult their current documentation and project configuration rather than
-assuming a shared path. Preserve customizations and avoid duplicate copies.
-
-Prefer native dependency-linked skills when the package manager supports them,
-ensuring its targets include the current agent's skill directory. Otherwise use
-the skills CLI with the installed package as its source and explicit agent
-selection: agent-run subprocesses may skip the TUI. Verify that the skill is
-discoverable by the current agent, not merely copied somewhere in the checkout.
-
-For example, after a local installation, targeting Claude Code:
-
-```sh
-npx --yes skills add ./node_modules/traits --skill traits --agent claude-code
-```
-
-Adapt the package runner, source path, and agent name to the project. Do not
-pass the skills CLI's `--yes` flag before reviewing any overwrite plan with the
-user. Its installation is a snapshot; rerun after updating Traits.
-
-### 6. Connect and verify
-
-Merge a local Traits MCP server into the selected agents' existing settings,
+Merge a local Traits MCP server into the current agent's existing settings,
 preserving other servers. Consult the agent's current configuration format. Use
-the project's package runner to launch the installed Traits CLI, with this
-checkout root as the working directory. For npm, the command is `npx -y traits`.
+the project's package runner to launch the installed CLI's `mcp` command, with
+the checkout root as the working directory. For npm, the command is
+`npx traits mcp`.
 
-Verify config imports and provider compatibility. When credentials are
-available, connect the server and confirm `derive_trait` and `check_traits` are
-exposed, and that the agent discovers the skill. Report manual
-credential/reconnection steps and blocked checks without claiming setup passed.
-Do not create a trait merely to test installation.
+The server exposes `traits.check` and `traits.derive`, and its instructions tell
+the agent when to use them. `traits.derive` asks the user to approve each trait
+through an MCP elicitation form, so it requires a client that supports form
+elicitation. Configuration and trait files are reloaded on every call; no
+restart is needed after editing them.
+
+When credentials are available, connect the server, confirm both tools are
+exposed, and check one existing source file with `traits.check`. Report manual
+credential steps and blocked checks without claiming setup passed. Do not create
+a trait merely to test installation.
+
+## Command line
+
+`traits check [paths...]` prints the report as JSON. Without paths it checks
+every project file. `--trait <name>` and `--environment <name>` narrow the
+traits. With a decision policy, `--fail <p> --pass <p>`, it exits 0 for Pass, 1
+for Fail, 2 for Incomplete or a check that could not run, and 3 for
+Inconclusive, so CI can gate on it.
+
+`traits update` prints what changed since the workspace's `version`: the
+releases to apply, oldest first. The agent performs the migration.
 
 ## Troubleshooting
 
-### Dependency-linked skills
+### A tool or check fails
 
-With pnpm 12.11+, install Traits using the project's conventions, then use
-`pnpm approve` to review and approve its skills. pnpm links skills from the
-installed package, keeping them aligned with updates and removing links when
-approval or the dependency is removed. It targets existing agent skill
-directories or the running agent's directory. If needed, configure targets
-explicitly:
+A failed check is neither a pass nor a finding. The failure message says what to
+fix, such as a missing `traits.json`, missing credentials, or an invalid trait
+file. Fix it and retry; configuration reloads on the next call.
 
-```yaml
-# pnpm-workspace.yaml
-skills:
-  dirs:
-    - .agents/skills
-    - .claude/skills
-```
+### Files are too large for the decision model
 
-An approved skill without a target makes installation fail. `pnpm dlx` and
-global installs do not natively link skills. Other package managers can use the
-skills CLI as described above. Older Traits versions copied the skill into
-`.agents/skills/traits`; back up customizations and avoid loading that copy
-alongside a package-managed skill.
+A check reports an input as failed with `InvalidRequestError` when the provider
+rejects the request, usually because the file exceeds the model's context. Add
+the file to `exclude` in `traits.json`, or check smaller files.
 
-### File filtering
+### Results do not change after a re-check
 
-Ignore rules refresh on every check. Untracked files do not need to be added to
-Git to be evaluated; tracked files remain eligible even if an ignore pattern
-matches them. Set `excludeGitignored: false` in `traits.ts` to disable the
-filter, including for files outside the checkout. Explicit `excludes` still
-apply. Git failures fail the check rather than bypass filtering.
+Checks remember each completed decision in `.agents/traits/.cache/`, so
+re-checking unchanged traits and files reuses earlier answers instead of asking
+the model again. Delete that directory to have every decision made afresh. The
+directory ignores itself in Git.
 
-### Startup failures
+### Outdated workspace
 
-Configuration and providers initialize when the MCP server starts. If setup
-fails, the connection stays alive with fallback `derive_trait` and
-`check_traits` tools using the normal descriptions and parameters. Each tool
-returns the original error diagnostics. Surface the failure, fix the reported
-error, and restart the Traits MCP server to load the corrected setup. Then retry
-the same operation; keep any trait proposal pending and retry its derivation
-with identical arguments. Diagnostics include the full Effect cause and may
-contain sensitive values embedded in errors; do not paste credentials into chat.
-Handler failures and defects use the declared `ToolExecutionError` MCP error
-result.
-
-### External trait edits
-
-`fileReadConcurrency` in `traits.ts` controls the maximum number of trait-file
-reads in flight during startup, full refresh, and incremental reconciliation. It
-defaults to `16`; set a positive integer to tune it for your environment.
-`"unbounded"` explicitly opts out of the limit. Smaller collections naturally
-use fewer concurrent reads. SQL writes and store-state synchronization remain
-serialized, and clean indexed reads do not touch Markdown files.
-
-The server watches the trait directory and automatically synchronizes Markdown
-changes into SQLite. Clean reads query SQLite only; invalidated reads wait for
-synchronization before querying. Changes are coalesced briefly, so filesystem
-notifications are asynchronous. When a watch fails or is unsupported, the server
-reports it and falls back to a full polling synchronization every second while
-retrying the watcher. Polling failures block reads until repaired. No
-model-facing refresh tool is required.
-
-Ordinary notifications reconcile only affected files, validating each pending
-batch before a transactional database update. Notifications from server writes
-are checked against the indexed contents rather than blindly ignored. Full
-rescans are reserved for initialization, explicit internal refresh, and recovery
-from failures or ambiguous notifications. Invalid documents block reads until
-repaired; previously indexed rows are retained when reconciliation fails.
-
-### Stored trait parsing fails
-
-If a stored trait cannot be parsed, tools return `TraitParseError` with the file
-path and original diagnostic instead of stopping the server. Update all stored
-traits only after obtaining repair consent. Inspect the installed package's
-`Trait` schema and `serialize` format, preserving the rules and metadata.
-Validate the repaired files and retry; synchronization is automatic and no
-server restart is needed. A failed check is not a clean review, and no automatic
-migration is performed.
-
-### Reconciliation fails after approval
-
-Conflict reconciliation and trait decomposition use the configured
-`LanguageModel` to generate schema-validated JSON. A
-`LanguageModel.generateObject` / `StructuredOutputError` can mean the provider
-returned plain text instead of JSON; it does not necessarily indicate an
-approval-form failure. Generation completes before replacements are written or
-originals are removed.
-
-When using `@effect/ai-openrouter`, check that strict structured output is
-enabled in the language-model configuration, alongside any existing options:
-
-```ts
-OpenRouterLanguageModel.layer({
-  model: "openai/gpt-6.1-sol",
-  config: { strictJsonSchema: true, reasoning: { effort: "low" } }
-})
-```
-
-Use a model and route that support structured output. Traits also explicitly
-describes the required JSON shape in its generation prompts, but provider-side
-enforcement remains preferable. No changes to the decision-model configuration
-are required for this setting.
+When `traits.json`'s `version` is incompatible with the installed package,
+checks fail and ask for a migration. Run `traits update` and apply each listed
+release to `traits.json` and the trait files, then set `version` to the latest
+release.

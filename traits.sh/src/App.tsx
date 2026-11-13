@@ -43,7 +43,9 @@ const playingAtom = Atom.make(true)
 const walkthroughVisibleAtom = Atom.make(false)
 const observeWalkthroughAtom = Atom.make((ctx) => {
   const walkthrough = document.querySelector(".walkthrough")
-  if (walkthrough === null) return
+  if (walkthrough === null) {
+    return
+  }
   const observer = new IntersectionObserver(
     (entries) =>
       ctx.set(
@@ -66,17 +68,25 @@ const stepAtom = Atom.family((count: 1 | -1) =>
 const navigateStepsAtom = Atom.fnSync((event: KeyboardEvent<HTMLDivElement>, ctx) => {
   const active = ctx(activeAtom)
   let next = active
-  if (event.key === "ArrowRight") next = (active + 1) % steps.length
-  else if (event.key === "ArrowLeft") next = (active + steps.length - 1) % steps.length
-  else if (event.key === "Home") next = 0
-  else if (event.key === "End") next = steps.length - 1
-  else return
+  if (event.key === "ArrowRight") {
+    next = (active + 1) % steps.length
+  } else if (event.key === "ArrowLeft") {
+    next = (active + steps.length - 1) % steps.length
+  } else if (event.key === "Home") {
+    next = 0
+  } else if (event.key === "End") {
+    next = steps.length - 1
+  } else {
+    return
+  }
   event.preventDefault()
   selectStep(ctx, next)
   event.currentTarget.querySelector<HTMLAnchorElement>(`#step-${next}`)?.focus()
 })
 const advanceStepAtom = Atom.fnSync((event: AnimationEvent<HTMLDivElement>, ctx) => {
-  if (event.animationName !== "step-progress") return
+  if (event.animationName !== "step-progress") {
+    return
+  }
   ctx.set(directionAtom, "forward")
   ctx.set(activeAtom, (ctx(activeAtom) + 1) % steps.length)
 })
@@ -242,8 +252,8 @@ export const App = () => {
             <aside className="book-note">
               <span className="eyebrow">A note</span>
               <p>
-                Traits are not immutable laws. You can clarify a trait when the wording is too broad and reconcile it
-                when a new preference conflicts.
+                Traits are not immutable laws. You can clarify a trait when the wording is too broad, and revise a new
+                preference when it conflicts with one you already have.
               </p>
             </aside>
           </section>
@@ -264,15 +274,15 @@ export const App = () => {
                 <div className="instrument-copy">
                   <span className="instrument-number">01 / Remember</span>
                   <h3>
-                    <code>derive_trait</code>
+                    <code>traits.derive</code>
                   </h3>
                   <p>
-                    Compare a proposed trait with the collection. A distinct trait can be saved and an existing trait
-                    can be reused or clarified. Confirmed conflicts lead to an explicit reconciliation approval.
+                    Compare a proposed trait with the collection. A distinct trait can be saved, a covered one reuses
+                    what you have, and a clearer version can replace the trait it clarifies. Conflicts go back to you to
+                    resolve.
                   </p>
                   <p className="small-note">
-                    Creation and changes require approval. Created, Updated, and Resolved include saved traits and their
-                    IDs.
+                    Nothing is saved without your approval: each proposal appears in a form to save, revise, or skip.
                   </p>
                 </div>
                 <img
@@ -288,15 +298,15 @@ export const App = () => {
                 <div className="instrument-copy">
                   <span className="instrument-number">02 / Review</span>
                   <h3>
-                    <code>check_traits</code>
+                    <code>traits.check</code>
                   </h3>
                   <p>
-                    Select files or glob patterns. The tool reviews current contents in 200-line chunks, compares them
-                    with the selected traits, and returns assessments that need attention.
+                    Check changed files, or every project file, against your traits. Each trait first decides which
+                    files it applies to, then assesses only those, and the report shows how likely each one passes or
+                    fails.
                   </p>
                   <p className="small-note">
-                    Use <code>traitNames</code> for a focused review. Overlapping matches are deduplicated, while
-                    unmatched patterns review nothing.
+                    Name traits for a focused review. The same checks run from the command line, so CI can gate on them.
                   </p>
                 </div>
                 <img

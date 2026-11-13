@@ -1,0 +1,5 @@
+{
+  "path": "pnpm-workspace.yaml",
+  "violating": "catalog:\n  typescript: ^5.9.2\n  vitest: ^3.2.4\n  prettier: ^3.6.2\n  eslint: ^9.34.0\n  '@types/node': ^22.18.0\n\npackages:\n  - apps/*\n  - packages/*\n  - tooling/*\n  - examples/*\n  - '!examples/archived/**'\n\ncatalogs:\n  docs:\n    vitepress: ^1.6.4\n    vue: ^3.5.20\n  browser:\n    vite: ^6.3.5\n    playwright: ^1.55.0\n\nonlyBuiltDependencies:\n  - esbuild\n  - sharp\n\nignoredBuiltDependencies:\n  - fsevents\n\nlinkWorkspacePackages: true\npreferWorkspacePackages: true\n",
+  "compliant": "packages:\n  - apps/*\n  - packages/*\n  - tooling/*\n  - examples/*\n  - '!examples/archived/**'\n\ncatalog:\n  typescript: ^5.9.2\n  vitest: ^3.2.4\n  prettier: ^3.6.2\n  eslint: ^9.34.0\n  '@types/node': ^22.18.0\n\ncatalogs:\n  docs:\n    vitepress: ^1.6.4\n    vue: ^3.5.20\n  browser:\n    vite: ^6.3.5\n    playwright: ^1.55.0\n\nonlyBuiltDependencies:\n  - esbuild\n  - sharp\n\nignoredBuiltDependencies:\n  - fsevents\n\nlinkWorkspacePackages: true\npreferWorkspacePackages: true\n"
+}

@@ -7,7 +7,7 @@ type TraitField = {
   readonly description: string
 }
 
-const context = String.stripMargin(`
+const body = String.stripMargin(`
 |\`\`\`diff
 |-// Parse.ts
 |-import { InvalidDocument } from "./InvalidDocument.ts"
@@ -33,7 +33,7 @@ const fields: ReadonlyArray<TraitField> = [
     description: "What to look at. Identifies the thing being assessed."
   },
   {
-    name: "requirement",
+    name: "assertion",
     number: "03",
     value:
       "Define small domain-specific error types alongside the domain operations that produce them rather than creating standalone error modules, unless separate ownership or dependency constraints justify a separate module.",
@@ -46,10 +46,10 @@ const fields: ReadonlyArray<TraitField> = [
     description: "The reason behind it. What the preference aims to protect."
   },
   {
-    name: "context",
+    name: "body",
     number: "05",
-    value: String.trim(context),
-    description: "Any additional context with which the agent should interpret the current trait."
+    value: String.trim(body),
+    description: "Supporting context, such as examples, with which to interpret the trait. Never hidden requirements."
   }
 ]
 
@@ -57,7 +57,7 @@ const TraitFieldRow = (props: { readonly field: TraitField }) => {
   const { field } = props
   return (
     <>
-      {field.name === "context" && (
+      {field.name === "body" && (
         <pre className="anatomy-delimiter">
           <code>---</code>
         </pre>
@@ -69,8 +69,8 @@ const TraitFieldRow = (props: { readonly field: TraitField }) => {
         <div className="anatomy-field-content">
           <pre className="anatomy-example" id={`anatomy-field-${field.name}`}>
             <code>
-              {field.name !== "context" && <span className="anatomy-key">{field.name}: </span>}
-              {field.name === "context"
+              {field.name !== "body" && <span className="anatomy-key">{field.name}: </span>}
+              {field.name === "body"
                 ? Array.map(String.split(field.value, "\n"), (line, index) => (
                     <span
                       className="anatomy-diff-line"

@@ -10,22 +10,20 @@
     "prepare": "effect-tsgo patch --oxlint",
     "build": "effect-tsgo tsrs@0.21.0-ts7.1.0-beta -b tsconfig.json",
     "check": "vp check && pnpm build && pnpm test",
-    "test": "vp test run",
-    "test:traits:integration": "vp test run --config traits.integration.config.ts"
+    "test": "vp test run"
   },
   "devDependencies": {
     "@alchemy.run/cloudflare": "catalog:",
     "@alchemy.run/github": "catalog:",
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
-    "@effect/ai-openrouter": "catalog:",
     "@effect/platform-node": "catalog:",
     "@effect/tsgo": "catalog:",
+    "@traits/typescript": "workspace:*",
     "@types/node": "catalog:",
     "alchemy": "catalog:",
     "effect": "catalog:",
     "pkg-pr-new": "catalog:",
-    "tinybench": "catalog:",
     "traits": "workspace:*",
     "typescript": "catalog:",
     "vite-plus": "catalog:"

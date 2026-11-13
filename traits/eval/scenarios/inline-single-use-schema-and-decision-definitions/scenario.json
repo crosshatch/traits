@@ -1,0 +1,7 @@
+{
+  "trait": "inline-single-use-schema-and-decision-definitions",
+  "labels": {
+    "github/labelRequest.ts": "fail",
+    "github/pageQuery.ts": "pass"
+  }
+}
