@@ -11,14 +11,15 @@ import from `local/`, `Cli/`, or `mcp/`.
 
 `check({ traits, changes })` evaluates caller-ordered traits and changes and
 returns a `Report`. Each trait entry is `{ trait, origin }`, so where the host
-loaded the trait from travels with it; each change entry is `{ change }`. It
-requires `SegmenterRegistry`, `EnrichmentRegistry`, `Digest` for report text
-digests, and a `DecisionModel` when assertions are assessed. Guidance-only
-traits do not call the decision model. The request is decoded first: duplicate
-trait names or two changes sharing an after path fail with a `SchemaError`
-before any extension or model work. Success of the Effect means report assembly
-finished, not that its assessments satisfy a caller's acceptance policy; use
-`Report.verdicts` with a `DecisionPolicy` for that interpretation.
+loaded the trait from travels with it; each change is a `Change` of before
+and/or after text. It requires `SegmenterRegistry`, `EnrichmentRegistry`,
+`Digest` for report text digests, and a `DecisionModel` when assertions are
+assessed. Guidance-only traits do not call the decision model. The request is
+decoded first: duplicate trait names or two changes sharing an after path fail
+with a `SchemaError` before any extension or model work. Success of the Effect
+means report assembly finished, not that its assessments satisfy a caller's
+acceptance policy; use `Report.verdicts` with a `DecisionPolicy` for that
+interpretation.
 
 Subject identification is also available independently as
 `TraitSubject.match(subjects, input)`, where subjects is a caller-keyed record.

@@ -203,9 +203,9 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
               path: file,
               problem: "it exists neither in the working tree nor at HEAD."
             })
-          : { change: { before } }
+          : { before }
       }
-      return { change: { after: { path: file, text: current }, ...(before === undefined ? {} : { before }) } }
+      return { after: { path: file, text: current }, ...(before === undefined ? {} : { before }) }
     }),
     { concurrency: fileConcurrency }
   ).pipe(Effect.map(Array.filter(Predicate.isNotUndefined)))

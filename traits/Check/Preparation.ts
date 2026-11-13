@@ -99,7 +99,7 @@ export const make = Effect.fnUntraced(function* (
       const [module, execute] = entry
       return Effect.forEach(
         request.changes,
-        (entry, index) => {
+        (change, index) => {
           const origin = Report.DiagnosticOrigin.cases.SegmenterExecution.make({ module, change: index })
           const fallback = Report.Diagnostic.make({
             origin,
@@ -107,7 +107,7 @@ export const make = Effect.fnUntraced(function* (
               error: "Segmentation failed or returned invalid inputs."
             })
           })
-          return Segmentation.execute(execute, entry.change).pipe(
+          return Segmentation.execute(execute, change).pipe(
             Effect.catchTags({
               SegmenterError: (error) =>
                 Effect.fail(

@@ -80,7 +80,7 @@ const program = Effect.gen(function* () {
           S.decodeEffect(WorkspacePath)
         )
         const text = yield* fs.readFileString(path.join(directory, relative))
-        return { change: { after: { path: relative, text } } }
+        return { after: { path: relative, text } }
       })
     )
     const correct = { without: 0, with: 0 }

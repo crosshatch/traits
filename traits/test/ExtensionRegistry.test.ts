@@ -158,7 +158,7 @@ it.live("resolves relative and consumer-only import-condition packages before us
             })
           }
         ],
-        changes: [{ change: { after: { path: WorkspacePath.make("source.ts"), text: "source" } } }]
+        changes: [{ after: { path: WorkspacePath.make("source.ts"), text: "source" } }]
       }).pipe(Effect.provide([LocalSegmenterRegistry.layer, LocalEnrichmentRegistry.layer]))
       expect(report.diagnostics).toEqual([])
       expect(inputsOf(report.traits[0]!)[0]!.enrichments).toEqual([
@@ -288,7 +288,7 @@ it.live("shares setup while isolating execution chats/scopes and owning setup re
               })
             }
           ],
-          changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "" } } }]
+          changes: [{ after: { path: WorkspacePath.make("file.ts"), text: "" } }]
         }
         yield* check(request).pipe(
           Effect.provideService(SegmenterRegistry, registry),
@@ -393,7 +393,7 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
                 })
               }
             ],
-            changes: [{ change: { after: { path: WorkspacePath.make(filename), text: "" } } }]
+            changes: [{ after: { path: WorkspacePath.make(filename), text: "" } }]
           }).pipe(Effect.provideContext(services))
           expect(inputsOf(report.traits[0]!)[0]).toEqual(
             expect.objectContaining({ _tag: "Completed", enrichments: [{ _tag: "Succeeded", module, text: filename }] })
@@ -410,7 +410,7 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
               })
             }
           ],
-          changes: [{ change: { after: { path: WorkspacePath.make("invalid.ts"), text: "" } } }]
+          changes: [{ after: { path: WorkspacePath.make("invalid.ts"), text: "" } }]
         }).pipe(Effect.provideContext(services))
         expect(inputsOf(invalid.traits[0]!)[0]!.enrichments).toEqual([
           { _tag: "Failed", module, explanation: { _tag: "Error", error: "Enrichment execution failed." } }

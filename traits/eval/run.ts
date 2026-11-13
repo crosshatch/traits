@@ -110,7 +110,7 @@ const program = Effect.gen(function* () {
   )
   const changes = yield* Effect.forEach(cases.fixtures, (fixture) =>
     Effect.map(fs.readFileString(path.join(import.meta.dirname, "fixtures", `${fixture.id}.txt`)), (text) => ({
-      change: { after: { path: fixture.path, text } }
+      after: { path: fixture.path, text }
     }))
   )
   const requests = yield* Ref.make(0)

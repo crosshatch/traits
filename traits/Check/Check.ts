@@ -8,7 +8,7 @@ import { CheckInput } from "./CheckInput.ts"
 import * as Evaluation from "./Evaluation.ts"
 import * as Preparation from "./Preparation.ts"
 
-export { CheckChange, CheckInput, CheckTrait } from "./CheckInput.ts"
+export { CheckInput, CheckTrait } from "./CheckInput.ts"
 
 const sourceIdentity = (source: InputSource) =>
   pipe(
@@ -27,17 +27,17 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
   const { models, usage, traits } = yield* Evaluation.evaluate(input, preparation)
   const changes = yield* Effect.forEach(
     input.changes,
-    (entry): Effect.Effect<Report.ChangeIdentity, never, Digest.Digest> =>
-      entry.change.after === undefined
+    (change): Effect.Effect<Report.ChangeIdentity, never, Digest.Digest> =>
+      change.after === undefined
         ? pipe(
-            entry.change.before!,
+            change.before!,
             sourceIdentity,
             Effect.map((before) => ({ before }))
           )
         : Effect.all(
             {
-              after: sourceIdentity(entry.change.after),
-              ...(entry.change.before === undefined ? {} : { before: sourceIdentity(entry.change.before) })
+              after: sourceIdentity(change.after),
+              ...(change.before === undefined ? {} : { before: sourceIdentity(change.before) })
             },
             { concurrency: "unbounded" }
           ),

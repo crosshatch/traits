@@ -30,7 +30,7 @@ const request = {
       origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/small-functions.md") })
     }
   ],
-  changes: [{ change: { after: { path: WorkspacePath.make("a.ts"), text: "export const f = () => 1\n" } } }]
+  changes: [{ after: { path: WorkspacePath.make("a.ts"), text: "export const f = () => 1\n" } }]
 }
 const host = Layer.mergeAll(
   Layer.succeed(SegmenterRegistry, () => Effect.die("Unexpected segmenter")),
@@ -91,7 +91,7 @@ it.effect("reuses cached decisions for unchanged traits and inputs without askin
     // A changed input is decided again.
     const changed = {
       ...request,
-      changes: [{ change: { after: { ...request.changes[0]!.change.after, text: "x\n" } } }]
+      changes: [{ after: { ...request.changes[0]!.after, text: "x\n" } }]
     }
     yield* check(changed).pipe(Effect.provide([host, model.layer, cache]))
     expect(model.calls.count).toBe(4)
