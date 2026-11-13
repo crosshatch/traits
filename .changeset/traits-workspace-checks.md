@@ -36,6 +36,10 @@ migrate a workspace:
   trait files in `traits` and asks for approval through an MCP form, so it
   requires a client that supports form elicitation; there is no `approved`
   parameter.
+- `traits.check` returns `{ report, notice? }`. The notice tells the agent once
+  per server when a newer traits release is published, and on every check when
+  the package was upgraded while the MCP server kept running, so the user can
+  restart it.
 - Remove installed copies of the bundled `traits` skill, such as
   `.agents/skills/traits` and `.claude/skills/traits`, and unlink
   package-managed skills; the server's instructions replace it.

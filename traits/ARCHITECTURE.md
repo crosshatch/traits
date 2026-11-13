@@ -214,10 +214,17 @@ configured models and fresh extension registries, and returns the full report.
 `WorkspaceCheck.layer` supplies default host services (HTTP, WebCrypto digests
 and randomness, an in-memory key-value store, and the local time zone); the host
 provides the platform and `WorkspaceRoot`. The `traits check` CLI command prints
-the report as JSON, and the `traits.check` MCP tool returns it, turning any
-failure, including unexpected defects, into its message so the agent can act,
-for example by running `traits update`. Both use the current directory as the
-workspace.
+the report as JSON, and the `traits.check` MCP tool returns it as
+`{ report, notice? }`, turning any failure, including unexpected defects, into
+its message so the agent can act, for example by running `traits update`. The
+notice keeps the agent informed about the package itself. When the server
+starts, it looks up the latest traits release on npm once, giving up silently
+after 3 seconds or on any failure, and the first check after that announces a
+newer release. Every check also compares the `package.json` installed beside the
+server with the version it is running. When the package was upgraded under a
+running server, the notice, or the failure message, asks the user to restart it,
+rather than reporting a version mismatch the upgrade already fixed. Both use the
+current directory as the workspace.
 
 Without paths, a check covers every project file: tracked and untracked files
 that Git does not ignore, listed by `git ls-files`, minus the configuration's

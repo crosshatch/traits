@@ -1,8 +1,8 @@
 import { expect, it } from "@effect/vitest"
 import { Array, pipe, String } from "effect"
 
-import * as Changelog from "../Cli/Changelog.ts"
 import { render } from "../Cli/commands/update/update.ts"
+import * as Changelog from "../local/Changelog.ts"
 
 const changelog = String.stripMargin(`
 |# traits
