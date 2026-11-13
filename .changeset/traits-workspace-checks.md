@@ -44,10 +44,14 @@ migrate a workspace:
   `--fail <p> --pass <p>`, exits 0 for Pass, 1 for Fail, 2 for Incomplete, and 3
   for Inconclusive. `traits update` prints these migration steps for later
   releases.
+- Reports record the traits version that produced them in `version`; reports
+  from versions compatible under caret (`^`) semantics share a format.
 - Checks remember completed decisions in `.agents/traits/.cache/`, which ignores
   itself in Git, so re-checking unchanged traits and files is nearly free.
 - `@traits/typescript/references` is a new enrichment that lists, for each
-  declaration a TypeScript file exports, the other files referencing it, using
-  the TypeScript 7 project that includes the file.
+  declaration a TypeScript file exports, the other files that use it and how
+  often, across every TypeScript project in the workspace. Re-exports are listed
+  separately, and declarations a package entry point exposes are marked as
+  public API.
 - `@traits/typescript/package-exports` is a new enrichment that tells
   assessments whether a file is a package entry point.

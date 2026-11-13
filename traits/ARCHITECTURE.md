@@ -624,9 +624,8 @@ Reports group results by trait, then by supplied change, then by selected input:
 
 ```text
 Report
-├── version: 1
+├── version: string (the traits version)
 ├── run: Run
-│   ├── evaluator: { name, version }
 │   ├── models: string[] (distinct, sorted)
 │   └── usage: { inputTokens?, outputTokens? }
 ├── changes: ChangeIdentity[] ({ before?, after?: { path, digest } }, at least one side)
@@ -662,12 +661,15 @@ has an assertion, and failed inputs are explained by an assessment failure or a
 failed enrichment. The schemas cannot establish whether the runner assigned the
 correct state in response to cancellation or recovery.
 
-`version` identifies the report format; incompatible format changes increment
-it. `run` records deterministic provenance without timestamps, hosts, or
-absolute paths: the evaluator package name and version, distinct sorted model
-identifiers reported by assessment responses, and token totals across received
-responses. Each total is omitted when any response did not report it, rather
-than understating usage. Responses lost to cancellation are not counted.
+`version` is the traits version that produced the report, the same version
+`traits.json` records. Reports from versions compatible under caret (`^`)
+semantics share a format, so an incompatible format change is a breaking
+release, as for any change to the exported `Report` schema. `run` records
+deterministic provenance without timestamps, hosts, or absolute paths: distinct
+sorted model identifiers reported by assessment responses, and token totals
+across received responses. Each total is omitted when any response did not
+report it, rather than understating usage. Responses lost to cancellation are
+not counted.
 
 Required `Report.changes` records before and/or after source identities for
 every supplied change in caller order. At least one side is required per change;
@@ -784,11 +786,11 @@ retry identifiers. Incremental checking, dependency tracking, cache
 invalidation, and persistent lock formats are deferred until the core execution
 model is established. Reports already record the inputs a future lock entry
 needs: source digests per change, the complete trait with workspace-relative
-extension identities, and evaluator and model provenance. The client report
-supplies results and remediation, not an execution ledger or retry schedule. A
-passing assessment does not by itself establish successful execution; observed
-extension failures remain relevant even when other work produces passing
-assessments.
+extension identities, the traits version, and model provenance. The client
+report supplies results and remediation, not an execution ledger or retry
+schedule. A passing assessment does not by itself establish successful
+execution; observed extension failures remain relevant even when other work
+produces passing assessments.
 
 ## Evaluate accuracy
 

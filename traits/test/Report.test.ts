@@ -7,7 +7,7 @@ import { Segment, WorkspacePath } from "../util/util.ts"
 const digest = `sha256:${pipe("0", String.repeat(64))}`
 const trait = { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." }
 const guidance = { name: trait.name, purpose: trait.purpose }
-const run = { evaluator: { name: "traits", version: "0.0.0" }, models: [], usage: {} }
+const run = { models: [], usage: {} }
 const assessment = { pass: 0.9, fail: 0.05, na: 0.03, uncertain: 0.02 }
 const fields = { segment: Segment.cases.After.make({ range: { start: 0, end: 1 } }), digest, enrichments: [] }
 const completed = { _tag: "Completed", ...fields, assessment }
@@ -17,7 +17,7 @@ const reportWith = (
   selectedTrait: unknown = trait,
   diagnostics: ReadonlyArray<unknown> = []
 ) => ({
-  version: 1,
+  version: "0.6.0",
   run,
   changes: [{ after: { path: "file.ts", digest } }],
   diagnostics,

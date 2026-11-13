@@ -44,12 +44,8 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
     { concurrency: digestConcurrency }
   )
   return Report.Report.make({
-    version: 1,
-    run: {
-      evaluator: { name: PackageJson.name, version: PackageJson.version },
-      models,
-      usage
-    },
+    version: PackageJson.version,
+    run: { models, usage },
     changes,
     traits,
     diagnostics: [

@@ -1,6 +1,7 @@
 import { Array, Function, Option, pipe, Schema as S } from "effect"
 
 import { Segment } from "../util/util.ts"
+import { Version } from "../Version.ts"
 import { ChangeIdentity } from "./ChangeIdentity.ts"
 import { ChangeReport } from "./ChangeReport.ts"
 import type { DecisionPolicy } from "./DecisionPolicy.ts"
@@ -17,9 +18,10 @@ import type { Verdict } from "./Verdict.ts"
 /** Portable, client-facing evaluation results grouped by trait and change, without source text or excerpts; retry tracking is external. */
 export type Report = typeof Report.Type
 export const Report = S.Struct({
-  /** Report format version; incompatible format changes increment it. */
-  version: S.Literal(1).annotateKey({
-    description: "Report format version; incompatible format changes increment it."
+  /** The traits version that produced the report; versions compatible under caret (^) semantics share the report format. */
+  version: Version.annotateKey({
+    description:
+      "The traits version that produced the report; versions compatible under caret (^) semantics share the report format."
   }),
   /** Deterministic evaluation provenance, without timestamps, hosts, or absolute paths. */
   run: Run,

@@ -113,12 +113,8 @@ it.effect("uses whole files without segmentation and keeps execution success sep
       old,
       empty.digest
     ])
-    expect(report.version).toBe(1)
-    expect(report.run).toEqual({
-      evaluator: { name: PackageJson.name, version: PackageJson.version },
-      models: [],
-      usage: {}
-    })
+    expect(report.version).toBe(PackageJson.version)
+    expect(report.run).toEqual({ models: [], usage: {} })
     expect(Report.verdicts(report, { fail: 0.5, pass: 0.8 }).verdict).toBe("Fail")
     expect(Report.verdicts(report, { fail: 1, pass: 0 }).verdict).toBe("Pass")
     yield* pipe(report, S.decodeEffect(Report.Report))
