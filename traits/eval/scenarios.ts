@@ -19,6 +19,7 @@ import * as ExtensionModule from "../local/ExtensionModule.ts"
 import * as LocalEnrichmentRegistry from "../local/LocalEnrichmentRegistry.ts"
 import * as LocalSegmenterRegistry from "../local/LocalSegmenterRegistry.ts"
 import * as TraitsConfig from "../local/TraitsConfig.ts"
+import * as WorkspaceLayout from "../local/WorkspaceLayout.ts"
 import * as WorkspaceModels from "../local/WorkspaceModels.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
@@ -61,6 +62,10 @@ const program = Effect.gen(function* () {
       )
     )
     const loaded = yield* WorkspaceTraits.load(scenario.trait)
+    // Both variants are checked as the workspace's trait file, with or without its references enrichment.
+    const origin = Report.TraitOrigin.cases.File.make({
+      path: WorkspacePath.make(WorkspaceLayout.traitFile(scenario.trait))
+    })
     const others = Array.filter(loaded.enrichments ?? [], (module) => module !== references)
     const { enrichments: _configured, ...definition } = loaded
     const variants = {
@@ -84,7 +89,7 @@ const program = Effect.gen(function* () {
       const verdicts = yield* Effect.forEach(
         Array.range(1, runs),
         () =>
-          check({ traits: [{ trait }], changes }).pipe(
+          check({ traits: [{ trait, origin }], changes }).pipe(
             Effect.map((report) =>
               Array.map(Report.verdicts(report, policy).traits[0]!.changes, (change) => change.verdict)
             )

@@ -65,7 +65,15 @@ type Outcome = "caught" | "missed-by-gate" | "missed" | "clean" | "false-positiv
 
 /** Checks one file against one trait and classifies the verdict for the file's expected label. */
 const assess = Effect.fnUntraced(function* (trait: Trait, path: WorkspacePath, text: string, violating: boolean) {
-  const report = yield* check({ traits: [{ trait }], changes: [{ change: { after: { path, text } } }] })
+  const report = yield* check({
+    traits: [
+      {
+        trait,
+        origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(WorkspaceLayout.traitFile(trait.name)) })
+      }
+    ],
+    changes: [{ change: { after: { path, text } } }]
+  })
   const verdict = Report.verdicts(report, policy).traits[0]!.verdict
   const change = report.traits[0]!.changes[0]!
   const unmatched =

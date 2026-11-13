@@ -8,6 +8,7 @@ const digest = `sha256:${pipe("0", String.repeat(64))}`
 const trait = { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." }
 const guidance = { name: trait.name, purpose: trait.purpose }
 const run = { models: [], usage: {} }
+const origin = { _tag: "File", path: ".agents/traits/example.md" }
 const assessment = { pass: 0.9, fail: 0.05, na: 0.03, uncertain: 0.02 }
 const fields = { segment: Segment.cases.After.make({ range: { start: 0, end: 1 } }), digest, enrichments: [] }
 const completed = { _tag: "Completed", ...fields, assessment }
@@ -21,7 +22,7 @@ const reportWith = (
   run,
   changes: [{ after: { path: "file.ts", digest } }],
   diagnostics,
-  traits: [{ trait: selectedTrait, changes: [change] }]
+  traits: [{ trait: selectedTrait, origin, changes: [change] }]
 })
 const decode = S.decodeUnknownEffect(Report.Report)
 const policy = { fail: 0.5, pass: 0.8 }
@@ -59,7 +60,11 @@ it.effect("accepts not-applicable assessments only when the policy says so", () 
 
 it.effect("combines verdicts by precedence Fail, Incomplete, Inconclusive, then Pass", () =>
   Effect.gen(function* () {
-    const traitWith = (name: string, input: unknown) => ({ trait: { ...trait, name }, changes: [evaluated(input)] })
+    const traitWith = (name: string, input: unknown) => ({
+      trait: { ...trait, name },
+      origin,
+      changes: [evaluated(input)]
+    })
     const failing = traitWith("failing", {
       ...completed,
       assessment: { pass: 0.05, fail: 0.9, na: 0.03, uncertain: 0.02 }
@@ -175,10 +180,12 @@ it("requires portable, unambiguous identities", () => {
       { before: { path: "file.ts", digest }, after: { path: "file.ts", digest } },
       { before: { path: "file.ts", digest }, after: { path: "copy.ts", digest } }
     ],
-    traits: [{ trait, changes: [evaluated(completed), evaluated(completed)] }]
+    traits: [{ trait, origin, changes: [evaluated(completed), evaluated(completed)] }]
   }
   expect(S.is(Report.Report)({ ...valid, ...copy })).toBe(true)
-  expect(S.is(Report.Report)({ ...valid, ...copy, traits: [{ trait, changes: [evaluated(completed)] }] })).toBe(false)
+  expect(S.is(Report.Report)({ ...valid, ...copy, traits: [{ trait, origin, changes: [evaluated(completed)] }] })).toBe(
+    false
+  )
   for (const path of ["/abs/file.ts", "./file.ts", "../file.ts", "dir\\file.ts", "C:/file.ts"]) {
     expect(S.is(Report.Report)({ ...valid, changes: [{ after: { path, digest } }] })).toBe(false)
   }
@@ -192,15 +199,15 @@ it("requires portable, unambiguous identities", () => {
   expect(S.is(Report.Report)({ ...valid, run: { ...run, models: ["a", "a"] } })).toBe(false)
 })
 
-it("records host-supplied trait origins", () => {
-  const withOrigin = (origin: unknown) => ({
+it("records each trait's origin", () => {
+  const withOrigin = (traitOrigin: unknown) => ({
     ...reportWith(),
-    traits: [{ trait, origin, changes: [evaluated(completed)] }]
+    traits: [{ trait, origin: traitOrigin, changes: [evaluated(completed)] }]
   })
-  expect(S.is(Report.Report)(withOrigin({ path: ".agents/traits/example.md" }))).toBe(true)
-  expect(S.is(Report.Report)(withOrigin({ collection: { collection: "github:example/traits" } }))).toBe(true)
-  expect(S.is(Report.Report)(withOrigin({}))).toBe(false)
-  expect(S.is(Report.Report)(withOrigin({ path: "/absolute/example.md" }))).toBe(false)
+  expect(S.is(Report.Report)(withOrigin(origin))).toBe(true)
+  expect(S.is(Report.Report)(withOrigin({ path: ".agents/traits/example.md" }))).toBe(false)
+  expect(S.is(Report.Report)(withOrigin({ _tag: "File", path: "/absolute/example.md" }))).toBe(false)
+  expect(S.is(Report.Report)({ ...reportWith(), traits: [{ trait, changes: [evaluated(completed)] }] })).toBe(false)
 })
 
 it.effect("lists shared and local problems with their locations", () =>
@@ -217,6 +224,7 @@ it.effect("lists shared and local problems with their locations", () =>
       traits: [
         {
           trait: enriched,
+          origin,
           changes: [
             evaluated({ ...completed, enrichments: [failedEnrichment] }),
             evaluated({
@@ -227,7 +235,7 @@ it.effect("lists shared and local problems with their locations", () =>
             })
           ]
         },
-        { trait: { ...trait, name: "set-up", enrichments: [module] }, changes: [evaluated(), evaluated()] }
+        { trait: { ...trait, name: "set-up", enrichments: [module] }, origin, changes: [evaluated(), evaluated()] }
       ]
     })
     expect(S.is(Report.Report)({ ...report, diagnostics: [setup] })).toBe(false)

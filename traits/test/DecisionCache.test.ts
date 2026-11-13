@@ -9,6 +9,7 @@ import { CachedDecision, DecisionCache } from "../Check/DecisionCache.ts"
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import * as LocalDecisionCache from "../local/LocalDecisionCache.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
+import * as Report from "../Report/Report.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import { Trait } from "../Trait.ts"
 import { TraitAssertion } from "../TraitAssertion.ts"
@@ -25,7 +26,8 @@ const request = {
         subject: TraitSubject.make("Functions."),
         assertion: TraitAssertion.make("Functions are small."),
         purpose: TraitPurpose.make("Keep code readable.")
-      })
+      }),
+      origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/small-functions.md") })
     }
   ],
   changes: [{ change: { after: { path: WorkspacePath.make("a.ts"), text: "export const f = () => 1\n" } } }]

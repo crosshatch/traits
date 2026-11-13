@@ -49,3 +49,5 @@ import { Enrichment, EnrichmentError, EnrichmentName } from "./index.ts"
 Imports from external packages are out of scope; see choose-import-style-by-api-cohesion.
 
 An import statement naming one or two exports without aliases never needs a namespace import; count names per import statement, not per file.
+
+Not a violation: `import { check, type CheckTrait } from "../Check/Check.ts"`. It names two exports with no aliases; a type-only member and a name that starts with the module name still count once each toward the three-export threshold.

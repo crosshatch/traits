@@ -3,7 +3,7 @@ import { Array, Cause, Deferred, Effect, Exit, Fiber, Layer, Order, pipe, Record
 import { AiError, DecisionModel } from "effect/ai"
 import { Digest } from "effect/crypto"
 
-import { check } from "../Check/Check.ts"
+import { check, type CheckTrait } from "../Check/Check.ts"
 import * as Enrichment from "../Enrichment/Enrichment.ts"
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import PackageJson from "../package.json" with { type: "json" }
@@ -22,6 +22,8 @@ const trait = (name: string, options: Partial<Omit<Trait, "name" | "purpose">> =
     purpose: TraitPurpose.make("Protect correctness."),
     ...options
   })
+/** Where every test trait is said to be loaded from. */
+const origin = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/example.md") })
 const allInputsOf = (trait: Report.TraitReport) =>
   Array.flatMap(trait.changes, (change) => (Report.ChangeReport.guards.Evaluated(change) ? change.inputs : []))
 /** Inputs that passed the subject gate, so their enrichments ran or were recorded. */
@@ -56,7 +58,10 @@ it.effect("uses whole files without segmentation and keeps execution success sep
   Effect.gen(function* () {
     let assessments = 0
     const report = yield* check({
-      traits: [{ trait: trait("asserted", { assertion }) }, { trait: trait("guidance") }],
+      traits: [
+        { origin, trait: trait("asserted", { assertion }) },
+        { origin, trait: trait("guidance") }
+      ],
       changes: [
         {
           change: {
@@ -141,7 +146,10 @@ it.effect("shares segmentation across traits and validates the entire result bef
         })
     })
     const report = yield* check({
-      traits: [{ trait: trait("one", { segment: module }) }, { trait: trait("two", { segment: module }) }],
+      traits: [
+        { origin, trait: trait("one", { segment: module }) },
+        { origin, trait: trait("two", { segment: module }) }
+      ],
       changes: [
         { change: { after: { path: WorkspacePath.make("invalid.ts"), text: "ab" } } },
         { change: { after: { path: WorkspacePath.make("valid.ts"), text: "ab" } } }
@@ -179,9 +187,9 @@ it.effect("retains empty segment selections and reports setup failures once with
     })
     const report = yield* check({
       traits: [
-        { trait: trait("empty", { segment: module }) },
-        { trait: trait("failed-one", { segment: failedModule }) },
-        { trait: trait("failed-two", { segment: failedModule }) }
+        { origin, trait: trait("empty", { segment: module }) },
+        { origin, trait: trait("failed-one", { segment: failedModule }) },
+        { origin, trait: trait("failed-two", { segment: failedModule }) }
       ],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
     }).pipe(Effect.provide([registry, model]))
@@ -215,8 +223,8 @@ it.effect("reports failed enrichment setup once and omits it from every trait's 
     })
     const report = yield* check({
       traits: [
-        { trait: trait("one", { enrichments: [context] }) },
-        { trait: trait("two", { enrichments: [context] }) }
+        { origin, trait: trait("one", { enrichments: [context] }) },
+        { origin, trait: trait("two", { enrichments: [context] }) }
       ],
       changes: [
         { change: { after: { path: WorkspacePath.make("one.ts"), text: "one" } } },
@@ -250,7 +258,7 @@ it.effect("allows enrichment-only recovery to proceed, but blocks Input-scoped a
           )
       })
       const report = yield* check({
-        traits: [{ trait: trait("example", { assertion, enrichments: [context] }) }],
+        traits: [{ origin, trait: trait("example", { assertion, enrichments: [context] }) }],
         changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
       }).pipe(Effect.provide([registry, model]))
       expect(report.diagnostics).toEqual([])
@@ -287,7 +295,7 @@ it.effect("retains empty enrichment context and reports failed enrichment withou
         )
     })
     const report = yield* check({
-      traits: [{ trait: trait("example", { enrichments: [empty, context] }) }],
+      traits: [{ origin, trait: trait("example", { enrichments: [empty, context] }) }],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "private-source" } } }]
     }).pipe(Effect.provide([registry, model]))
     expect(inputsOf(report.traits[0]!)[0]!.enrichments).toEqual([
@@ -332,8 +340,8 @@ it.effect("Trait recovery cancels sibling input work without cancelling unrelate
     })
     const report = yield* check({
       traits: [
-        { trait: trait("recovering", { assertion, segment: module, enrichments: [context] }) },
-        { trait: trait("unaffected") }
+        { origin, trait: trait("recovering", { assertion, segment: module, enrichments: [context] }) },
+        { origin, trait: trait("unaffected") }
       ],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "ab" } } }]
     }).pipe(
@@ -374,7 +382,7 @@ it.effect("explains assessment failures by reason without leaking provider text,
     ] as const
     for (const [decide, expected] of cases) {
       const report = yield* check({
-        traits: [{ trait: trait("example", { assertion }) }],
+        traits: [{ origin, trait: trait("example", { assertion }) }],
         changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "secret-source" } } }]
       }).pipe(
         Effect.provide(unused),
@@ -404,7 +412,7 @@ it.effect("uses normal fiber interruption and waits for execution cleanup", () =
     const firstAssessed = yield* Deferred.make<void>()
     let cleaned = false
     const running = yield* check({
-      traits: [{ trait: trait("example", { assertion }) }],
+      traits: [{ origin, trait: trait("example", { assertion }) }],
       changes: [
         { change: { after: { path: WorkspacePath.make("one.ts"), text: "one" } } },
         { change: { after: { path: WorkspacePath.make("two.ts"), text: "two" } } }
@@ -450,8 +458,14 @@ it.effect("rejects ambiguous requests before any extension or model work", () =>
   Effect.gen(function* () {
     const source = { after: { path: WorkspacePath.make("file.ts"), text: "source" } }
     for (const request of [
-      { traits: [{ trait: trait("same") }, { trait: trait("same") }], changes: [{ change: source }] },
-      { traits: [{ trait: trait("one") }], changes: [{ change: source }, { change: source }] }
+      {
+        traits: [
+          { origin, trait: trait("same") },
+          { origin, trait: trait("same") }
+        ],
+        changes: [{ change: source }]
+      },
+      { traits: [{ origin, trait: trait("one") }], changes: [{ change: source }, { change: source }] }
     ]) {
       const error = yield* check(request).pipe(
         Effect.provide(unused),
@@ -475,7 +489,7 @@ it.effect("records sorted model identities and token totals only when every resp
     ]
     let index = 0
     const report = yield* check({
-      traits: [{ trait: trait("example", { assertion }) }],
+      traits: [{ origin, trait: trait("example", { assertion }) }],
       changes: [
         { change: { after: { path: WorkspacePath.make("one.ts"), text: "one" } } },
         { change: { after: { path: WorkspacePath.make("two.ts"), text: "two" } } },
@@ -510,7 +524,7 @@ it.effect("records enrichments cancelled by another enrichment's Input recovery"
         )
     })
     const report = yield* check({
-      traits: [{ trait: trait("example", { assertion, enrichments: [context, slow] }) }],
+      traits: [{ origin, trait: trait("example", { assertion, enrichments: [context, slow] }) }],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
     }).pipe(Effect.provide([registry, model]))
     const input = inputsOf(report.traits[0]!)[0]!
@@ -529,16 +543,20 @@ it.effect("records enrichments cancelled by another enrichment's Input recovery"
   })
 )
 
-it.effect("reports host-supplied trait origins", () =>
+it.effect("reports each trait's origin and requires one", () =>
   Effect.gen(function* () {
-    const origin = Report.TraitOrigin.make({ path: WorkspacePath.make(".agents/traits/with-origin.md") })
-    const report = yield* check({
-      traits: [{ trait: trait("with-origin"), origin }, { trait: trait("without-origin") }],
-      changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }]
-    }).pipe(Effect.provide([unused, model]))
-    expect(report.traits[0]!.origin).toEqual(origin)
-    expect(report.traits[1]!).not.toHaveProperty("origin")
+    const loaded = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/with-origin.md") })
+    const change = { change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } } }
+    const report = yield* check({ traits: [{ trait: trait("with-origin"), origin: loaded }], changes: [change] }).pipe(
+      Effect.provide([unused, model])
+    )
+    expect(report.traits[0]!.origin).toEqual(loaded)
     yield* pipe(report, S.decodeEffect(Report.Report))
+    const missing = yield* check({
+      traits: [{ trait: trait("without-origin") } as unknown as CheckTrait],
+      changes: [change]
+    }).pipe(Effect.provide([unused, model]), Effect.flip)
+    expect(missing._tag).toBe("SchemaError")
   })
 )
 
@@ -589,9 +607,9 @@ it.effect(
       })
       const report = yield* check({
         traits: [
-          { trait: trait("asserted", { subject, assertion, enrichments: [context] }) },
-          { trait: trait("guidance", { subject }) },
-          { trait: trait("ungated", { assertion }) }
+          { origin, trait: trait("asserted", { subject, assertion, enrichments: [context] }) },
+          { origin, trait: trait("guidance", { subject }) },
+          { origin, trait: trait("ungated", { assertion }) }
         ],
         changes: Array.map(["match", "skip", "maybe"], (text) => ({
           change: { after: { path: WorkspacePath.make(`${text}.ts`), text } }
@@ -637,7 +655,7 @@ it.effect("fails inputs whose subject decision fails, without running enrichment
       Enrichment: () => Effect.succeed(Effect.die("Unexpected enrichment"))
     })
     const report = yield* check({
-      traits: [{ trait: trait("asserted", { subject, assertion, enrichments: [context] }) }],
+      traits: [{ origin, trait: trait("asserted", { subject, assertion, enrichments: [context] }) }],
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "private-source" } } }]
     }).pipe(
       Effect.provide(registry),
@@ -673,6 +691,7 @@ it.effect("batches subject decisions per input, splits large batches, and counts
     const questions: Array<number> = []
     const report = yield* check({
       traits: Array.map(Array.range(1, 40), (index) => ({
+        origin,
         trait: trait(`subject-${index}`, { subject: TraitSubject.make(`Subject ${index}.`) })
       })),
       changes: [{ change: { after: { path: WorkspacePath.make("file.ts"), text: "export const a = 1" } } }]

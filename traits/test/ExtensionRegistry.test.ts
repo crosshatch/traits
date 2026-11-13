@@ -39,6 +39,8 @@ import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
 import { WorkspacePath } from "../util/util.ts"
 
+/** Where every test trait is said to be loaded from. */
+const origin = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/example.md") })
 const allInputsOf = (trait: Report.TraitReport) =>
   Array.flatMap(trait.changes, (change) => (Report.ChangeReport.guards.Evaluated(change) ? change.inputs : []))
 /** Inputs that passed the subject gate, so their enrichments ran or were recorded. */
@@ -147,6 +149,7 @@ it.live("resolves relative and consumer-only import-condition packages before us
       const report = yield* check({
         traits: [
           {
+            origin,
             trait: Trait.make({
               name: TraitName.make("consumer"),
               purpose: TraitPurpose.make("Protect correctness."),
@@ -277,6 +280,7 @@ it.live("shares setup while isolating execution chats/scopes and owning setup re
         const request = {
           traits: [
             {
+              origin,
               trait: Trait.make({
                 name: TraitName.make("example"),
                 purpose: TraitPurpose.make("Protect correctness."),
@@ -381,6 +385,7 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
           const report = yield* check({
             traits: [
               {
+                origin,
                 trait: Trait.make({
                   name: TraitName.make("example"),
                   purpose: TraitPurpose.make("Protect correctness."),
@@ -397,6 +402,7 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
         const invalid = yield* check({
           traits: [
             {
+              origin,
               trait: Trait.make({
                 name: TraitName.make("example"),
                 purpose: TraitPurpose.make("Protect correctness."),

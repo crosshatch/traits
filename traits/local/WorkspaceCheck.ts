@@ -15,6 +15,7 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { check } from "../Check/Check.ts"
+import { TraitOrigin } from "../Report/TraitOrigin.ts"
 import { WorkspacePath } from "../util/util.ts"
 import * as LocalDecisionCache from "./LocalDecisionCache.ts"
 import * as LocalEnrichmentRegistry from "./LocalEnrichmentRegistry.ts"
@@ -213,7 +214,7 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
     (name) =>
       Effect.map(WorkspaceTraits.load(name), (trait) => ({
         trait,
-        origin: { path: WorkspacePath.make(WorkspaceLayout.traitFile(name)) }
+        origin: TraitOrigin.cases.File.make({ path: WorkspacePath.make(WorkspaceLayout.traitFile(name)) })
       })),
     { concurrency: fileConcurrency }
   )

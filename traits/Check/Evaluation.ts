@@ -246,7 +246,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
       return {
         report: Report.TraitReport.make({
           trait,
-          ...(entry.origin === undefined ? {} : { origin: entry.origin }),
+          origin: entry.origin,
           changes: Array.map(changes, (change) => change.report)
         }),
         responses: Array.flatMap(changes, (change) => change.responses)

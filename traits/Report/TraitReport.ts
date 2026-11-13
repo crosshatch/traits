@@ -11,10 +11,8 @@ export type TraitReport = typeof TraitReport.Type
 export const TraitReport = S.Struct({
   /** The unchanged static trait definition, included once for these results. */
   trait: Trait.annotateKey({ description: "The unchanged static trait definition, included once for these results." }),
-  /** Where the host loaded the trait definition from; omitted when the host did not supply it. */
-  origin: TraitOrigin.annotateKey({
-    description: "Where the host loaded the trait definition from; omitted when the host did not supply it."
-  }).pipe(S.optionalKey),
+  /** Where the host loaded the trait definition from. */
+  origin: TraitOrigin.annotateKey({ description: "Where the host loaded the trait definition from." }),
   /** One result per supplied change, aligned with Report.changes. */
   changes: S.Array(ChangeReport).annotate({
     description: "One result per supplied change, aligned with Report.changes."

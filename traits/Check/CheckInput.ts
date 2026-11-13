@@ -9,10 +9,8 @@ export type CheckTrait = typeof CheckTrait.Type
 export const CheckTrait = S.Struct({
   /** The static trait definition, with canonical extension references. */
   trait: Trait.annotateKey({ description: "The static trait definition, with canonical extension references." }),
-  /** Where the host loaded the trait definition from; omitted when unknown. */
-  origin: TraitOrigin.annotateKey({
-    description: "Where the host loaded the trait definition from; omitted when unknown."
-  }).pipe(S.optionalKey)
+  /** Where the host loaded the trait definition from. */
+  origin: TraitOrigin.annotateKey({ description: "Where the host loaded the trait definition from." })
 }).annotate({ description: "A static trait to evaluate, with where the host loaded it from." })
 
 /** A text change to evaluate against every supplied trait. */

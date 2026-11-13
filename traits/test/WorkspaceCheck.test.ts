@@ -103,7 +103,7 @@ it.live("checks working-tree files against their text at HEAD and reports trait 
       [undefined, "src/untracked.ts"]
     ])
     expect(Array.map(report.traits, (trait) => [trait.trait.name, trait.origin])).toEqual([
-      ["small", { path: ".agents/traits/small.md" }]
+      ["small", { _tag: "File", path: ".agents/traits/small.md" }]
     ])
     expect(report.traits[0]!.trait.body).toBe("Prefer small functions.")
     yield* pipe(report, S.decodeEffect(Report.Report))
