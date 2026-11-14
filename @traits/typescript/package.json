@@ -3,27 +3,27 @@
   "version": "0.0.0",
   "license": "Apache-2.0",
   "files": [
-    "segmenter/**/*.ts",
     "package-exports/**/*.ts",
     "references/**/*.ts",
-    "dist/**/*.js",
-    "dist/**/*.js.map",
+    "segmenter/**/*.ts",
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
     "!dist/test/**",
     "!dist/vite.config.*"
   ],
   "type": "module",
   "exports": {
-    "./segmenter": "./segmenter/index.ts",
     "./package-exports": "./package-exports/index.ts",
-    "./references": "./references/index.ts"
+    "./references": "./references/index.ts",
+    "./segmenter": "./segmenter/index.ts"
   },
   "publishConfig": {
     "exports": {
-      "./segmenter": "./dist/segmenter/index.js",
       "./package-exports": "./dist/package-exports/index.js",
-      "./references": "./dist/references/index.js"
+      "./references": "./dist/references/index.js",
+      "./segmenter": "./dist/segmenter/index.js"
     },
     "access": "public"
   },

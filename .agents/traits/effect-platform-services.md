@@ -1,9 +1,11 @@
 ---
 name: effect-platform-services
-subject: "Filesystem, path, working-directory, and child-process access. In
-  TypeScript, TSX, JavaScript, or JSX files. Exception: When all native Node API
-  usage under assessment is confined to synchronous tooling boundaries and is
-  needed to preserve the framework's synchronous execution contract."
+subject: "Filesystem, path, working-directory, and child-process access in
+  TypeScript, TSX, JavaScript, or JSX files. Excludes build-tool configuration
+  files such as vite.config.ts, whose plugin hooks follow the tool's Promise
+  contract (see native-promises-in-build-hooks). Exception: when all native Node
+  API usage under assessment is confined to synchronous tooling boundaries and
+  is needed to preserve the framework's synchronous execution contract."
 assertion: "Use the Effect alternative for Node APIs in ordinary application
   code: node:fs and node:fs/promises use the FileSystem service; node:path uses
   the Path service; process.cwd() uses path.resolve() on the injected Path
@@ -23,6 +25,7 @@ assertion: "Use the Effect alternative for Node APIs in ordinary application
 purpose: Make platform dependencies injectable, testable, and portable without
   breaking synchronous tooling contracts.
 ---
+
 ```diff
 -const text = await fs.readFile(file, "utf8")
 +const fs = yield* FileSystem.FileSystem
@@ -39,3 +42,5 @@ yield* fs.makeDirectory(dataDirectory, { recursive: true }) // everything else v
 ```
 
 Violation: native usage for something FileSystem provides (`await readFile(path, "utf8")`, `mkdir(...)`), or native usage without a use-site comment explaining the missing capability.
+
+Out of scope: `await readFile(new URL("../SETUP.md", import.meta.url), "utf8")` in a plugin hook of vite.config.ts, which is build-tool configuration rather than application code.

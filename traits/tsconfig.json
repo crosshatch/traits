@@ -1,10 +1,10 @@
 {
-  "extends": "../tsconfig.base.json",
-  "include": ["**/*.ts", "package.json"],
-  "exclude": ["node_modules", "dist", "eval/scenarios"],
   "compilerOptions": {
-    "outDir": "dist",
     "noEmit": false,
+    "outDir": "dist",
     "types": ["node"]
-  }
+  },
+  "exclude": ["dist", "eval/scenarios", "node_modules"],
+  "extends": "../tsconfig.base.json",
+  "include": ["**/*.ts", "package.json"]
 }
