@@ -200,7 +200,8 @@ tells agents to supply both.
    of Inconclusive files.
 6. **Ask for approval.** The form message shows the trait, its evaluation
    ("correct on 7 of 7 cases over 2 runs"), and its impact ("would flag `a.ts`,
-   `b.ts`, and 3 more files"). The form fields stay Save, Revise, and Skip.
+   `b.ts`, and 3 more files"). The form fields stay the Save or Skip decision
+   and the optional feedback.
 7. **On Save,** write the trait file and its kept cases to `_cases/<trait>/`.
    Files from the workspace-impact step are not saved as cases, because no one
    confirmed their labels.

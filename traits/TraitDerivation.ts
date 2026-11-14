@@ -9,12 +9,10 @@ export type Approval = typeof Approval.Type
 export const Approval = S.TaggedUnion({
   /** Save the proposal as shown. */
   Save: {},
-  /** Change the proposal first; feedback says how, when given. */
+  /** Change the proposal first; feedback says how. */
   Revise: {
-    /** What to change; absent when the user gave no details. */
-    feedback: S.String.annotateKey({ description: "What to change; absent when the user gave no details." }).pipe(
-      S.optionalKey
-    )
+    /** What to change. */
+    feedback: S.String.annotateKey({ description: "What to change." })
   },
   /** Do not save the proposal. */
   Skip: {}
@@ -78,10 +76,8 @@ export const TraitDerivation = S.TaggedUnion({
   /** The user asked for changes, so nothing was saved; revise the proposal and derive it again. */
   RevisionRequested: {
     name: TraitName,
-    /** What to change; absent when the user gave no details, so ask them. */
-    feedback: S.String.annotateKey({
-      description: "What to change; absent when the user gave no details, so ask them."
-    }).pipe(S.optionalKey)
+    /** What the user asked to change. */
+    feedback: S.String.annotateKey({ description: "What the user asked to change." })
   },
   /** The user declined the proposal, so nothing was saved. */
   Skipped: { name: TraitName }

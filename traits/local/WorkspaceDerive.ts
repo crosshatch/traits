@@ -1,17 +1,4 @@
-import {
-  Array,
-  Context,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Path,
-  pipe,
-  Schema as S,
-  Semaphore,
-  String,
-  Struct
-} from "effect"
+import { Array, Context, Effect, FileSystem, Layer, Option, Path, pipe, Schema as S, Semaphore, Struct } from "effect"
 
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
@@ -160,9 +147,7 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
   if (TraitDerivation.Approval.guards.Revise(approval)) {
     return TraitDerivation.TraitDerivation.cases.RevisionRequested.make({
       name: saved.name,
-      ...(approval.feedback === undefined || pipe(approval.feedback, String.trim, String.isEmpty)
-        ? {}
-        : { feedback: approval.feedback })
+      feedback: approval.feedback
     })
   }
   if (TraitDerivation.Approval.guards.Skip(approval)) {

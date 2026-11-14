@@ -282,7 +282,8 @@ export const App = () => {
                     resolve.
                   </p>
                   <p className="small-note">
-                    Nothing is saved without your approval: each proposal appears in a form to save, revise, or skip.
+                    Nothing is saved without your approval: each proposal appears in a form to save or skip, with room
+                    to ask for changes.
                   </p>
                 </div>
                 <img

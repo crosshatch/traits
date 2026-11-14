@@ -306,10 +306,11 @@ target file that changed while waiting for approval fails with
 
 The `WorkspaceDerive` service runs derivations one at a time with the configured
 models. The `traits.derive` MCP tool supplies `approve` as one form elicitation
-per proposal, offering Save, Revise with feedback, or Skip, and returns every
-outcome in the same call; declining or dismissing the form skips the proposal.
-Clients that cannot show forms get a failure carrying the proposals, since
-saving requires the user's approval.
+per proposal, offering Save or Skip beside an optional feedback field, and
+returns every outcome in the same call. Any feedback returns `RevisionRequested`
+without saving, whichever decision is selected; declining or dismissing the form
+skips the proposal. Clients that cannot show forms get a failure carrying the
+proposals, since saving requires the user's approval.
 
 `traits check` writes only the report to stdout; verdicts and errors go to
 stderr. Without a policy it exits 0 whenever the check runs, because the report

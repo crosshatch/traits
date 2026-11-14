@@ -33,8 +33,8 @@ const server = (check: WorkspaceCheck.WorkspaceCheck["Service"]["check"], latest
     ])
   )
 const call = Effect.gen(function* () {
-  const toolkit = yield* TraitsCheck.toolkit
-  const results = yield* toolkit.handle("traits.check", { paths: ["src/a.ts"] })
+  const { handle } = yield* TraitsCheck.toolkit
+  const results = yield* handle("traits.check", { paths: ["src/a.ts"] })
   return yield* Stream.runLast(results).pipe(Effect.flatMap(Effect.fromOption))
 })
 const messageOf = (result: { readonly encodedResult: unknown }) =>

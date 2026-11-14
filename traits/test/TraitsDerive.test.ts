@@ -27,7 +27,7 @@ const deriver = Layer.succeed(WorkspaceDerive, {
             Revise: (revise) =>
               TraitDerivation.TraitDerivation.cases.RevisionRequested.make({
                 name: document.name,
-                ...(revise.feedback === undefined ? {} : { feedback: revise.feedback })
+                feedback: revise.feedback
               }),
             Skip: () => TraitDerivation.TraitDerivation.cases.Skipped.make({ name: document.name })
           })
@@ -46,15 +46,15 @@ const client = (capabilities: McpSchema.ClientCapabilities, result: McpSchema.El
     getClient: Effect.succeed({ elicit: () => Effect.succeed(result) })
   }) as unknown as McpSchema.McpServerClient["Service"]
 
-const handle = (services: Layer.Layer<never>) =>
+const call = (services: Layer.Layer<never>) =>
   Effect.gen(function* () {
-    const toolkit = yield* TraitsDerive.toolkit
-    const results = yield* toolkit.handle("traits.derive", { traits: [proposal] })
+    const { handle } = yield* TraitsDerive.toolkit
+    const results = yield* handle("traits.derive", { traits: [proposal] })
     return yield* Stream.runLast(results).pipe(Effect.flatMap(Effect.fromOption))
   }).pipe(Effect.provide([TraitsDerive.layer.pipe(Layer.provide(deriver)), services]))
 
 const answered = (result: McpSchema.ElicitResult) =>
-  handle(Layer.succeed(McpSchema.McpServerClient, client({ elicitation: {} }, result))).pipe(
+  call(Layer.succeed(McpSchema.McpServerClient, client({ elicitation: {} }, result))).pipe(
     Effect.map((handled) => handled.encodedResult)
   )
 
@@ -62,8 +62,16 @@ it.effect("asks for approval in one call through a form, treating declined and d
   Effect.gen(function* () {
     const saved = yield* answered({ action: "accept", content: { decision: "Save" } })
     expect(saved).toMatchObject({ results: [{ _tag: "Created", name: "proposed" }] })
-    const revised = yield* answered({ action: "accept", content: { decision: "Revise", feedback: "Shorter." } })
-    expect(revised).toMatchObject({ results: [{ _tag: "RevisionRequested", feedback: "Shorter." }] })
+    const skipped = yield* answered({ action: "accept", content: { decision: "Skip" } })
+    expect(skipped).toMatchObject({ results: [{ _tag: "Skipped" }] })
+    // Blank feedback is no feedback.
+    const blank = yield* answered({ action: "accept", content: { decision: "Save", feedback: "  " } })
+    expect(blank).toMatchObject({ results: [{ _tag: "Created", name: "proposed" }] })
+    // Feedback asks for a revision whichever decision is selected, so nothing the user wants changed is saved.
+    for (const decision of ["Save", "Skip"]) {
+      const revised = yield* answered({ action: "accept", content: { decision, feedback: " Shorter. " } })
+      expect(revised).toMatchObject({ results: [{ _tag: "RevisionRequested", feedback: "Shorter." }] })
+    }
     const declined = yield* answered({ action: "decline" })
     expect(declined).toMatchObject({ results: [{ _tag: "Skipped" }] })
     const dismissed = yield* answered({ action: "cancel" })
@@ -73,7 +81,7 @@ it.effect("asks for approval in one call through a form, treating declined and d
 
 it.effect("explains that clients without forms cannot approve, and returns the proposals", () =>
   Effect.gen(function* () {
-    const unsupported = yield* handle(Layer.succeed(McpSchema.McpServerClient, client({}, { action: "decline" })))
+    const unsupported = yield* call(Layer.succeed(McpSchema.McpServerClient, client({}, { action: "decline" })))
     expect(unsupported.isFailure).toBe(true)
     const { message } = unsupported.encodedResult as { readonly message: string }
     expect(message).toContain("cannot show approval forms")

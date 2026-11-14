@@ -54,10 +54,11 @@ it.effect("still answers every tool when its services fail to start, saying what
 
 it.effect("offers to report an unexpected startup error as a traits issue", () =>
   Effect.gen(function* () {
-    const check = yield* TraitsCheck.toolkit
-    const result = yield* check
-      .handle("traits.check", {})
-      .pipe(Effect.flatMap(Stream.runLast), Effect.flatMap(Effect.fromOption))
+    const { handle } = yield* TraitsCheck.toolkit
+    const result = yield* handle("traits.check", {}).pipe(
+      Effect.flatMap(Stream.runLast),
+      Effect.flatMap(Effect.fromOption)
+    )
     expect(result.isFailure).toBe(true)
     const message = messageOf(result)
     expect(message).toContain("services exploded")
