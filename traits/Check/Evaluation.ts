@@ -1,4 +1,4 @@
-import { Array, Deferred, Effect, Order, Result } from "effect"
+import { Array, Data, Deferred, Effect, Order, Result } from "effect"
 import type { AiError, Decision } from "effect/ai"
 
 import * as Enrichment from "../Enrichment/Enrichment.ts"
@@ -12,13 +12,16 @@ import type { Preparation } from "./Preparation.ts"
 
 type DecisionResponse = TraitAssertion.TraitAssertionEvaluations<"assertion"> | TraitSubject.TraitSubjectMatches
 
-/** The subject decision for one input when it completed; neither decision nor cancellation means it failed, for the reason in failure when known. */
-interface SubjectGate {
-  readonly responses: ReadonlyArray<DecisionResponse>
-  readonly decision?: { readonly label: string; readonly probabilities: TraitSubject.TraitSubjectMatch } | undefined
-  readonly failure?: string | undefined
-  readonly cancelled?: boolean | undefined
-}
+/** How one input's subject decision ended: decided, failed for the reason in failure when known, or cancelled because its trait stopped. */
+type SubjectGate = Data.TaggedEnum<{
+  readonly Decided: {
+    readonly responses: ReadonlyArray<DecisionResponse>
+    readonly probabilities: TraitSubject.TraitSubjectMatch
+  }
+  readonly Failed: { readonly responses: ReadonlyArray<DecisionResponse>; readonly failure: string | undefined }
+  readonly Cancelled: {}
+}>
+const SubjectGate = Data.taggedEnum<SubjectGate>()
 
 /** Why a decision failed, from its error or unanswered reason only, so provider text and source never reach the report; undefined for defects. */
 const failureReason = (failure: AiError.AiError | Decision.Unanswered | undefined): string | undefined => {
@@ -89,29 +92,35 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
                   onFailure: (error) =>
                     error !== undefined && rejectsAccount(error)
                       ? Effect.fail(error)
-                      : Effect.succeed({ responses: [], failure: failureReason(error) }),
-                  onSuccess: (decided) =>
+                      : Effect.succeed(SubjectGate.Failed({ responses: [], failure: failureReason(error) })),
+                  onSuccess: (subject) =>
                     Effect.succeed(
-                      Result.isSuccess(decided.outcome)
-                        ? { responses: [decided.response], decision: decided.outcome.success }
-                        : { responses: [decided.response], failure: failureReason(decided.outcome.failure) }
+                      Result.isSuccess(subject.outcome)
+                        ? SubjectGate.Decided({
+                            responses: [subject.response],
+                            probabilities: subject.outcome.success.probabilities
+                          })
+                        : SubjectGate.Failed({
+                            responses: [subject.response],
+                            failure: failureReason(subject.outcome.failure)
+                          })
                     )
                 }),
-                Effect.raceFirst(Deferred.await(traitStopped).pipe(Effect.as({ responses: [], cancelled: true }))),
-                Effect.map((gate): SubjectGate => gate)
+                Effect.raceFirst(Deferred.await(traitStopped).pipe(Effect.as(SubjectGate.Cancelled())))
               )
-        if (gate?.decision !== undefined && TraitSubject.rulesOut(gate.decision.probabilities)) {
+        const decided = gate !== undefined && SubjectGate.$is("Decided")(gate) ? gate : undefined
+        if (decided !== undefined && TraitSubject.rulesOut(decided.probabilities)) {
           return {
             report: Report.InputReport.cases.Unmatched.make({
               segment: input.segment,
               digest,
-              subject: gate.decision.probabilities
+              subject: decided.probabilities
             }),
-            responses: gate.responses
+            responses: decided.responses
           }
         }
-        const subjectFailed = gate !== undefined && gate.decision === undefined && gate.cancelled !== true
-        if (subjectFailed) {
+        const subjectFailure = gate !== undefined && SubjectGate.$is("Failed")(gate) ? gate : undefined
+        if (subjectFailure !== undefined) {
           yield* Deferred.succeed(inputStopped, undefined)
         }
         const enrichments = yield* Effect.forEach(
@@ -160,15 +169,15 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
         const fields = {
           segment: input.segment,
           digest,
-          ...(gate?.decision === undefined ? {} : { subject: gate.decision.probabilities }),
+          ...(decided === undefined ? {} : { subject: decided.probabilities }),
           enrichments
         }
-        const responses = gate?.responses ?? []
-        if (subjectFailed) {
+        const responses = (decided ?? subjectFailure)?.responses ?? []
+        if (subjectFailure !== undefined) {
           return {
             report: Report.InputReport.cases.Failed.make({
               ...fields,
-              explanation: decisionFailed("Subject decision", gate.failure)
+              explanation: decisionFailed("Subject decision", subjectFailure.failure)
             }),
             responses
           }
