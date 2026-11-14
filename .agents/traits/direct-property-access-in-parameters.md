@@ -19,3 +19,5 @@ purpose: Keep parameter identity and property provenance visible throughout
 ```
 
 Violation: a callback that destructures a property only to forward it, such as `Effect.mapError(({ cause }) => SaveError.make({ cause }))`; write `Effect.mapError((error) => SaveError.make({ cause: error.cause }))`.
+
+Not a violation: array destructuring of a tuple parameter, such as `([name, total]) => name + total` over `Record.toEntries(totals)`; positions have no property names to keep visible. Destructuring in a `for...of` head is not a parameter either.

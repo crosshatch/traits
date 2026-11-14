@@ -47,11 +47,8 @@ export const read = Effect.gen(function* () {
 /** Replaces all saved accounts; coordinate read-modify-write operations with UserConfigLock. */
 export const write = Effect.fn("Accounts.write")(
   function* (saved: ReadonlyArray<ProviderAccount>) {
-    const { accounts, dataDirectory } = yield* CliPaths
-    const fs = yield* FileSystem.FileSystem
-    const secure = yield* UserFileSecurity
-    yield* fs.makeDirectory(dataDirectory, { recursive: true, mode: 0o700 })
-    yield* secure(dataDirectory, "Directory")
+    const { accounts } = yield* CliPaths
+    // AtomicFile.write creates and secures the data directory.
     const text = yield* pipe(
       saved,
       S.encodeEffect(S.fromJsonString(S.Array(ProviderAccount))),

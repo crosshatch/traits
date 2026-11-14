@@ -1,7 +1,6 @@
 ---
 name: structural-equality-for-composite-keys
-subject: Composite keys in Effect collections, caches, and Atom.family. Applies
-  when composite keys in Effect collections, caches, or Atom.family need
+subject: Composite keys in Effect collections, caches, and Atom.family that need
   content-based equality. In TypeScript or TSX files.
 assertion: When a composite value is used as a key in an Effect collection,
   cache, or Atom.family and should match by its contents across independently
@@ -14,6 +13,7 @@ assertion: When a composite value is used as a key in an Effect collection,
 purpose: Ensure logically equal composite inputs share collection entries or
   cached state across independently created instances.
 ---
+
 ```diff
 -const key = { id, code } // Fresh object identity on every call.
 +class CopyInput extends Data.Class<{ readonly id: string; readonly code: string }> {}

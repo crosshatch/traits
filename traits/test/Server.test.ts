@@ -8,9 +8,11 @@ import type * as WorkspaceDerive from "../local/WorkspaceDerive.ts"
 import { Server, TraitsCheck, TraitsDerive } from "../mcp/index.ts"
 
 /** A startup failure the user can fix, such as an unreadable workspace. */
-class WorkspaceUnavailable extends S.TaggedError<WorkspaceUnavailable>()("WorkspaceUnavailable", {
-  message: S.String
-}) {}
+class WorkspaceUnavailable extends S.TaggedError<WorkspaceUnavailable>()("WorkspaceUnavailable", {}) {
+  override get message(): string {
+    return "The workspace directory cannot be read."
+  }
+}
 
 /** The tool handlers built over workspace services whose construction runs `failure`, plus the host services the tools need. */
 const handlersFailingWith = <E>(failure: Effect.Effect<never, E>) =>
@@ -47,13 +49,7 @@ it.effect("still answers every tool when its services fail to start, saying what
       expect(message).toContain("restart the traits MCP server")
       expect(message).not.toContain("crosshatch/traits")
     }
-  }).pipe(
-    Effect.provide(
-      handlersFailingWith(
-        Effect.fail(WorkspaceUnavailable.make({ message: "The workspace directory cannot be read." }))
-      )
-    )
-  )
+  }).pipe(Effect.provide(handlersFailingWith(WorkspaceUnavailable.make({}))))
 )
 
 it.effect("offers to report an unexpected startup error as a traits issue", () =>

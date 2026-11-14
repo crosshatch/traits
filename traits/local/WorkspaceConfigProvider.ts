@@ -36,15 +36,14 @@ export const layer = ConfigProvider.layerAdd(
     const root = yield* mainCheckoutRoot
     const files = Array.dedupe([path.join(directory, ".env"), ...(root === undefined ? [] : [path.join(root, ".env")])])
     // The workspace's .env takes precedence over the main checkout's, in file order.
-    const dotEnvs = yield* Effect.forEach(files, (file) =>
+    return yield* Effect.forEach(files, (file) =>
       fs
         .exists(file)
         .pipe(
           Effect.flatMap((exists) =>
-            exists ? Effect.asSome(ConfigProvider.fromDotEnv({ path: file })) : Effect.succeedNone
+            exists ? ConfigProvider.fromDotEnv({ path: file }).pipe(Effect.asSome) : Effect.succeedNone
           )
         )
-    )
-    return Array.reduce(Array.getSomes(dotEnvs), ConfigProvider.fromUnknown({}), ConfigProvider.orElse)
+    ).pipe(Effect.map(Array.getSomes), Effect.map(Array.reduce(ConfigProvider.fromUnknown({}), ConfigProvider.orElse)))
   }).pipe(Effect.withSpan("WorkspaceConfigProvider.load"))
 )

@@ -45,7 +45,8 @@ export const read = Effect.gen(function* () {
 export const write = Effect.fn("UserConfig.write")(
   function* (saved: UserConfig) {
     const { config } = yield* CliPaths
-    const text = yield* pipe(saved, S.encodeEffect(S.fromJsonString(UserConfig)))
+    // The configuration is already typed, so an encoding failure is a bug here, not something the user can fix.
+    const text = yield* pipe(saved, S.encodeEffect(S.fromJsonString(UserConfig)), Effect.orDie)
     yield* AtomicFile.write(config, text)
   },
   Effect.catch((cause) =>

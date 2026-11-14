@@ -11,3 +11,7 @@ purpose: Keep dependencies and implementation logic together without redundant
 enrichments:
   - "@traits/typescript/references"
 ---
+
+Violation: `const storeHelpers = Effect.gen(function* () { const fs = yield* FileSystem.FileSystem; return { readJson, writeJson } })` yielded only by `layerStore`; define `readJson` and `writeJson` in `layerStore`'s generator.
+
+Not a violation: a layer that yields such a bundle from a helper that another layer also yields, such as `Registry.make(...)` consumed by both `layerParsers` and `layerFormatters`. Count consumers across files; the consuming layer is judged by how many layers use the helper, not by the fact that it destructures one.

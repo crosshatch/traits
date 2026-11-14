@@ -52,10 +52,7 @@ it.effect("returns check failures and unexpected errors to the client as actiona
     const declared = yield* call.pipe(
       Effect.provide(
         server(
-          () =>
-            Effect.fail(
-              WorkspaceCheck.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." })
-            ),
+          () => WorkspaceCheck.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." }),
           PackageJson.version
         )
       )
@@ -109,10 +106,7 @@ it.effect("asks for a server restart when the installed package changed under it
     const failed = yield* call.pipe(
       Effect.provide(
         server(
-          () =>
-            Effect.fail(
-              WorkspaceCheck.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." })
-            ),
+          () => WorkspaceCheck.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." }),
           PackageJson.version,
           "999.0.0"
         )

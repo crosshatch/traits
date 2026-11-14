@@ -17,6 +17,7 @@ assertion: Treat genuine internal invariant violations as defects, including
 purpose: Keep recoverable error channels focused on actionable failures while
   exposing genuine internal invariant violations as defects.
 ---
+
 For encoding that genuinely checks an internal invariant with no meaningful consumer recovery, use `Effect.orDie` rather than exposing `SchemaError` in the public error channel. This example does not apply to recoverable encoding failures.
 
 ```diff
@@ -24,7 +25,7 @@ For encoding that genuinely checks an internal invariant with no meaningful cons
 +return pipe(internallyConstructed, S.encodeEffect(schema), Effect.orDie)
 ```
 
-Using `Schema.Defect()` (e.g. `cause: S.Defect()`) as the schema of an error's cause field does not classify a failure as a defect; it only describes how an arbitrary cause value is encoded. Judge only what is placed in the typed error channel versus the defect channel (`Effect.die`, `Effect.orDie`, thrown exceptions). An interface-only contract declaring typed storage errors in its method signatures is not a violation.
+Using `Schema.Defect()` (e.g. `cause: S.Defect()`) as the schema of an error's cause field does not classify a failure as a defect; it only describes how an arbitrary cause value is encoded. Judge only what is placed in the typed error channel versus the defect channel (`Effect.die`, `Effect.orDie`, thrown exceptions). An interface-only contract declaring typed errors in its method signatures, whether storage errors or a `SchemaError`, is not a violation by itself; judge the implementation that produces them.
 
 Violation: a manifest built only from constants exposes `SchemaError` in the typed error channel.
 
@@ -40,3 +41,5 @@ const read = fs.readFileString(path).pipe(Effect.orDie)
 ```
 
 Not a violation: `Effect.orDie` on an operation whose typed failure is ruled out by earlier code in the same function, such as `path.toFileUrl(path.resolve(file)).pipe(Effect.orDie)`, since a resolved absolute path always converts. A short comment stating the invariant makes this explicit.
+
+Not a violation: leaving `SchemaError` in the typed channel when decoding a value produced by consumer-supplied code, such as `pipe(yield* plugin.render(page), S.decodeUnknownEffect(S.String))` or the export of a dynamically imported module. That value is external input, not internally constructed data.

@@ -3,8 +3,8 @@ name: host-specific-code-in-host-directories
 subject: Modules that depend on one host environment (such as the local
   filesystem, Git, processes, or a CLI), and imports between a package's
   portable core, its host directories, and its front ends. In TypeScript files.
-assertion: Put host-specific functionality shared by more than one front end
-  in a dedicated host directory, such as local/, rather than the package's top
+assertion: Put host-specific functionality shared by more than one front end in
+  a dedicated host directory, such as local/, rather than the package's top
   level, and have front ends such as Cli/ and mcp/ import it from there;
   host-specific code used by only one front end may stay in that front end's
   directory. Portable core modules never import from host directories or front
@@ -14,6 +14,7 @@ assertion: Put host-specific functionality shared by more than one front end
 purpose: Keep the core usable by other hosts, such as a hosted service, and make
   host-specific dependencies visible from file paths.
 ---
+
 ```diff
 -// traits/Segmenter/SegmenterRegistry.ts (core)
 -import * as ExtensionRegistry from "../local/ExtensionRegistry.ts"
@@ -30,3 +31,7 @@ purpose: Keep the core usable by other hosts, such as a hosted service, and make
 ```
 
 Correct: `traits/mcp/Server.ts` and `traits/Cli/Cli.ts` import `WorkspaceCheck` from `traits/local/`, while `traits/Check/` depends only on the registry tags.
+
+Violation: the core entry point re-exporting a front end, such as `export * as Accounts from "./Cli/Accounts.ts"` in traits/index.ts. A re-export is an import; expose such modules from an entry point in their own directory.
+
+Not a violation: a module inside a front-end directory that imports only that front end's modules, the core, local/, or Effect platform services, such as Cli/commands/profile/create.ts (FileSystem, Path, ../../UserConfig.ts) and show.ts. Its path already shows its host. It would move to local/ only if another front end, such as mcp/, imported it.

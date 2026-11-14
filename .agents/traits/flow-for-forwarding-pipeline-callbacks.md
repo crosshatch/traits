@@ -20,3 +20,5 @@ purpose: Make pure forwarding composition explicit without unnecessary
 ```
 
 Not forwarding: a function that uses its input again after the first stage, or that builds a new value from several arguments, such as `(input) => pipe(read(input), String.slice(input.range.start, input.range.end))` or `(change, segment) => pipe({ change, segment }, decode)`. Also not forwarding: a function whose pipeline starts from a value other than its parameter and uses the parameter only inside a stage, such as `(scope) => pipe(GROUPS, Array.filter((group) => group.scope === scope))`.
+
+Also not forwarding: a function whose pipeline starts from one property of its parameter and reads another property in a later stage, such as `(user) => pipe(user.email, normalize, Effect.map((email) => Contact.make({ id: user.id, email })))`, or a function that chooses between pipelines with a conditional.

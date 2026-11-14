@@ -143,9 +143,14 @@ const program = Effect.gen(function* () {
           )
         const casePath = yield* workspacePath(generatedCase.path)
         const compliantPath = yield* workspacePath(generatedCase.compliantPath ?? generatedCase.path)
-        const violating = yield* assess(trait, casePath, generatedCase.violating, true)
-        const compliant = yield* assess(trait, compliantPath, generatedCase.compliant, false)
-        return { trait: name, path: casePath, violating, compliant }
+        const assessed = yield* Effect.all(
+          {
+            violating: assess(trait, casePath, generatedCase.violating, true),
+            compliant: assess(trait, compliantPath, generatedCase.compliant, false)
+          },
+          { concurrency: "unbounded" }
+        )
+        return { trait: name, path: casePath, ...assessed }
       },
       (effect, name) =>
         // A trait whose case cannot be generated or checked is reported rather than stopping the run.

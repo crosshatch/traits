@@ -28,7 +28,6 @@ export const TraitsCheck = Tool.make("traits.check", {
     |Returns the full report, and sometimes a notice about a newer traits release or a needed server restart; relay any notice to the user. The report gives, for each trait and file, the targets with their subject-match and pass, fail, na, and uncertain probabilities, plus any failures that prevented complete checking.
     |Targets the trait's subject clearly does not cover are reported as Unmatched and not assessed, which keeps checking all files cheap.
     |A high fail probability means a likely violation. pass means the assertion holds and na means it does not apply to the target, so a target is fine when pass and na together are likely. A target where neither that nor fail is likely is Inconclusive, which is unresolved rather than a violation. Probabilities are evidence, not guarantees.
-    |If the check fails, nothing was checked and it is not a pass: follow the message, for example by running \`traits update\` to migrate an outdated workspace, or report it to the user when you cannot resolve it.
     `),
     String.trim
   ),
@@ -77,31 +76,32 @@ export const layer = toolkit.toLayer(
     // Looked up once per server, starting now so checks rarely wait; a failed or slow lookup gives no notice.
     const latest = yield* Changelog.latestVersion.pipe(
       Effect.timeoutOption("3 seconds"),
-      Effect.orElseSucceed(() => Option.none<string>()),
+      Effect.map(Option.getOrUndefined),
+      Effect.orElseSucceed(() => undefined),
       Effect.forkScoped
     )
     const announced = yield* Ref.make(false)
     // The package.json beside this module; upgrading the package replaces it while this server keeps running.
     const manifest = path.join(import.meta.dirname, "..", "package.json")
     const notice = Effect.gen(function* () {
-      const installed = yield* fs
-        .readFileString(manifest)
-        .pipe(Effect.flatMap(S.decodeEffect(S.fromJsonString(S.Struct({ version: Version.Version })))), Effect.option)
-      if (Option.isSome(installed) && installed.value.version !== PackageJson.version) {
-        return Option.some(
-          `traits ${installed.value.version} is now installed, but this MCP server is still running ${PackageJson.version}, so checks use the old version. Ask the user to restart the traits MCP server, then run \`traits update\` if the workspace needs migrating.`
-        )
-      }
-      const newer = yield* Fiber.join(latest).pipe(
-        Effect.map(Option.filter((version) => Version.isNewer(version, PackageJson.version)))
+      const installed = yield* fs.readFileString(manifest).pipe(
+        Effect.flatMap(S.decodeEffect(S.fromJsonString(S.Struct({ version: Version.Version })))),
+        // An unreadable manifest gives no restart notice.
+        Effect.orElseSucceed(() => undefined)
       )
+      if (installed !== undefined && installed.version !== PackageJson.version) {
+        return `traits ${installed.version} is now installed, but this MCP server is still running ${PackageJson.version}, so checks use the old version. Ask the user to restart the traits MCP server, then run \`traits update\` if the workspace needs migrating.`
+      }
+      const newest = yield* Fiber.join(latest)
       // A release is announced once per server, so it does not repeat in every result.
-      if (Option.isNone(newer) || (yield* Ref.getAndSet(announced, true))) {
-        return Option.none<string>()
+      if (
+        newest === undefined ||
+        !Version.isNewer(newest, PackageJson.version) ||
+        (yield* Ref.getAndSet(announced, true))
+      ) {
+        return undefined
       }
-      return Option.some(
-        `traits ${newer.value} is available; this workspace runs ${PackageJson.version}. Tell the user. If they want to upgrade, update the traits package with the workspace's package manager, restart the traits MCP server, then run \`traits update\` and follow its migration steps.`
-      )
+      return `traits ${newest} is available; this workspace runs ${PackageJson.version}. Tell the user. If they want to upgrade, update the traits package with the workspace's package manager, restart the traits MCP server, then run \`traits update\` and follow its migration steps.`
     })
     return {
       "traits.check": (parameters) =>
@@ -120,12 +120,10 @@ export const layer = toolkit.toLayer(
           ),
           Effect.matchEffect({
             onSuccess: (report) =>
-              Effect.map(notice, (found) => (Option.isSome(found) ? { report, notice: found.value } : { report })),
+              Effect.map(notice, (found) => (found === undefined ? { report } : { report, notice: found })),
             onFailure: (failure) =>
               Effect.flatMap(notice, (found) =>
-                Option.isSome(found)
-                  ? TraitsCheckFailure.make({ message: `${failure.message}\n\n${found.value}` })
-                  : Effect.fail(failure)
+                found === undefined ? failure : TraitsCheckFailure.make({ message: `${failure.message}\n\n${found}` })
               )
           })
         )

@@ -64,21 +64,26 @@ const layerCountedDecisions = (requests: Ref.Ref<number>) =>
 const program = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
-  const cases = yield* fs.readFileString(path.join(import.meta.dirname, "cases.json")).pipe(
-    // Labeled fixtures: each fixture is a file snapshot checked at its logical path, labeled per trait.
-    Effect.flatMap(
-      S.decodeEffect(
-        S.fromJsonString(
-          S.Struct({
-            traits: S.Array(TraitName),
-            fixtures: S.Array(S.Struct({ id: S.String, path: WorkspacePath })),
-            labels: S.Record(S.String, S.Record(S.String, S.Literals(["fail", "pass", "unmatched"])))
-          })
+  const { cases, configured } = yield* Effect.all(
+    {
+      cases: fs.readFileString(path.join(import.meta.dirname, "cases.json")).pipe(
+        // Labeled fixtures: each fixture is a file snapshot checked at its logical path, labeled per trait.
+        Effect.flatMap(
+          S.decodeEffect(
+            S.fromJsonString(
+              S.Struct({
+                traits: S.Array(TraitName),
+                fixtures: S.Array(S.Struct({ id: S.String, path: WorkspacePath })),
+                labels: S.Record(S.String, S.Record(S.String, S.Literals(["fail", "pass", "unmatched"])))
+              })
+            )
+          )
         )
-      )
-    )
+      ),
+      configured: TraitsConfig.load
+    },
+    { concurrency: "unbounded" }
   )
-  const configured = yield* TraitsConfig.load
   const modelIndex = process.argv.indexOf("--decision-model")
   const config =
     modelIndex === -1
@@ -102,16 +107,22 @@ const program = Effect.gen(function* () {
               ExtensionModule.resolve({ reference: process.argv[segmentIndex + 1]!, baseUrl })
             )
           )
-  const traits = yield* Effect.forEach(names, (name) =>
-    Effect.map(WorkspaceTraits.load(name), (trait) => ({
-      trait: segment !== undefined && Array.contains(cases.traits, name) ? Trait.make({ ...trait, segment }) : trait,
-      origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(WorkspaceLayout.traitFile(name)) })
-    }))
-  )
-  const changes = yield* Effect.forEach(cases.fixtures, (fixture) =>
-    Effect.map(fs.readFileString(path.join(import.meta.dirname, "fixtures", `${fixture.id}.txt`)), (text) => ({
-      after: { path: fixture.path, text }
-    }))
+  const { traits, changes } = yield* Effect.all(
+    {
+      traits: Effect.forEach(names, (name) =>
+        Effect.map(WorkspaceTraits.load(name), (trait) => ({
+          trait:
+            segment !== undefined && Array.contains(cases.traits, name) ? Trait.make({ ...trait, segment }) : trait,
+          origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(WorkspaceLayout.traitFile(name)) })
+        }))
+      ),
+      changes: Effect.forEach(cases.fixtures, (fixture) =>
+        Effect.map(fs.readFileString(path.join(import.meta.dirname, "fixtures", `${fixture.id}.txt`)), (text) => ({
+          after: { path: fixture.path, text }
+        }))
+      )
+    },
+    { concurrency: "unbounded" }
   )
   const requests = yield* Ref.make(0)
   const models = layerCountedDecisions(requests).pipe(
