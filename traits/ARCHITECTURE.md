@@ -282,18 +282,21 @@ trait relates to it: distinct, covered, clarification, conflict, or
 inconclusive, deciding up to 32 existing traits per request. Conflicting or
 inconclusive traits, or several clarification targets, return `Unresolved`. A
 proposal named after one of the clarified traits replaces that trait instead,
-since a proposal replaces at most one. Covering traits return `Covered`. The
-decision model decides these relationships, and the language model then
-explains, in one request, why each trait the outcome reports relates as it does:
-`Unresolved` and `Covered` give a reason per trait, and the approval message for
-a clarification says why it counts as one, so the agent can reconcile the
-proposal with the user. A trait the model leaves unexplained gets a reason
-saying so; an unrelated trait with the same name returns `NameTaken`. Otherwise
-it calls `approve` once with the complete file text, and with the current file
-when a clarification replaces an existing trait under its name. The user's
-answer yields `Created` or `Updated` after writing, or `RevisionRequested` or
-`Skipped` without writing. A target file that changed while waiting for approval
-fails with `TraitChangedError` rather than overwriting it.
+since a proposal replaces at most one. Covering traits return `Covered`, with
+one exception: a proposal covered only by the trait it is named after rewords
+that trait without changing its rule, so it is offered as an update, unless it
+would leave the trait's content unchanged. The decision model decides these
+relationships, and the language model then explains, in one request, why each
+trait the outcome reports relates as it does: `Unresolved` and `Covered` give a
+reason per trait, and the approval message for a clarification says why it
+counts as one, so the agent can reconcile the proposal with the user. A trait
+the model leaves unexplained gets a reason saying so; an unrelated trait with
+the same name returns `NameTaken`. Otherwise it calls `approve` once with the
+complete file text, and with the current file when a clarification replaces an
+existing trait under its name. The user's answer yields `Created` or `Updated`
+after writing, or `RevisionRequested` or `Skipped` without writing. A target
+file that changed while waiting for approval fails with `TraitChangedError`
+rather than overwriting it.
 
 The `WorkspaceDerive` service runs derivations one at a time with the configured
 models. The `traits.derive` MCP tool supplies `approve` as one form elicitation

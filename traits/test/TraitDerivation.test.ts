@@ -148,6 +148,46 @@ it.live("replaces the trait a clarification is named after, even when others are
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 
+it.live("offers a rewording of the trait it is named after as an update, unless nothing would change", () =>
+  Effect.gen(function* () {
+    const { directory, read, services } = yield* workspace("covered")
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const same = TraitFile.TraitDocument.make({
+      name: TraitName.make("existing"),
+      assertion: TraitAssertion.make("Functions are small."),
+      purpose: TraitPurpose.make("Keep code readable.")
+    })
+    // The same content in other YAML formatting is not a change.
+    const quoted = '---\nname: "existing"\nassertion: "Functions are small."\npurpose: Keep code readable.\n---\n'
+    yield* fs.writeFileString(path.join(directory, ".agents", "traits", "existing.md"), quoted)
+    const unchanged = yield* WorkspaceDerive.derive(same, () => Effect.die("approval must not be requested")).pipe(
+      Effect.provide(services)
+    )
+    expect(unchanged._tag).toBe("Covered")
+    const kept = yield* read("existing")
+    expect(kept).toBe(quoted)
+    const requests: Array<TraitDerivation.ApprovalRequest> = []
+    const reworded = yield* WorkspaceDerive.derive(
+      { ...same, purpose: TraitPurpose.make("Keep functions easy to read.") },
+      (request) =>
+        Effect.sync(() => {
+          requests.push(request)
+          return TraitDerivation.Approval.cases.Save.make({})
+        })
+    ).pipe(Effect.provide(services))
+    expect(reworded).toEqual(
+      TraitDerivation.TraitDerivation.cases.Updated.make({ name: same.name, path: ".agents/traits/existing.md" })
+    )
+    expect(requests[0]).toMatchObject({ name: "existing", action: "Update" })
+    expect(requests[0]!.message).toContain("rewording, which keeps its rule")
+    expect(requests[0]!.message).toContain("Why: Both limit how functions are written.")
+    expect(requests[0]!.message).toContain(quoted)
+    const replaced = yield* read("existing")
+    expect(replaced).toContain("Keep functions easy to read.")
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+)
+
 it.live("saves nothing when the proposal is covered, unresolved, renamed onto another trait, revised, or skipped", () =>
   Effect.gen(function* () {
     const unexpected = () => Effect.die("approval must not be requested")

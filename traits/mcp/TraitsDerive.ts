@@ -19,6 +19,7 @@ export const TraitsDerive = Tool.make("traits.derive", {
   |Propose traits distilled from user feedback that generalizes beyond the current task: a correction, a stated preference, an approved or rejected approach, or a request to remember a convention. Skip one-off decisions, transient facts, and preferences specific to the current task.
   |Give each independent insight its own complete trait: a descriptive kebab-case name, the assertion that should hold, and its purpose; a subject when it applies only to a kind of artifact; and a body only for supporting examples or context, never hidden requirements.
   |Each proposal is compared with the existing traits, then shown to the user in a form to save, revise, or skip; this call returns after the user answers.
+  |To clarify or reword an existing trait, propose its complete new version under that trait's name; the form then shows the current and replacement texts.
   |Results, one per proposal: Created or Updated saved a trait file. Covered, Unresolved, NameTaken, RevisionRequested, and Skipped saved nothing. Covered and Unresolved give each related trait with the reason for its relationship: reuse the covering traits; show the user each blocking trait with its reason, and revise the unresolved proposal with them, for example into a clarified version of the blocking trait under its name; choose another name; incorporate the feedback, asking for it when absent, and derive again; or stop.
   |Never write trait files yourself to bypass this tool or a skipped proposal.
   `),

@@ -49,6 +49,9 @@ migrate a workspace:
 - `traits.derive` explains its results: `Unresolved` and `Covered` give each
   related trait with the reason for its relationship, written by the language
   model, so conflicts can be reconciled with the user.
+- To clarify or reword an existing trait, propose its complete new version under
+  that trait's name with `traits.derive`; a rewording that keeps the rule is
+  offered as an update.
 - Remove installed copies of the bundled `traits` skill, such as
   `.agents/skills/traits` and `.claude/skills/traits`, and unlink
   package-managed skills; the server's instructions replace it.

@@ -20,7 +20,7 @@ export const Approval = S.TaggedUnion({
   Skip: {}
 }).annotate({ description: "The user's answer to a request to save a proposed trait." })
 
-/** What the user is asked to approve: creating a trait, or replacing an existing one with a clarified version. */
+/** What the user is asked to approve: creating a trait, or replacing an existing one with a clarified or reworded version. */
 export interface ApprovalRequest {
   /** The name the trait is saved under. */
   readonly name: TraitName
@@ -51,7 +51,7 @@ export const TraitDerivation = S.TaggedUnion({
     /** The saved trait file, relative to the workspace root. */
     path: S.String.annotate({ description: "The saved trait file, relative to the workspace root." })
   },
-  /** The user approved replacing an existing trait with the proposal, a clarified version of it, saved at path under the existing name. */
+  /** The user approved replacing an existing trait with the proposal, a clarified or reworded version of it, saved at path under the existing name. */
   Updated: {
     name: TraitName,
     /** The replaced trait file, relative to the workspace root. */
