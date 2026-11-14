@@ -125,12 +125,13 @@ const program = Effect.gen(function* () {
   }
 }).pipe(
   Effect.provide(
-    Layer.unwrap(
-      Effect.map(TraitsConfig.load, (config) =>
+    TraitsConfig.load.pipe(
+      Effect.map((config) =>
         Layer.mergeAll(LocalSegmenterRegistry.layer, LocalEnrichmentRegistry.layer).pipe(
           Layer.provideMerge(WorkspaceModels.layer(config))
         )
-      )
+      ),
+      Layer.unwrap
     )
   )
 )
