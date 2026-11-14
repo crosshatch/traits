@@ -17,6 +17,7 @@ import * as Report from "../Report/Report.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
+import { WorkspacePath } from "../util/util.ts"
 
 const traitFile = (name: string, extra = "") =>
   `---\nname: ${name}\npurpose: Protect correctness.\nassertion: The code is correct.\n${extra}---\n\nPrefer small functions.\n`
@@ -103,7 +104,7 @@ it.live("checks working-tree files against their text at HEAD and reports trait 
       [undefined, "src/untracked.ts"]
     ])
     expect(Array.map(report.traits, (trait) => [trait.trait.name, trait.origin])).toEqual([
-      ["small", { _tag: "File", path: ".agents/traits/small.md" }]
+      ["small", Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/small.md") })]
     ])
     expect(report.traits[0]!.trait.body).toBe("Prefer small functions.")
     yield* pipe(report, S.decodeEffect(Report.Report))
@@ -288,8 +289,9 @@ it.live("builds the shared checker from the program's infrastructure and a works
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-workspace-checker-" })
-    const error = yield* WorkspaceCheck.WorkspaceCheck.pipe(
-      Effect.flatMap((workspace) => workspace.check({ paths: ["src/a.ts"] })),
+    const error = yield* WorkspaceCheck.WorkspaceCheck.use((workspace) =>
+      workspace.check({ paths: ["src/a.ts"] })
+    ).pipe(
       Effect.provide(WorkspaceCheck.WorkspaceCheck.layer.pipe(Layer.provide(WorkspaceRoot.layer(directory)))),
       Effect.flip
     )

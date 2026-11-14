@@ -254,17 +254,20 @@ it.live(
         Stream.decodeText(),
         Stream.splitLines,
         Stream.mapEffect((line) =>
-          S.decodeEffect(
-            S.fromJsonString(
-              S.Struct({
-                id: S.Finite.pipe(S.optionalKey),
-                result: S.Struct({
-                  isError: S.Boolean.pipe(S.optionalKey),
-                  content: S.Array(S.Struct({ text: S.String })).pipe(S.optionalKey)
-                }).pipe(S.optionalKey)
-              })
+          pipe(
+            line,
+            S.decodeEffect(
+              S.fromJsonString(
+                S.Struct({
+                  id: S.Finite.pipe(S.optionalKey),
+                  result: S.Struct({
+                    isError: S.Boolean.pipe(S.optionalKey),
+                    content: S.Array(S.Struct({ text: S.String })).pipe(S.optionalKey)
+                  }).pipe(S.optionalKey)
+                })
+              )
             )
-          )(line)
+          )
         ),
         Stream.filter((message) => message.id === 2),
         Stream.runHead,

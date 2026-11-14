@@ -148,12 +148,9 @@ export const verdicts: {
         if (!Array.every(completed.enrichments, EnrichmentOutcome.guards.Succeeded)) {
           return "Incomplete"
         }
-        // Completed guidance-only inputs have no assessment and pass.
-        return assessment === undefined ||
-          assessment.pass >= policy.pass ||
-          (policy.na !== undefined && assessment.na >= policy.na)
-          ? "Pass"
-          : "Inconclusive"
+        // Completed guidance-only inputs have no assessment and pass. An assertion that holds and one that does not
+        // apply are both acceptable, so their probabilities count together.
+        return assessment === undefined || assessment.pass + assessment.na >= policy.pass ? "Pass" : "Inconclusive"
       },
       // The trait does not apply to a target its subject decision ruled out.
       Unmatched: (): Verdict => "Pass",

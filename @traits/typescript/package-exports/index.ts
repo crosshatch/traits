@@ -25,13 +25,13 @@ export default Effect.gen(function* () {
     const packageDirectories = Array.map(Array.range(0, segments.length), (depth) =>
       Array.join(Array.dropRight(segments, depth), "/")
     )
-    const nearest = yield* Effect.findFirst(packageDirectories, (packageDirectory) =>
-      fs.exists(path.join(directory, packageDirectory, "package.json"))
-    )
-    if (Option.isNone(nearest)) {
+    const packageDirectory = yield* Effect.findFirst(packageDirectories, (candidate) =>
+      fs.exists(path.join(directory, candidate, "package.json"))
+    ).pipe(Effect.map(Option.getOrUndefined))
+    // The workspace root is the empty string, so only undefined means no package encloses the file.
+    if (packageDirectory === undefined) {
       return `No package.json encloses ${file}, so it is not a package entry point.`
     }
-    const packageDirectory = nearest.value
     const manifestFile = packageDirectory === "" ? "package.json" : `${packageDirectory}/package.json`
     const manifest = yield* fs.readFileString(path.join(directory, manifestFile)).pipe(
       Effect.flatMap(
@@ -60,7 +60,7 @@ export default Effect.gen(function* () {
         : exportTargets(manifest.exports)
     const entryPoints = pipe(
       declared,
-      Array.filter((target) => String.startsWith("./")(target) || !String.includes(":")(target)),
+      Array.filter((target) => pipe(target, String.startsWith("./")) || !pipe(target, String.includes(":"))),
       // Workspace paths are POSIX and relative, so drop the leading ./ of each package-relative target.
       Array.map(
         flow(String.replace(/^\.\//u, ""), (target) =>

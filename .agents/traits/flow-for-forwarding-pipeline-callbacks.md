@@ -13,9 +13,10 @@ assertion: Use flow to compose callbacks and function definitions that only
 purpose: Make pure forwarding composition explicit without unnecessary
   parameters and callback scaffolding.
 ---
+
 ```diff
 -const process = (input) => pipe(input, parse, build)
 +const process = flow(parse, build)
 ```
 
-Not forwarding: a function that uses its input again after the first stage, or that builds a new value from several arguments, such as `(input) => pipe(read(input), String.slice(input.range.start, input.range.end))` or `(change, segment) => pipe({ change, segment }, decode)`.
+Not forwarding: a function that uses its input again after the first stage, or that builds a new value from several arguments, such as `(input) => pipe(read(input), String.slice(input.range.start, input.range.end))` or `(change, segment) => pipe({ change, segment }, decode)`. Also not forwarding: a function whose pipeline starts from a value other than its parameter and uses the parameter only inside a stage, such as `(scope) => pipe(GROUPS, Array.filter((group) => group.scope === scope))`.

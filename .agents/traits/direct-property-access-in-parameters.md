@@ -1,6 +1,6 @@
 ---
 name: direct-property-access-in-parameters
-subject: Function, callback, and generator parameters receiving objects. In
+subject: Parameters of functions, arrow callbacks, and generators, in
   TypeScript, TSX, JavaScript, or JSX files.
 assertion: "Use direct property access rather than object destructuring in
   function parameters, including arrow callbacks, ordinary functions, and
@@ -12,7 +12,10 @@ assertion: "Use direct property access rather than object destructuring in
 purpose: Keep parameter identity and property provenance visible throughout
   function bodies.
 ---
+
 ```diff
 -const names = Array.map(items, ({ name }) => name)
 +const names = Array.map(items, (item) => item.name)
 ```
+
+Violation: a callback that destructures a property only to forward it, such as `Effect.mapError(({ cause }) => SaveError.make({ cause }))`; write `Effect.mapError((error) => SaveError.make({ cause: error.cause }))`.

@@ -273,7 +273,7 @@
       "execution": "unmatched",
       "execution-unbraced": "unmatched",
       "gitignore": "unmatched",
-      "mcp-server": "unmatched",
+      "mcp-server": "fail",
       "package-json": "unmatched",
       "preparation": "unmatched",
       "report": "unmatched",

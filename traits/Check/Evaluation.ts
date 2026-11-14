@@ -100,7 +100,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
                 Effect.raceFirst(Deferred.await(traitStopped).pipe(Effect.as({ responses: [], cancelled: true }))),
                 Effect.map((gate): SubjectGate => gate)
               )
-        if (gate?.decision?.label === "no") {
+        if (gate?.decision !== undefined && TraitSubject.rulesOut(gate.decision.probabilities)) {
           return {
             report: Report.InputReport.cases.Unmatched.make({
               segment: input.segment,

@@ -1,4 +1,4 @@
-import { Array, Effect, FileSystem, flow, Option, Path, pipe, Record, Schema as S, Stream, String } from "effect"
+import { Array, Effect, FileSystem, flow, Path, pipe, Record, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Enrichment } from "traits"
 import { WorkspaceRoot } from "traits/local"
@@ -76,10 +76,13 @@ export default Effect.gen(function* () {
         Effect.orElseSucceed((): ReadonlyArray<string> => [])
       )
   // Every project is opened, so uses from other packages in the workspace are counted too.
-  const configs = yield* gitFiles("tsconfig.json")
+  const { configs, manifests } = yield* Effect.all(
+    { configs: gitFiles("tsconfig.json"), manifests: gitFiles("package.json") },
+    { concurrency: "unbounded" }
+  )
   // Package entry points, by lower-cased absolute path, so re-export chains that reach one can be reported as public API.
   const entries = new Map<string, string>()
-  for (const manifest of yield* gitFiles("package.json")) {
+  for (const manifest of manifests) {
     const parsed = yield* fs.readFileString(path.join(directory, manifest)).pipe(
       Effect.flatMap(
         S.decodeEffect(
@@ -92,9 +95,10 @@ export default Effect.gen(function* () {
           )
         )
       ),
-      Effect.option
+      // An unreadable or malformed manifest contributes no entry points.
+      Effect.orElseSucceed(() => undefined)
     )
-    if (Option.isNone(parsed) || parsed.value.name === undefined) {
+    if (parsed?.name === undefined) {
       continue
     }
     const targets: Array<string> = []
@@ -105,9 +109,9 @@ export default Effect.gen(function* () {
         Array.forEach(Record.values(value as Record.ReadonlyRecord<string, unknown>), collect)
       }
     }
-    collect([parsed.value.exports, parsed.value.main])
+    collect([parsed.exports, parsed.main])
     for (const target of targets) {
-      entries.set(String.toLowerCase(path.resolve(directory, path.dirname(manifest), target)), parsed.value.name)
+      entries.set(String.toLowerCase(path.resolve(directory, path.dirname(manifest), target)), parsed.name)
     }
   }
   const api = yield* Effect.sync(() => new API({ cwd: directory })).pipe((acquire) =>

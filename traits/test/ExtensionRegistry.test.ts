@@ -162,8 +162,8 @@ it.live("resolves relative and consumer-only import-condition packages before us
       }).pipe(Effect.provide([LocalSegmenterRegistry.layer, LocalEnrichmentRegistry.layer]))
       expect(report.diagnostics).toEqual([])
       expect(inputsOf(report.traits[0]!)[0]!.enrichments).toEqual([
-        { _tag: "Succeeded", module: enricher, text: "package context" },
-        { _tag: "Succeeded", module: local, text: "relative context" }
+        Report.EnrichmentOutcome.cases.Succeeded.make({ module: enricher, text: "package context" }),
+        Report.EnrichmentOutcome.cases.Succeeded.make({ module: local, text: "relative context" })
       ])
       const unavailable = yield* ExtensionModule.resolve({
         reference: "@traits-resolution-test/consumer-only/segmenter",
@@ -396,7 +396,10 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
             changes: [{ after: { path: WorkspacePath.make(filename), text: "" } }]
           }).pipe(Effect.provideContext(services))
           expect(inputsOf(report.traits[0]!)[0]).toEqual(
-            expect.objectContaining({ _tag: "Completed", enrichments: [{ _tag: "Succeeded", module, text: filename }] })
+            expect.objectContaining({
+              _tag: "Completed",
+              enrichments: [Report.EnrichmentOutcome.cases.Succeeded.make({ module, text: filename })]
+            })
           )
         }
         const invalid = yield* check({
@@ -413,7 +416,10 @@ it.live("reuses real enrichment setup while isolating input context, chats, and 
           changes: [{ after: { path: WorkspacePath.make("invalid.ts"), text: "" } }]
         }).pipe(Effect.provideContext(services))
         expect(inputsOf(invalid.traits[0]!)[0]!.enrichments).toEqual([
-          { _tag: "Failed", module, explanation: { _tag: "Error", error: "Enrichment execution failed." } }
+          Report.EnrichmentOutcome.cases.Failed.make({
+            module,
+            explanation: Report.Explanation.cases.Error.make({ error: "Enrichment execution failed." })
+          })
         ])
         expect(invalid.diagnostics).toEqual([])
         expect(JSON.stringify(invalid)).not.toContain("private-result")

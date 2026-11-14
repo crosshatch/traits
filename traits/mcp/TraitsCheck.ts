@@ -26,8 +26,8 @@ export const TraitsCheck = Tool.make("traits.check", {
     |For a created or changed trait, pass its name in traits and omit paths, so every project file is checked: tracked and untracked text files that Git does not ignore.
     |When passing paths, never pass dependencies, generated output, lockfiles, secrets, .env files, credentials, or binary files. Pass an environment or other trait names only when the user asks for them.
     |Returns the full report, and sometimes a notice about a newer traits release or a needed server restart; relay any notice to the user. The report gives, for each trait and file, the targets with their subject-match and pass, fail, na, and uncertain probabilities, plus any failures that prevented complete checking.
-    |Targets the trait's subject does not cover are reported as Unmatched and not assessed, which keeps checking all files cheap.
-    |A high fail probability means a likely violation; a target where neither pass nor fail is likely is Inconclusive, which is unresolved rather than a violation. Probabilities are evidence, not guarantees.
+    |Targets the trait's subject clearly does not cover are reported as Unmatched and not assessed, which keeps checking all files cheap.
+    |A high fail probability means a likely violation. pass means the assertion holds and na means it does not apply to the target, so a target is fine when pass and na together are likely. A target where neither that nor fail is likely is Inconclusive, which is unresolved rather than a violation. Probabilities are evidence, not guarantees.
     |If the check fails, nothing was checked and it is not a pass: follow the message, for example by running \`traits update\` to migrate an outdated workspace, or report it to the user when you cannot resolve it.
     `),
     String.trim
@@ -82,7 +82,7 @@ export const layer = toolkit.toLayer(
     )
     const announced = yield* Ref.make(false)
     // The package.json beside this module; upgrading the package replaces it while this server keeps running.
-    const manifest = yield* path.fromFileUrl(new URL("../package.json", import.meta.url)).pipe(Effect.orDie)
+    const manifest = path.join(import.meta.dirname, "..", "package.json")
     const notice = Effect.gen(function* () {
       const installed = yield* fs
         .readFileString(manifest)

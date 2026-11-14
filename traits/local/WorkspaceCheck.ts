@@ -71,7 +71,7 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
   config: TraitsConfig.TraitsConfig,
   request: WorkspaceCheckRequest
 ) {
-  if ((config.extends ?? []).length > 0) {
+  if (config.extends.length > 0) {
     return yield* ExtendsUnsupportedError.make({})
   }
   const names = yield* WorkspaceTraits.select(request)
@@ -98,7 +98,7 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
   }, Effect.scoped)
   // Tracked and untracked files that Git does not ignore or the configuration excludes, relative to the workspace root; submodules and deleted files are dropped below.
   const projectFiles = Effect.gen(function* () {
-    const excluded = Array.map(config.exclude ?? [], (pattern) => `:(exclude,glob)${pattern}`)
+    const excluded = Array.map(config.exclude, (pattern) => `:(exclude,glob)${pattern}`)
     const handle = yield* spawner.spawn(
       ChildProcess.make(
         "git",
@@ -190,7 +190,7 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
         )
       )
       // Listed files include binaries such as images, which have no text to assess.
-      if (listing && current !== undefined && String.includes("\u0000")(current)) {
+      if (listing && current !== undefined && pipe(current, String.includes("\u0000"))) {
         return undefined
       }
       const committed = committedLink

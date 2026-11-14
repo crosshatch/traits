@@ -9,13 +9,11 @@ export const DecisionPolicy = S.Struct({
   fail: Probability.annotateKey({
     description: "Minimum fail probability rejecting an assessment; checked before acceptance."
   }),
-  /** Minimum pass probability accepting an assessment. */
-  pass: Probability.annotateKey({ description: "Minimum pass probability accepting an assessment." }),
-  /** Minimum na probability accepting an assessment as not applicable; omitted when not-applicable never passes. */
-  na: Probability.annotateKey({
+  /** Minimum probability that the assertion holds or does not apply (pass plus na) accepting an assessment. */
+  pass: Probability.annotateKey({
     description:
-      "Minimum na probability accepting an assessment as not applicable; omitted when not-applicable never passes."
-  }).pipe(S.optionalKey)
+      "Minimum probability that the assertion holds or does not apply (pass plus na) accepting an assessment."
+  })
 }).annotate({
   description:
     "Serializable assessment thresholds, so every environment derives the same verdicts from the same report."

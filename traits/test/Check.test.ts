@@ -592,7 +592,7 @@ it.effect("reports each trait's origin and requires one", () =>
 )
 
 const subject = TraitSubject.make("An exported constant.")
-/** Answers subject decisions by target text, so "skip" is ruled out and "maybe" is uncertain, and assertions with the shared response. */
+/** Answers subject decisions by target text, so "skip" is ruled out, "leaning" leans no without being confident, and "maybe" is uncertain, and assertions with the shared response. */
 const gatedModel = () => {
   const calls = { subject: 0, assertion: 0 }
   return {
@@ -606,15 +606,18 @@ const gatedModel = () => {
           }
           calls.subject++
           const target = (options.state as { readonly target: string }).target
-          const label = target === "skip" ? "no" : target === "maybe" ? "uncertain" : "yes"
+          const label = target === "skip" || target === "leaning" ? "no" : target === "maybe" ? "uncertain" : "yes"
           const answer = {
             _tag: "Classify",
             label,
-            probabilities: {
-              yes: label === "yes" ? 0.9 : 0.05,
-              no: label === "no" ? 0.9 : 0.05,
-              uncertain: label === "uncertain" ? 0.9 : 0.05
-            }
+            probabilities:
+              target === "leaning"
+                ? { yes: 0.4, no: 0.55, uncertain: 0.05 }
+                : {
+                    yes: label === "yes" ? 0.9 : 0.05,
+                    no: label === "no" ? 0.9 : 0.05,
+                    uncertain: label === "uncertain" ? 0.9 : 0.05
+                  }
           } as const
           // Subject decisions for one input arrive batched, one keyed question per trait.
           return {
@@ -625,6 +628,23 @@ const gatedModel = () => {
     })
   }
 }
+
+it.effect("assesses a target whose subject decision leans no without being confident", () =>
+  Effect.gen(function* () {
+    const gated = gatedModel()
+    const report = yield* check({
+      traits: [{ origin, trait: trait("asserted", { subject, assertion }) }],
+      changes: Array.map(["leaning", "skip"], (text) => ({
+        after: { path: WorkspacePath.make(`${text}.ts`), text }
+      }))
+    }).pipe(Effect.provide(unused), Effect.provideServiceEffect(DecisionModel.DecisionModel, gated.model))
+    // Ruling a target out hides any violation in it, so no must be clearly likelier than not: 0.55 is not enough.
+    expect(Array.map(allInputsOf(report.traits[0]!), (input) => input._tag)).toEqual(["Completed", "Unmatched"])
+    expect(inputsOf(report.traits[0]!)[0]).toMatchObject({ subject: { yes: 0.4, no: 0.55, uncertain: 0.05 } })
+    expect(inputsOf(report.traits[0]!)[0]).toHaveProperty("assessment")
+    expect(gated.calls()).toEqual({ subject: 2, assertion: 1 })
+  })
+)
 
 it.effect(
   "gates enrichments and the assertion on the subject decision, proceeding unless it rules the target out",

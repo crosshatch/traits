@@ -7,8 +7,7 @@ import * as WorkspaceConfigProvider from "../local/WorkspaceConfigProvider.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 
 const load = (directory: string, key: string) =>
-  ConfigProvider.ConfigProvider.pipe(
-    Effect.flatMap((provider) => provider.load([key])),
+  ConfigProvider.ConfigProvider.use((provider) => provider.load([key])).pipe(
     Effect.map((node) => node?.value),
     Effect.provide(WorkspaceConfigProvider.layer.pipe(Layer.provide(WorkspaceRoot.layer(directory))))
   )

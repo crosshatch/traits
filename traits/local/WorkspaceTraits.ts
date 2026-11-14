@@ -137,7 +137,7 @@ export const environment = Effect.fn("WorkspaceTraits.environment")(function* (n
       })
     )
   )
-  if ((loaded.extends ?? []).length > 0) {
+  if (loaded.extends.length > 0) {
     return yield* EnvironmentError.make({
       environment: name,
       problem: `${file} extends other trait collections, which checking does not support yet.`

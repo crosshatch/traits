@@ -58,7 +58,9 @@ migrate a workspace:
 - The reflection server and its telemetry database are removed.
 - `traits check [paths...]` checks from the command line and, with
   `--fail <p> --pass <p>`, exits 0 for Pass, 1 for Fail, 2 for Incomplete, and 3
-  for Inconclusive. `traits update` prints these migration steps for later
+  for Inconclusive. An assessment fails when its fail probability reaches
+  `--fail`, and passes when its pass and not-applicable probabilities together
+  reach `--pass`. `traits update` prints these migration steps for later
   releases.
 - Reports record the traits version that produced them in `version`; reports
   from versions compatible under caret (`^`) semantics share a format.

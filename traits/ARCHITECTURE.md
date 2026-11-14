@@ -63,12 +63,17 @@ input, typically one per trait, share one `TraitSubject.match` request of up to
 therefore sent once per batch instead of once per trait, and run usage counts
 each shared response once. The resolver is the seam for later request-level
 optimizations, such as caching unchanged decisions or routing decision kinds to
-different models, without changing `check`. When the decision model labels the
-target `no`, the input is reported as `Unmatched` with the subject
-probabilities, and neither its enrichments nor its assertion run; verdicts treat
-it as Pass. Otherwise, including an `uncertain` label, so possibly in-scope code
-is still assessed, the input proceeds and records the probabilities as
-`subject`. The gate uses the model's label rather than a threshold.
+different models, without changing `check`. When the decision's `no` probability
+is at least 0.6 (`TraitSubject.rulesOut`), the input is reported as `Unmatched`
+with the subject probabilities, and neither its enrichments nor its assertion
+run; verdicts treat it as Pass. Otherwise the input proceeds and records the
+probabilities as `subject`, so possibly in-scope code is still assessed. The
+gate uses this threshold rather than the model's label because the two mistakes
+cost differently: wrongly ruling a target out hides a violation, while wrongly
+matching it costs one assessment. Answers near an even split also vary between
+requests and with the other subjects sharing them, so ruling out on the label
+alone missed labelled violations at random. In measurements on this repository,
+0.6 removed those misses for about a fifth more tokens.
 `Models.layerDecisionLimit` caps simultaneous decision requests at the
 configured concurrency and retries transient provider failures (rate limits,
 network and internal provider errors) up to five times with jittered exponential
@@ -307,12 +312,11 @@ saving requires the user's approval.
 
 `traits check` writes only the report to stdout; verdicts and errors go to
 stderr. Without a policy it exits 0 whenever the check runs, because the report
-implies no thresholds. With `--fail` and `--pass` (and optionally `--na`) it
-derives the verdict with `Report.verdicts` and exits 0 for Pass, 1 for Fail, 2
-for Incomplete, and 3 for Inconclusive. A check that cannot run, such as one
-with missing configuration or a partial policy, also exits 2, since the fix is
-to repair the setup and retry. Invalid command-line usage exits 1, as Effect's
-CLI does.
+implies no thresholds. With `--fail` and `--pass` it derives the verdict with
+`Report.verdicts` and exits 0 for Pass, 1 for Fail, 2 for Incomplete, and 3 for
+Inconclusive. A check that cannot run, such as one with missing configuration or
+a partial policy, also exits 2, since the fix is to repair the setup and retry.
+Invalid command-line usage exits 1, as Effect's CLI does.
 
 `traits update` prints the context an agent needs to migrate a workspace to the
 latest release: the workspace, installed, and latest versions and each
@@ -561,8 +565,9 @@ Guidance-only traits have no assertion and therefore no assertion assessment.
 Each input report is tagged by execution state, independent of assertion
 acceptance:
 
-- `Unmatched`: the subject decision ruled the target out. It carries the subject
-  probabilities, but no enrichments, assessment, or explanation.
+- `Unmatched`: the subject decision ruled the target out, with a `no`
+  probability of at least 0.6. It carries the subject probabilities, but no
+  enrichments, assessment, or explanation.
 - `Completed`: required work finished. Assertion inputs have an assessment;
   guidance-only inputs do not. Inputs of traits with a subject carry its
   probabilities. A high `fail` probability is still a completed evaluation, not
@@ -800,9 +805,10 @@ artifact remains policy-free. A `DecisionPolicy` is serializable data, so CI
 configuration and hosted services apply the same thresholds:
 
 - `fail`: the minimum fail probability rejecting an assessment, checked first.
-- `pass`: the minimum pass probability accepting an assessment.
-- `na`: an optional minimum not-applicable probability accepting an assessment.
-  When omitted, not-applicable assessments never pass.
+- `pass`: the minimum probability that the assertion holds or does not apply
+  accepting an assessment. An assertion that holds (`pass`) and one that does
+  not apply to the target (`na`) are both acceptable, so their probabilities are
+  added.
 
 An assessment that neither fails nor passes is `Inconclusive`. An input whose
 assessment fails is `Fail`. An `Unmatched` input is `Pass`. Otherwise `Failed`

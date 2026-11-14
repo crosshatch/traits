@@ -46,14 +46,19 @@ it.effect("separates completed execution from policy-dependent verdicts", () =>
   })
 )
 
-it.effect("accepts not-applicable assessments only when the policy says so", () =>
+it.effect("accepts an assessment when the assertion likely holds or does not apply", () =>
   Effect.gen(function* () {
     const assessed = (assessment: Report.Assessment) => decode(reportWith(evaluated({ ...completed, assessment })))
     const na = yield* assessed({ pass: 0.01, fail: 0.01, na: 0.97, uncertain: 0.01 })
-    expect(Report.verdicts(na, policy).verdict).toBe("Inconclusive")
-    expect(Report.verdicts(na, { ...policy, na: 0.9 }).verdict).toBe("Pass")
-    const failing = yield* assessed({ pass: 0.01, fail: 0.6, na: 0.95, uncertain: 0.01 })
-    expect(Report.verdicts(failing, { ...policy, na: 0.9 }).verdict).toBe("Fail")
+    expect(Report.verdicts(na, policy).verdict).toBe("Pass")
+    // Neither answer reaches the threshold alone, but together they do.
+    const split = yield* assessed({ pass: 0.45, fail: 0.05, na: 0.4, uncertain: 0.1 })
+    expect(Report.verdicts(split, policy).verdict).toBe("Pass")
+    const unsure = yield* assessed({ pass: 0.2, fail: 0.1, na: 0.2, uncertain: 0.5 })
+    expect(Report.verdicts(unsure, policy).verdict).toBe("Inconclusive")
+    // A likely violation still fails, however likely not-applicable is.
+    const failing = yield* assessed({ pass: 0.01, fail: 0.6, na: 0.38, uncertain: 0.01 })
+    expect(Report.verdicts(failing, policy).verdict).toBe("Fail")
     expect(S.is(Report.DecisionPolicy)({ fail: 1.5, pass: 0.8 })).toBe(false)
   })
 )

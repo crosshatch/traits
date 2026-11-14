@@ -9,6 +9,7 @@ import {
   Exit,
   Fiber,
   FileSystem,
+  flow,
   Layer,
   Path,
   pipe,
@@ -30,7 +31,7 @@ const models = {
 }
 const config = { version: PackageJson.version, models }
 
-const decodes = (input: unknown) => Exit.isSuccess(S.decodeUnknownExit(TraitsConfig.TraitsConfig)(input))
+const decodes = flow(S.decodeUnknownExit(TraitsConfig.TraitsConfig), Exit.isSuccess)
 
 it("validates the workspace configuration and each role's supported providers", () => {
   expect(decodes(config)).toBe(true)

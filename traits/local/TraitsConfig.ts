@@ -19,19 +19,19 @@ export const TraitsConfig = S.Struct({
     description:
       'The traits version this workspace\'s configuration and trait files were last migrated to, or "internal" in the traits repository itself, which always matches its own source.'
   }),
-  /** Trait collections from other repositories to check in addition to the workspace's own traits; not supported yet. */
-  extends: TraitSources.annotateKey({
+  /** Trait collections from other repositories to check in addition to the workspace's own traits; none when omitted, and not supported yet. */
+  extends: TraitSources.pipe(S.withDecodingDefaultKey(Effect.succeed([]))).annotateKey({
     description:
-      "Trait collections from other repositories to check in addition to the workspace's own traits; not supported yet."
-  }).pipe(S.optionalKey),
+      "Trait collections from other repositories to check in addition to the workspace's own traits; none when omitted, and not supported yet."
+  }),
   models: Models,
-  /** Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; explicitly requested paths are always checked. */
+  /** Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; none when omitted. Explicitly requested paths are always checked. */
   exclude: S.Array(S.NonEmptyString)
+    .pipe(S.withDecodingDefaultKey(Effect.succeed([])))
     .annotateKey({
       description:
-        "Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; explicitly requested paths are always checked."
-    })
-    .pipe(S.optionalKey),
+        "Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; none when omitted. Explicitly requested paths are always checked."
+    }),
   /** The maximum number of simultaneous decision model requests; 16 when omitted. */
   concurrency: S.Int.check(S.isGreaterThanOrEqualTo(1))
     .pipe(S.withDecodingDefaultKey(Effect.succeed(16)))
@@ -129,10 +129,7 @@ export const load = Effect.gen(function* () {
   )
   if (config.version === "internal") {
     // Only the traits repository runs traits from source inside its own workspace; a dependency lives in node_modules.
-    const source = yield* path.fromFileUrl(new URL("..", import.meta.url)).pipe(
-      Effect.flatMap(fs.realPath),
-      Effect.orElseSucceed(() => "")
-    )
+    const source = yield* fs.realPath(path.join(import.meta.dirname, "..")).pipe(Effect.orElseSucceed(() => ""))
     const relative = path.relative(directory, source)
     const withinWorkspace =
       source !== "" &&

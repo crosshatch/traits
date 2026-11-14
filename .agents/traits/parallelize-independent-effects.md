@@ -11,6 +11,7 @@ assertion: Prefer explicit parallel composition for Effect operations that do
 purpose: Avoid unnecessary waiting while keeping dependencies and concurrency
   policy explicit.
 ---
+
 ```diff
 -const a = yield* loadA
 -const b = yield* loadB
@@ -18,3 +19,5 @@ purpose: Avoid unnecessary waiting while keeping dependencies and concurrency
 ```
 
 Independent dynamic imports and configuration lookups are examples; independence must include side effects, not just return values.
+
+Not a violation: yields that only register declarations for an engine to run later, such as Alchemy resource declarations (`yield* GitHub.Variables(...)` then `yield* GitHub.Secrets(...)`) inside a stack. They wait on nothing and write to the stack's shared state in declaration order; the engine parallelizes the real operations.

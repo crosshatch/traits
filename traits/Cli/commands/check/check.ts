@@ -54,15 +54,16 @@ export const check = Command.make(
       Flag.optional
     ),
     fail: threshold("fail", "Minimum fail probability that rejects an assessment; requires --pass"),
-    pass: threshold("pass", "Minimum pass probability that accepts an assessment; requires --fail"),
-    na: threshold("na", "Minimum not-applicable probability that accepts an assessment; never accepted when omitted")
+    pass: threshold(
+      "pass",
+      "Minimum probability that the assertion holds or does not apply that accepts an assessment; requires --fail"
+    )
   },
   Effect.fn("check")(
     function* (params) {
       const fail = Option.getOrUndefined(params.fail)
       const pass = Option.getOrUndefined(params.pass)
-      const na = Option.getOrUndefined(params.na)
-      if ((fail === undefined) !== (pass === undefined) || (na !== undefined && fail === undefined)) {
+      if ((fail === undefined) !== (pass === undefined)) {
         return yield* CheckError.make({ message: "Pass both --fail and --pass to apply a decision policy." })
       }
       const report = yield* WorkspaceCheck.use((workspace) =>
@@ -77,8 +78,7 @@ export const check = Command.make(
       if (fail === undefined || pass === undefined) {
         return
       }
-      const policy = DecisionPolicy.make({ fail, pass, ...(na === undefined ? {} : { na }) })
-      const { verdict } = verdicts(report, policy)
+      const { verdict } = verdicts(report, DecisionPolicy.make({ fail, pass }))
       yield* Console.error(`Verdict: ${verdict}`)
       if (verdict !== "Pass") {
         return yield* VerdictExit.make({ verdict })
