@@ -1,6 +1,6 @@
 import { type Effect, Schema as S } from "effect"
 
-import { TraitsEnvironment } from "./TraitsEnvironment.ts"
+import { TraitsEnvironment } from "../TraitsEnvironment/TraitsEnvironment.ts"
 
 /** Reads and writes authored environments within one configured store; does not synthesize default or resolve extends. */
 export interface TraitsEnvironmentStore {
@@ -45,8 +45,7 @@ export class TraitsEnvironmentWriteError extends S.TaggedError<TraitsEnvironment
       description: "The name of the environment involved in the failed operation."
     }),
     /** The environment definition that could not be written. */
-    // Suspended because TraitsEnvironment.ts re-exports this module, so the schema may not be initialized yet at load time.
-    environment: S.suspend(() => TraitsEnvironment).annotateKey({
+    environment: TraitsEnvironment.annotateKey({
       description: "The environment definition that could not be written."
     }),
     /** The underlying storage failure. */

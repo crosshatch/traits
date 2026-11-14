@@ -9,7 +9,7 @@ import * as Version from "../../../Version.ts"
 /** Everything an agent needs to migrate a workspace from one traits version to the latest release. */
 export interface UpdateContext {
   /** The version the workspace was last migrated to, and where that version came from. */
-  readonly from: { readonly version: string; readonly source: "flag" | "workspace" | "installed" }
+  readonly from: { readonly version: string; readonly source: "flag" | "workspace" | "installed" | "internal" }
   /** The installed traits version. */
   readonly installed: string
   /** The latest published traits version. */
@@ -21,7 +21,8 @@ export interface UpdateContext {
 const sourceLabel = {
   flag: "--from",
   workspace: "traits.json",
-  installed: "installed version; traits.json has no readable version"
+  installed: "installed version; traits.json has no readable version",
+  internal: "installed version; traits.json is internal to the traits repository"
 } as const
 
 /** Renders migration context as Markdown for an agent to act on; the agent, not this command, performs the migration. */
@@ -78,7 +79,7 @@ const workspaceVersion = Effect.gen(function* () {
   const text = yield* fs.readFileString(file)
   return yield* pipe(
     text,
-    S.decodeEffect(S.fromJsonString(S.Struct({ version: Version.Version }))),
+    S.decodeEffect(S.fromJsonString(S.Struct({ version: S.Union([Version.Version, S.Literal("internal")]) }))),
     Effect.map((config): string | undefined => config.version),
     Effect.orElseSucceed(() => undefined)
   )
@@ -100,9 +101,12 @@ export const update = Command.make(
     const from: UpdateContext["from"] =
       flagged !== undefined
         ? { version: flagged, source: "flag" }
-        : configured !== undefined
-          ? { version: configured, source: "workspace" }
-          : { version: PackageJson.version, source: "installed" }
+        : configured === "internal"
+          ? // The traits repository tracks its own source, so there is nothing to migrate from.
+            { version: PackageJson.version, source: "internal" }
+          : configured !== undefined
+            ? { version: configured, source: "workspace" }
+            : { version: PackageJson.version, source: "installed" }
     const latest = yield* Changelog.latestVersion
     let releases: ReadonlyArray<Changelog.Release> = []
     if (Version.isNewer(latest, from.version)) {

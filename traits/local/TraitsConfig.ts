@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Path, pipe, Schema as S } from "effect"
+import { Array, Effect, FileSystem, Path, pipe, Schema as S, String } from "effect"
 
 import { Models } from "../Models.ts"
 import PackageJson from "../package.json" with { type: "json" }
@@ -14,9 +14,10 @@ export const TraitsConfig = S.Struct({
   $schema: S.String.annotateKey({
     description: "A JSON Schema URL for editor validation and completion; ignored by traits."
   }).pipe(S.optionalKey),
-  /** The traits version this workspace's configuration and trait files were last migrated to. */
-  version: Version.Version.annotateKey({
-    description: "The traits version this workspace's configuration and trait files were last migrated to."
+  /** The traits version this workspace's configuration and trait files were last migrated to, or "internal" in the traits repository itself, which always matches its own source. */
+  version: S.Union([Version.Version, S.Literal("internal")]).annotateKey({
+    description:
+      'The traits version this workspace\'s configuration and trait files were last migrated to, or "internal" in the traits repository itself, which always matches its own source.'
   }),
   /** Trait collections from other repositories to check in addition to the workspace's own traits; not supported yet. */
   extends: TraitSources.annotateKey({
@@ -92,6 +93,21 @@ export class TraitsConfigVersionError extends S.TaggedError<TraitsConfigVersionE
   }
 }
 
+/** The configuration claims to be the traits repository's own, but traits is installed as a dependency. */
+export class TraitsConfigInternalVersionError extends S.TaggedError<TraitsConfigInternalVersionError>()(
+  "TraitsConfigInternalVersionError",
+  {
+    /** The configuration file path. */
+    path: S.String.annotateKey({ description: "The configuration file path." }),
+    /** The installed traits version. */
+    installed: S.String.annotateKey({ description: "The installed traits version." })
+  }
+) {
+  override get message(): string {
+    return `${this.path} sets version to "internal", which only the traits repository uses, for checks run from its own source. Set version to the traits version this workspace was migrated to, such as ${this.installed}.`
+  }
+}
+
 /** Loads and validates traits.json from the workspace root, failing when it was written for an incompatible traits version. */
 export const load = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
@@ -111,6 +127,22 @@ export const load = Effect.gen(function* () {
     S.decodeUnknownEffect(TraitsConfig, { onExcessProperty: "error" }),
     Effect.mapError((cause) => TraitsConfigDecodeError.make({ path: file, cause }))
   )
+  if (config.version === "internal") {
+    // Only the traits repository runs traits from source inside its own workspace; a dependency lives in node_modules.
+    const source = yield* path.fromFileUrl(new URL("..", import.meta.url)).pipe(
+      Effect.flatMap(fs.realPath),
+      Effect.orElseSucceed(() => "")
+    )
+    const relative = path.relative(directory, source)
+    const withinWorkspace =
+      source !== "" &&
+      !path.isAbsolute(relative) &&
+      !pipe(relative, String.startsWith("..")) &&
+      !pipe(source, String.split(path.sep), Array.contains("node_modules"))
+    return withinWorkspace
+      ? config
+      : yield* TraitsConfigInternalVersionError.make({ path: file, installed: PackageJson.version })
+  }
   if (Version.status(config.version, PackageJson.version) !== "Compatible") {
     return yield* TraitsConfigVersionError.make({
       path: file,

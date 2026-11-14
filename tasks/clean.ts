@@ -4,6 +4,9 @@ import { Command, Flag } from "effect/cli"
 /** Never descend into nested worktrees or Git metadata. */
 const alwaysIgnore = ["**/.git", "**/.worktrees"]
 
+/** Packages cleaned at once; the glob can match thousands of package.json files, and each removal walks a directory tree. */
+const packageConcurrency = 8
+
 export const clean = Command.make("clean", {
   ignore: Flag.String("ignore").pipe(Flag.atLeast(0))
 }).pipe(
@@ -24,10 +27,11 @@ export const clean = Command.make("clean", {
           yield* Effect.forEach(
             ["dist", "node_modules", "tsconfig.tsbuildinfo"],
             (entry) => fs.remove(path.join(dir, entry), { recursive: true, force: true }),
+            // Three fixed entries per package.
             { concurrency: "unbounded" }
           )
         }),
-        { concurrency: "unbounded" }
+        { concurrency: packageConcurrency }
       )
     })
   )

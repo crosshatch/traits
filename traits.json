@@ -1,18 +1,18 @@
 {
-  "version": "0.5.14",
+  "version": "internal",
   "models": {
-    "language": {
-      "provider": "openrouter",
-      "model": "openai/gpt-6.1-sol"
-    },
     "decision": {
       "provider": "openrouter",
       "model": "liquid/d1-ultra"
+    },
+    "language": {
+      "provider": "openrouter",
+      "model": "openai/gpt-6.1-sol"
     }
   },
   "exclude": [
-    "pnpm-lock.yaml",
     "**/*.svg",
+    "pnpm-lock.yaml",
     "traits/eval/fixtures/**",
     "traits/eval/generated/**",
     "traits/eval/scenarios/**"

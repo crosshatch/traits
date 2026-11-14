@@ -16,7 +16,5 @@ export const TraitsEnvironment = S.Struct({
   description: "An additive selection of local traits and extended collection environments."
 })
 
-export * from "./EnvironmentInfo.ts"
-export * from "./TraitsEnvironmentStore.ts"
 export * from "./TraitsSource.ts"
 export * from "./TraitSources.ts"

@@ -156,9 +156,9 @@ export const layerDecisionLimit = (concurrency: number) =>
       return DecisionModel.DecisionModel.of({
         ...model,
         decide: (definition, options) =>
-          Semaphore.withPermits(semaphore, 1)(retryTransient(model.decide(definition, options))),
+          model.decide(definition, options).pipe(retryTransient, Semaphore.withPermits(semaphore, 1)),
         decideSettled: (definition, options) =>
-          Semaphore.withPermits(semaphore, 1)(retryTransient(model.decideSettled(definition, options)))
+          model.decideSettled(definition, options).pipe(retryTransient, Semaphore.withPermits(semaphore, 1))
       })
     })
   )

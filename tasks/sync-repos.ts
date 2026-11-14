@@ -2,6 +2,12 @@ import { Array, Console, Effect, FileSystem, Path } from "effect"
 import { CliError, Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
+/** Directory entries inspected at once while finding repositories. */
+const entryConcurrency = 16
+
+/** Repositories synced at once; each runs Git processes with network connections. */
+const fetchConcurrency = 4
+
 export const syncRepos = Command.make("sync-repos").pipe(
   Command.withHandler(
     Effect.fn("tasks.syncRepos")(function* () {
@@ -25,7 +31,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             Effect.filter(
               entries,
               (entry) => fs.stat(path.join(reposDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
-              { concurrency: "unbounded" }
+              { concurrency: entryConcurrency }
             )
           )
         )
@@ -39,7 +45,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
           const repoNames = yield* Effect.filter(
             entries,
             (entry) => fs.stat(path.join(orgDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
-            { concurrency: "unbounded" }
+            { concurrency: entryConcurrency }
           )
 
           return Array.map(repoNames, (repo) => ({
@@ -47,7 +53,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             repoDir: path.join(orgDir, repo)
           }))
         }),
-        { concurrency: "unbounded" }
+        { concurrency: entryConcurrency }
       ).pipe(Effect.map(Array.flatten))
 
       yield* Effect.forEach(
@@ -72,7 +78,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
           )
           yield* Console.log(`Synced "${repo.entry}" (main)`)
         }),
-        { concurrency: "unbounded" }
+        { concurrency: fetchConcurrency }
       )
     })
   )

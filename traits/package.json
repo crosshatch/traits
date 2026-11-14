@@ -22,6 +22,7 @@
     "Report/**/*.ts",
     "Segmenter/**/*.ts",
     "TraitsEnvironment/**/*.ts",
+    "unstable/**/*.ts",
     "util/**/*.ts",
     "dist/**/*.js",
     "dist/**/*.js.map",
@@ -36,13 +37,15 @@
   "exports": {
     ".": "./index.ts",
     "./local": "./local/index.ts",
-    "./mcp": "./mcp/index.ts"
+    "./mcp": "./mcp/index.ts",
+    "./unstable": "./unstable/index.ts"
   },
   "publishConfig": {
     "exports": {
       ".": "./dist/index.js",
       "./local": "./dist/local/index.js",
-      "./mcp": "./dist/mcp/index.js"
+      "./mcp": "./dist/mcp/index.js",
+      "./unstable": "./dist/unstable/index.js"
     },
     "access": "public"
   },

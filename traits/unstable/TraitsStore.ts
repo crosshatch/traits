@@ -1,7 +1,7 @@
 import { type Effect, Schema as S } from "effect"
 
-import { Trait } from "./Trait.ts"
-import { TraitName } from "./TraitName.ts"
+import { Trait } from "../Trait.ts"
+import { TraitName } from "../TraitName.ts"
 
 /** Reads and writes validated trait definitions within one configured store. */
 export interface TraitsStore {

@@ -96,13 +96,21 @@ it.effect("loads traits.json and explains read, schema, and version failures", (
         }),
         "TraitsConfigDecodeError"
       ],
-      [JSON.stringify({ ...config, version: "99.0.0" }), "TraitsConfigVersionError"]
+      [JSON.stringify({ ...config, version: "99.0.0" }), "TraitsConfigVersionError"],
+      // Only the traits repository, which runs traits from its own source, may be "internal".
+      [JSON.stringify({ ...config, version: "internal" }), "TraitsConfigInternalVersionError"]
     ] as const) {
       const root = yield* workspace(contents)
       const error = yield* TraitsConfig.load.pipe(Effect.provide(root), Effect.flip)
       expect(error._tag).toBe(tag)
       expect(error.message).toContain("traits.json")
     }
+    // This repository's own traits.json is "internal": its traits source is inside the workspace.
+    const path = yield* Path.Path
+    const own = yield* TraitsConfig.load.pipe(
+      Effect.provide(WorkspaceRoot.layer(path.resolve(import.meta.dirname, "..", "..")))
+    )
+    expect(own.version).toBe("internal")
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 

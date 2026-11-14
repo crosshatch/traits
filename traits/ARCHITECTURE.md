@@ -175,17 +175,19 @@ A workspace keeps its configuration at its root and its traits under
 
 - `traits.json` at the workspace root is plain JSON, so it loads without
   executing code or installing JavaScript dependencies. It records the traits
-  `version` the workspace was last migrated to, optional `extends`, the `models`
-  for the language and decision roles, an optional `concurrency`: the maximum
-  number of simultaneous decision requests, 16 by default, and optional
-  `exclude` patterns for checks of every project file. It lists no traits, and
-  unknown keys are rejected, so a trait list from an earlier version is reported
-  rather than ignored. Credentials come from the environment, falling back to
-  the workspace's `.env` and then to the main checkout's `.env`, so linked Git
-  worktrees share its credentials (`WorkspaceConfigProvider`).
-  `TraitsConfig.load` fails with an agent-facing message when the file is
-  missing, invalid, or written for an incompatible version under caret
-  semantics.
+  `version` the workspace was last migrated to, or `"internal"` in the traits
+  repository itself, whose traits source is inside the workspace and so always
+  matches (a workspace that installs traits as a dependency may not use it),
+  optional `extends`, the `models` for the language and decision roles, an
+  optional `concurrency`: the maximum number of simultaneous decision requests,
+  16 by default, and optional `exclude` patterns for checks of every project
+  file. It lists no traits, and unknown keys are rejected, so a trait list from
+  an earlier version is reported rather than ignored. Credentials come from the
+  environment, falling back to the workspace's `.env` and then to the main
+  checkout's `.env`, so linked Git worktrees share its credentials
+  (`WorkspaceConfigProvider`). `TraitsConfig.load` fails with an agent-facing
+  message when the file is missing, invalid, or written for an incompatible
+  version under caret semantics.
 - `.agents/traits/<name>.md` defines each trait: YAML frontmatter with `name`,
   `purpose`, and optional `subject`, `assertion`, `segment`, and `enrichments`,
   and a Markdown body of supporting context. Unknown frontmatter keys are
@@ -313,6 +315,15 @@ CLI does.
 latest release: the workspace, installed, and latest versions and each
 intermediate release's changelog, oldest first. The agent performs the
 migration.
+
+## Unstable contracts
+
+`traits/unstable` (the `unstable/` directory) holds contracts for trait stores
+beyond the local workspace, such as a hosted store: `TraitsStore`,
+`TraitsEnvironmentStore`, and `EnvironmentInfo`. Nothing implements them yet,
+and they may change in any release, so they stay out of the stable entry points.
+The `extends` key of `traits.json` and of environments belongs to the same
+preparation: it is accepted by the schemas and rejected when checking.
 
 ## Provide traits and inputs
 
@@ -750,10 +761,10 @@ edits shift offsets. Baselines and suppressions use this identity. Identical
 target texts in the same file share a digest, so consumers needing one identity
 per occurrence must disambiguate, for example by occurrence order.
 
-A trait report may also carry the `origin` supplied with the trait's `check`
-entry: the workspace path of the trait's definition file, the extended
-collection environment (`TraitsSource`) that supplied it, or both. Hosts omit it
-when unknown, such as for programmatic definitions; the runner never infers it.
+Each trait report carries the `origin` supplied with the trait's `check` entry.
+It is a tagged union with one case today, `File`, holding the workspace path of
+the trait's definition file; kinds such as remote or registry traits can be
+added as cases. The runner never infers it.
 
 ## Enrichment outcomes
 
