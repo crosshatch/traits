@@ -54,8 +54,14 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
   if (Array.isArrayNonEmpty(covering)) {
     return TraitDerivation.TraitDerivation.cases.Covered.make({ name: document.name, by: covering })
   }
-  const clarified = Array.flatMap(related, (entry) =>
+  const clarifications = Array.flatMap(related, (entry) =>
     entry.label === "clarification" ? [{ name: entry.name, relationship: "clarification" as const }] : []
+  )
+  // A proposal that clarifies the trait it is named after replaces that trait, and can replace only one, so other
+  // clarification labels do not compete with it.
+  const clarified = pipe(
+    Array.findFirst(clarifications, (entry) => entry.name === document.name),
+    Option.match({ onNone: () => clarifications, onSome: (named) => [named] })
   )
   if (Array.isArrayNonEmpty(clarified) && clarified.length > 1) {
     return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits: clarified })

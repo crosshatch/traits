@@ -99,6 +99,32 @@ it.live("replaces a clarified trait under its existing name after approval", () 
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 
+it.live("replaces the trait a clarification is named after, even when others are also labelled clarifications", () =>
+  Effect.gen(function* () {
+    const { directory, exists, read, services } = yield* workspace("clarification")
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const other = "---\nname: other\nassertion: Functions are pure.\npurpose: Keep code testable.\n---\n"
+    yield* fs.writeFileString(path.join(directory, ".agents", "traits", "other.md"), other)
+    const save = () => Effect.succeed(TraitDerivation.Approval.cases.Save.make({}))
+    const named = yield* WorkspaceDerive.derive({ ...proposal, name: TraitName.make("existing") }, save).pipe(
+      Effect.provide(services)
+    )
+    expect(named._tag).toBe("Updated")
+    const replaced = yield* read("existing")
+    expect(replaced).toContain("Functions have at most one parameter.")
+    const untouched = yield* read("other")
+    expect(untouched).toBe(other)
+    // Under a new name, nothing says which of the clarified traits the proposal replaces.
+    const unnamed = yield* WorkspaceDerive.derive(proposal, () => Effect.die("approval must not be requested")).pipe(
+      Effect.provide(services)
+    )
+    expect(unnamed._tag).toBe("Unresolved")
+    const saved = yield* exists("proposed")
+    expect(saved).toBe(false)
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+)
+
 it.live("saves nothing when the proposal is covered, unresolved, renamed onto another trait, revised, or skipped", () =>
   Effect.gen(function* () {
     const unexpected = () => Effect.die("approval must not be requested")
