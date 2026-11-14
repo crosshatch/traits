@@ -9,6 +9,7 @@ purpose: Preserve the distinction between omitted keys and undefined values so
   schemas stay JSON-compatible by default and undefined is admitted only
   deliberately.
 ---
+
 ```ts
 body: TraitBody.pipe(S.optionalKey)
 ```
@@ -16,12 +17,12 @@ body: TraitBody.pipe(S.optionalKey)
 Violation: `S.optional` with no comment justifying explicit undefined.
 
 ```ts
-cause: S.optional(S.Defect())
+cause: S.Defect().pipe(S.optional)
 ```
 
 Correct: either `cause: S.Defect().pipe(S.optionalKey)`, or a justified exception:
 
 ```ts
 // Admits explicit undefined: callers forward `options.cause`, which may be undefined.
-cause: S.optional(S.Defect())
+cause: S.Defect().pipe(S.optional)
 ```

@@ -1,8 +1,6 @@
 ---
 name: colocate-domain-types-and-operations
-subject: Core domain types and the operations that act on them. Applies when
-  introducing or organizing core domain types and their operations. In
-  TypeScript files.
+subject: Core domain types and the operations that act on them. In TypeScript files.
 assertion: "Keep each core domain type in its own module and export the
   functions that operate on that type from the same module: TraitExpression.ts
   exports both TraitExpression and check. Consumers such as tool adapters should
@@ -11,8 +9,11 @@ assertion: "Keep each core domain type in its own module and export the
 purpose: Make domain behavior discoverable beside its data model and keep
   adapters from owning domain logic.
 ---
+
 ```diff
 -import { TraitExpression } from "./TraitExpression.ts"
 -import { check } from "./checkTraitExpression.ts"
 +import { TraitExpression, check } from "./TraitExpression.ts"
 ```
+
+Not a violation: a helper module that declares a type only for its own options or parameters, such as a `RenderOptions` interface beside `render`; that is not a core domain type, and nothing else imports it.

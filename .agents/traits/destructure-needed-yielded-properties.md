@@ -14,6 +14,7 @@ assertion: Destructure the needed properties directly from the yielded result
 purpose: Make dependencies explicit at the binding site without unnecessary
   intermediate names.
 ---
+
 ```diff
 -const paths = yield* WorkspacePaths
 -const lockPath = paths.lock
@@ -40,3 +41,5 @@ const fs = yield* FileSystem.FileSystem
 const path = yield* Path.Path
 const text = yield* fs.readFileString(path.join(directory, "a.txt"))
 ```
+
+Also allowed: two yielded objects that expose the same member name stay bound for qualified calls, such as two toolkits each with `handle` (`check.handle(...)`, `derive.handle(...)`); destructuring both would need the aliases this rule avoids.

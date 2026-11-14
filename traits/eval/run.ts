@@ -82,6 +82,7 @@ const program = Effect.gen(function* () {
       ),
       configured: TraitsConfig.load
     },
+    // Two fixed effects.
     { concurrency: "unbounded" }
   )
   const modelIndex = process.argv.indexOf("--decision-model")
@@ -122,6 +123,7 @@ const program = Effect.gen(function* () {
         }))
       )
     },
+    // Two fixed effects.
     { concurrency: "unbounded" }
   )
   const requests = yield* Ref.make(0)

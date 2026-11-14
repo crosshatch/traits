@@ -148,6 +148,7 @@ const program = Effect.gen(function* () {
             violating: assess(trait, casePath, generatedCase.violating, true),
             compliant: assess(trait, compliantPath, generatedCase.compliant, false)
           },
+          // Two fixed checks; decision requests are limited by Models.layerDecisionLimit.
           { concurrency: "unbounded" }
         )
         return { trait: name, path: casePath, ...assessed }

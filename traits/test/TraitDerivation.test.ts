@@ -158,6 +158,11 @@ it.live("offers a rewording of the trait it is named after as an update, unless 
       assertion: TraitAssertion.make("Functions are small."),
       purpose: TraitPurpose.make("Keep code readable.")
     })
+    // Another trait the model also calls covering does not compete with a new version of the named trait.
+    yield* fs.writeFileString(
+      path.join(directory, ".agents", "traits", "other.md"),
+      "---\nname: other\nassertion: Functions are pure.\npurpose: Keep code testable.\n---\n"
+    )
     // The same content in other YAML formatting is not a change.
     const quoted = '---\nname: "existing"\nassertion: "Functions are small."\npurpose: Keep code readable.\n---\n'
     yield* fs.writeFileString(path.join(directory, ".agents", "traits", "existing.md"), quoted)

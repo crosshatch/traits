@@ -20,10 +20,8 @@ export const EnrichmentErrorReason = S.TaggedUnion({
 export class EnrichmentError extends S.TaggedError<EnrichmentError>()("EnrichmentError", {
   /** Requested execution skip scope: Enrichment skips only this invocation, Input prevents the current input's assessment, and Trait stops remaining work for this trait; unrelated traits are unaffected. */
   reason: EnrichmentErrorReason,
-  /** Required actionable guidance for resolving the failure before reevaluation. */
-  instruction: RecoveryInstruction.annotateKey({
-    description: "Required actionable guidance for resolving the failure before reevaluation."
-  })
+  /** Nonblank, actionable guidance for resolving a failure before reevaluation. */
+  instruction: RecoveryInstruction
 }) {
   override get message(): string {
     const message = EnrichmentErrorReason.match(this.reason, {

@@ -2,8 +2,8 @@
 name: test-model-behavior-with-real-integrations
 subject: Tests whose assertions depend on a model's judgment or output quality
   (classification correctness, generated content), whether the model is real or
-  mocked, as opposed to tests of how code builds model requests or handles
-  model responses.
+  mocked, as opposed to tests of how code builds model requests or handles model
+  responses.
 assertion: Test model-dependent behavior with real-model integration tests using
   meaningful inputs and expected outcomes, rather than mocked model answers that
   predetermine the behavior under test. Use mocks only when they help validate
@@ -13,6 +13,7 @@ assertion: Test model-dependent behavior with real-model integration tests using
 purpose: Obtain evidence of actual model behavior rather than mistaking
   predetermined mock answers for model quality.
 ---
+
 Allowed: a mocked model returning a fixed answer to test request plumbing (batching, request shape, missing-answer normalization, error propagation).
 
 ```ts
@@ -35,3 +36,5 @@ it.effect("detects a violation", () =>
     expect(result.a.fail).toBe(true)
   }))
 ```
+
+Not a violation: a fake model returning a fixed label so the test can assert what the code then does with that label (which file is written, whether approval is requested, which result is returned). The input's content does not influence the outcome, and the test claims nothing about what a real model would answer.

@@ -80,11 +80,15 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     const traits = yield* explained(blocking)
     return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits })
   }
+  // A proposal named after an existing trait is a new version of that trait, so only that trait's own label can make
+  // it covered; other traits' covered labels do not compete with it, as their clarification labels do not.
   const covering = Array.flatMap(related, (entry) =>
-    entry.label === "covered" ? [{ name: entry.name, relationship: "covered" }] : []
+    entry.label === "covered" && (!Array.contains(names, document.name) || entry.name === document.name)
+      ? [{ name: entry.name, relationship: "covered" }]
+      : []
   )
-  // A proposal covered only by the trait it is named after rewords that trait without changing its rule. It is offered
-  // as an update, like a clarification, unless it would leave the trait's content as it is.
+  // A proposal covered by the trait it is named after rewords that trait without changing its rule. It is offered as
+  // an update, like a clarification, unless it would leave the trait's content as it is.
   const own = covering.length === 1 && covering[0]?.name === document.name ? covering[0] : undefined
   const unchanged =
     own !== undefined &&

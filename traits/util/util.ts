@@ -1,4 +1,4 @@
-export * from "./AccountRejection.ts"
+export * from "./rejectsAccount.ts"
 export * from "./InputRange.ts"
 export * from "./Input.ts"
 export * from "./InputSource.ts"
