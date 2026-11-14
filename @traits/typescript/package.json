@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "license": "Apache-2.0",
   "files": [
-    "package-exports/**/*.ts",
-    "references/**/*.ts",
-    "segmenter/**/*.ts",
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
     "dist/**/*.js",
     "dist/**/*.js.map",
+    "package-exports/**/*.ts",
+    "references/**/*.ts",
+    "segmenter/**/*.ts",
     "!dist/test/**",
     "!dist/vite.config.*"
   ],
