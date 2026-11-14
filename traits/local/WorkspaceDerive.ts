@@ -1,4 +1,17 @@
-import { Array, Context, Effect, FileSystem, Layer, Option, Path, pipe, Schema as S, Semaphore, String } from "effect"
+import {
+  Array,
+  Context,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  pipe,
+  Schema as S,
+  Semaphore,
+  String,
+  Struct
+} from "effect"
 
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
@@ -42,17 +55,40 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     { concurrency: 16 }
   )
   const related = yield* TraitDerivation.compare(document.name, proposal, existing)
+  /** The reported traits, each with the language model's reason for its relationship to the proposal. */
+  const explained = Effect.fnUntraced(function* <
+    Entry extends { readonly name: TraitName; readonly relationship: string }
+  >(entries: Array.NonEmptyReadonlyArray<Entry>) {
+    const reasons = yield* TraitDerivation.explain(
+      proposal,
+      Array.map(entries, (entry) => ({
+        ...entry,
+        text: Array.findFirst(existing, (trait) => trait.name === entry.name).pipe(
+          Option.map((trait) => trait.text),
+          Option.getOrElse(() => "")
+        )
+      }))
+    )
+    return Array.map(entries, (entry) => ({ ...entry, reason: reasons[entry.name]! }))
+  })
   const blocking = Array.flatMap(related, (entry) =>
     entry.label === "conflict" || entry.label === "inconclusive"
       ? [{ name: entry.name, relationship: entry.label }]
       : []
   )
   if (Array.isArrayNonEmpty(blocking)) {
-    return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits: blocking })
+    const traits = yield* explained(blocking)
+    return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits })
   }
-  const covering = Array.flatMap(related, (entry) => (entry.label === "covered" ? [entry.name] : []))
+  const covering = Array.flatMap(related, (entry) =>
+    entry.label === "covered" ? [{ name: entry.name, relationship: "covered" }] : []
+  )
   if (Array.isArrayNonEmpty(covering)) {
-    return TraitDerivation.TraitDerivation.cases.Covered.make({ name: document.name, by: covering })
+    const covers = yield* explained(covering)
+    return TraitDerivation.TraitDerivation.cases.Covered.make({
+      name: document.name,
+      by: Array.map(covers, Struct.pick(["name", "reason"]))
+    })
   }
   const clarifications = Array.flatMap(related, (entry) =>
     entry.label === "clarification" ? [{ name: entry.name, relationship: "clarification" as const }] : []
@@ -64,7 +100,8 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     Option.match({ onNone: () => clarifications, onSome: (named) => [named] })
   )
   if (Array.isArrayNonEmpty(clarified) && clarified.length > 1) {
-    return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits: clarified })
+    const traits = yield* explained(clarified)
+    return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits })
   }
   const target = clarified[0]?.name
   if (target === undefined && Array.contains(names, document.name)) {
@@ -78,13 +115,15 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     Option.map((entry) => entry.text),
     Option.getOrUndefined
   )
+  // The user sees why the proposal counts as a clarification before replacing the trait.
+  const why = clarified[0] === undefined ? undefined : (yield* explained([clarified[0]]))[0].reason
   const approval = yield* approve({
     name: saved.name,
     action: current === undefined ? "Create" : "Update",
     message:
       current === undefined
         ? `Save this new trait as ${relative}?\n\n${text}`
-        : `Replace ${relative} with this clarified version?\n\nCurrent:\n\n${current}\nReplacement:\n\n${text}`
+        : `Replace ${relative} with this clarified version?\n\nWhy: ${why ?? ""}\n\nCurrent:\n\n${current}\nReplacement:\n\n${text}`
   })
   if (TraitDerivation.Approval.guards.Revise(approval)) {
     return TraitDerivation.TraitDerivation.cases.RevisionRequested.make({

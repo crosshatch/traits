@@ -46,6 +46,9 @@ migrate a workspace:
   server cannot start its tools, it still connects and every call returns why. A
   provider rejecting the account (invalid key or no credits) fails the check
   with the provider's error, instead of failing every input.
+- `traits.derive` explains its results: `Unresolved` and `Covered` give each
+  related trait with the reason for its relationship, written by the language
+  model, so conflicts can be reconciled with the user.
 - Remove installed copies of the bundled `traits` skill, such as
   `.agents/skills/traits` and `.claude/skills/traits`, and unlink
   package-managed skills; the server's instructions replace it.

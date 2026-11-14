@@ -1,7 +1,7 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Layer, Path, Record } from "effect"
-import { DecisionModel } from "effect/ai"
+import { Array, Effect, FileSystem, Layer, Path, Record, Stream } from "effect"
+import { DecisionModel, LanguageModel } from "effect/ai"
 
 import * as WorkspaceDerive from "../local/WorkspaceDerive.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
@@ -21,6 +21,18 @@ const proposal = TraitFile.TraitDocument.make({
   assertion: TraitAssertion.make("Functions have at most one parameter."),
   purpose: TraitPurpose.make("Keep call sites readable."),
   body: TraitBody.make("```diff\n-f(a, b)\n+f({ a, b })\n```")
+})
+
+/** A language model that explains only the trait named existing, so other traits get the fallback reason. */
+const explainer = LanguageModel.make({
+  generateText: () =>
+    Effect.succeed([
+      {
+        type: "text",
+        text: JSON.stringify({ reasons: [{ name: "existing", reason: "Both limit how functions are written." }] })
+      }
+    ]),
+  streamText: () => Stream.empty
 })
 
 /** A workspace with one saved trait, whose relationship to every proposal the decision model reports as label. */
@@ -51,7 +63,11 @@ const workspace = (label: string) =>
       directory,
       read: (name: string) => fs.readFileString(path.join(directory, ".agents", "traits", `${name}.md`)),
       exists: (name: string) => fs.exists(path.join(directory, ".agents", "traits", `${name}.md`)),
-      services: Layer.mergeAll(WorkspaceRoot.layer(directory), Layer.effect(DecisionModel.DecisionModel, model))
+      services: Layer.mergeAll(
+        WorkspaceRoot.layer(directory),
+        Layer.effect(DecisionModel.DecisionModel, model),
+        Layer.effect(LanguageModel.LanguageModel, explainer)
+      )
     }
   })
 
@@ -91,6 +107,7 @@ it.live("replaces a clarified trait under its existing name after approval", () 
     expect(result._tag).toBe("Updated")
     expect(requests[0]).toMatchObject({ name: "existing", action: "Update" })
     expect(requests[0]!.message).toContain(existing)
+    expect(requests[0]!.message).toContain("Why: Both limit how functions are written.")
     const replaced = yield* read("existing")
     expect(replaced).toContain("name: existing")
     expect(replaced).toContain("Functions have at most one parameter.")
@@ -119,7 +136,13 @@ it.live("replaces the trait a clarification is named after, even when others are
     const unnamed = yield* WorkspaceDerive.derive(proposal, () => Effect.die("approval must not be requested")).pipe(
       Effect.provide(services)
     )
-    expect(unnamed._tag).toBe("Unresolved")
+    expect(unnamed).toMatchObject({
+      _tag: "Unresolved",
+      traits: [
+        { name: "existing", relationship: "clarification", reason: "Both limit how functions are written." },
+        { name: "other", relationship: "clarification", reason: "The language model gave no reason." }
+      ]
+    })
     const saved = yield* exists("proposed")
     expect(saved).toBe(false)
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
@@ -136,6 +159,9 @@ it.live("saves nothing when the proposal is covered, unresolved, renamed onto an
       const { exists, services } = yield* workspace(label)
       const result = yield* WorkspaceDerive.derive(proposal, unexpected).pipe(Effect.provide(services))
       expect(result._tag).toBe(tag)
+      // The agent learns why each reported trait relates to the proposal, to reconcile them with the user.
+      const reported = result._tag === "Covered" ? result.by : result._tag === "Unresolved" ? result.traits : []
+      expect(reported).toMatchObject([{ name: "existing", reason: "Both limit how functions are written." }])
       const saved = yield* exists("proposed")
       expect(saved).toBe(false)
     }
