@@ -45,40 +45,32 @@ export const create = Command.make(
     decision: selectionFlag("decision"),
     replace: Flag.Boolean("replace").pipe(Flag.withDefault(false))
   },
-  Effect.fn("profile.create")(
-    function* (params) {
-      const { name, language, decision, replace } = params
-      const profile = Profile.make({ language, decision })
-      const providerSelections = Array.filter([language, decision], ModelSelection.guards.Provider)
-      const config = yield* UserConfig.read.pipe(
-        Effect.filterOrFail(
-          (config) => replace || !Array.some(config.profiles, (entry) => entry.name === name),
-          () => CliError.UserError.make({ cause: `Profile ${name} already exists. Use --replace to overwrite it.` })
-        )
+  Effect.fn("profile.create")(function* (params) {
+    const { name, language, decision, replace } = params
+    const profile = Profile.make({ language, decision })
+    const providerSelections = Array.filter([language, decision], ModelSelection.guards.Provider)
+    const config = yield* UserConfig.read.pipe(
+      Effect.filterOrFail(
+        (config) => replace || !Array.some(config.profiles, (entry) => entry.name === name),
+        () => CliError.UserError.make({ cause: `Profile ${name} already exists. Use --replace to overwrite it.` })
       )
-      if (providerSelections.length > 0) {
-        const accounts = yield* Accounts.read
-        for (const selection of providerSelections) {
-          if (!Array.some(accounts, (account) => account.id === selection.account)) {
-            return yield* CliError.UserError.make({
-              cause: `Unknown account: ${selection.account}. Run traits auth login first.`
-            })
-          }
+    )
+    if (providerSelections.length > 0) {
+      const accounts = yield* Accounts.read
+      for (const selection of providerSelections) {
+        if (!Array.some(accounts, (account) => account.id === selection.account)) {
+          return yield* CliError.UserError.make({
+            cause: `Unknown account: ${selection.account}. Run traits auth login first.`
+          })
         }
       }
-      yield* UserConfig.write({
-        ...config,
-        profiles: [...Array.filter(config.profiles, (entry) => entry.name !== name), { name, profile }]
-      })
-    },
-    withLock,
-    (effect, params) =>
-      effect.pipe(
-        Effect.andThen(
-          Console.log(
-            `Saved profile ${params.name}. Model availability and role capabilities are checked when models are resolved.`
-          )
-        )
-      )
-  )
+    }
+    yield* UserConfig.write({
+      ...config,
+      profiles: [...Array.filter(config.profiles, (entry) => entry.name !== name), { name, profile }]
+    })
+    yield* Console.log(
+      `Saved profile ${name}. Model availability and role capabilities are checked when models are resolved.`
+    )
+  }, withLock)
 )

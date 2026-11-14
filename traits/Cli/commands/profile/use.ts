@@ -11,27 +11,22 @@ export const use = Command.make(
   {
     name: Argument.String("name").pipe(Argument.withSchema(ProfileName))
   },
-  Effect.fn("profile.use")(
-    function* (params) {
-      const { name } = params
-      const config = yield* UserConfig.read.pipe(
-        Effect.filterOrFail(
-          (config) => Array.some(config.profiles, (entry) => entry.name === name),
-          () => CliError.UserError.make({ cause: `Unknown profile: ${name}` })
-        )
+  Effect.fn("profile.use")(function* (params) {
+    const { name } = params
+    const config = yield* UserConfig.read.pipe(
+      Effect.filterOrFail(
+        (config) => Array.some(config.profiles, (entry) => entry.name === name),
+        () => CliError.UserError.make({ cause: `Unknown profile: ${name}` })
       )
-      const { workspaceKey } = yield* CliPaths
-      yield* UserConfig.write({
-        ...config,
-        workspaceProfiles:
-          name === "default"
-            ? Record.remove(config.workspaceProfiles, workspaceKey)
-            : { ...config.workspaceProfiles, [workspaceKey]: name }
-      })
-      return `workspace ${workspaceKey}`
-    },
-    withLock,
-    (effect, params) =>
-      effect.pipe(Effect.flatMap((target) => Console.log(`Using profile ${params.name} for ${target}.`)))
-  )
+    )
+    const { workspaceKey } = yield* CliPaths
+    yield* UserConfig.write({
+      ...config,
+      workspaceProfiles:
+        name === "default"
+          ? Record.remove(config.workspaceProfiles, workspaceKey)
+          : { ...config.workspaceProfiles, [workspaceKey]: name }
+    })
+    yield* Console.log(`Using profile ${name} for workspace ${workspaceKey}.`)
+  }, withLock)
 )
