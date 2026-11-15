@@ -257,12 +257,16 @@ it.live(
 it.effect("parses trait frontmatter, rejects outdated or malformed files, and resolves extensions from the file", () =>
   Effect.gen(function* () {
     const parsed = yield* TraitFile.parse({ path: "traits/a.md", text: traitFile("a") })
-    expect(parsed.frontmatter).toEqual({
+    expect(parsed).toEqual({
       name: "a",
       purpose: "Protect correctness.",
-      assertion: "The code is correct."
+      assertion: "The code is correct.",
+      body: "Prefer small functions."
     })
-    expect(parsed.body).toBe("Prefer small functions.")
+    // Serializing writes the frontmatter in the schema's canonical key order, whatever order the file used.
+    expect(TraitFile.serialize(parsed)).toBe(
+      "---\nname: a\nassertion: The code is correct.\npurpose: Protect correctness.\n---\n\nPrefer small functions.\n"
+    )
     for (const text of ["no frontmatter", "---\nname: [\n---\n", traitFile("a", "requirement: Legacy.\n")]) {
       const malformed = yield* TraitFile.parse({ path: "traits/a.md", text }).pipe(Effect.flip)
       expect(malformed._tag).toBe("TraitFileParseError")

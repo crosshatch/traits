@@ -182,30 +182,33 @@ export const select = Effect.fn("WorkspaceTraits.select")(function* (selection: 
 /** Parses a trait file's text and resolves its extension references relative to the file, which must be named for the trait. */
 export const decode = Effect.fn("WorkspaceTraits.decode")(function* (name: TraitName, file: string, text: string) {
   const path = yield* Path.Path
-  const { frontmatter, body } = yield* TraitFile.parse({ path: file, text })
-  if (frontmatter.name !== name) {
+  const {
+    segment: segmentReference,
+    enrichments: enrichmentReferences,
+    ...document
+  } = yield* TraitFile.parse({
+    path: file,
+    text
+  })
+  if (document.name !== name) {
     return yield* TraitFile.TraitFileParseError.make({
       path: file,
-      problem: `its name is "${frontmatter.name}", but the file is named for "${name}".`
+      problem: `its name is "${document.name}", but the file is named for "${name}".`
     })
   }
   // The file path is absolute, so it always converts to a URL.
   const baseUrl = yield* path.toFileUrl(file).pipe(Effect.orDie)
   const resolve = (reference: string) => ExtensionModule.resolve({ reference, baseUrl })
-  const segment = frontmatter.segment === undefined ? undefined : yield* resolve(frontmatter.segment)
+  const segment = segmentReference === undefined ? undefined : yield* resolve(segmentReference)
   const enrichments =
-    frontmatter.enrichments === undefined
+    enrichmentReferences === undefined
       ? undefined
       : // A trait lists few enrichments, and resolving one only locates a module file, so resolve them together.
-        yield* Effect.all(Array.map(frontmatter.enrichments, resolve), { concurrency: "unbounded" })
+        yield* Effect.all(Array.map(enrichmentReferences, resolve), { concurrency: "unbounded" })
   return Trait.make({
-    name: frontmatter.name,
-    purpose: frontmatter.purpose,
-    ...(frontmatter.subject === undefined ? {} : { subject: frontmatter.subject }),
-    ...(frontmatter.assertion === undefined ? {} : { assertion: frontmatter.assertion }),
+    ...document,
     ...(segment === undefined ? {} : { segment }),
-    ...(enrichments === undefined ? {} : { enrichments }),
-    ...(body === undefined ? {} : { body })
+    ...(enrichments === undefined ? {} : { enrichments })
   })
 })
 

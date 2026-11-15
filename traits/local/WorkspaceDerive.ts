@@ -87,13 +87,7 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
         onSome: (trait) =>
           TraitFile.parse({ path: WorkspaceLayout.traitFile(trait.name), text: trait.text }).pipe(
             // Compared as the file would be written, so formatting alone is not a change.
-            Effect.map(
-              (parsed) =>
-                TraitFile.serialize({
-                  ...parsed.frontmatter,
-                  ...(parsed.body === undefined ? {} : { body: parsed.body })
-                }) === proposal
-            ),
+            Effect.map((parsed) => TraitFile.serialize(parsed) === proposal),
             Effect.orElseSucceed(() => false)
           )
       })

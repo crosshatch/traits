@@ -1,61 +1,39 @@
-import { Effect, pipe, Schema as S, String } from "effect"
+import { Array, Effect, pipe, Record, Schema as S, String, Struct } from "effect"
 import * as Yaml from "yaml"
 
-import { TraitAssertion } from "./TraitAssertion.ts"
+import { Trait } from "./Trait.ts"
 import { TraitBody } from "./TraitBody.ts"
-import { TraitName } from "./TraitName.ts"
-import { TraitPurpose } from "./TraitPurpose.ts"
-import { TraitSubject } from "./TraitSubject.ts"
 
 const reference = S.NonEmptyString.annotate({
   description: "A path relative to the trait file, or an ESM package reference, resolved from the trait file."
 })
 
-/** The YAML frontmatter of a trait file; unknown keys are rejected so outdated files are reported rather than misread. */
-export type TraitFrontmatter = typeof TraitFrontmatter.Type
-export const TraitFrontmatter = S.Struct({
-  name: TraitName,
-  subject: TraitSubject.pipe(S.optionalKey),
-  assertion: TraitAssertion.pipe(S.optionalKey),
-  purpose: TraitPurpose,
-  /** The segmenter module reference; omitted to check whole files. */
-  segment: reference
-    .annotateKey({ description: "The segmenter module reference; omitted to check whole files." })
-    .pipe(S.optionalKey),
-  /** Enrichment module references, in order. */
-  enrichments: S.NonEmptyArray(reference)
-    .annotateKey({ description: "Enrichment module references, in order." })
-    .pipe(S.optionalKey)
-}).annotate({
+/** A trait as written to its file: the trait with its extension references as written rather than resolved, and an optional Markdown body of supporting context. */
+export type TraitDocument = typeof TraitDocument.Type
+export const TraitDocument = Trait.mapFields(
+  Struct.assign({
+    /** The segmenter module reference; omitted to check whole files. */
+    segment: reference
+      .annotateKey({ description: "The segmenter module reference; omitted to check whole files." })
+      .pipe(S.optionalKey),
+    /** Enrichment module references, in order. */
+    enrichments: S.NonEmptyArray(reference)
+      .annotateKey({ description: "Enrichment module references, in order." })
+      .pipe(S.optionalKey)
+  })
+).annotate({
   description:
-    "The YAML frontmatter of a trait file; unknown keys are rejected so outdated files are reported rather than misread."
+    "A trait as written to its file: the trait with its extension references as written rather than resolved, and an optional Markdown body of supporting context."
 })
 
-/** A trait as written to its file: frontmatter with extension references as written, and an optional Markdown body of supporting context. */
-export type TraitDocument = typeof TraitDocument.Type
-export const TraitDocument = S.Struct({
-  ...TraitFrontmatter.fields,
-  /** Supporting context, such as examples; not hidden requirements. */
-  body: TraitBody.annotateKey({ description: "Supporting context, such as examples; not hidden requirements." }).pipe(
-    S.optionalKey
-  )
-}).annotate({
-  description:
-    "A trait as written to its file: frontmatter with extension references as written, and an optional Markdown body of supporting context."
-})
+/** The YAML frontmatter of a trait file, in canonical key order; unknown keys are rejected so outdated files are reported rather than misread. */
+const TraitFrontmatter = TraitDocument.mapFields(Struct.omit(["body"]))
 
 /** Renders a trait file: YAML frontmatter in canonical key order, then the body. */
 export const serialize = (document: TraitDocument): string => {
   const { body, ...frontmatter } = document
   const yaml = Yaml.stringify(
-    {
-      name: frontmatter.name,
-      subject: frontmatter.subject,
-      assertion: frontmatter.assertion,
-      purpose: frontmatter.purpose,
-      segment: frontmatter.segment,
-      enrichments: frontmatter.enrichments
-    },
+    Record.fromEntries(Array.map(Record.keys(TraitFrontmatter.fields), (key) => [key, frontmatter[key]])),
     { lineWidth: 80 }
   )
   return body === undefined ? `---\n${yaml}---\n` : `---\n${yaml}---\n\n${body}\n`
@@ -77,7 +55,7 @@ const Delimiter = S.Literals(["---\r\n", "---\n"])
 /** Frontmatter lines up to the first closing delimiter, so a later --- in the Markdown body stays in the body. */
 const FrontmatterLines = S.String.check(S.isPattern(/^(?:(?!---(?:\r?\n|$))[^\n]*\n)*$/u))
 
-/** Parses a trait file into its frontmatter and trimmed body; extension references are not resolved yet. */
+/** Parses a trait file into its document with a trimmed body; extension references are not resolved yet. */
 export const parse = Effect.fn("TraitFile.parse")(function* (input: { readonly path: string; readonly text: string }) {
   const [, frontmatterText, , bodyText] = yield* pipe(
     input.text,
@@ -111,5 +89,5 @@ export const parse = Effect.fn("TraitFile.parse")(function* (input: { readonly p
     )
   )
   const body = pipe(bodyText, String.trim)
-  return { frontmatter, body: body === "" ? undefined : TraitBody.make(body) }
+  return TraitDocument.make(body === "" ? frontmatter : { ...frontmatter, body: TraitBody.make(body) })
 })

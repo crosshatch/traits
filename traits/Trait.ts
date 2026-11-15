@@ -33,9 +33,10 @@ export const Trait = S.Struct({
         "Ordered, distinct host-resolved, workspace-relative module paths supplying input-specific context; omitted when none are configured."
     })
     .pipe(S.optionalKey),
-  /** Shared supporting context from the trait's Markdown body; enrichments do not modify it. */
+  /** Supporting context from the trait's Markdown body, such as examples, not hidden requirements; enrichments do not modify it. */
   body: TraitBody.annotateKey({
-    description: "Shared supporting context from the trait's Markdown body; enrichments do not modify it."
+    description:
+      "Supporting context from the trait's Markdown body, such as examples, not hidden requirements; enrichments do not modify it."
   }).pipe(S.optionalKey)
 }).annotate({
   description:
