@@ -32,7 +32,7 @@ export class DecisionCache extends Context.Service<
   }
 >()("traits/Check/DecisionCache") {}
 
-/** Digests a decision's kind and inputs with the traits version, so changed prompts or schemas never reuse old answers. */
+/** Digests a decision's kind, the question it is asked, and its inputs with the traits version, so changed wording or schemas never reuse old answers. */
 const keyOf = (kind: "subject" | "assertion", material: unknown) =>
   digestText(JSON.stringify([PackageJson.version, kind, material]))
 
@@ -81,7 +81,7 @@ export const decideSubject = Effect.fn("DecisionCache.decideSubject")(function* 
   subject: TraitSubject.TraitSubject,
   input: Input
 ) {
-  const key = yield* keyOf("subject", [subject, decisionState(input)])
+  const key = yield* keyOf("subject", [TraitSubject.question, subject, decisionState(input)])
   const hit = yield* lookup(
     key,
     S.Struct({
@@ -105,7 +105,7 @@ export const evaluateAssertion = Effect.fn("DecisionCache.evaluateAssertion")(fu
   assertion: TraitAssertion.TraitAssertionInput,
   input: Input
 ) {
-  const key = yield* keyOf("assertion", [assertion, decisionState(input)])
+  const key = yield* keyOf("assertion", [TraitAssertion.question, assertion, decisionState(input)])
   const hit = yield* lookup(
     key,
     S.Struct({

@@ -2,17 +2,17 @@ import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Array, Effect, FileSystem, Layer, Path, Redacted } from "effect"
 
-import * as Accounts from "../local/Accounts.ts"
-import { AccountName } from "../local/Provider/AccountName.ts"
-import { Credential } from "../local/Provider/Credential.ts"
-import * as ProviderAccount from "../local/Provider/ProviderAccount.ts"
-import { ProviderId } from "../local/Provider/ProviderId.ts"
-import { UserConfigLock } from "../local/UserConfigLock.ts"
-import { UserFileSecurity } from "../local/UserFileSecurity.ts"
-import { UserPaths } from "../local/UserPaths.ts"
+import * as Accounts from "../local/user/Accounts.ts"
+import { AccountName } from "../local/user/Provider/AccountName.ts"
+import { Credential } from "../local/user/Provider/Credential.ts"
+import { ProviderAccount } from "../local/user/Provider/ProviderAccount.ts"
+import { ProviderId } from "../local/user/Provider/ProviderId.ts"
+import { UserConfigLock } from "../local/user/UserConfigLock.ts"
+import { UserFileSecurity } from "../local/user/UserFileSecurity.ts"
+import { UserPaths } from "../local/user/UserPaths.ts"
 
 const account = (provider: ProviderId, key: string, name = "primary") =>
-  ProviderAccount.ProviderAccount.make({
+  ProviderAccount.make({
     id: AccountName.make(name),
     provider,
     method: "api-key",
@@ -44,8 +44,8 @@ it.live(
     const fs = yield* FileSystem.FileSystem
     const before = yield* fs.readFileString(paths.accounts)
     yield* Effect.gen(function* () {
-      const error = yield* ProviderAccount.save(account("openrouter", "fake-new-key")).pipe(Effect.flip)
-      expect(error).toBeInstanceOf(ProviderAccount.AccountProviderConflictError)
+      const error = yield* Accounts.save(account("openrouter", "fake-new-key")).pipe(Effect.flip)
+      expect(error).toBeInstanceOf(Accounts.AccountProviderConflictError)
       const saved = yield* Accounts.read
       expect(saved).toEqual([original])
       const after = yield* fs.readFileString(paths.accounts)
@@ -62,8 +62,8 @@ it.live(
     const updated = account("openai", "fake-updated-key")
     const separate = account("openrouter", "fake-other-key", "router")
     yield* Effect.gen(function* () {
-      yield* ProviderAccount.save(updated)
-      yield* ProviderAccount.save(separate)
+      yield* Accounts.save(updated)
+      yield* Accounts.save(separate)
       const saved = yield* Accounts.read
       expect(saved).toEqual([updated, separate])
       expect(

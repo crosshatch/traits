@@ -21,6 +21,12 @@ export interface Preparation {
   >
 }
 
+/** Logs a failure the report cannot explain, since reports carry no raw errors, then fails with the diagnostic recorded in its place, so a broken extension can still be diagnosed. */
+const unexplained = (diagnostic: Report.Diagnostic) => (cause: unknown) =>
+  Effect.logError(`${diagnostic.origin._tag} of ${diagnostic.origin.module} failed`, cause).pipe(
+    Effect.andThen(Effect.fail(diagnostic))
+  )
+
 /** Collects immutable results; registry layers, not preparation, own setup caching. */
 export const make = Effect.fnUntraced(function* (
   request: CheckInput
@@ -53,9 +59,9 @@ export const make = Effect.fnUntraced(function* (
                     explanation: Report.Explanation.cases.Instruction.make({ instruction: error.instruction })
                   })
                 ),
-              SchemaError: () => Effect.fail(fallback)
+              SchemaError: unexplained(fallback)
             }),
-            Effect.catchDefect(() => Effect.fail(fallback)),
+            Effect.catchDefect(unexplained(fallback)),
             Effect.result,
             Effect.map((result) => [module, result] as const)
           )
@@ -79,9 +85,9 @@ export const make = Effect.fnUntraced(function* (
                     explanation: Report.Explanation.cases.Instruction.make({ instruction: error.instruction })
                   })
                 ),
-              SchemaError: () => Effect.fail(fallback)
+              SchemaError: unexplained(fallback)
             }),
-            Effect.catchDefect(() => Effect.fail(fallback)),
+            Effect.catchDefect(unexplained(fallback)),
             Effect.result,
             Effect.map((result) => [module, result] as const)
           )
@@ -116,9 +122,9 @@ export const make = Effect.fnUntraced(function* (
                     explanation: Report.Explanation.cases.Instruction.make({ instruction: error.instruction })
                   })
                 ),
-              SchemaError: () => Effect.fail(fallback)
+              SchemaError: unexplained(fallback)
             }),
-            Effect.catchDefect(() => Effect.fail(fallback)),
+            Effect.catchDefect(unexplained(fallback)),
             Effect.result
           )
         },

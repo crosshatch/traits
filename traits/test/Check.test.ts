@@ -379,7 +379,7 @@ it.effect("explains assessment failures by reason without leaking provider text,
             method: "decide",
             reason: AiError.InvalidRequestError.make({ description: "rejected private-error secret-source" })
           }),
-        "Assertion assessment failed: InvalidRequestError; the provider rejected the request, often because the file exceeds the model's context. Exclude the file in traits.json, or check a smaller file."
+        "Assertion assessment failed: InvalidRequestError; the provider rejected the request, often because the file exceeds the model's context. Exclude the file from checks, or check a smaller file."
       ]
     ] as const
     for (const [decide, expected] of cases) {

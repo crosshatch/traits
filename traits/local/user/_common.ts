@@ -3,7 +3,7 @@ import { Effect, FileSystem, Path } from "effect"
 import { UserFileSecurity } from "./UserFileSecurity.ts"
 
 /** Replaces a file atomically after securing its directory and temporary file. */
-export const write = Effect.fn("AtomicFile.write")(function* (filename: string, text: string) {
+export const writeAtomic = Effect.fn("writeAtomic")(function* (filename: string, text: string) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
   const secure = yield* UserFileSecurity

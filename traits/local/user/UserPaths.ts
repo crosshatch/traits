@@ -1,6 +1,7 @@
-import { Context, Effect, FileSystem, Layer, Path, pipe, Schema as S, Stream, String } from "effect"
+import { Context, Effect, FileSystem, Layer, Path, pipe, Schema as S, String } from "effect"
 import { UserDirectories } from "effect/persistence"
-import { ChildProcess, ChildProcessSpawner } from "effect/process"
+
+import * as Git from "../Git.ts"
 
 /** Git could not resolve the workspace's common directory from the invocation directory. */
 export class WorkspaceGitError extends S.TaggedError<WorkspaceGitError>()("WorkspaceGitError", {
@@ -17,40 +18,20 @@ export class WorkspaceGitError extends S.TaggedError<WorkspaceGitError>()("Works
 }
 
 /** User-level filesystem locations for profiles, accounts, and their lock, and the key that selects the current workspace's profile. */
-export class UserPaths extends Context.Service<UserPaths>()("traits/local/UserPaths", {
+export class UserPaths extends Context.Service<UserPaths>()("traits/local/user/UserPaths", {
   make: Effect.gen(function* () {
     const path = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
-    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const cwd = path.resolve()
     const canonicalCwd = yield* fs.realPath(cwd)
-    const workspaceKey = yield* Effect.gen(function* () {
-      const handle = yield* spawner.spawn(
-        ChildProcess.make("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
-          cwd,
-          stdin: "ignore",
-          stdout: "pipe",
-          stderr: "pipe",
-          env: { LC_ALL: "C" },
-          extendEnv: true
-        })
-      )
-      const { exitCode, stdout, stderr } = yield* Effect.all(
-        {
-          exitCode: handle.exitCode,
-          stdout: handle.stdout.pipe(Stream.decodeText(), Stream.mkString),
-          stderr: handle.stderr.pipe(Stream.decodeText(), Stream.mkString)
-        },
-        { concurrency: "unbounded" }
-      )
-      if (exitCode === 128 && pipe(stderr, String.startsWith("fatal: not a git repository (or any "))) {
-        return canonicalCwd
-      }
-      if (exitCode !== 0) {
-        return yield* WorkspaceGitError.make({ cwd, exitCode, stderr: String.trim(stderr) })
-      }
-      return yield* pipe(stdout, String.trim, S.decodeEffect(S.NonEmptyString), Effect.flatMap(fs.realPath))
-    }).pipe(Effect.scoped)
+    const { exitCode, stdout, stderr } = yield* Git.commonDirectory(cwd)
+    const outsideGit = exitCode === 128 && pipe(stderr, String.startsWith("fatal: not a git repository (or any "))
+    if (exitCode !== 0 && !outsideGit) {
+      return yield* WorkspaceGitError.make({ cwd, exitCode, stderr: String.trim(stderr) })
+    }
+    const workspaceKey = outsideGit
+      ? canonicalCwd
+      : yield* pipe(stdout, String.trim, S.decodeEffect(S.NonEmptyString), Effect.flatMap(fs.realPath))
     const { config, data } = yield* UserDirectories.UserDirectories
     const { configDirectory, dataDirectory } = yield* Effect.all(
       {

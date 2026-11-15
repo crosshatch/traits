@@ -106,6 +106,7 @@ export const layer = toolkit.toLayer(
     return {
       "traits.check": (parameters) =>
         check(parameters).pipe(
+          Effect.map((checked) => checked.report),
           // Every failure, expected or not, reaches the client serialized; otherwise it sees only a generic internal error.
           Effect.catchCause((cause) =>
             Cause.hasInterruptsOnly(cause)

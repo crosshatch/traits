@@ -45,12 +45,13 @@ export const CheckSettings = S.Struct({
 
 /** How decision model requests are batched and retried. */
 export const RequestSettings = S.Struct({
-  /** The most concurrent decision calls about one input merged into one request; 32 when omitted. */
+  /** The most decisions that concurrent decision calls about one input merge into one request; a call with more is sent alone; 32 when omitted. */
   batchSize: Count.pipe(
     S.withConstructorDefault(Effect.succeed(32)),
     S.withDecodingDefaultTypeKey(Effect.succeed(32))
   ).annotateKey({
-    description: "The most concurrent decision calls about one input merged into one request; 32 when omitted."
+    description:
+      "The most decisions that concurrent decision calls about one input merge into one request; a call with more is sent alone; 32 when omitted."
   }),
   /** How long decision calls about one input are collected before their request is sent, in milliseconds; 10 when omitted. */
   batchWindowMillis: S.Natural.pipe(

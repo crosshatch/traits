@@ -34,7 +34,8 @@ const share = (tokens: number | undefined, index: number, callers: number) =>
 
 /**
  * Wraps the DecisionModel in context so concurrent decideSettled calls that ask the same-named decisions about the same
- * input share one provider request of at most the settings' batch size, collected over its batch window; the input is sent once per request instead of once per call. Each caller receives
+ * input share provider requests of at most the settings' batch size in decisions, collected over its batch window; the
+ * input is sent once per request instead of once per call. Each caller receives
  * only its own outcomes, the request's model and metadata, and a share of its token usage, so usage summed over callers
  * equals the provider's. decide is passed through unchanged.
  */
@@ -43,51 +44,74 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const model = yield* DecisionModel.DecisionModel
     const { requests } = yield* CurrentSettings
-    const resolver = RequestResolver.makeGrouped<SettledCall, string>({
-      key: (entry) => entry.request.key,
-      resolver: (entries) => {
-        // A call merged with no others keeps its decision names, so its request is the one it would have sent alone.
-        const merged = (index: number, name: string) => (entries.length === 1 ? name : `${index}.${name}`)
-        return model
-          .decideSettled(
-            Decision.make({
-              input: S.Json,
-              // Locate decisions name image paths in the encoded input, which Json leaves unchanged, but their types
-              // cannot be checked against an untyped input.
-              decisions: Record.fromEntries(
-                Array.flatMap(entries, (entry, index) =>
-                  Array.map(Record.toEntries(entry.request.decisions), ([name, decision]) => [
-                    merged(index, name),
-                    decision
-                  ])
-                )
-              ) as Record<string, Exclude<Decision.Any, Decision.Locate>>
-            }),
-            { input: entries[0].request.state }
-          )
-          .pipe(
-            Effect.exit,
-            Effect.flatMap((exit) =>
-              Effect.sync(() =>
-                Array.forEach(entries, (entry, index) =>
-                  entry.completeUnsafe(
-                    Exit.map(exit, (response) => ({
-                      ...response,
-                      outcomes: Record.map(
-                        entry.request.decisions,
-                        (_, name) => response.outcomes[merged(index, name)]!
-                      ),
-                      usage: DecisionModel.DecisionUsage.make({
-                        inputTokens: share(response.usage.inputTokens, index, entries.length),
-                        outputTokens: share(response.usage.outputTokens, index, entries.length)
-                      })
-                    }))
-                  )
+    /** Sends the calls as one request and gives each its own outcomes and share of the usage. */
+    const send = (calls: Array.NonEmptyReadonlyArray<Request.Entry<SettledCall>>) => {
+      // A call merged with no others keeps its decision names, so its request is the one it would have sent alone.
+      const merged = (index: number, name: string) => (calls.length === 1 ? name : `${index}.${name}`)
+      return model
+        .decideSettled(
+          Decision.make({
+            input: S.Json,
+            // Locate decisions name image paths in the encoded input, which Json leaves unchanged, but their types
+            // cannot be checked against an untyped input.
+            decisions: Record.fromEntries(
+              Array.flatMap(calls, (call, index) =>
+                Array.map(Record.toEntries(call.request.decisions), ([name, decision]) => [
+                  merged(index, name),
+                  decision
+                ])
+              )
+            ) as Record<string, Exclude<Decision.Any, Decision.Locate>>
+          }),
+          { input: calls[0].request.state }
+        )
+        .pipe(
+          Effect.exit,
+          Effect.flatMap((exit) =>
+            Effect.sync(() =>
+              Array.forEach(calls, (call, index) =>
+                call.completeUnsafe(
+                  Exit.map(exit, (response) => ({
+                    ...response,
+                    outcomes: Record.map(call.request.decisions, (_, name) => response.outcomes[merged(index, name)]!),
+                    usage: DecisionModel.DecisionUsage.make({
+                      inputTokens: share(response.usage.inputTokens, index, calls.length),
+                      outputTokens: share(response.usage.outputTokens, index, calls.length)
+                    })
+                  }))
                 )
               )
             )
           )
-      }
+        )
+    }
+    const resolver = RequestResolver.makeGrouped<SettledCall, string>({
+      key: (entry) => entry.request.key,
+      resolver: (entries) =>
+        Effect.forEach(
+          // A request carries at most the batch size in decisions, however many calls they came from, so merging never
+          // builds a larger request than its callers chose to send; a call with more decisions is sent alone.
+          Array.reduce(
+            entries,
+            Array.empty<{
+              readonly decisions: number
+              readonly calls: Array.NonEmptyReadonlyArray<Request.Entry<SettledCall>>
+            }>(),
+            (batches, entry) => {
+              const decisions = Record.size(entry.request.decisions)
+              const last = batches.at(-1)
+              return last !== undefined && last.decisions + decisions <= requests.batchSize
+                ? [
+                    ...Array.dropRight(batches, 1),
+                    { decisions: last.decisions + decisions, calls: Array.append(last.calls, entry) }
+                  ]
+                : [...batches, { decisions, calls: Array.of(entry) }]
+            }
+          ),
+          (request) => send(request.calls),
+          // Decision requests are limited by DecisionLimit.layer.
+          { concurrency: "unbounded", discard: true }
+        )
     }).pipe(
       // Calls about one input arrive over several scheduler ticks, so collect briefly before sending; this is negligible next
       // to model latency. The wait uses the real clock so callers testing under a TestClock are not blocked.
@@ -95,9 +119,7 @@ export const layer = Layer.effect(
         Effect.sleep(Duration.millis(requests.batchWindowMillis)).pipe(
           Effect.provideService(Clock.Clock, Clock.Clock.defaultValue())
         )
-      ),
-      // Larger groups are split across requests.
-      RequestResolver.batchN(requests.batchSize)
+      )
     )
     return DecisionModel.DecisionModel.of({
       ...model,

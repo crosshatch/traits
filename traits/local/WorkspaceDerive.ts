@@ -1,4 +1,4 @@
-import { Array, Context, Effect, FileSystem, Layer, Option, Path, pipe, Schema as S, Semaphore, Struct } from "effect"
+import { Array, Context, Effect, FileSystem, Layer, Option, Path, Schema as S, Semaphore, Struct } from "effect"
 
 import { CurrentSettings } from "../Settings.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
@@ -36,11 +36,12 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
   // Validates the proposal as its saved file would be read, including its extension references.
   yield* WorkspaceTraits.decode(document.name, path.join(directory, WorkspaceLayout.traitFile(document.name)), proposal)
   const names = yield* WorkspaceTraits.all
+  const { check } = yield* CurrentSettings
   const existing = yield* Effect.forEach(
     names,
     (name) => Effect.map(read(name), (text) => ({ name, text })),
     // Trait files are small, but a workspace can have hundreds.
-    { concurrency: 16 }
+    { concurrency: check.fileConcurrency }
   )
   const related = yield* TraitDerivation.compare(document.name, proposal, existing)
   /** The reported traits, each with the language model's reason for its relationship to the proposal. */
@@ -59,85 +60,40 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     )
     return Array.map(entries, (entry) => ({ ...entry, reason: reasons[entry.name]! }))
   })
-  const blocking = Array.flatMap(related, (entry) =>
-    entry.label === "conflict" || entry.label === "inconclusive"
-      ? [{ name: entry.name, relationship: entry.label }]
-      : []
-  )
-  if (Array.isArrayNonEmpty(blocking)) {
-    const traits = yield* explained(blocking)
+  const resolution = yield* TraitDerivation.resolve(document.name, proposal, existing, related)
+  if (TraitDerivation.Resolution.$is("Unresolved")(resolution)) {
+    const traits = yield* explained(resolution.traits)
     return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits })
   }
-  // A proposal named after an existing trait is a new version of that trait, so only that trait's own label can make
-  // it covered; other traits' covered labels do not compete with it, as their clarification labels do not.
-  const covering = Array.flatMap(related, (entry) =>
-    entry.label === "covered" && (!Array.contains(names, document.name) || entry.name === document.name)
-      ? [{ name: entry.name, relationship: "covered" }]
-      : []
-  )
-  // A proposal covered by the trait it is named after rewords that trait without changing its rule. It is offered as
-  // an update, like a clarification, unless it would leave the trait's content as it is.
-  const own = covering.length === 1 && covering[0]?.name === document.name ? covering[0] : undefined
-  const unchanged =
-    own !== undefined &&
-    (yield* pipe(
-      Array.findFirst(existing, (trait) => trait.name === own.name),
-      Option.match({
-        onNone: () => Effect.succeed(false),
-        onSome: (trait) =>
-          TraitFile.parse({ path: WorkspaceLayout.traitFile(trait.name), text: trait.text }).pipe(
-            // Compared as the file would be written, so formatting alone is not a change.
-            Effect.map((parsed) => TraitFile.serialize(parsed) === proposal),
-            Effect.orElseSucceed(() => false)
-          )
-      })
-    ))
-  const reworded = own !== undefined && !unchanged ? own : undefined
-  if (Array.isArrayNonEmpty(covering) && reworded === undefined) {
-    const covers = yield* explained(covering)
+  if (TraitDerivation.Resolution.$is("Covered")(resolution)) {
+    const covers = yield* explained(resolution.by)
     return TraitDerivation.TraitDerivation.cases.Covered.make({
       name: document.name,
       by: Array.map(covers, Struct.pick(["name", "reason"]))
     })
   }
-  const clarifications = Array.flatMap(related, (entry) =>
-    entry.label === "clarification" ? [{ name: entry.name, relationship: "clarification" as const }] : []
-  )
-  // A proposal that rewords or clarifies the trait it is named after replaces that trait, and can replace only one,
-  // so other clarification labels do not compete with it.
-  const clarified =
-    reworded === undefined
-      ? pipe(
-          Array.findFirst(clarifications, (entry) => entry.name === document.name),
-          Option.match({ onNone: () => clarifications, onSome: (named) => [named] })
-        )
-      : []
-  if (Array.isArrayNonEmpty(clarified) && clarified.length > 1) {
-    const traits = yield* explained(clarified)
-    return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits })
-  }
-  const replaced = reworded ?? clarified[0]
-  const target = replaced?.name
-  if (target === undefined && Array.contains(names, document.name)) {
+  if (TraitDerivation.Resolution.$is("NameTaken")(resolution)) {
     return TraitDerivation.TraitDerivation.cases.NameTaken.make({ name: document.name })
   }
+  const replaced = TraitDerivation.Resolution.$is("Replace")(resolution) ? resolution : undefined
   // A clarification or rewording replaces the existing trait under its name.
-  const saved = target === undefined ? document : { ...document, name: target }
+  const saved = replaced === undefined ? document : { ...document, name: replaced.name }
   const text = TraitFile.serialize(saved)
   const relative = WorkspaceLayout.traitFile(saved.name)
-  const current = Array.findFirst(existing, (entry) => entry.name === target).pipe(
+  const current = Array.findFirst(existing, (entry) => entry.name === replaced?.name).pipe(
     Option.map((entry) => entry.text),
     Option.getOrUndefined
   )
   // The user sees why the proposal counts as a clarification or a rewording before replacing the trait.
-  const why = replaced === undefined ? undefined : (yield* explained([replaced]))[0].reason
+  const why =
+    replaced === undefined ? undefined : yield* explained([replaced]).pipe(Effect.map(([entry]) => entry.reason))
   const approval = yield* approve({
     name: saved.name,
     action: current === undefined ? "Create" : "Update",
     message:
       current === undefined
         ? `Save this new trait as ${relative}?\n\n${text}`
-        : `Replace ${relative} with this ${reworded === undefined ? "clarified version" : "rewording, which keeps its rule"}?\n\nWhy: ${why ?? ""}\n\nCurrent:\n\n${current}\nReplacement:\n\n${text}`
+        : `Replace ${relative} with this ${replaced?.relationship === "covered" ? "rewording, which keeps its rule" : "clarified version"}?\n\nWhy: ${why ?? ""}\n\nCurrent:\n\n${current}\nReplacement:\n\n${text}`
   })
   if (TraitDerivation.Approval.guards.Revise(approval)) {
     return TraitDerivation.TraitDerivation.cases.RevisionRequested.make({
@@ -156,7 +112,13 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     return yield* TraitChangedError.make({ path: relative })
   }
   yield* fs.makeDirectory(path.dirname(file), { recursive: true })
-  yield* fs.writeFileString(file, text)
+  // Written beside the trait file and renamed over it, so a reader never sees a partly written trait.
+  yield* fs.makeTempDirectoryScoped({ directory: path.dirname(file), prefix: ".derive-" }).pipe(
+    Effect.map((staging) => path.join(staging, "trait")),
+    Effect.tap((staged) => fs.writeFileString(staged, text)),
+    Effect.flatMap((staged) => fs.rename(staged, file)),
+    Effect.scoped
+  )
   return current === undefined
     ? TraitDerivation.TraitDerivation.cases.Created.make({ name: saved.name, path: relative })
     : TraitDerivation.TraitDerivation.cases.Updated.make({ name: saved.name, path: relative })
@@ -169,8 +131,8 @@ const deriveWorkspace = Effect.fn("WorkspaceDerive.deriveWorkspace")(function* <
 ) {
   const config = yield* TraitsConfig.load
   return yield* Effect.forEach(documents, (document) => derive(document, approve)).pipe(
-    Effect.provide(WorkspaceModels.layer(config)),
-    Effect.provideService(CurrentSettings, config)
+    // The models layer also provides the configuration's settings.
+    Effect.provide(WorkspaceModels.layer(config))
   )
 })
 

@@ -49,7 +49,7 @@ const workspace = Effect.gen(function* () {
   yield* fs.makeDirectory(path.join(directory, "src"))
   yield* fs.writeFileString(
     path.join(directory, "traits.json"),
-    JSON.stringify({ version: PackageJson.version, models })
+    JSON.stringify({ version: PackageJson.version, models, check: { ruleOut: 0.7 } })
   )
   yield* fs.writeFileString(path.join(directory, ".agents", "traits", "correct.md"), traitFile("correct"))
   yield* fs.writeFileString(path.join(directory, ".agents", "traits", "small.md"), traitFile("small"))
@@ -107,6 +107,8 @@ it.live("checks working-tree files against their text at HEAD and reports trait 
       ["small", Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/small.md") })]
     ])
     expect(report.traits[0]!.trait.body).toBe("Prefer small functions.")
+    // The configuration's settings govern the check without the caller providing them.
+    expect(report.run.ruleOut).toBe(0.7)
     yield* pipe(report, S.decodeEffect(Report.Report))
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
@@ -177,16 +179,6 @@ it.live("explains requests and workspaces it cannot check", () =>
     const outdated = yield* run({ paths: ["src/modified.ts"] })
     expect(outdated._tag).toBe("TraitFileParseError")
     expect(outdated.message).toContain("traits update")
-    yield* fs.writeFileString(
-      path.join(directory, "traits.json"),
-      JSON.stringify({
-        version: PackageJson.version,
-        models,
-        extends: [{ collection: "github:example/x" }]
-      })
-    )
-    const extended = yield* run({ paths: ["src/modified.ts"] })
-    expect(extended._tag).toBe("ExtendsUnsupportedError")
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 
@@ -228,8 +220,7 @@ it.live(
       for (const [contents, tag] of [
         [JSON.stringify({ traits: ["missing"] }), "UnknownTraitsError"],
         [JSON.stringify({ traits: ["small"], exclude: [] }), "EnvironmentError"],
-        ["{", "EnvironmentError"],
-        [JSON.stringify({ traits: [], extends: [{ collection: "github:example/x" }] }), "EnvironmentError"]
+        ["{", "EnvironmentError"]
       ] as const) {
         yield* fs.writeFileString(path.join(environments, "ci.json"), contents)
         const invalid = yield* fail({ environment })

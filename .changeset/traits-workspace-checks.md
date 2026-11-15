@@ -73,6 +73,7 @@ migrate a workspace:
   used in `run.ruleOut`.
 - Checks remember completed decisions in `.agents/traits/.cache/`, which ignores
   itself in Git, so re-checking unchanged traits and files is nearly free.
+  Decisions no check has used for one to two months are removed automatically.
 - `@traits/typescript/references` is a new enrichment that lists, for each
   declaration a TypeScript file exports, the other files that use it and how
   often, across every TypeScript project in the workspace. Re-exports are listed

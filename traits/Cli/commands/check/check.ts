@@ -71,29 +71,20 @@ export const check = Command.make(
         return yield* CheckError.make({ message: "Pass both --fail and --pass to apply a decision policy." })
       }
       const { report, policy } = yield* WorkspaceCheck.use((workspace) =>
-        Effect.all(
-          {
-            report: workspace.check({
-              ...(params.paths.length > 0 ? { paths: params.paths } : {}),
-              ...(environment === undefined ? {} : { environment }),
-              ...(params.traits.length > 0 ? { traits: params.traits } : {})
-            }),
-            // The flags override the policy in traits.json.
-            policy:
-              fail === undefined || pass === undefined
-                ? workspace.policy
-                : Effect.succeed(DecisionPolicy.make({ fail, pass }))
-          },
-          // Two fixed effects.
-          { concurrency: "unbounded" }
-        )
+        workspace.check({
+          ...(params.paths.length > 0 ? { paths: params.paths } : {}),
+          ...(environment === undefined ? {} : { environment }),
+          ...(params.traits.length > 0 ? { traits: params.traits } : {})
+        })
       ).pipe(Effect.mapError((error) => CheckError.make({ message: error.message })))
+      // The flags override the policy in traits.json.
+      const applied = fail === undefined || pass === undefined ? policy : DecisionPolicy.make({ fail, pass })
       const encoded = yield* pipe(report, S.encodeEffect(Report), Effect.orDie)
       yield* Console.log(JSON.stringify(encoded, null, 2))
-      if (policy === undefined) {
+      if (applied === undefined) {
         return
       }
-      const { verdict } = verdicts(report, policy)
+      const { verdict } = verdicts(report, applied)
       yield* Console.error(`Verdict: ${verdict}`)
       if (verdict !== "Pass") {
         return yield* VerdictExit.make({ verdict })

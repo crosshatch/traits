@@ -1,8 +1,8 @@
 import { Console, Effect, Option } from "effect"
 import { Argument, Command } from "effect/cli"
 
-import { ProfileName } from "../../../local/Profile/ProfileName.ts"
-import * as UserConfig from "../../../local/UserConfig.ts"
+import { ProfileName } from "../../../local/user/Profile/ProfileName.ts"
+import * as UserConfig from "../../../local/user/UserConfig.ts"
 import { withExperimentalDescription } from "../_common.ts"
 
 export const show = Command.make(

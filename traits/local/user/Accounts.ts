@@ -1,7 +1,9 @@
-import { Effect, FileSystem, pipe, Schema as S } from "effect"
+import { Array, Effect, FileSystem, pipe, Schema as S } from "effect"
 
-import * as AtomicFile from "./AtomicFile.ts"
+import { writeAtomic } from "./_common.ts"
+import { AccountName } from "./Provider/AccountName.ts"
 import { ProviderAccount } from "./Provider/ProviderAccount.ts"
+import { withLock } from "./UserConfigLock.ts"
 import { UserFileSecurity } from "./UserFileSecurity.ts"
 import { UserPaths } from "./UserPaths.ts"
 
@@ -68,13 +70,37 @@ export const read = Effect.gen(function* () {
 export const write = Effect.fn("Accounts.write")(
   function* (saved: ReadonlyArray<ProviderAccount>) {
     const { accounts } = yield* UserPaths
-    // AtomicFile.write creates and secures the data directory.
+    // writeAtomic creates and secures the data directory.
     const text = yield* pipe(
       saved,
       S.encodeEffect(S.fromJsonString(S.Array(ProviderAccount))),
       Effect.mapError(() => InvalidAccountsError.make({ path: accounts }))
     )
-    yield* AtomicFile.write(accounts, text)
+    yield* writeAtomic(accounts, text)
   },
   Effect.catch((cause) => UserPaths.use((paths) => AccountsWriteError.make({ path: paths.accounts, cause })))
 )
+
+/** An account with this name already belongs to a different provider. */
+export class AccountProviderConflictError extends S.TaggedError<AccountProviderConflictError>()(
+  "AccountProviderConflictError",
+  {
+    /** The account name already in use. */
+    account: AccountName.annotateKey({ description: "The account name already in use." })
+  }
+) {
+  override get message(): string {
+    return `Account ${this.account} belongs to a different provider. Choose a different --account name, or use auth logout first; accounts referenced by profiles cannot be removed.`
+  }
+}
+
+/** Saves an account, replacing a saved account with the same name and provider. */
+export const save = Effect.fn("Accounts.save")(function* (entry: ProviderAccount) {
+  const accounts = yield* read.pipe(
+    Effect.filterOrFail(
+      (accounts) => !Array.some(accounts, (saved) => saved.id === entry.id && saved.provider !== entry.provider),
+      () => AccountProviderConflictError.make({ account: entry.id })
+    )
+  )
+  yield* write([...Array.filter(accounts, (saved) => saved.id !== entry.id), entry])
+}, withLock)

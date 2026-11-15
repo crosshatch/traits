@@ -1,8 +1,9 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Layer, Option, Path, Record } from "effect"
+import { Effect, FileSystem, Layer, Option, Path, Record } from "effect"
 import { DecisionModel } from "effect/ai"
 import { Digest } from "effect/crypto"
+import { TestClock } from "effect/testing"
 
 import { check } from "../Check/Check.ts"
 import { CachedDecision, DecisionCache } from "../Check/DecisionCache.ts"
@@ -110,7 +111,7 @@ it.effect("never caches failed decisions, so they are retried", () =>
   })
 )
 
-it.live("keeps decisions in the workspace across runs, ignored by Git and scoped to the decision model", () =>
+it.effect("keeps decisions in the workspace across runs, ignored by Git and scoped to the decision model", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
@@ -131,7 +132,48 @@ it.live("keeps decisions in the workspace across runs, ignored by Git and scoped
     expect(Option.isNone(missing)).toBe(true)
     const ignore = yield* fs.readFileString(path.join(directory, ".agents", "traits", ".cache", ".gitignore"))
     expect(ignore).toBe("*\n")
-    const files = yield* fs.readDirectory(path.join(directory, ".agents", "traits", ".cache", "decisions"))
-    expect(Array.length(files)).toBe(1)
+  }).pipe(Effect.scoped, Effect.provide([NodeServices.layer, Digest.layerWebCrypto]))
+)
+
+it.effect("drops a decision once a whole generation passes without a check using it", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-decision-cache-" })
+    const cache = DecisionCache.pipe(
+      Effect.provide(LocalDecisionCache.layer("model").pipe(Layer.provide(WorkspaceRoot.layer(directory))))
+    )
+    const used = yield* digestText("used")
+    const unused = yield* digestText("unused")
+    const decision = CachedDecision.make({ label: "pass", probabilities: { pass: 1 } })
+    const first = yield* cache
+    yield* first.set(used, decision)
+    yield* first.set(unused, decision)
+    yield* TestClock.adjust("31 days")
+    const second = yield* cache
+    const kept = yield* second.get(used)
+    expect(kept).toEqual(Option.some(decision))
+    yield* TestClock.adjust("31 days")
+    const third = yield* cache
+    const stillKept = yield* third.get(used)
+    expect(stillKept).toEqual(Option.some(decision))
+    const dropped = yield* third.get(unused)
+    expect(Option.isNone(dropped)).toBe(true)
+  }).pipe(Effect.scoped, Effect.provide([NodeServices.layer, Digest.layerWebCrypto]))
+)
+
+it.effect("checks without remembering decisions when the cache directory cannot be prepared", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-decision-cache-" })
+    // A file where the cache's parent directory belongs.
+    yield* fs.writeFileString(path.join(directory, ".agents"), "")
+    const cache = yield* DecisionCache.pipe(
+      Effect.provide(LocalDecisionCache.layer("model").pipe(Layer.provide(WorkspaceRoot.layer(directory))))
+    )
+    const key = yield* digestText("question")
+    yield* cache.set(key, CachedDecision.make({ label: "pass", probabilities: { pass: 1 } }))
+    const stored = yield* cache.get(key)
+    expect(Option.isNone(stored)).toBe(true)
   }).pipe(Effect.scoped, Effect.provide([NodeServices.layer, Digest.layerWebCrypto]))
 )

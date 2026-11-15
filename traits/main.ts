@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { Cause, Console, DateTime, Effect, Option, pipe, Predicate, Runtime } from "effect"
+import { Cause, Console, DateTime, Effect, Logger, Option, pipe, Predicate, Runtime } from "effect"
 import { Digest, SecureRandom } from "effect/crypto"
 import { FetchHttpClient } from "effect/http"
 import { KeyValueStore, UserDirectories } from "effect/persistence"
@@ -22,6 +22,8 @@ Cli.pipe(
           )
         )
   ),
+  // Logs also go to stderr, so they never mix with a report or the MCP protocol stream on stdout.
+  Effect.provideService(Logger.LogToStderr, true),
   // Infrastructure for every command, provided once at the program's edge rather than by the services that use it.
   Effect.provide([
     NodeServices.layer,

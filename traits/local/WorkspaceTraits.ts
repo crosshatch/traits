@@ -3,7 +3,7 @@ import { Array, Effect, FileSystem, Order, Path, pipe, Schema as S, String } fro
 import { Trait } from "../Trait.ts"
 import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
-import { TraitsEnvironment } from "../TraitsEnvironment/TraitsEnvironment.ts"
+import { TraitsEnvironment } from "../TraitsEnvironment.ts"
 import * as ExtensionModule from "./ExtensionModule.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
@@ -101,7 +101,7 @@ export const all = Effect.gen(function* () {
   return Array.sort(names, Order.String)
 }).pipe(Effect.withSpan("WorkspaceTraits.all"))
 
-/** Loads .agents/traits/_environments/<name>.json; extending trait collections is not supported yet. */
+/** Loads .agents/traits/_environments/<name>.json. */
 export const environment = Effect.fn("WorkspaceTraits.environment")(function* (name: EnvironmentName) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -127,7 +127,7 @@ export const environment = Effect.fn("WorkspaceTraits.environment")(function* (n
         EnvironmentError.make({ environment: name, problem: `${file} cannot be read: ${cause.message}` })
     })
   )
-  const loaded = yield* pipe(
+  return yield* pipe(
     text,
     S.decodeEffect(S.fromJsonString(TraitsEnvironment), { onExcessProperty: "error" }),
     Effect.mapError((cause) =>
@@ -137,13 +137,6 @@ export const environment = Effect.fn("WorkspaceTraits.environment")(function* (n
       })
     )
   )
-  if (loaded.extends.length > 0) {
-    return yield* EnvironmentError.make({
-      environment: name,
-      problem: `${file} extends other trait collections, which checking does not support yet.`
-    })
-  }
-  return loaded
 })
 
 /** Resolves the trait names to check: every trait, narrowed by the environment and then by the requested names. */

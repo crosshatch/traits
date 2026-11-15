@@ -12,7 +12,7 @@ import * as Report from "../Report/Report.ts"
 const server = (check: WorkspaceCheck.WorkspaceCheck["Service"]["check"], latest: string, installed?: string) =>
   TraitsCheck.layer.pipe(
     Layer.provide([
-      Layer.succeed(WorkspaceCheck.WorkspaceCheck, { check, policy: Effect.undefined }),
+      Layer.succeed(WorkspaceCheck.WorkspaceCheck, { check }),
       installed === undefined
         ? NodeServices.layer
         : Layer.merge(
@@ -85,20 +85,20 @@ it.effect("announces a newer traits release once per server, beside the report",
     expect(notice).toContain("traits 999.0.0 is available")
     expect(notice).toContain("traits update")
     expect(second.encodedResult).not.toHaveProperty("notice")
-  }).pipe(Effect.provide(server(() => Effect.succeed(report), "999.0.0")))
+  }).pipe(Effect.provide(server(() => Effect.succeed({ report, policy: undefined }), "999.0.0")))
 )
 
 it.effect("gives no notice when the installed release is the latest", () =>
   Effect.gen(function* () {
     const result = yield* call
     expect(result.encodedResult).not.toHaveProperty("notice")
-  }).pipe(Effect.provide(server(() => Effect.succeed(report), PackageJson.version)))
+  }).pipe(Effect.provide(server(() => Effect.succeed({ report, policy: undefined }), PackageJson.version)))
 )
 
 it.effect("asks for a server restart when the installed package changed under it, also on failures", () =>
   Effect.gen(function* () {
     const succeeded = yield* call.pipe(
-      Effect.provide(server(() => Effect.succeed(report), PackageJson.version, "999.0.0"))
+      Effect.provide(server(() => Effect.succeed({ report, policy: undefined }), PackageJson.version, "999.0.0"))
     )
     const { notice } = succeeded.encodedResult as { readonly notice?: string | undefined }
     expect(notice).toContain("traits 999.0.0 is now installed")

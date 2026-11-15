@@ -3,6 +3,7 @@ import { Array, Effect, Exit, Option, Order, Record, Result, Schema as S } from 
 import { AiError, Decision, DecisionModel } from "effect/ai"
 
 import * as DecisionBatching from "../DecisionBatching.ts"
+import * as Settings from "../Settings.ts"
 
 const classify = (instructions: string) =>
   Decision.classify({ instructions, criteria: { yes: "It applies.", no: "It does not apply." } })
@@ -93,5 +94,44 @@ it.effect("fails every merged call when their shared request fails", () =>
       )
     )
     expect(Array.map(exits, Exit.findErrorOption)).toEqual([Option.some(failure), Option.some(failure)])
+  })
+)
+
+it.effect("never merges calls into a request with more decisions than the batch size", () =>
+  Effect.gen(function* () {
+    const sizes: Array<number> = []
+    const pair = Decision.make({ input, decisions: { first: classify("First."), second: classify("Second.") } })
+    yield* Effect.all(
+      [
+        ...Array.makeBy(4, () => DecisionModel.decideSettled(subject("One."), { input: { text: "a" } })),
+        // Two calls of two decisions cannot share a request of three.
+        ...Array.makeBy(2, () => DecisionModel.decideSettled(pair, { input: { text: "a" } }))
+      ],
+      { concurrency: "unbounded" }
+    ).pipe(
+      Effect.provide(DecisionBatching.layer),
+      Effect.provideServiceEffect(
+        DecisionModel.DecisionModel,
+        DecisionModel.make({
+          decide: (options) =>
+            Effect.sync(() => {
+              sizes.push(Record.size(options.decisions))
+              return {
+                answers: Record.map(options.decisions, () => ({
+                  _tag: "Classify" as const,
+                  label: "yes",
+                  probabilities: { yes: 0.5, no: 0.5 }
+                })),
+                usage: { inputTokens: undefined, outputTokens: undefined }
+              }
+            })
+        })
+      ),
+      Effect.provideService(
+        Settings.CurrentSettings,
+        Settings.Settings.make({ requests: Settings.RequestSettings.make({ batchSize: 3 }) })
+      )
+    )
+    expect(Array.sort(sizes, Order.Number)).toEqual([1, 2, 2, 3])
   })
 )

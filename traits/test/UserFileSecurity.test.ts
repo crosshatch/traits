@@ -17,13 +17,13 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { TestClock } from "effect/testing"
 
-import * as Accounts from "../local/Accounts.ts"
-import { AccountName } from "../local/Provider/AccountName.ts"
-import { Credential } from "../local/Provider/Credential.ts"
-import { ProviderAccount } from "../local/Provider/ProviderAccount.ts"
-import * as ConfigLock from "../local/UserConfigLock.ts"
-import { UserFileSecurity, UserFileSecurityError } from "../local/UserFileSecurity.ts"
-import { UserPaths } from "../local/UserPaths.ts"
+import * as Accounts from "../local/user/Accounts.ts"
+import { AccountName } from "../local/user/Provider/AccountName.ts"
+import { Credential } from "../local/user/Provider/Credential.ts"
+import { ProviderAccount } from "../local/user/Provider/ProviderAccount.ts"
+import * as ConfigLock from "../local/user/UserConfigLock.ts"
+import { UserFileSecurity, UserFileSecurityError } from "../local/user/UserFileSecurity.ts"
+import { UserPaths } from "../local/user/UserPaths.ts"
 
 const runtime = UserFileSecurity.layer.pipe(Layer.provideMerge(NodeServices.layer))
 const fixture = Effect.gen(function* () {

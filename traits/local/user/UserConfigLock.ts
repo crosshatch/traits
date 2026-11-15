@@ -101,7 +101,7 @@ export class UserConfigLockTimeoutError extends S.TaggedError<UserConfigLockTime
   }
 }
 
-export class UserConfigLock extends Context.Service<UserConfigLock>()("traits/local/UserConfigLock", {
+export class UserConfigLock extends Context.Service<UserConfigLock>()("traits/local/user/UserConfigLock", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const { dataDirectory, lock } = yield* UserPaths

@@ -1,10 +1,10 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, Layer } from "effect"
 
-import { ModelSelection } from "../local/Profile/ModelSelection.ts"
-import { Profile, ProfileName } from "../local/Profile/Profile.ts"
-import * as UserConfig from "../local/UserConfig.ts"
-import { UserPaths } from "../local/UserPaths.ts"
+import { ModelSelection } from "../local/user/Profile/ModelSelection.ts"
+import { Profile, ProfileName } from "../local/user/Profile/Profile.ts"
+import * as UserConfig from "../local/user/UserConfig.ts"
+import { UserPaths } from "../local/user/UserPaths.ts"
 
 const layer = ModelSelection.cases.Custom.make({ path: "layer.ts" })
 const profile = Profile.make({ language: layer, decision: layer })

@@ -1,10 +1,9 @@
 import { Array, Effect, FileSystem, Path, pipe, Schema as S, String } from "effect"
 
-import { Models } from "../Models.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { Settings } from "../Settings.ts"
-import { TraitSources } from "../TraitsEnvironment/TraitSources.ts"
 import * as Version from "../Version.ts"
+import { Models } from "./Models.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
@@ -19,11 +18,6 @@ export const TraitsConfig = S.Struct({
   version: S.Union([Version.Version, S.Literal("internal")]).annotateKey({
     description:
       'The traits version this workspace\'s configuration and trait files were last migrated to, or "internal" in the traits repository itself, which always matches its own source.'
-  }),
-  /** Trait collections from other repositories to check in addition to the workspace's own traits; none when omitted, and not supported yet. */
-  extends: TraitSources.pipe(S.withDecodingDefaultKey(Effect.succeed([]))).annotateKey({
-    description:
-      "Trait collections from other repositories to check in addition to the workspace's own traits; none when omitted, and not supported yet."
   }),
   models: Models,
   /** Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; none when omitted. Explicitly requested paths are always checked. */

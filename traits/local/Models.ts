@@ -3,10 +3,7 @@ import { CloudflareClient, CloudflareDecisionModel } from "@effect/ai-cloudflare
 import { OpenAiClient, OpenAiDecisionModel, OpenAiLanguageModel } from "@effect/ai-openai"
 import * as OpenAiCompatible from "@effect/ai-openai-compat"
 import { OpenRouterClient, OpenRouterDecisionModel, OpenRouterLanguageModel } from "@effect/ai-openrouter"
-import { Array, Config, type Context, Duration, Effect, Layer, Schedule, Schema as S, Semaphore } from "effect"
-import { type AiError, DecisionModel } from "effect/ai"
-
-import { CurrentSettings } from "./Settings.ts"
+import { Array, Config, type Context, Layer, Schema as S } from "effect"
 
 const model = S.NonEmptyString.check(S.isTrimmed()).annotate({ description: "The provider's model ID." })
 
@@ -131,36 +128,3 @@ export const layer = (models: Models) =>
         CloudflareDecisionModel.layer({ model: selection.model }).pipe(Layer.provide(cloudflareClient))
     })
   )
-
-/** Limits simultaneous requests to the decision model in context to the settings' concurrency and retries transient failures, such as rate limits and provider or network errors, with jittered exponential backoff that waits at least as long as a rate limit asks. A request holds its slot while it backs off, so throttling slows the whole check instead of failing queued work. */
-export const layerDecisionLimit = Layer.effect(
-  DecisionModel.DecisionModel,
-  Effect.gen(function* () {
-    const model = yield* DecisionModel.DecisionModel
-    const { concurrency, requests } = yield* CurrentSettings
-    const semaphore = yield* Semaphore.make(concurrency)
-    const backoff = Schedule.exponential(Duration.millis(requests.retryDelayMillis)).pipe(
-      Schedule.jittered,
-      Schedule.modifyDelay((metadata: Schedule.Metadata<Duration.Duration, AiError.AiError>) =>
-        Effect.succeed(
-          metadata.input.retryAfter === undefined
-            ? metadata.duration
-            : Duration.max(metadata.duration, metadata.input.retryAfter)
-        )
-      )
-    )
-    const retryTransient = <A, R>(effect: Effect.Effect<A, AiError.AiError, R>) =>
-      Effect.retry(effect, {
-        schedule: backoff,
-        times: requests.retries,
-        while: (error) => error.isRetryable
-      })
-    return DecisionModel.DecisionModel.of({
-      ...model,
-      decide: (definition, options) =>
-        model.decide(definition, options).pipe(retryTransient, Semaphore.withPermits(semaphore, 1)),
-      decideSettled: (definition, options) =>
-        model.decideSettled(definition, options).pipe(retryTransient, Semaphore.withPermits(semaphore, 1))
-    })
-  })
-)

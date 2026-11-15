@@ -1,12 +1,12 @@
 import { Array, Console, Effect, FileSystem, Path } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import * as Accounts from "../../../local/Accounts.ts"
-import { ModelSelection, ModelSelectionFromString } from "../../../local/Profile/ModelSelection.ts"
-import { Profile } from "../../../local/Profile/Profile.ts"
-import { ProfileName } from "../../../local/Profile/ProfileName.ts"
-import * as UserConfig from "../../../local/UserConfig.ts"
-import { withLock } from "../../../local/UserConfigLock.ts"
+import * as Accounts from "../../../local/user/Accounts.ts"
+import { ModelSelection, ModelSelectionFromString } from "../../../local/user/Profile/ModelSelection.ts"
+import { Profile } from "../../../local/user/Profile/Profile.ts"
+import { ProfileName } from "../../../local/user/Profile/ProfileName.ts"
+import * as UserConfig from "../../../local/user/UserConfig.ts"
+import { withLock } from "../../../local/user/UserConfigLock.ts"
 import { withExperimentalDescription } from "../_common.ts"
 
 const selectionFlag = (role: string) =>

@@ -18,15 +18,16 @@ import { KeyValueStore } from "effect/persistence"
 
 import { check } from "../Check/Check.ts"
 import * as DecisionBatching from "../DecisionBatching.ts"
+import * as DecisionLimit from "../DecisionLimit.ts"
 import * as ExtensionModule from "../local/ExtensionModule.ts"
 import * as LocalEnrichmentRegistry from "../local/LocalEnrichmentRegistry.ts"
 import * as LocalSegmenterRegistry from "../local/LocalSegmenterRegistry.ts"
+import * as Models from "../local/Models.ts"
 import * as TraitsConfig from "../local/TraitsConfig.ts"
 import * as WorkspaceConfigProvider from "../local/WorkspaceConfigProvider.ts"
 import * as WorkspaceLayout from "../local/WorkspaceLayout.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
-import * as Models from "../Models.ts"
 import * as Report from "../Report/Report.ts"
 import { CurrentSettings } from "../Settings.ts"
 import { Trait } from "../Trait.ts"
@@ -131,7 +132,7 @@ const program = Effect.gen(function* () {
   const requests = yield* Ref.make(0)
   const models = DecisionBatching.layer.pipe(
     Layer.provideMerge(layerCountedDecisions(requests)),
-    Layer.provideMerge(Models.layerDecisionLimit),
+    Layer.provideMerge(DecisionLimit.layer),
     Layer.provideMerge(Models.layer(config.models).pipe(Layer.provide(WorkspaceConfigProvider.layer)))
   )
   const started = yield* Clock.currentTimeMillis

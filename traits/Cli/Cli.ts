@@ -1,9 +1,9 @@
 import { Layer } from "effect"
 import { Command } from "effect/cli"
 
-import { UserConfigLock } from "../local/UserConfigLock.ts"
-import { UserFileSecurity } from "../local/UserFileSecurity.ts"
-import { UserPaths } from "../local/UserPaths.ts"
+import { UserConfigLock } from "../local/user/UserConfigLock.ts"
+import { UserFileSecurity } from "../local/user/UserFileSecurity.ts"
+import { UserPaths } from "../local/user/UserPaths.ts"
 import { WorkspaceCheck } from "../local/WorkspaceCheck.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import PackageJson from "../package.json" with { type: "json" }

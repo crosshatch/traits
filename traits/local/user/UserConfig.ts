@@ -1,6 +1,6 @@
 import { Array, Effect, FileSystem, Option, pipe, Schema as S } from "effect"
 
-import * as AtomicFile from "./AtomicFile.ts"
+import { writeAtomic } from "./_common.ts"
 import { Profile, ProfileName } from "./Profile/Profile.ts"
 import { UserPaths } from "./UserPaths.ts"
 
@@ -73,7 +73,7 @@ export const write = Effect.fn("UserConfig.write")(
     const { config } = yield* UserPaths
     // The configuration is already typed, so an encoding failure is a bug here, not something the user can fix.
     const text = yield* pipe(saved, S.encodeEffect(S.fromJsonString(UserConfig)), Effect.orDie)
-    yield* AtomicFile.write(config, text)
+    yield* writeAtomic(config, text)
   },
   Effect.catch((cause) => UserPaths.use((paths) => UserConfigWriteError.make({ path: paths.config, cause })))
 )

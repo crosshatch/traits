@@ -1,12 +1,8 @@
-import { Console, Effect, Option, Schema as S } from "effect"
+import { Schema as S } from "effect"
 import { Command, Flag } from "effect/cli"
 
-import { AccountName } from "../../../../local/Provider/AccountName.ts"
-import { Credential } from "../../../../local/Provider/Credential.ts"
-import { ProviderAccount, save } from "../../../../local/Provider/ProviderAccount.ts"
-import * as ApiKey from "../../../ApiKey.ts"
 import { withExperimentalDescription } from "../../_common.ts"
-import { commonFlags } from "./_common.ts"
+import { commonFlags, saveApiKey } from "./_common.ts"
 
 export const cloudflareWorkersAi = Command.make(
   "cloudflare-workers-ai",
@@ -17,16 +13,12 @@ export const cloudflareWorkersAi = Command.make(
       Flag.withSchema(S.String.check(S.isPattern(/^[a-f0-9]{32}$/iu)))
     )
   },
-  Effect.fn("auth.login.cloudflareWorkersAi")(function* (params) {
-    const apiKey = yield* ApiKey.read(params.keyEnv, "Cloudflare API token")
-    const account = ProviderAccount.make({
-      id: Option.getOrElse(params.account, () => AccountName.make("cloudflare-workers-ai")),
+  (params) =>
+    saveApiKey({
+      account: params.account,
+      keyEnv: params.keyEnv,
       provider: "cloudflare-workers-ai",
-      method: "api-key",
-      credential: Credential.cases.ApiKey.make({ apiKey }),
+      prompt: "Cloudflare API token",
       settings: { accountId: params.accountId }
     })
-    yield* save(account)
-    yield* Console.log(`Saved ${account.id} (${account.provider}). The API key has not been verified remotely.`)
-  })
 ).pipe(withExperimentalDescription("Save a Cloudflare Workers AI API-token account"))

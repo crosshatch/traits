@@ -1,11 +1,14 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Array, Effect, FileSystem, Path, pipe, Runtime, Schema as S, Stream, String } from "effect"
+import { Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { VerdictExit } from "../Cli/commands/check/check.ts"
-import { ModelSelection } from "../local/Profile/ModelSelection.ts"
-import { Profile } from "../local/Profile/Profile.ts"
+import { check, VerdictExit } from "../Cli/commands/check/check.ts"
+import { ModelSelection } from "../local/user/Profile/ModelSelection.ts"
+import { Profile } from "../local/user/Profile/Profile.ts"
+import { WorkspaceCheck } from "../local/WorkspaceCheck.ts"
+import * as Report from "../Report/Report.ts"
 
 const runCli = Effect.fn("test.runCli")(function* (
   args: ReadonlyArray<string>,
@@ -209,6 +212,51 @@ it.live(
     Effect.scoped,
     Effect.provide(NodeServices.layer)
   )
+)
+
+it.effect("applies check.policy from traits.json unless --fail and --pass override it", () =>
+  Effect.gen(function* () {
+    const digest = `sha256:${pipe("0", String.repeat(64))}`
+    // One assessment that is likelier a violation than not.
+    const report = yield* pipe(
+      {
+        version: "0.6.0",
+        run: { models: [], usage: {}, ruleOut: 0.6 },
+        changes: [{ after: { path: "file.ts", digest } }],
+        diagnostics: [],
+        traits: [
+          {
+            trait: { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." },
+            origin: { _tag: "File", path: ".agents/traits/example.md" },
+            changes: [
+              {
+                _tag: "Evaluated",
+                inputs: [
+                  {
+                    _tag: "Completed",
+                    segment: { _tag: "After", range: { start: 0, end: 1 } },
+                    digest,
+                    enrichments: [],
+                    assessment: { pass: 0.3, fail: 0.6, na: 0.05, uncertain: 0.05 }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      S.decodeEffect(Report.Report)
+    )
+    const run = (args: ReadonlyArray<string>, policy: Report.DecisionPolicy | undefined) =>
+      Command.runWith(check, { version: "0" })(args).pipe(
+        Effect.provideService(WorkspaceCheck, { check: () => Effect.succeed({ report, policy }) })
+      )
+    const configured = yield* run([], { fail: 0.5, pass: 0.5 }).pipe(Effect.flip)
+    expect(configured).toMatchObject({ _tag: "VerdictExit", verdict: "Fail" })
+    // The flags' higher fail threshold accepts the same report, and without any policy there is no verdict to exit with.
+    yield* run(["--fail", "0.9", "--pass", "0.1"], { fail: 0.5, pass: 0.5 })
+    yield* run([], undefined)
+  }).pipe(Effect.provide(NodeServices.layer))
 )
 
 it.live(

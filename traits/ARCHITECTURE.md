@@ -1,14 +1,17 @@
 # Trait evaluation lifecycle
 
 The package root (`traits`) is the portable core: trait schemas, the `check`
-engine, `Report`, extension contracts and registry tags, model selection, the
-trait-file format, and derivation comparison. Everything tied to a local
-workspace, its filesystem, and extension loading lives in `local/`, exported as
-`traits/local`, as does user-level state on the machine: profiles, provider
-accounts, their owner-only storage, and the lock that serializes their updates.
-The CLI and MCP server build on it; `Cli/` keeps only command handling and
-terminal prompts, and core modules never import from `local/`, `Cli/`, or
-`mcp/`.
+engine, `Report`, extension contracts and registry tags, the settings and the
+request limit and batching they configure, the trait-file format, and derivation
+comparison. It imports no model provider. Everything tied to a local workspace,
+its filesystem, and extension loading lives in `local/`, exported as
+`traits/local`, including the configured models (`Models`), which wire the
+provider SDKs and read their credentials. `local/user/` holds user-level state
+on the machine: profiles, provider accounts, their owner-only storage, and the
+lock that serializes their updates. It backs the experimental `auth` and
+`profile` commands and is not exported. The CLI and MCP server build on
+`local/`; `Cli/` keeps only command handling and terminal prompts, and core
+modules never import from `local/`, `Cli/`, or `mcp/`.
 
 ## Runtime API
 
@@ -60,8 +63,11 @@ instruction to ignore it.
 
 `DecisionBatching.layer` wraps the `DecisionModel` in context so that concurrent
 `decideSettled` calls asking the same-named decisions about the same encoded
-input share one provider request of up to `requests.batchSize` calls (32),
-collected over a real-time window of `requests.batchWindowMillis` (10 ms).
+input share provider requests of up to `requests.batchSize` decisions (32),
+collected over a real-time window of `requests.batchWindowMillis` (10 ms). The
+limit counts decisions rather than calls, so merging never builds a larger
+request than its callers chose to send: a call that already carries that many
+decisions, such as one group of a derivation's comparisons, is sent alone.
 Callers keep calling `DecisionModel.decideSettled` directly; batching is a
 property of the provided model, not of the code that asks. Merged decisions are
 named by caller index (`0.subject`, `1.subject`), and a call merged with no
@@ -69,12 +75,11 @@ others is sent unchanged. Each caller receives only its own outcomes, the
 request's model and metadata, and an integer share of its token usage, so
 summing usage over callers gives the provider's totals. A failed request fails
 every call merged into it. `decide` is not batched. The workspace models and the
-eval provide it outside `Models.layerDecisionLimit`, so the limit and retries
-apply to merged requests. Subject decisions on one input, one per trait,
-therefore send the file once per request instead of once per trait. Assertion
-calls merge only when they start in the same window, which is rare: on the
-labelled eval with every trait, merging them saved about 1% of requests and left
-results unchanged.
+eval provide it outside `DecisionLimit.layer`, so the limit and retries apply to
+merged requests. Subject decisions on one input, one per trait, therefore send
+the file once per request instead of once per trait. Assertion calls merge only
+when they start in the same window, which is rare: on the labelled eval with
+every trait, merging them saved about 1% of requests and left results unchanged.
 
 `check` gates each input of a trait with a subject on
 `TraitSubject.match({ subject }, input)` before any other work on that input.
@@ -88,7 +93,7 @@ hides a violation, while wrongly matching it costs one assessment. Answers near
 an even split also vary between requests and with the other subjects sharing
 them, so ruling out on the label alone missed labelled violations at random. In
 measurements on this repository, 0.6 removed those misses for about a fifth more
-tokens. `Models.layerDecisionLimit` caps simultaneous decision requests at
+tokens. `DecisionLimit.layer` caps simultaneous decision requests at
 `concurrency` (16) and retries transient provider failures (rate limits, network
 and internal provider errors) up to `requests.retries` times (5) with jittered
 exponential backoff starting at `requests.retryDelayMillis` (1000 ms), waiting
@@ -197,26 +202,29 @@ A workspace keeps its configuration at its root and its traits under
   executing code or installing JavaScript dependencies. It records the traits
   `version` the workspace was last migrated to, or `"internal"` in the traits
   repository itself, whose traits source is inside the workspace and so always
-  matches (a workspace that installs traits as a dependency may not use it),
-  optional `extends`, the `models` for the language and decision roles, an
-  optional `exclude` patterns for checks of every project file, and optional
-  settings (`Settings`, core), each defaulting when omitted: `concurrency`, the
-  maximum number of simultaneous decision requests (16); `check.ruleOut` (0.6),
-  `check.policy` (none), and the file, segmentation, and digest concurrency of
-  checks (16, 8, 8); `requests.batchSize` (32), `requests.batchWindowMillis`
-  (10), `requests.retries` (5), and `requests.retryDelayMillis` (1000); and
+  matches (a workspace that installs traits as a dependency may not use it), the
+  `models` for the language and decision roles, optional `exclude` patterns for
+  checks of every project file, and optional settings (`Settings`, core), each
+  defaulting when omitted: `concurrency`, the maximum number of simultaneous
+  decision requests (16); `check.ruleOut` (0.6), `check.policy` (none), and the
+  file, segmentation, and digest concurrency of checks (16, 8, 8);
+  `requests.batchSize` (32), `requests.batchWindowMillis` (10),
+  `requests.retries` (5), and `requests.retryDelayMillis` (1000); and
   `derive.batchSize` (32), the existing traits compared per request. Core code
   reads them from the `CurrentSettings` reference, whose default is
   `Settings.make({})`: each field carries its default beside it, as both a
   constructor and a decoding default, so hosts that provide nothing get the
-  defaults; the local check and derive provide the loaded `traits.json`. It
-  lists no traits, and unknown keys are rejected, so a trait list from an
-  earlier version is reported rather than ignored. Credentials come from the
-  environment, falling back to the workspace's `.env` and then to the main
-  checkout's `.env`, so linked Git worktrees share its credentials
-  (`WorkspaceConfigProvider`). `TraitsConfig.load` fails with an agent-facing
-  message when the file is missing, invalid, or written for an incompatible
-  version under caret semantics.
+  defaults. Locally, `WorkspaceModels.layer(config)` provides the loaded
+  `traits.json` together with the models it limits and batches, and
+  `WorkspaceCheck.run` provides the configuration it is given to the check, so
+  one configuration governs a whole check or derivation. It lists no traits, and
+  unknown keys are rejected, so a trait list from an earlier version is reported
+  rather than ignored. Credentials come from the environment, falling back to
+  the workspace's `.env` and then to the main checkout's `.env`, so linked Git
+  worktrees share its credentials (`WorkspaceConfigProvider`).
+  `TraitsConfig.load` fails with an agent-facing message when the file is
+  missing, invalid, or written for an incompatible version under caret
+  semantics.
 - `.agents/traits/<name>.md` defines each trait: YAML frontmatter with `name`,
   `purpose`, and optional `subject`, `assertion`, `segment`, and `enrichments`,
   and a Markdown body of supporting context. Unknown frontmatter keys are
@@ -228,8 +236,7 @@ A workspace keeps its configuration at its root and its traits under
   extension references.
 - `.agents/traits/_environments/<name>.json` defines an optional environment,
   `{ "traits": [...] }`, naming a subset of the workspace's traits to check,
-  such as a smaller set for CI. Unknown keys are rejected, and `extends` is not
-  supported yet.
+  such as a smaller set for CI. Unknown keys are rejected.
 
 `WorkspaceCheck.run(config, { paths, environment?, traits? })`
 (`local/WorkspaceCheck`) checks files against the selected traits.
@@ -241,22 +248,23 @@ becomes a change pairing the working-tree text (after) with the text at Git
 `HEAD` (before): untracked files are new, deleted tracked files are deletions,
 and workspaces outside Git have no before text. Paths may be workspace-relative
 or absolute within the workspace. Each trait's report records its file as
-`origin`. `extends` is not supported yet and fails the check rather than
-silently checking fewer traits.
+`origin`. Git is run through `local/Git`, which collects each command's exit
+code and output.
 
 The `WorkspaceCheck` service owns the complete pipeline, independent of any
 front end: `check(request)` loads `traits.json` and the trait files, builds the
-configured models and fresh extension registries, and returns the full report.
-`WorkspaceCheck.layer` supplies default host services (HTTP, WebCrypto digests
-and randomness, an in-memory key-value store, and the local time zone); the host
-provides the platform and `WorkspaceRoot`. The `traits check` CLI command prints
-the report as JSON, and the `traits.check` MCP tool returns it as
-`{ report, notice? }`. The notice keeps the agent informed about the package
-itself. When the server starts, it looks up the latest traits release on npm
-once, giving up silently after 3 seconds or on any failure, and the first check
-after that announces a newer release. Every check also compares the
-`package.json` installed beside the server with the version it is running. When
-the package was upgraded under a running server, the notice, or the failure
+configured models and fresh extension registries, and returns the full report
+with the verdict policy that same configuration sets, if any.
+`WorkspaceCheck.layer` declares the host services it needs (the platform, HTTP,
+WebCrypto digests and randomness, a key-value store, the local time zone, and
+`WorkspaceRoot`); the program provides them once at its entry point. The
+`traits check` CLI command prints the report as JSON, and the `traits.check` MCP
+tool returns it as `{ report, notice? }`. The notice keeps the agent informed
+about the package itself. When the server starts, it looks up the latest traits
+release on npm once, giving up silently after 3 seconds or on any failure, and
+the first check after that announces a newer release. Every check also compares
+the `package.json` installed beside the server with the version it is running.
+When the package was upgraded under a running server, the notice, or the failure
 message, asks the user to restart it, rather than reporting a version mismatch
 the upgrade already fixed. Both use the current directory as the workspace.
 
@@ -292,14 +300,20 @@ own path, and their text at `HEAD` is only that file's path.
 
 Completed subject and assertion decisions are remembered by the optional
 `DecisionCache` service, keyed by a digest of the traits version, the decision's
-kind, and everything sent to the model: the subject or assertion with its
-context and enrichment outputs, and the input's decision state. A repeated check
-of unchanged traits and files therefore asks the model nothing, reports zero
-tokens for those decisions, and still lists the model that made them. Failed or
-unanswered decisions are never cached. `LocalDecisionCache` stores entries under
-`.agents/traits/.cache/`, which ignores itself in Git, and scopes keys to the
-configured decision model. The evaluation runner uses no cache, so accuracy
-measurements always ask the model.
+kind, and everything sent to the model: the wording of the question
+(`TraitSubject.question` or `TraitAssertion.question`), the subject or assertion
+with its context and enrichment outputs, and the input's decision state. A
+repeated check of unchanged traits and files therefore asks the model nothing,
+reports zero tokens for those decisions, and still lists the model that made
+them. Failed or unanswered decisions are never cached. `LocalDecisionCache`
+stores entries under `.agents/traits/.cache/`, which ignores itself in Git, and
+scopes keys to the configured decision model. Entries are kept in 30-day
+generations: a decision found only in the previous generation moves to the
+current one, and older generations are deleted, so a decision is dropped once a
+whole generation passes without a check using it. When the directory cannot be
+prepared, such as in a read-only checkout, checks run without remembering
+decisions. The evaluation runner uses no cache, so accuracy measurements always
+ask the model.
 
 ## Derive traits
 
@@ -309,25 +323,27 @@ would be read, including extension references, then uses
 `TraitDerivation.compare` (core) to ask the decision model how each existing
 trait relates to it: distinct, covered, clarification, conflict, or
 inconclusive, deciding up to `derive.batchSize` (32) existing traits per
-request. Conflicting or inconclusive traits, or several clarification targets,
-return `Unresolved`. A proposal named after one of the clarified traits replaces
-that trait instead, since a proposal replaces at most one. Covering traits
-return `Covered`, with one exception: a proposal named after an existing trait
-is a new version of that trait, so other traits' covered labels do not compete
-with it. When its own trait covers it, it rewords that trait without changing
-its rule and is offered as an update, unless it would leave the trait's content
-unchanged. The decision model decides these relationships, and the language
-model then explains, in one request, why each trait the outcome reports relates
-as it does: `Unresolved` and `Covered` give a reason per trait, and the approval
-message for a clarification says why it counts as one, so the agent can
-reconcile the proposal with the user. A trait the model leaves unexplained gets
-a reason saying so; an unrelated trait with the same name returns `NameTaken`.
-Otherwise it calls `approve` once with the complete file text, and with the
-current file when a clarification replaces an existing trait under its name. The
-user's answer yields `Created` or `Updated` after writing, or
-`RevisionRequested` or `Skipped` without writing. A target file that changed
-while waiting for approval fails with `TraitChangedError` rather than
-overwriting it.
+request. `TraitDerivation.resolve` (core) then decides from those labels what to
+do with the proposal, without touching the filesystem or a model. Conflicting or
+inconclusive traits, or several clarification targets, return `Unresolved`. A
+proposal named after one of the clarified traits replaces that trait instead,
+since a proposal replaces at most one. Covering traits return `Covered`, with
+one exception: a proposal named after an existing trait is a new version of that
+trait, so other traits' covered labels do not compete with it. When its own
+trait covers it, it rewords that trait without changing its rule and is offered
+as an update, unless it would leave the trait's content unchanged. The decision
+model decides these relationships, and the language model then explains, in one
+request, why each trait the outcome reports relates as it does: `Unresolved` and
+`Covered` give a reason per trait, and the approval message for a clarification
+says why it counts as one, so the agent can reconcile the proposal with the
+user. A trait the model leaves unexplained gets a reason saying so; an unrelated
+trait with the same name returns `NameTaken`. Otherwise it calls `approve` once
+with the complete file text, and with the current file when a clarification
+replaces an existing trait under its name. The user's answer yields `Created` or
+`Updated` after writing, or `RevisionRequested` or `Skipped` without writing. A
+target file that changed while waiting for approval fails with
+`TraitChangedError` rather than overwriting it. The file is written beside its
+destination and renamed over it, so a reader never sees a partly written trait.
 
 The `WorkspaceDerive` service runs derivations one at a time with the configured
 models. The `traits.derive` MCP tool supplies `approve` as one form elicitation
@@ -349,7 +365,10 @@ since the fix is to repair the setup and retry. Invalid command-line usage exits
 Every command reports an expected failure on stderr by its message alone,
 without a stack trace, so each error's message says what went wrong and how to
 fix it, including the underlying reason when that is what the user acts on.
-Defects are bugs, so they are reported with their full cause.
+Defects are bugs, so they are reported with their full cause. Logs go to stderr
+for every command. A check records extension and decision defects in its report
+as generic failures, because reports carry no raw errors, and logs each one's
+cause so a broken extension or a bug in traits can still be diagnosed.
 
 `traits update` prints the context an agent needs to migrate a workspace to the
 latest release: the workspace, installed, and latest versions and each
@@ -362,8 +381,6 @@ migration.
 beyond the local workspace, such as a hosted store: `TraitsStore`,
 `TraitsEnvironmentStore`, and `EnvironmentInfo`. Nothing implements them yet,
 and they may change in any release, so they stay out of the stable entry points.
-The `extends` key of `traits.json` and of environments belongs to the same
-preparation: it is accepted by the schemas and rejected when checking.
 
 ## Provide traits and inputs
 

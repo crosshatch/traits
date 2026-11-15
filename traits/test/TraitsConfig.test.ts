@@ -19,9 +19,11 @@ import { AiError, Decision, DecisionModel, LanguageModel } from "effect/ai"
 import { FetchHttpClient } from "effect/http"
 import { TestClock } from "effect/testing"
 
+import * as DecisionLimit from "../DecisionLimit.ts"
+import * as Models from "../local/Models.ts"
 import * as TraitsConfig from "../local/TraitsConfig.ts"
+import * as WorkspaceModels from "../local/WorkspaceModels.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
-import * as Models from "../Models.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import * as Settings from "../Settings.ts"
 import * as Version from "../Version.ts"
@@ -146,6 +148,30 @@ it.effect("builds each role's model from configured credentials and reads the wo
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 
+it.effect("provides the configuration's settings with the workspace's models", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-workspace-models-" })
+    const openAi = { provider: "openai", model: "gpt-5" }
+    const config = yield* pipe(
+      { version: PackageJson.version, models: { language: openAi, decision: openAi }, concurrency: 3 },
+      S.decodeUnknownEffect(TraitsConfig.TraitsConfig)
+    )
+    const settings = yield* Settings.CurrentSettings.pipe(
+      Effect.provide(
+        WorkspaceModels.layer(config).pipe(
+          Layer.provide([
+            WorkspaceRoot.layer(directory),
+            FetchHttpClient.layer,
+            ConfigProvider.layer(ConfigProvider.fromUnknown({ OPENAI_API_KEY: "test-key" }))
+          ])
+        )
+      )
+    )
+    expect(settings.concurrency).toBe(3)
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+)
+
 it.live("limits simultaneous decision requests through the composed models layer", () =>
   Effect.gen(function* () {
     let active = 0
@@ -169,7 +195,7 @@ it.live("limits simultaneous decision requests through the composed models layer
     })
     const decide = () => DecisionModel.decideSettled(decision, { input: "x" })
     yield* Effect.forEach(Array.range(1, 10), decide, { concurrency: "unbounded" }).pipe(
-      Effect.provide(Models.layerDecisionLimit.pipe(Layer.provideMerge(provider))),
+      Effect.provide(DecisionLimit.layer.pipe(Layer.provideMerge(provider))),
       Effect.provideService(Settings.CurrentSettings, Settings.Settings.make({ concurrency: 3 }))
     )
     expect(peak).toBe(3)
@@ -202,7 +228,7 @@ it.effect("retries transient decision failures with backoff and fails fast on pe
       Effect.gen(function* () {
         attempts = 0
         const fiber = yield* DecisionModel.decideSettled(decision, { input: "x" }).pipe(
-          Effect.provide(Models.layerDecisionLimit.pipe(Layer.provideMerge(layer))),
+          Effect.provide(DecisionLimit.layer.pipe(Layer.provideMerge(layer))),
           Effect.exit,
           Effect.forkChild
         )

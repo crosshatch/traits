@@ -136,7 +136,8 @@ the file to `exclude` in `traits.json`, or check smaller files.
 Checks remember each completed decision in `.agents/traits/.cache/`, so
 re-checking unchanged traits and files reuses earlier answers instead of asking
 the model again. Delete that directory to have every decision made afresh. The
-directory ignores itself in Git.
+directory ignores itself in Git, and decisions no check has used for one to two
+months are removed automatically.
 
 ### Outdated workspace
 

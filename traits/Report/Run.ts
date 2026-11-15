@@ -21,8 +21,8 @@ export const Run = S.Struct({
     description:
       "Token totals across received assessment responses; a total is omitted when any response did not report it."
   }),
-  /** The least subject no probability that ruled a target out (check.ruleOut in traits.json). */
+  /** The least subject no probability that ruled a target out: the check.ruleOut setting in effect. */
   ruleOut: Probability.annotateKey({
-    description: "The least subject no probability that ruled a target out (check.ruleOut in traits.json)."
+    description: "The least subject no probability that ruled a target out: the check.ruleOut setting in effect."
   })
 }).annotate({ description: "Deterministic evaluation provenance, without timestamps, hosts, or absolute paths." })

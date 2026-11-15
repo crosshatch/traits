@@ -1,7 +1,8 @@
-import { Array, Effect, Option, pipe, Record, Result, Schema as S, String } from "effect"
+import { Array, Data, Effect, Option, pipe, Record, Result, Schema as S, String } from "effect"
 import { Decision, DecisionModel, LanguageModel } from "effect/ai"
 
 import { CurrentSettings } from "./Settings.ts"
+import * as TraitFile from "./TraitFile.ts"
 import { TraitName } from "./TraitName.ts"
 import { rejectsAccount } from "./util/rejectsAccount.ts"
 
@@ -94,7 +95,7 @@ export class TraitComparisonError extends S.TaggedError<TraitComparisonError>()(
   })
 }) {
   override get message(): string {
-    return `Could not compare proposed trait ${this.trait} with the existing traits (${this.reason}), so nothing was saved. Retry, or check the decision model configured in traits.json.`
+    return `Could not compare proposed trait ${this.trait} with the existing traits (${this.reason}), so nothing was saved. Retry, or check the configured decision model.`
   }
 }
 
@@ -157,10 +158,95 @@ export const compare = Effect.fn("TraitDerivation.compare")(function* (
           })
         )
       ),
-    // Decision requests are limited by Models.layerDecisionLimit, so these fibers stay cheap.
+    // Decision requests are limited by DecisionLimit.layer, so these fibers stay cheap.
     { concurrency: "unbounded" }
   )
   return Array.flatten(labelled)
+})
+
+/** What to do with a proposal once it has been compared with the existing traits; only Create and Replace go on to ask the user. */
+export type Resolution = Data.TaggedEnum<{
+  /** Existing traits conflict with the proposal or are ambiguous beside it, or it could replace several of them. */
+  readonly Unresolved: {
+    readonly traits: Array.NonEmptyReadonlyArray<{
+      readonly name: TraitName
+      readonly relationship: "conflict" | "inconclusive" | "clarification"
+    }>
+  }
+  /** Existing traits already require everything the proposal does. */
+  readonly Covered: {
+    readonly by: Array.NonEmptyReadonlyArray<{ readonly name: TraitName; readonly relationship: "covered" }>
+  }
+  /** An unrelated trait already has the proposed name. */
+  readonly NameTaken: {}
+  /** The proposal is a new trait. */
+  readonly Create: {}
+  /** The proposal replaces the named trait: covered means it rewords that trait without changing its rule, and clarification means it clarifies or completes the rule. */
+  readonly Replace: { readonly name: TraitName; readonly relationship: "covered" | "clarification" }
+}>
+export const Resolution = Data.taggedEnum<Resolution>()
+
+/** Decides what to do with a proposal from how compare labelled each existing trait, given the proposal's name and serialized text and the existing traits' names and texts. */
+export const resolve = Effect.fn("TraitDerivation.resolve")(function* (
+  name: TraitName,
+  proposal: string,
+  existing: ReadonlyArray<{ readonly name: TraitName; readonly text: string }>,
+  related: ReadonlyArray<{ readonly name: TraitName; readonly label: keyof typeof relationships }>
+) {
+  const blocking = Array.flatMap(related, (entry) =>
+    entry.label === "conflict" || entry.label === "inconclusive"
+      ? [{ name: entry.name, relationship: entry.label }]
+      : []
+  )
+  if (Array.isArrayNonEmpty(blocking)) {
+    return Resolution.Unresolved({ traits: blocking })
+  }
+  const current = Array.findFirst(existing, (trait) => trait.name === name)
+  // A proposal named after an existing trait is a new version of that trait, so only that trait's own label can make
+  // it covered; other traits' covered labels do not compete with it, as their clarification labels do not.
+  const covering = Array.flatMap(related, (entry) =>
+    entry.label === "covered" && (Option.isNone(current) || entry.name === name)
+      ? [{ name: entry.name, relationship: "covered" as const }]
+      : []
+  )
+  // A proposal covered by the trait it is named after rewords that trait without changing its rule. It is offered as
+  // an update, like a clarification, unless it would leave the trait's content as it is.
+  const own = covering.length === 1 && covering[0]?.name === name ? covering[0] : undefined
+  const unchanged =
+    own !== undefined &&
+    (yield* Option.match(current, {
+      onNone: () => Effect.succeed(false),
+      onSome: (trait) =>
+        TraitFile.parse({ path: trait.name, text: trait.text }).pipe(
+          // Compared as the file would be written, so formatting alone is not a change.
+          Effect.map((parsed) => TraitFile.serialize(parsed) === proposal),
+          Effect.orElseSucceed(() => false)
+        )
+    }))
+  const reworded = own !== undefined && !unchanged ? own : undefined
+  if (Array.isArrayNonEmpty(covering) && reworded === undefined) {
+    return Resolution.Covered({ by: covering })
+  }
+  if (reworded !== undefined) {
+    return Resolution.Replace(reworded)
+  }
+  const clarifications = Array.flatMap(related, (entry) =>
+    entry.label === "clarification" ? [{ name: entry.name, relationship: "clarification" as const }] : []
+  )
+  // A proposal that clarifies the trait it is named after replaces that trait, and can replace only one, so other
+  // clarification labels do not compete with it.
+  const clarified = pipe(
+    Array.findFirst(clarifications, (entry) => entry.name === name),
+    Option.match({ onNone: () => clarifications, onSome: Array.of })
+  )
+  if (Array.isArrayNonEmpty(clarified) && clarified.length > 1) {
+    return Resolution.Unresolved({ traits: clarified })
+  }
+  const replaced = clarified[0]
+  if (replaced !== undefined) {
+    return Resolution.Replace(replaced)
+  }
+  return Option.isSome(current) ? Resolution.NameTaken() : Resolution.Create()
 })
 
 /**

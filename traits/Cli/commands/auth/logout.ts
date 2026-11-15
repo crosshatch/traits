@@ -1,11 +1,11 @@
 import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
-import * as Accounts from "../../../local/Accounts.ts"
-import { ModelSelection } from "../../../local/Profile/ModelSelection.ts"
-import { AccountName } from "../../../local/Provider/AccountName.ts"
-import * as UserConfig from "../../../local/UserConfig.ts"
-import { withLock } from "../../../local/UserConfigLock.ts"
+import * as Accounts from "../../../local/user/Accounts.ts"
+import { ModelSelection } from "../../../local/user/Profile/ModelSelection.ts"
+import { AccountName } from "../../../local/user/Provider/AccountName.ts"
+import * as UserConfig from "../../../local/user/UserConfig.ts"
+import { withLock } from "../../../local/user/UserConfigLock.ts"
 import { withExperimentalDescription } from "../_common.ts"
 
 export const logout = Command.make(

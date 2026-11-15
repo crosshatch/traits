@@ -6,7 +6,7 @@ import * as Report from "../Report/Report.ts"
 import { CurrentSettings } from "../Settings.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
-import { Input, targetText } from "../util/Input.ts"
+import { Input, primarySource, targetText } from "../util/Input.ts"
 import { rejectsAccount } from "../util/rejectsAccount.ts"
 import { Segment } from "../util/Segment.ts"
 import { digestText } from "../util/TextDigest.ts"
@@ -39,10 +39,13 @@ const failureReason = (failure: AiError.AiError | Decision.Unanswered | undefine
   // Provider descriptions stay out of reports, so name the likeliest cause and its remedy instead.
   const remedy =
     failure.reason._tag === "InvalidRequestError"
-      ? "; the provider rejected the request, often because the file exceeds the model's context. Exclude the file in traits.json, or check a smaller file"
+      ? "; the provider rejected the request, often because the file exceeds the model's context. Exclude the file from checks, or check a smaller file"
       : ""
   return `${failure.reason._tag}${kind}${failure.isRetryable ? " after retries" : ""}${remedy}`
 }
+
+/** Logs a defect the report cannot explain, since reports carry no raw errors, so a bug in traits or an extension can still be diagnosed. */
+const logDefect = (what: string) => (defect: unknown) => Effect.logError(`${what} failed unexpectedly`, defect)
 
 /** A decision failure explanation naming the reason when known. */
 const decisionFailed = (decision: string, reason: string | undefined) =>
@@ -75,7 +78,7 @@ const provenance = (responses: ReadonlyArray<DecisionResponse>) => {
 /** Builds each trait's per-change results and run provenance; Deferreds only coordinate recovery. */
 export const evaluate = Effect.fnUntraced(function* (request: CheckInput, preparation: Preparation) {
   const { check } = yield* CurrentSettings
-  // Decision requests are limited by Models.layerDecisionLimit, so the per-trait, per-change, and per-input fibers here stay cheap.
+  // Decision requests are limited by DecisionLimit.layer, so the per-trait, per-change, and per-input fibers here stay cheap.
   const traits = yield* Effect.forEach(
     request.traits,
     Effect.fnUntraced(function* (entry) {
@@ -89,6 +92,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
           trait.subject === undefined
             ? undefined
             : yield* DecisionCache.decideSubject(trait.subject, input).pipe(
+                Effect.tapDefect(logDefect(`Subject decision for ${trait.name} on ${primarySource(input).path}`)),
                 Effect.catchDefect(() => Effect.fail(undefined)),
                 Effect.matchEffect({
                   // A rejected account fails every request, so it ends the check instead of failing each input.
@@ -162,8 +166,10 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
                   }
                   return failed(Report.Explanation.cases.Instruction.make({ instruction: error.instruction }))
                 }),
-                SchemaError: () => Effect.succeed(fallback)
+                SchemaError: (error) =>
+                  Effect.as(Effect.logError(`Enrichment ${module} returned an invalid result`, error), fallback)
               }),
+              Effect.tapDefect(logDefect(`Enrichment ${module} for ${trait.name} on ${primarySource(input).path}`)),
               Effect.catchDefect(() => Effect.succeed(fallback))
             )
           }),
@@ -207,6 +213,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
           },
           input
         ).pipe(
+          Effect.tapDefect(logDefect(`Assertion assessment for ${trait.name} on ${primarySource(input).path}`)),
           Effect.catchDefect(() => Effect.fail(undefined)),
           Effect.matchEffect({
             onSuccess: (response) => {

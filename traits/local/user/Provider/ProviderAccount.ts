@@ -1,7 +1,5 @@
-import { Array, Effect, Schema as S } from "effect"
+import { Schema as S } from "effect"
 
-import * as Accounts from "../Accounts.ts"
-import { withLock } from "../UserConfigLock.ts"
 import { AccountName } from "./AccountName.ts"
 import { Credential } from "./Credential.ts"
 import { ProviderId } from "./ProviderId.ts"
@@ -31,27 +29,3 @@ export const ProviderAccount = S.Struct({
 }).annotate({
   description: "A saved provider connection; contains credentials and must not be stored in project configuration."
 })
-
-/** An account with this name already belongs to a different provider. */
-export class AccountProviderConflictError extends S.TaggedError<AccountProviderConflictError>()(
-  "AccountProviderConflictError",
-  {
-    /** The account name already in use. */
-    account: AccountName.annotateKey({ description: "The account name already in use." })
-  }
-) {
-  override get message(): string {
-    return `Account ${this.account} belongs to a different provider. Choose a different --account name, or use auth logout first; accounts referenced by profiles cannot be removed.`
-  }
-}
-
-/** Saves an account, replacing a saved account with the same name and provider. */
-export const save = Effect.fn("ProviderAccount.save")(function* (entry: ProviderAccount) {
-  const accounts = yield* Accounts.read.pipe(
-    Effect.filterOrFail(
-      (accounts) => !Array.some(accounts, (saved) => saved.id === entry.id && saved.provider !== entry.provider),
-      () => AccountProviderConflictError.make({ account: entry.id })
-    )
-  )
-  yield* Accounts.write([...Array.filter(accounts, (saved) => saved.id !== entry.id), entry])
-}, withLock)

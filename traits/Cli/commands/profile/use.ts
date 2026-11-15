@@ -1,10 +1,10 @@
 import { Array, Console, Effect, Record } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
-import { ProfileName } from "../../../local/Profile/ProfileName.ts"
-import * as UserConfig from "../../../local/UserConfig.ts"
-import { withLock } from "../../../local/UserConfigLock.ts"
-import { UserPaths } from "../../../local/UserPaths.ts"
+import { ProfileName } from "../../../local/user/Profile/ProfileName.ts"
+import * as UserConfig from "../../../local/user/UserConfig.ts"
+import { withLock } from "../../../local/user/UserConfigLock.ts"
+import { UserPaths } from "../../../local/user/UserPaths.ts"
 import { withExperimentalDescription } from "../_common.ts"
 
 export const use = Command.make(

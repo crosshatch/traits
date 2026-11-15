@@ -1,8 +1,8 @@
 import { type Effect, Schema as S } from "effect"
 
-import { TraitsEnvironment } from "../TraitsEnvironment/TraitsEnvironment.ts"
+import { TraitsEnvironment } from "../TraitsEnvironment.ts"
 
-/** Reads and writes authored environments within one configured store; does not synthesize default or resolve extends. */
+/** Reads and writes authored environments within one configured store; does not synthesize the default environment. */
 export interface TraitsEnvironmentStore {
   /** Lists authored environment names, excluding the implicit default environment. */
   readonly list: () => Effect.Effect<ReadonlyArray<string>, TraitsEnvironmentListError>

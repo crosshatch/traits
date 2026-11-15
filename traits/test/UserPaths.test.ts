@@ -4,7 +4,7 @@ import { Effect, FileSystem, Layer, Path, PlatformError } from "effect"
 import { UserDirectories } from "effect/persistence"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { UserPaths, WorkspaceGitError } from "../local/UserPaths.ts"
+import { UserPaths, WorkspaceGitError } from "../local/user/UserPaths.ts"
 
 it.live("shares a canonical profile key across linked worktrees and resolves it only during layer construction", () =>
   Effect.scoped(

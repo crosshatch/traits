@@ -18,7 +18,6 @@
     "Enrichment/**/*.ts",
     "Report/**/*.ts",
     "Segmenter/**/*.ts",
-    "TraitsEnvironment/**/*.ts",
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
     "dist/**/*.js",
@@ -55,7 +54,6 @@
     "@effect/ai-openai": "catalog:",
     "@effect/ai-openai-compat": "catalog:",
     "@effect/ai-openrouter": "catalog:",
-    "fs-native-extensions": "catalog:",
     "import-meta-resolve": "catalog:",
     "yaml": "catalog:"
   },
@@ -67,5 +65,8 @@
   "peerDependencies": {
     "@effect/platform-node": "catalog:",
     "effect": "catalog:"
+  },
+  "optionalDependencies": {
+    "fs-native-extensions": "catalog:"
   }
 }
