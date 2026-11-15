@@ -1,8 +1,8 @@
-import { Array, Console, Effect, FileSystem, Option, Path, pipe, Schema as S, String } from "effect"
+import { Array, Console, Effect, Option, pipe, String } from "effect"
 import { Command, Flag } from "effect/cli"
 
 import * as Changelog from "../../../local/Changelog.ts"
-import * as WorkspaceLayout from "../../../local/WorkspaceLayout.ts"
+import * as TraitsConfig from "../../../local/TraitsConfig.ts"
 import PackageJson from "../../../package.json" with { type: "json" }
 import * as Version from "../../../Version.ts"
 
@@ -68,23 +68,6 @@ export const render = (context: UpdateContext): string => {
   )
 }
 
-/** Reads only the version from traits.json, since the rest may not match the current schema yet. */
-const workspaceVersion = Effect.gen(function* () {
-  const fs = yield* FileSystem.FileSystem
-  const path = yield* Path.Path
-  const file = path.resolve(WorkspaceLayout.config)
-  if (!(yield* fs.exists(file))) {
-    return undefined
-  }
-  const text = yield* fs.readFileString(file)
-  return yield* pipe(
-    text,
-    S.decodeEffect(S.fromJsonString(S.Struct({ version: S.Union([Version.Version, S.Literal("internal")]) }))),
-    Effect.map((config): string | undefined => config.version),
-    Effect.orElseSucceed(() => undefined)
-  )
-})
-
 /** Prints what changed since the workspace's traits version so an agent can migrate configuration and trait files. */
 export const update = Command.make(
   "update",
@@ -97,7 +80,7 @@ export const update = Command.make(
   },
   Effect.fn("update")(function* (params) {
     const flagged = Option.getOrUndefined(params.from)
-    const configured = flagged === undefined ? yield* workspaceVersion : undefined
+    const configured = flagged === undefined ? yield* TraitsConfig.loadVersion : undefined
     const from: UpdateContext["from"] =
       flagged !== undefined
         ? { version: flagged, source: "flag" }

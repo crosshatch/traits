@@ -34,7 +34,7 @@ export const Cli = Command.make("traits").pipe(
     profile.pipe(Command.provide(userConfiguration)),
     check.pipe(Command.provide(workspace)),
     mcp,
-    update
+    update.pipe(Command.provide(root))
   ]),
   Command.run({ version: PackageJson.version })
 )

@@ -106,6 +106,27 @@ export class TraitsConfigInternalVersionError extends S.TaggedError<TraitsConfig
   }
 }
 
+/** Reads only the version from traits.json at the workspace root, since the rest may not match the current schema yet; undefined when the file is missing or its version is invalid. */
+export const loadVersion = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
+  const path = yield* Path.Path
+  const { directory } = yield* WorkspaceRoot
+  const file = path.join(directory, WorkspaceLayout.config)
+  if (!(yield* fs.exists(file))) {
+    return undefined
+  }
+  return yield* fs.readFileString(file).pipe(
+    Effect.flatMap((text) =>
+      pipe(
+        text,
+        S.decodeEffect(S.fromJsonString(S.Struct({ version: TraitsConfig.fields.version }))),
+        Effect.map((config) => config.version),
+        Effect.orElseSucceed(() => undefined)
+      )
+    )
+  )
+})
+
 /** Loads and validates traits.json from the workspace root, failing when it was written for an incompatible traits version. */
 export const load = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
