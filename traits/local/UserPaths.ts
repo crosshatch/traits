@@ -2,8 +2,6 @@ import { Context, Effect, FileSystem, Layer, Path, pipe, Schema as S, Stream, St
 import { UserDirectories } from "effect/persistence"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import * as WorkspaceLayout from "../local/WorkspaceLayout.ts"
-
 /** Git could not resolve the workspace's common directory from the invocation directory. */
 export class WorkspaceGitError extends S.TaggedError<WorkspaceGitError>()("WorkspaceGitError", {
   /** Invocation directory whose Git workspace lookup failed. */
@@ -18,8 +16,8 @@ export class WorkspaceGitError extends S.TaggedError<WorkspaceGitError>()("Works
   }
 }
 
-/** Workspace and user-level filesystem locations used by the local CLI. */
-export class CliPaths extends Context.Service<CliPaths>()("traits/Cli/CliPaths", {
+/** User-level filesystem locations for profiles, accounts, and their lock, and the key that selects the current workspace's profile. */
+export class UserPaths extends Context.Service<UserPaths>()("traits/local/UserPaths", {
   make: Effect.gen(function* () {
     const path = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
@@ -53,7 +51,6 @@ export class CliPaths extends Context.Service<CliPaths>()("traits/Cli/CliPaths",
       }
       return yield* pipe(stdout, String.trim, S.decodeEffect(S.NonEmptyString), Effect.flatMap(fs.realPath))
     }).pipe(Effect.scoped)
-    const traitsDirectory = path.join(cwd, WorkspaceLayout.directory)
     const { config, data } = yield* UserDirectories.UserDirectories
     const { configDirectory, dataDirectory } = yield* Effect.all(
       {
@@ -63,16 +60,8 @@ export class CliPaths extends Context.Service<CliPaths>()("traits/Cli/CliPaths",
       { concurrency: "unbounded" }
     )
     return {
-      /** Absolute invocation directory, without resolving symlinks. */
-      cwd,
       /** Profile-selection key: canonical Git common directory shared by worktrees, or canonical cwd outside Git. */
       workspaceKey,
-      /** Local trait definitions directory at cwd/.agents/traits. */
-      traitsDirectory,
-      /** Named environment configurations at cwd/.agents/traits/_environments. */
-      environmentsDirectory: path.join(cwd, WorkspaceLayout.environments),
-      /** Platform-native user configuration directory for traits. */
-      configDirectory,
       /** Platform-native user data directory for traits. */
       dataDirectory,
       /** User-level profiles.json file containing profiles and workspace overrides. */

@@ -4,7 +4,7 @@ import { Effect, FileSystem, Layer, Path, PlatformError } from "effect"
 import { UserDirectories } from "effect/persistence"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { CliPaths, WorkspaceGitError } from "../Cli/CliPaths.ts"
+import { UserPaths, WorkspaceGitError } from "../local/UserPaths.ts"
 
 it.live("shares a canonical profile key across linked worktrees and resolves it only during layer construction", () =>
   Effect.scoped(
@@ -71,19 +71,18 @@ it.live("shares a canonical profile key across linked worktrees and resolves it 
             })
         })
         yield* Effect.gen(function* () {
-          const first = yield* CliPaths
+          const first = yield* UserPaths
           const expected = cwd === outside ? outsideKey : cwd === bare ? bareKey : commonDirectory
           expect(first.workspaceKey).toBe(expected)
-          expect(first.cwd).toBe(cwd)
           const callsAfterConstruction = canonicalizations
           expect(callsAfterConstruction).toBe(cwd === outside ? 1 : 2)
           expect(gitQueries).toBe(1)
-          const second = yield* CliPaths
+          const second = yield* UserPaths
           expect(second).toBe(first)
           expect(canonicalizations).toBe(callsAfterConstruction)
           expect(gitQueries).toBe(1)
         }).pipe(
-          Effect.provide(CliPaths.layer.pipe(Layer.provide(UserDirectories.layer))),
+          Effect.provide(UserPaths.layer.pipe(Layer.provide(UserDirectories.layer))),
           Effect.provideService(FileSystem.FileSystem, trackedFs),
           Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, trackedSpawner),
           Effect.provideService(Path.Path, Path.Path.of({ ...path, resolve: () => cwd }))
@@ -101,7 +100,7 @@ it.live("does not fall back to cwd for invalid Git metadata or process-spawn fai
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
       const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-invalid-git-" })
       yield* fs.writeFileString(path.join(cwd, ".git"), "gitdir: missing\n")
-      const lookup = CliPaths.make.pipe(
+      const lookup = UserPaths.make.pipe(
         Effect.provide(UserDirectories.layer),
         Effect.provideService(Path.Path, Path.Path.of({ ...path, resolve: () => cwd }))
       )

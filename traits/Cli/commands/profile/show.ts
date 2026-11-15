@@ -1,8 +1,9 @@
 import { Console, Effect, Option } from "effect"
 import { Argument, Command } from "effect/cli"
 
-import { ProfileName } from "../../Profile/ProfileName.ts"
-import * as UserConfig from "../../UserConfig.ts"
+import { ProfileName } from "../../../local/Profile/ProfileName.ts"
+import * as UserConfig from "../../../local/UserConfig.ts"
+import { withExperimentalDescription } from "../_common.ts"
 
 export const show = Command.make(
   "show",
@@ -14,4 +15,4 @@ export const show = Command.make(
     const entry = yield* UserConfig.resolveProfile(config, Option.getOrUndefined(params.name))
     yield* Console.log(JSON.stringify(entry, null, 2))
   })
-)
+).pipe(withExperimentalDescription("Print a profile as JSON; this workspace's profile when no name is given"))

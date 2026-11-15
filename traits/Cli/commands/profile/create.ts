@@ -1,12 +1,13 @@
 import { Array, Console, Effect, FileSystem, Path } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import * as Accounts from "../../Accounts.ts"
-import { ModelSelection, ModelSelectionFromString } from "../../Profile/ModelSelection.ts"
-import { Profile } from "../../Profile/Profile.ts"
-import { ProfileName } from "../../Profile/ProfileName.ts"
-import * as UserConfig from "../../UserConfig.ts"
-import { withLock } from "../../UserConfigLock.ts"
+import * as Accounts from "../../../local/Accounts.ts"
+import { ModelSelection, ModelSelectionFromString } from "../../../local/Profile/ModelSelection.ts"
+import { Profile } from "../../../local/Profile/Profile.ts"
+import { ProfileName } from "../../../local/Profile/ProfileName.ts"
+import * as UserConfig from "../../../local/UserConfig.ts"
+import { withLock } from "../../../local/UserConfigLock.ts"
+import { withExperimentalDescription } from "../_common.ts"
 
 const selectionFlag = (role: string) =>
   Flag.String(role).pipe(
@@ -73,4 +74,8 @@ export const create = Command.make(
       `Saved profile ${name}. Model availability and role capabilities are checked when models are resolved.`
     )
   }, withLock)
+).pipe(
+  withExperimentalDescription(
+    "Save a profile selecting the language and decision models; --replace overwrites one with the same name"
+  )
 )

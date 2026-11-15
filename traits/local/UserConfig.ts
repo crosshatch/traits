@@ -1,9 +1,8 @@
 import { Array, Effect, FileSystem, Option, pipe, Schema as S } from "effect"
-import { CliError } from "effect/cli"
 
 import * as AtomicFile from "./AtomicFile.ts"
-import { CliPaths } from "./CliPaths.ts"
 import { Profile, ProfileName } from "./Profile/Profile.ts"
+import { UserPaths } from "./UserPaths.ts"
 
 /** User-level profiles and workspace overrides; the profile named default is the fallback. Contains no credentials. */
 export type UserConfig = typeof UserConfig.Type
@@ -20,9 +19,43 @@ export const UserConfig = S.Struct({
     "User-level profiles and workspace overrides; the profile named default is the fallback. Contains no credentials."
 })
 
+/** The profiles file could not be read or does not contain valid profiles. */
+export class UserConfigReadError extends S.TaggedError<UserConfigReadError>()("UserConfigReadError", {
+  /** The profiles file path. */
+  path: S.String.annotateKey({ description: "The profiles file path." }),
+  /** The underlying read or decoding failure. */
+  cause: S.Defect().annotateKey({ description: "The underlying read or decoding failure." })
+}) {
+  override get message(): string {
+    return `Could not read profiles from ${this.path}. Check that the file is readable and contains valid profile JSON.`
+  }
+}
+
+/** The profiles file could not be saved. */
+export class UserConfigWriteError extends S.TaggedError<UserConfigWriteError>()("UserConfigWriteError", {
+  /** The profiles file path. */
+  path: S.String.annotateKey({ description: "The profiles file path." }),
+  /** The underlying write failure. */
+  cause: S.Defect().annotateKey({ description: "The underlying write failure." })
+}) {
+  override get message(): string {
+    return `Could not save profiles to ${this.path}. Check directory ownership, permissions, and available disk space.`
+  }
+}
+
+/** The selected profile does not exist. */
+export class ProfileNotFoundError extends S.TaggedError<ProfileNotFoundError>()("ProfileNotFoundError", {
+  /** The selected profile name. */
+  profile: ProfileName.annotateKey({ description: "The selected profile name." })
+}) {
+  override get message(): string {
+    return `Selected profile ${this.profile} does not exist. Create it with traits profile create ${this.profile}, or select an existing workspace profile with traits profile use <name>.`
+  }
+}
+
 /** Reads fresh profile settings; missing configuration is empty. */
 export const read = Effect.gen(function* () {
-  const { config } = yield* CliPaths
+  const { config } = yield* UserPaths
   const fs = yield* FileSystem.FileSystem
   if (!(yield* fs.exists(config))) {
     return UserConfig.make({ profiles: [], workspaceProfiles: {} })
@@ -30,33 +63,19 @@ export const read = Effect.gen(function* () {
   const text = yield* fs.readFileString(config)
   return yield* pipe(text, S.decodeEffect(S.fromJsonString(UserConfig)))
 }).pipe(
-  Effect.catch((cause) =>
-    CliPaths.use((paths) =>
-      CliError.UserError.make({
-        cause,
-        userMessage: `Could not read profiles from ${paths.config}. Check that the file is readable and contains valid profile JSON.`
-      })
-    )
-  ),
+  Effect.catch((cause) => UserPaths.use((paths) => UserConfigReadError.make({ path: paths.config, cause }))),
   Effect.withSpan("UserConfig.read")
 )
 
 /** Replaces the complete configuration; coordinate read-modify-write operations with UserConfigLock. */
 export const write = Effect.fn("UserConfig.write")(
   function* (saved: UserConfig) {
-    const { config } = yield* CliPaths
+    const { config } = yield* UserPaths
     // The configuration is already typed, so an encoding failure is a bug here, not something the user can fix.
     const text = yield* pipe(saved, S.encodeEffect(S.fromJsonString(UserConfig)), Effect.orDie)
     yield* AtomicFile.write(config, text)
   },
-  Effect.catch((cause) =>
-    CliPaths.use((paths) =>
-      CliError.UserError.make({
-        cause,
-        userMessage: `Could not save profiles to ${paths.config}. Check directory ownership, permissions, and available disk space.`
-      })
-    )
-  )
+  Effect.catch((cause) => UserPaths.use((paths) => UserConfigWriteError.make({ path: paths.config, cause })))
 )
 
 /** Resolves an explicit name, workspace override, or the profile named default; missing profiles fail. */
@@ -66,16 +85,13 @@ export const resolveProfile = Effect.fn("UserConfig.resolveProfile")(function* (
 ) {
   let selected = explicitName
   if (selected === undefined) {
-    const { workspaceKey } = yield* CliPaths
+    const { workspaceKey } = yield* UserPaths
     selected = config.workspaceProfiles[workspaceKey] ?? ProfileName.make("default")
   }
   return yield* Array.findFirst(config.profiles, (entry) => entry.name === selected).pipe(
     Option.match({
       onSome: Effect.succeed,
-      onNone: () =>
-        CliError.UserError.make({
-          cause: `Selected profile ${selected} does not exist. Create it with traits profile create ${selected}, or select an existing workspace profile with traits profile use <name>.`
-        })
+      onNone: () => ProfileNotFoundError.make({ profile: selected })
     })
   )
 })

@@ -1,6 +1,6 @@
 import { Flag } from "effect/cli"
 
-import { AccountName } from "../../../Provider/AccountName.ts"
+import { AccountName } from "../../../../local/Provider/AccountName.ts"
 
 export const commonFlags = {
   account: Flag.String("account").pipe(Flag.withSchema(AccountName), Flag.optional),

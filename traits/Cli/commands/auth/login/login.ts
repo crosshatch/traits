@@ -1,6 +1,6 @@
 import { Command } from "effect/cli"
 
-import { withExperimentalDescription } from "../_common.ts"
+import { withExperimentalDescription } from "../../_common.ts"
 import { anthropic } from "./anthropic.ts"
 import { cloudflareWorkersAi } from "./cloudflare-workers-ai.ts"
 import { openai } from "./openai.ts"

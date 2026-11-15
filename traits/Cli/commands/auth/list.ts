@@ -1,8 +1,8 @@
 import { Console, Effect } from "effect"
 import { Command } from "effect/cli"
 
-import * as Accounts from "../../Accounts.ts"
-import { withExperimentalDescription } from "./_common.ts"
+import * as Accounts from "../../../local/Accounts.ts"
+import { withExperimentalDescription } from "../_common.ts"
 
 export const list = Command.make(
   "list",

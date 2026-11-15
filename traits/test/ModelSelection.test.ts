@@ -3,9 +3,9 @@ import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Path, pipe, Schema as S, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import * as Selection from "../Cli/Profile/ModelSelection.ts"
-import { AccountName } from "../Cli/Provider/AccountName.ts"
 import * as LayerModule from "../local/LayerModule.ts"
+import * as Selection from "../local/Profile/ModelSelection.ts"
+import { AccountName } from "../local/Provider/AccountName.ts"
 
 it.effect(
   "round-trips provider and custom model selections and rejects untagged selections",

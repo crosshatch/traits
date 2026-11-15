@@ -1,12 +1,12 @@
 import { Array, Console, Effect } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
-import * as Accounts from "../../Accounts.ts"
-import { ModelSelection } from "../../Profile/ModelSelection.ts"
-import { AccountName } from "../../Provider/AccountName.ts"
-import * as UserConfig from "../../UserConfig.ts"
-import { withLock } from "../../UserConfigLock.ts"
-import { withExperimentalDescription } from "./_common.ts"
+import * as Accounts from "../../../local/Accounts.ts"
+import { ModelSelection } from "../../../local/Profile/ModelSelection.ts"
+import { AccountName } from "../../../local/Provider/AccountName.ts"
+import * as UserConfig from "../../../local/UserConfig.ts"
+import { withLock } from "../../../local/UserConfigLock.ts"
+import { withExperimentalDescription } from "../_common.ts"
 
 export const logout = Command.make(
   "logout",
@@ -21,8 +21,8 @@ export const logout = Command.make(
         () => CliError.UserError.make({ cause: `Unknown account: ${account}` })
       )
     )
-    const config = yield* UserConfig.read
-    const references = Array.filter(config.profiles, (entry) =>
+    const { profiles } = yield* UserConfig.read
+    const references = Array.filter(profiles, (entry) =>
       Array.some(
         [entry.profile.language, entry.profile.decision],
         (selection) => ModelSelection.guards.Provider(selection) && selection.account === account

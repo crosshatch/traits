@@ -1,10 +1,10 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, Layer } from "effect"
 
-import { CliPaths } from "../Cli/CliPaths.ts"
-import { ModelSelection } from "../Cli/Profile/ModelSelection.ts"
-import { Profile, ProfileName } from "../Cli/Profile/Profile.ts"
-import * as UserConfig from "../Cli/UserConfig.ts"
+import { ModelSelection } from "../local/Profile/ModelSelection.ts"
+import { Profile, ProfileName } from "../local/Profile/Profile.ts"
+import * as UserConfig from "../local/UserConfig.ts"
+import { UserPaths } from "../local/UserPaths.ts"
 
 const layer = ModelSelection.cases.Custom.make({ path: "layer.ts" })
 const profile = Profile.make({ language: layer, decision: layer })
@@ -22,13 +22,9 @@ it.effect("resolves an explicit profile, then the workspace override, then the p
       UserConfig.resolveProfile(config, explicitName).pipe(
         Effect.provide(
           Layer.succeed(
-            CliPaths,
-            CliPaths.of({
-              cwd: "/workspace",
+            UserPaths,
+            UserPaths.of({
               workspaceKey,
-              traitsDirectory: "/workspace/.agents/traits",
-              environmentsDirectory: "/workspace/.agents/traits/_environments",
-              configDirectory: "/config",
               dataDirectory: "/data",
               config: "/config/profiles.json",
               accounts: "/data/credentials.json",

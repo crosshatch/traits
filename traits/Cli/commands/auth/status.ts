@@ -1,9 +1,9 @@
 import { Array, Console, Effect, Option } from "effect"
 import { CliError, Command, Flag } from "effect/cli"
 
-import * as Accounts from "../../Accounts.ts"
-import { AccountName } from "../../Provider/AccountName.ts"
-import { withExperimentalDescription } from "./_common.ts"
+import * as Accounts from "../../../local/Accounts.ts"
+import { AccountName } from "../../../local/Provider/AccountName.ts"
+import { withExperimentalDescription } from "../_common.ts"
 
 export const status = Command.make(
   "status",

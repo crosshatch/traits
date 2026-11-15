@@ -4,8 +4,8 @@ import { Array, Effect, FileSystem, Path, pipe, Runtime, Schema as S, Stream, St
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { VerdictExit } from "../Cli/commands/check/check.ts"
-import { ModelSelection } from "../Cli/Profile/ModelSelection.ts"
-import { Profile } from "../Cli/Profile/Profile.ts"
+import { ModelSelection } from "../local/Profile/ModelSelection.ts"
+import { Profile } from "../local/Profile/Profile.ts"
 
 const runCli = Effect.fn("test.runCli")(function* (
   args: ReadonlyArray<string>,

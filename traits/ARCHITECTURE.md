@@ -4,8 +4,11 @@ The package root (`traits`) is the portable core: trait schemas, the `check`
 engine, `Report`, extension contracts and registry tags, model selection, the
 trait-file format, and derivation comparison. Everything tied to a local
 workspace, its filesystem, and extension loading lives in `local/`, exported as
-`traits/local`; the CLI and MCP server build on it, and core modules never
-import from `local/`, `Cli/`, or `mcp/`.
+`traits/local`, as does user-level state on the machine: profiles, provider
+accounts, their owner-only storage, and the lock that serializes their updates.
+The CLI and MCP server build on it; `Cli/` keeps only command handling and
+terminal prompts, and core modules never import from `local/`, `Cli/`, or
+`mcp/`.
 
 ## Runtime API
 
@@ -342,6 +345,11 @@ Pass, 1 for Fail, 2 for Incomplete, and 3 for Inconclusive. A check that cannot
 run, such as one with missing configuration or a partial policy, also exits 2,
 since the fix is to repair the setup and retry. Invalid command-line usage exits
 1, as Effect's CLI does.
+
+Every command reports an expected failure on stderr by its message alone,
+without a stack trace, so each error's message says what went wrong and how to
+fix it, including the underlying reason when that is what the user acts on.
+Defects are bugs, so they are reported with their full cause.
 
 `traits update` prints the context an agent needs to migrate a workspace to the
 latest release: the workspace, installed, and latest versions and each

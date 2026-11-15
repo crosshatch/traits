@@ -1,10 +1,11 @@
 import { Array, Console, Effect, Record } from "effect"
 import { Argument, CliError, Command } from "effect/cli"
 
-import { CliPaths } from "../../CliPaths.ts"
-import { ProfileName } from "../../Profile/ProfileName.ts"
-import * as UserConfig from "../../UserConfig.ts"
-import { withLock } from "../../UserConfigLock.ts"
+import { ProfileName } from "../../../local/Profile/ProfileName.ts"
+import * as UserConfig from "../../../local/UserConfig.ts"
+import { withLock } from "../../../local/UserConfigLock.ts"
+import { UserPaths } from "../../../local/UserPaths.ts"
+import { withExperimentalDescription } from "../_common.ts"
 
 export const use = Command.make(
   "use",
@@ -19,7 +20,7 @@ export const use = Command.make(
         () => CliError.UserError.make({ cause: `Unknown profile: ${name}` })
       )
     )
-    const { workspaceKey } = yield* CliPaths
+    const { workspaceKey } = yield* UserPaths
     yield* UserConfig.write({
       ...config,
       workspaceProfiles:
@@ -29,4 +30,4 @@ export const use = Command.make(
     })
     yield* Console.log(`Using profile ${name} for workspace ${workspaceKey}.`)
   }, withLock)
-)
+).pipe(withExperimentalDescription("Select the profile this workspace uses"))

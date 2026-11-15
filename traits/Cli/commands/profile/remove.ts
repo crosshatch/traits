@@ -1,9 +1,10 @@
 import { Array, Console, Effect, Record } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import { ProfileName } from "../../Profile/ProfileName.ts"
-import * as UserConfig from "../../UserConfig.ts"
-import { withLock } from "../../UserConfigLock.ts"
+import { ProfileName } from "../../../local/Profile/ProfileName.ts"
+import * as UserConfig from "../../../local/UserConfig.ts"
+import { withLock } from "../../../local/UserConfigLock.ts"
+import { withExperimentalDescription } from "../_common.ts"
 
 export const remove = Command.make(
   "remove",
@@ -37,4 +38,6 @@ export const remove = Command.make(
     })
     yield* Console.log(`Removed profile ${name}.`)
   }, withLock)
+).pipe(
+  withExperimentalDescription("Remove a profile; --force also removes the default profile or one a workspace uses")
 )

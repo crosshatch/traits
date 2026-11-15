@@ -10,10 +10,22 @@
  * Lock-use errors distinguish storage, identity, legacy markers, native acquisition, and timeout.
  * Protected operation errors propagate unchanged.
  */
-import { Context, Duration, Effect, FileSystem, Layer, Option, Schedule, Schema as S, Scope, Semaphore } from "effect"
+import {
+  Context,
+  Duration,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Predicate,
+  Schedule,
+  Schema as S,
+  Scope,
+  Semaphore
+} from "effect"
 
-import { CliPaths } from "./CliPaths.ts"
 import { UserFileSecurity } from "./UserFileSecurity.ts"
+import { UserPaths } from "./UserPaths.ts"
 
 export class UserConfigLockSetupError extends S.TaggedError<UserConfigLockSetupError>()("UserConfigLockSetupError", {
   /** Native module whose lazy import failed. */
@@ -22,7 +34,7 @@ export class UserConfigLockSetupError extends S.TaggedError<UserConfigLockSetupE
   cause: S.Defect().annotateKey({ description: "Original native-module import failure." })
 }) {
   override get message() {
-    return `Failed to load ${this.module} for user configuration locking.`
+    return `Failed to load ${this.module} for user configuration locking: ${Predicate.isError(this.cause) ? this.cause.message : String(this.cause)}`
   }
 }
 
@@ -73,7 +85,7 @@ export class UserConfigLockAcquireError extends S.TaggedError<UserConfigLockAcqu
   }
 ) {
   override get message() {
-    return `Native lock acquisition failed at ${this.path}.`
+    return `Native lock acquisition failed at ${this.path}: ${Predicate.isError(this.cause) ? this.cause.message : String(this.cause)}`
   }
 }
 
@@ -89,10 +101,10 @@ export class UserConfigLockTimeoutError extends S.TaggedError<UserConfigLockTime
   }
 }
 
-export class UserConfigLock extends Context.Service<UserConfigLock>()("traits/Cli/UserConfigLock", {
+export class UserConfigLock extends Context.Service<UserConfigLock>()("traits/local/UserConfigLock", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
-    const { dataDirectory, lock } = yield* CliPaths
+    const { dataDirectory, lock } = yield* UserPaths
     const secure = yield* UserFileSecurity
     const semaphore = yield* Semaphore.make(1)
     const modules = yield* Effect.all(

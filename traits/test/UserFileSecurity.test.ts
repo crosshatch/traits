@@ -17,25 +17,21 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { TestClock } from "effect/testing"
 
-import * as Accounts from "../Cli/Accounts.ts"
-import { CliPaths } from "../Cli/CliPaths.ts"
-import { AccountName } from "../Cli/Provider/AccountName.ts"
-import { Credential } from "../Cli/Provider/Credential.ts"
-import { ProviderAccount } from "../Cli/Provider/ProviderAccount.ts"
-import * as ConfigLock from "../Cli/UserConfigLock.ts"
-import { UserFileSecurity, UserFileSecurityError } from "../Cli/UserFileSecurity.ts"
+import * as Accounts from "../local/Accounts.ts"
+import { AccountName } from "../local/Provider/AccountName.ts"
+import { Credential } from "../local/Provider/Credential.ts"
+import { ProviderAccount } from "../local/Provider/ProviderAccount.ts"
+import * as ConfigLock from "../local/UserConfigLock.ts"
+import { UserFileSecurity, UserFileSecurityError } from "../local/UserFileSecurity.ts"
+import { UserPaths } from "../local/UserPaths.ts"
 
 const runtime = UserFileSecurity.layer.pipe(Layer.provideMerge(NodeServices.layer))
 const fixture = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
   const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-security-" })
-  const paths = CliPaths.of({
-    cwd: root,
+  const paths = UserPaths.of({
     workspaceKey: root,
-    traitsDirectory: path.join(root, ".agents", "traits"),
-    environmentsDirectory: path.join(root, ".agents", "traits", "_environments"),
-    configDirectory: path.join(root, "config"),
     dataDirectory: path.join(root, "data"),
     config: path.join(root, "config", "profiles.json"),
     accounts: path.join(root, "data", "credentials.json"),
@@ -117,8 +113,8 @@ it.live(
     Effect.scoped(
       Effect.gen(function* () {
         const { paths } = yield* fixture
-        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(CliPaths, paths))
-        const independentLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(CliPaths, paths))
+        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(UserPaths, paths))
+        const independentLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(UserPaths, paths))
         const callerScope = yield* Scope.Scope
         const observedScope = yield* Scope.Scope.pipe(
           ConfigLock.withLock,
@@ -167,7 +163,7 @@ it.live(
     Effect.scoped(
       Effect.gen(function* () {
         const { fs, paths } = yield* fixture
-        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(CliPaths, paths))
+        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(UserPaths, paths))
         yield* fs.writeFileString(paths.dataDirectory, "not a directory")
         let ran = false
         const operation = Effect.sync(() => {
@@ -185,7 +181,7 @@ it.live(
           lstat: (path) => fs.lstat(path).pipe(Effect.map((info) => ({ ...info, dev: info.dev + 1n })))
         })
         const mismatchedLock = yield* ConfigLock.UserConfigLock.make.pipe(
-          Effect.provideService(CliPaths, paths),
+          Effect.provideService(UserPaths, paths),
           Effect.provideService(FileSystem.FileSystem, mismatchedFs)
         )
         const identityError = yield* mismatchedLock(operation).pipe(Effect.flip)
@@ -204,7 +200,7 @@ it.effect("reports a distinct setup/acquisition timeout without running the prot
       const { paths } = yield* fixture
       const entered = yield* Deferred.make<void>()
       const withLock = yield* ConfigLock.UserConfigLock.make.pipe(
-        Effect.provideService(CliPaths, paths),
+        Effect.provideService(UserPaths, paths),
         Effect.provideService(UserFileSecurity, () =>
           Deferred.succeed(entered, undefined).pipe(Effect.andThen(Effect.never))
         )
@@ -232,7 +228,7 @@ it.live(
     Effect.scoped(
       Effect.gen(function* () {
         const { fs, paths } = yield* fixture
-        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(CliPaths, paths))
+        const withLock = yield* ConfigLock.UserConfigLock.make.pipe(Effect.provideService(UserPaths, paths))
         yield* fs.makeDirectory(paths.dataDirectory, { recursive: true })
         yield* fs.writeFileString(paths.lock, "legacy")
         const error = yield* withLock(Effect.void).pipe(Effect.flip)
@@ -260,7 +256,7 @@ it.live(
             expect(info.mode & 0o777).toBe(0o600)
             expect(Option.getOrUndefined(info.nlink)).toBe(1n)
           }
-        }).pipe(Effect.provideService(CliPaths, paths))
+        }).pipe(Effect.provideService(UserPaths, paths))
       })
     ).pipe(Effect.provide(runtime)),
   60000
