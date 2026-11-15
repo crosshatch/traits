@@ -2,6 +2,7 @@ import { Array, type Effect, Function, pipe, Schema as S, String } from "effect"
 
 import { Change, ChangeWithAfter, ChangeWithBefore } from "./Change.ts"
 import { isValidForText } from "./InputRange.ts"
+import type { InputSource } from "./InputSource.ts"
 import { Segment } from "./Segment.ts"
 
 const invalidRange =
@@ -56,9 +57,10 @@ export const fromSegment: {
   pipe({ _tag: segment._tag, change, segment }, S.decodeUnknownEffect(Input))
 )
 
+/** The source version an input's segment selects from: before for a Before input, after for an After input. */
+export const primarySource = (input: Input): InputSource =>
+  Input.match(input, { Before: (input) => input.change.before, After: (input) => input.change.after })
+
 /** Selected primary source text; the input must already satisfy the Input schema. */
 export const targetText = (input: Input): string =>
-  pipe(
-    Input.match(input, { Before: (input) => input.change.before.text, After: (input) => input.change.after.text }),
-    String.slice(input.segment.range.start, input.segment.range.end)
-  )
+  pipe(primarySource(input).text, String.slice(input.segment.range.start, input.segment.range.end))

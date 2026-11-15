@@ -1,13 +1,15 @@
 import { Schema as S } from "effect"
 
-import { type Input, targetText } from "./Input.ts"
+import { type Input, primarySource, targetText } from "./Input.ts"
 import { InputRange } from "./InputRange.ts"
+import { InputSource } from "./InputSource.ts"
+import { WorkspacePath } from "./WorkspacePath.ts"
 
 /** The compact evidence a decision model sees for one input: the target once, the rest of its file only when the target is part of it, and earlier text only when the segmenter mapped the target to it. */
 export type DecisionState = typeof DecisionState.Type
 export const DecisionState = S.Struct({
   /** The workspace path of the file the target was selected from. */
-  path: S.String.annotateKey({ description: "The workspace path of the file the target was selected from." }),
+  path: WorkspacePath.annotateKey({ description: "The workspace path of the file the target was selected from." }),
   /** The file version the target was selected from: after for current text, before for text that was deleted. */
   version: S.Literals(["after", "before"]).annotateKey({
     description:
@@ -21,8 +23,7 @@ export const DecisionState = S.Struct({
   }).pipe(S.optionalKey),
   /** The earlier version of the file and the ranges in it that correspond to target; present only when that correspondence is known. */
   history: S.Struct({
-    path: S.String,
-    text: S.String,
+    ...InputSource.fields,
     /** Ranges in text corresponding to target; empty when target has no earlier counterpart. */
     ranges: S.Array(InputRange).annotateKey({
       description: "Ranges in text corresponding to target; empty when target has no earlier counterpart."
@@ -40,18 +41,16 @@ export const DecisionState = S.Struct({
 
 /** Builds the decision state for an input without repeating text or sending earlier text whose correspondence is unknown. */
 export const decisionState = (input: Input): DecisionState => {
-  const source = input._tag === "After" ? input.change.after : input.change.before
+  const source = primarySource(input)
   const target = targetText(input)
-  const partial = target.length !== source.text.length
-  const before = input._tag === "After" ? input.change.before : undefined
-  const ranges = input._tag === "After" ? input.segment.before : undefined
   return {
     path: source.path,
     version: input._tag === "After" ? "after" : "before",
     target,
-    ...(partial ? { source: source.text } : {}),
-    ...(before === undefined || ranges === undefined
-      ? {}
-      : { history: { path: before.path, text: before.text, ranges } })
+    // A target as long as its source is the whole file, so the file is not sent twice.
+    ...(target.length === source.text.length ? {} : { source: source.text }),
+    ...(input._tag === "After" && input.change.before !== undefined && input.segment.before !== undefined
+      ? { history: { ...input.change.before, ranges: input.segment.before } }
+      : {})
   }
 }
