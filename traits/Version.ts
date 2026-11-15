@@ -1,34 +1,29 @@
-import { Array, Function, Order, type Ordering, Schema as S, String } from "effect"
+import { Function, type Ordering, Result, Schema as S, SemVer, SemVerRange } from "effect"
 
 /** A semantic version such as 1.2.3 or 0.4.0-beta.1. */
 export type Version = typeof Version.Type
-export const Version = S.String.check(S.isPattern(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u)).annotate({
-  description: "A semantic version such as 1.2.3 or 0.4.0-beta.1."
-})
+export const Version = S.String.check(
+  S.makeFilter((version) => Result.isSuccess(SemVer.parse(version)), {
+    message: "Expected a semantic version such as 1.2.3 or 0.4.0-beta.1"
+  })
+).annotate({ description: "A semantic version such as 1.2.3 or 0.4.0-beta.1." })
 
-const parts = Function.flow(String.split("-"), Array.headNonEmpty, String.split("."), Array.map(Number))
-
-const order = Order.mapInput(Order.Tuple([Order.Number, Order.Number, Order.Number]), (version: string) => {
-  const [major = 0, minor = 0, patch = 0] = parts(version)
-  return [major, minor, patch] as const
-})
-
-/** Compares versions by major, minor, and patch, ignoring prerelease tags. */
+/** Compares versions by semantic version precedence, where a release is newer than its prereleases. */
 export const compare: {
   (that: string): (self: string) => Ordering.Ordering
   (self: string, that: string): Ordering.Ordering
-} = Function.dual(2, order)
+} = Function.dual(2, (self: string, that: string) => SemVer.Order(SemVer.parseUnsafe(self), SemVer.parseUnsafe(that)))
 
-/** Whether a version is newer than another by major, minor, and patch, ignoring prerelease tags. */
+/** Whether a version is newer than another by semantic version precedence. */
 export const isNewer: {
   (that: string): (self: string) => boolean
   (self: string, that: string): boolean
-} = Function.dual(2, Order.isGreaterThan(order))
+} = Function.dual(2, (self: string, that: string) => compare(self, that) === 1)
 
 /** How a configured version relates to the installed one under caret (^) semantics: Compatible when the installed version satisfies ^configured. */
 export type VersionStatus = "Compatible" | "Older" | "Newer"
 
-/** Compares a configured version with the installed one using caret (^) compatibility, ignoring prerelease tags. */
+/** Compares a configured version with the installed one using caret (^) compatibility, letting prereleases satisfy it. */
 export const status: {
   (installed: string): (configured: string) => VersionStatus
   (configured: string, installed: string): VersionStatus
@@ -36,10 +31,10 @@ export const status: {
   if (isNewer(configured, installed)) {
     return "Newer"
   }
-  const [major = 0, minor = 0, patch = 0] = parts(configured)
-  const [installedMajor = 0, installedMinor = 0, installedPatch = 0] = parts(installed)
   // ^1.2.3 allows 1.x.y, ^0.2.3 allows 0.2.y, and ^0.0.3 allows only 0.0.3.
-  const compatible =
-    major === installedMajor && (major > 0 || (minor === installedMinor && (minor > 0 || patch === installedPatch)))
-  return compatible ? "Compatible" : "Older"
+  return SemVerRange.matches(SemVerRange.caret(SemVer.parseUnsafe(configured)), SemVer.parseUnsafe(installed), {
+    includePrerelease: true
+  })
+    ? "Compatible"
+    : "Older"
 })
