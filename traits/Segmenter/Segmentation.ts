@@ -1,6 +1,8 @@
 import { Array, Effect, flow, Function, Order, Schema as S } from "effect"
 
-import { type Change, Input, Segment } from "../util/util.ts"
+import type { Change } from "../util/Change.ts"
+import { Input } from "../util/Input.ts"
+import { Segment } from "../util/Segment.ts"
 
 const segmentOrder = Order.make<Input>(
   (left, right) =>

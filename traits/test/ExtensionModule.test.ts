@@ -5,7 +5,7 @@ import { Effect, FileSystem, Layer, Path, pipe, Result, Schema as S } from "effe
 import * as ExtensionModule from "../local/ExtensionModule.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import { Trait } from "../Trait.ts"
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const services = Layer.merge(NodeServices.layer, WorkspaceRoot.layer(".").pipe(Layer.provide(NodeServices.layer)))
 

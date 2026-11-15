@@ -1,6 +1,6 @@
 import { Context, type Effect, type Schema as S } from "effect"
 
-import type { WorkspacePath } from "../util/util.ts"
+import type { WorkspacePath } from "../util/WorkspacePath.ts"
 import type { EnrichmentSetupError } from "./Enrichment.ts"
 import type { EnrichmentContext } from "./EnrichmentContext.ts"
 import type { EnrichmentError } from "./EnrichmentError.ts"

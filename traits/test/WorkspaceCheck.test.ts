@@ -17,7 +17,7 @@ import * as Report from "../Report/Report.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const traitFile = (name: string, extra = "") =>
   `---\nname: ${name}\npurpose: Protect correctness.\nassertion: The code is correct.\n${extra}---\n\nPrefer small functions.\n`

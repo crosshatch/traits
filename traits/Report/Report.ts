@@ -1,6 +1,6 @@
 import { Array, Function, Option, pipe, Schema as S } from "effect"
 
-import { Segment } from "../util/util.ts"
+import { Segment } from "../util/Segment.ts"
 import { Version } from "../Version.ts"
 import { ChangeIdentity } from "./ChangeIdentity.ts"
 import { ChangeReport } from "./ChangeReport.ts"

@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 /** Where the host loaded a trait definition from; further kinds, such as remote or registry traits, may be added as cases. */
 export type TraitOrigin = typeof TraitOrigin.Type

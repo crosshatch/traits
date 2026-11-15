@@ -16,7 +16,10 @@ import { TraitAssertion } from "../TraitAssertion.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
 import { TraitSubject } from "../TraitSubject.ts"
-import { type Change, Segment, TextDigest, WorkspacePath } from "../util/util.ts"
+import type { Change } from "../util/Change.ts"
+import { Segment } from "../util/Segment.ts"
+import { digestText, TextDigest } from "../util/TextDigest.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const trait = (name: string, options: Partial<Omit<Trait, "name" | "purpose">> = {}) =>
   Trait.make({
@@ -101,10 +104,10 @@ it.effect("uses whole files without segmentation and keeps execution success sep
     expect(inputsOf(report.traits[1]!)[0]).not.toHaveProperty("assessment")
     const empty = Report.SourceIdentity.make({
       path: WorkspacePath.make("empty.ts"),
-      digest: TextDigest.TextDigest.make("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+      digest: TextDigest.make("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
     })
-    const old = yield* TextDigest.make("old")
-    const updated = yield* TextDigest.make("😀new")
+    const old = yield* digestText("old")
+    const updated = yield* digestText("😀new")
     expect(report.changes).toEqual([
       {
         before: { path: "old.ts", digest: old },
@@ -690,7 +693,7 @@ it.effect(
       expect(enrichments).toBe(2)
       const [asserted, guidance, ungated] = report.traits
       expect(Array.map(allInputsOf(asserted!), (input) => input._tag)).toEqual(["Completed", "Unmatched", "Completed"])
-      const skipDigest = yield* TextDigest.make("skip")
+      const skipDigest = yield* digestText("skip")
       expect(allInputsOf(asserted!)[1]).toEqual(
         Report.InputReport.cases.Unmatched.make({
           segment: Segment.cases.After.make({ range: { start: 0, end: 4 } }),
@@ -740,7 +743,7 @@ it.effect("fails inputs whose subject decision fails, without running enrichment
       )
     )
     expect(assertions).toBe(0)
-    const digest = yield* TextDigest.make("private-source")
+    const digest = yield* digestText("private-source")
     expect(allInputsOf(report.traits[0]!)).toEqual([
       Report.InputReport.cases.Failed.make({
         segment: Segment.cases.After.make({ range: { start: 0, end: 14 } }),

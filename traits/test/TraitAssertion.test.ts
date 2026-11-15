@@ -5,7 +5,9 @@ import { AiError, DecisionModel } from "effect/ai"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import { TraitBody } from "../TraitBody.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
-import { Input, Segment, WorkspacePath } from "../util/util.ts"
+import { Input } from "../util/Input.ts"
+import { Segment } from "../util/Segment.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const probabilities = { pass: 0.1, fail: 0.8, na: 0.05, uncertain: 0.05 }
 const input = Input.cases.After.make({

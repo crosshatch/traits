@@ -1,7 +1,9 @@
 import { type Effect, Schema as S } from "effect"
 
 import type { ExtensionServices } from "../ExtensionServices.ts"
-import { type Change, RecoveryInstruction, type Segment } from "../util/util.ts"
+import type { Change } from "../util/Change.ts"
+import { RecoveryInstruction } from "../util/RecoveryInstruction.ts"
+import type { Segment } from "../util/Segment.ts"
 
 /**
  * Initializes trait-independent segmentation; an empty result selects no targets without diagnostics.

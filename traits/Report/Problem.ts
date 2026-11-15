@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 import { Diagnostic } from "./Diagnostic.ts"
 import { Explanation } from "./Explanation.ts"
 

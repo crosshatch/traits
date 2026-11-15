@@ -2,7 +2,8 @@ import { expect, it } from "@effect/vitest"
 import { Effect, pipe, Schema as S, String } from "effect"
 
 import * as Report from "../Report/Report.ts"
-import { Segment, WorkspacePath } from "../util/util.ts"
+import { Segment } from "../util/Segment.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const digest = `sha256:${pipe("0", String.repeat(64))}`
 const trait = { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." }

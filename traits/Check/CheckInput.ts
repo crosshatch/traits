@@ -2,7 +2,7 @@ import { Array, Schema as S } from "effect"
 
 import { TraitOrigin } from "../Report/TraitOrigin.ts"
 import { Trait } from "../Trait.ts"
-import { Change } from "../util/util.ts"
+import { Change } from "../util/Change.ts"
 
 /** A static trait to evaluate, with where the host loaded it from. */
 export type CheckTrait = typeof CheckTrait.Type

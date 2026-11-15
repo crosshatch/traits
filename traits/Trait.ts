@@ -5,7 +5,7 @@ import { TraitBody } from "./TraitBody.ts"
 import { TraitName } from "./TraitName.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
-import { WorkspacePath } from "./util/util.ts"
+import { WorkspacePath } from "./util/WorkspacePath.ts"
 
 /** A static trait definition with optional subject, segmentation, assertion, supporting body, and enrichments. */
 export type Trait = typeof Trait.Type

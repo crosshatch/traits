@@ -37,7 +37,7 @@ import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import { Trait } from "../Trait.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 /** Where every test trait is said to be loaded from. */
 const origin = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/example.md") })

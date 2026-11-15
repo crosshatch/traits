@@ -3,7 +3,7 @@ import { Decision, DecisionModel, LanguageModel } from "effect/ai"
 
 import { CurrentSettings } from "./Settings.ts"
 import { TraitName } from "./TraitName.ts"
-import { rejectsAccount } from "./util/util.ts"
+import { rejectsAccount } from "./util/rejectsAccount.ts"
 
 /** The user's answer to a request to save a proposed trait. */
 export type Approval = typeof Approval.Type

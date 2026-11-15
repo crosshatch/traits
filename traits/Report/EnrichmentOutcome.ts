@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 import { Explanation } from "./Explanation.ts"
 
 const module = WorkspacePath.annotateKey({ description: "The configured enrichment module." })

@@ -1,7 +1,7 @@
 import { type Effect, Schema as S } from "effect"
 
 import type { ExtensionServices } from "../ExtensionServices.ts"
-import { RecoveryInstruction } from "../util/util.ts"
+import { RecoveryInstruction } from "../util/RecoveryInstruction.ts"
 import type { EnrichmentContext } from "./EnrichmentContext.ts"
 import type { EnrichmentError } from "./EnrichmentError.ts"
 

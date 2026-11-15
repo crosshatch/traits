@@ -5,7 +5,8 @@ import * as Report from "../Report/Report.ts"
 import * as Segmentation from "../Segmenter/Segmentation.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
 import { CurrentSettings } from "../Settings.ts"
-import type { Input, WorkspacePath } from "../util/util.ts"
+import type { Input } from "../util/Input.ts"
+import type { WorkspacePath } from "../util/WorkspacePath.ts"
 import type { CheckInput } from "./CheckInput.ts"
 
 /** Completed setup and segmentation shared by all traits in one check. */

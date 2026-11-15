@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 /** Which shared extension stage failed: segmenter or enrichment setup for the whole check, or segmentation of one change for every trait sharing the segmenter. */
 export type DiagnosticOrigin = typeof DiagnosticOrigin.Type

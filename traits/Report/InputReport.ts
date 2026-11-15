@@ -1,7 +1,8 @@
 import { Schema as S } from "effect"
 
 import { TraitSubjectMatch } from "../TraitSubject.ts"
-import { Segment, TextDigest } from "../util/util.ts"
+import { Segment } from "../util/Segment.ts"
+import { TextDigest } from "../util/TextDigest.ts"
 import { Assessment } from "./Assessment.ts"
 import { EnrichmentOutcome } from "./EnrichmentOutcome.ts"
 import { Explanation } from "./Explanation.ts"
@@ -10,7 +11,7 @@ const target = {
   /** One primary before/after assessment target, with optional historical context for an after target. */
   segment: Segment,
   /** Digest of the primary target text; with the trait name and primary path, identifies the target across reports despite offset shifts. Identical target texts share a digest. */
-  digest: TextDigest.TextDigest.annotateKey({
+  digest: TextDigest.annotateKey({
     description:
       "Digest of the primary target text; with the trait name and primary path, identifies the target across reports despite offset shifts. Identical target texts share a digest."
   })

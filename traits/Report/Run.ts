@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { Probability } from "../util/util.ts"
+import { Probability } from "../util/Probability.ts"
 
 const TokenCount = S.Finite.check(S.isGreaterThanOrEqualTo(0))
 

@@ -3,7 +3,7 @@ import { Digest } from "effect/crypto"
 import { KeyValueStore } from "effect/persistence"
 
 import { CachedDecision, DecisionCache } from "../Check/DecisionCache.ts"
-import { TextDigest } from "../util/util.ts"
+import { digestText, TextDigest } from "../util/TextDigest.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
@@ -24,8 +24,8 @@ export const layer = (model: string) =>
         Effect.provide(KeyValueStore.layerFileSystem(path.join(cache, "decisions")))
       )
       const digest = yield* Digest.Digest
-      const scoped = (key: TextDigest.TextDigest) =>
-        TextDigest.make(`${model}\u0000${key}`).pipe(Effect.provideService(Digest.Digest, digest))
+      const scoped = (key: TextDigest) =>
+        digestText(`${model}\u0000${key}`).pipe(Effect.provideService(Digest.Digest, digest))
       return DecisionCache.of({
         get: (key) => scoped(key).pipe(Effect.flatMap(store.get), Effect.orElseSucceed(Option.none<CachedDecision>)),
         set: (key, decision) =>

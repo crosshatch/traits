@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { RecoveryInstruction } from "../util/util.ts"
+import { RecoveryInstruction } from "../util/RecoveryInstruction.ts"
 
 /** Requested execution skip scope: Enrichment skips only this invocation, Input prevents the current input's assessment, and Trait stops remaining work for this trait; unrelated traits are unaffected. */
 export type EnrichmentErrorReason = typeof EnrichmentErrorReason.Type

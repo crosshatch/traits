@@ -4,7 +4,8 @@ import type { Digest } from "effect/crypto"
 import PackageJson from "../package.json" with { type: "json" }
 import * as Report from "../Report/Report.ts"
 import { CurrentSettings } from "../Settings.ts"
-import { type InputSource, TextDigest } from "../util/util.ts"
+import type { InputSource } from "../util/InputSource.ts"
+import { digestText } from "../util/TextDigest.ts"
 import { CheckInput } from "./CheckInput.ts"
 import * as Evaluation from "./Evaluation.ts"
 import * as Preparation from "./Preparation.ts"
@@ -14,7 +15,7 @@ export { CheckInput, CheckTrait } from "./CheckInput.ts"
 const sourceIdentity = (source: InputSource) =>
   pipe(
     source.text,
-    TextDigest.make,
+    digestText,
     Effect.map((digest) => Report.SourceIdentity.make({ path: source.path, digest }))
   )
 

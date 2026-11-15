@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { Probability } from "../util/util.ts"
+import { Probability } from "../util/Probability.ts"
 
 /** Assertion outcome probabilities; normalization is owned by the decision model, and consumers apply explicit decision policies. */
 export type Assessment = typeof Assessment.Type

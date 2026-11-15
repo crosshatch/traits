@@ -1,7 +1,10 @@
 import { expect, it } from "@effect/vitest"
 import { pipe, Schema as S } from "effect"
 
-import { decisionState, Input, Segment, targetText, WorkspacePath } from "../util/util.ts"
+import { decisionState } from "../util/DecisionState.ts"
+import { Input, targetText } from "../util/Input.ts"
+import { Segment } from "../util/Segment.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 it("selects the required source text", () => {
   const before = { path: WorkspacePath.make("old.ts"), text: "😀old" }

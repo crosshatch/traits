@@ -4,7 +4,9 @@ import { DecisionModel } from "effect/ai"
 import PackageJson from "../package.json" with { type: "json" }
 import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
-import { decisionState, type Input, TextDigest } from "../util/util.ts"
+import { decisionState } from "../util/DecisionState.ts"
+import type { Input } from "../util/Input.ts"
+import { digestText, TextDigest } from "../util/TextDigest.ts"
 
 /** A decision a model completed, kept so the same question is not asked again. */
 export type CachedDecision = typeof CachedDecision.Type
@@ -24,15 +26,15 @@ export class DecisionCache extends Context.Service<
   DecisionCache,
   {
     /** The decision stored under key, if any. */
-    readonly get: (key: TextDigest.TextDigest) => Effect.Effect<Option.Option<CachedDecision>>
+    readonly get: (key: TextDigest) => Effect.Effect<Option.Option<CachedDecision>>
     /** Stores a completed decision under key. */
-    readonly set: (key: TextDigest.TextDigest, decision: CachedDecision) => Effect.Effect<void>
+    readonly set: (key: TextDigest, decision: CachedDecision) => Effect.Effect<void>
   }
 >()("traits/Check/DecisionCache") {}
 
 /** Digests a decision's kind and inputs with the traits version, so changed prompts or schemas never reuse old answers. */
 const keyOf = (kind: "subject" | "assertion", material: unknown) =>
-  TextDigest.make(JSON.stringify([PackageJson.version, kind, material]))
+  digestText(JSON.stringify([PackageJson.version, kind, material]))
 
 /** A stand-in for the response a cached decision came from: it used no tokens, but keeps the model that made it. */
 const cachedResponse = (decision: CachedDecision) => ({
@@ -42,7 +44,7 @@ const cachedResponse = (decision: CachedDecision) => ({
 })
 
 /** Looks up a decision of the given answer shape; undefined without a cache, or when the entry is missing or no longer matches the shape. */
-const lookup = Effect.fnUntraced(function* <A>(key: TextDigest.TextDigest, answer: S.ConstraintDecoder<A>) {
+const lookup = Effect.fnUntraced(function* <A>(key: TextDigest, answer: S.ConstraintDecoder<A>) {
   const cache = yield* Effect.serviceOption(DecisionCache).pipe(Effect.map(Option.getOrUndefined))
   if (cache === undefined) {
     return undefined
@@ -59,7 +61,7 @@ const lookup = Effect.fnUntraced(function* <A>(key: TextDigest.TextDigest, answe
 
 /** Stores a successful outcome; failures are never cached, so they are retried on the next check. */
 const remember = Effect.fnUntraced(function* (
-  key: TextDigest.TextDigest,
+  key: TextDigest,
   outcome: Result.Result<{ readonly label: string; readonly probabilities: Readonly<Record<string, number>> }, unknown>,
   modelId: string | undefined
 ) {

@@ -6,7 +6,10 @@ import * as Report from "../Report/Report.ts"
 import { CurrentSettings } from "../Settings.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
-import { Input, rejectsAccount, Segment, targetText, TextDigest } from "../util/util.ts"
+import { Input, targetText } from "../util/Input.ts"
+import { rejectsAccount } from "../util/rejectsAccount.ts"
+import { Segment } from "../util/Segment.ts"
+import { digestText } from "../util/TextDigest.ts"
 import type { CheckInput } from "./CheckInput.ts"
 import * as DecisionCache from "./DecisionCache.ts"
 import type { Preparation } from "./Preparation.ts"
@@ -80,7 +83,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
       const traitStopped = yield* Deferred.make<void>()
       const evaluateInput = Effect.fnUntraced(function* (input: Input) {
         const inputStopped = yield* Deferred.make<void>()
-        const digest = yield* TextDigest.make(targetText(input))
+        const digest = yield* digestText(targetText(input))
         // Gate on the subject first, so enrichments and the assertion run only for targets the subject may cover.
         const gate =
           trait.subject === undefined

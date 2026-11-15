@@ -3,7 +3,9 @@ import { Effect, pipe, Record, Result } from "effect"
 import { AiError, DecisionModel } from "effect/ai"
 
 import * as TraitSubject from "../TraitSubject.ts"
-import { Input, Segment, WorkspacePath } from "../util/util.ts"
+import { Input } from "../util/Input.ts"
+import { Segment } from "../util/Segment.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const probabilities = { yes: 0.4, no: 0.35, uncertain: 0.25 }
 const subject = TraitSubject.TraitSubject.make("Function declarations.")

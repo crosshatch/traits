@@ -1,6 +1,8 @@
 import { Context, type Effect, type Schema as S } from "effect"
 
-import type { Change, Segment, WorkspacePath } from "../util/util.ts"
+import type { Change } from "../util/Change.ts"
+import type { Segment } from "../util/Segment.ts"
+import type { WorkspacePath } from "../util/WorkspacePath.ts"
 import type { SegmenterError, SegmenterSetupError } from "./Segmenter.ts"
 
 /** Program-scoped segmenter setup with fresh execution chats and scopes. */

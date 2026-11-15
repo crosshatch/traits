@@ -5,7 +5,8 @@ import { EnrichmentOutcome } from "./Report/EnrichmentOutcome.ts"
 import { TraitBody } from "./TraitBody.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
-import { DecisionState, decisionState, type Input } from "./util/util.ts"
+import { DecisionState, decisionState } from "./util/DecisionState.ts"
+import type { Input } from "./util/Input.ts"
 
 /** The assertion to assess against the subject. */
 export type TraitAssertion = typeof TraitAssertion.Type

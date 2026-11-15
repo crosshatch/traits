@@ -26,7 +26,7 @@ import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
 import * as Report from "../Report/Report.ts"
 import { Trait } from "../Trait.ts"
 import { TraitName } from "../TraitName.ts"
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const policy = Report.DecisionPolicy.make({ fail: 0.5, pass: 0.5 })
 

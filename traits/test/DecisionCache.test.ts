@@ -16,7 +16,8 @@ import { TraitAssertion } from "../TraitAssertion.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
 import { TraitSubject } from "../TraitSubject.ts"
-import { TextDigest, WorkspacePath } from "../util/util.ts"
+import { digestText } from "../util/TextDigest.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const request = {
   traits: [
@@ -114,7 +115,7 @@ it.live("keeps decisions in the workspace across runs, ignored by Git and scoped
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-decision-cache-" })
-    const key = yield* TextDigest.make("question")
+    const key = yield* digestText("question")
     const decision = CachedDecision.make({ label: "pass", probabilities: { pass: 1 }, modelId: "m" })
     const cacheFor = (model: string) =>
       DecisionCache.pipe(

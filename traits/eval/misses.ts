@@ -27,7 +27,7 @@ import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
 import * as Report from "../Report/Report.ts"
 import type { Trait } from "../Trait.ts"
-import { WorkspacePath } from "../util/util.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 /** A generated pair of files for one trait: one violating its assertion, and the same file fixed. */
 const GeneratedCase = S.Struct({

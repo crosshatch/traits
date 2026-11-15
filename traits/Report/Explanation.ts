@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { RecoveryInstruction } from "../util/util.ts"
+import { RecoveryInstruction } from "../util/RecoveryInstruction.ts"
 
 /** Why something failed: actionable remediation when known, otherwise safe failure details; never raw error objects or source excerpts. */
 export type Explanation = typeof Explanation.Type

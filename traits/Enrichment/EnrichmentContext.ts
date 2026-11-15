@@ -1,7 +1,7 @@
 import { Context } from "effect"
 
 import type { Trait } from "../Trait.ts"
-import type { Input } from "../util/util.ts"
+import type { Input } from "../util/Input.ts"
 
 /** Evaluation inputs for one trait and source location. */
 export class EnrichmentContext extends Context.Service<

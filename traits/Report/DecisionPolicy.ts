@@ -1,6 +1,6 @@
 import { Schema as S } from "effect"
 
-import { Probability } from "../util/util.ts"
+import { Probability } from "../util/Probability.ts"
 
 /** Serializable assessment thresholds, so every environment derives the same verdicts from the same report. */
 export type DecisionPolicy = typeof DecisionPolicy.Type

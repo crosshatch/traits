@@ -7,7 +7,7 @@ import { DecisionPolicy } from "../../../Report/DecisionPolicy.ts"
 import { Report, verdicts } from "../../../Report/Report.ts"
 import { Verdict } from "../../../Report/Verdict.ts"
 import { TraitName } from "../../../TraitName.ts"
-import { Probability } from "../../../util/util.ts"
+import { Probability } from "../../../util/Probability.ts"
 
 /** Exit codes for each verdict, so CI can block on violations and retry incomplete checks. */
 const exitCodes = { Pass: 0, Fail: 1, Incomplete: 2, Inconclusive: 3 } as const
