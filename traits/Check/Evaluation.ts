@@ -3,6 +3,7 @@ import type { AiError, Decision } from "effect/ai"
 
 import * as Enrichment from "../Enrichment/Enrichment.ts"
 import * as Report from "../Report/Report.ts"
+import { CurrentSettings } from "../Settings.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
 import { Input, rejectsAccount, Segment, targetText, TextDigest } from "../util/util.ts"
@@ -70,6 +71,7 @@ const provenance = (responses: ReadonlyArray<DecisionResponse>) => {
 
 /** Builds each trait's per-change results and run provenance; Deferreds only coordinate recovery. */
 export const evaluate = Effect.fnUntraced(function* (request: CheckInput, preparation: Preparation) {
+  const { check } = yield* CurrentSettings
   // Decision requests are limited by Models.layerDecisionLimit, so the per-trait, per-change, and per-input fibers here stay cheap.
   const traits = yield* Effect.forEach(
     request.traits,
@@ -107,7 +109,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
                 Effect.raceFirst(Deferred.await(traitStopped).pipe(Effect.as(SubjectGate.Cancelled())))
               )
         const decided = gate !== undefined && SubjectGate.$is("Decided")(gate) ? gate : undefined
-        if (decided !== undefined && TraitSubject.rulesOut(decided.probabilities)) {
+        if (decided !== undefined && decided.probabilities.no >= check.ruleOut) {
           return {
             report: Report.InputReport.cases.Unmatched.make({
               segment: input.segment,

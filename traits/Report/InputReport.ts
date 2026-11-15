@@ -40,7 +40,7 @@ export const InputReport = S.TaggedUnion({
       description: "Assertion probabilities; present exactly when the trait has an assertion."
     }).pipe(S.optionalKey)
   },
-  /** The subject decision ruled the target out, with a no probability of at least 0.6, so enrichments and the assertion did not run. */
+  /** The subject decision ruled the target out, with a no probability of at least run.ruleOut, so enrichments and the assertion did not run. */
   Unmatched: {
     ...target,
     /** Subject-membership probabilities from the decision that ruled the target out. */

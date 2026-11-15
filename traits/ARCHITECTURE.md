@@ -57,26 +57,27 @@ instruction to ignore it.
 
 `DecisionBatching.layer` wraps the `DecisionModel` in context so that concurrent
 `decideSettled` calls asking the same-named decisions about the same encoded
-input share one provider request of up to 32 calls, collected over a 10 ms
-real-time window. Callers keep calling `DecisionModel.decideSettled` directly;
-batching is a property of the provided model, not of the code that asks. Merged
-decisions are named by caller index (`0.subject`, `1.subject`), and a call
-merged with no others is sent unchanged. Each caller receives only its own
-outcomes, the request's model and metadata, and an integer share of its token
-usage, so summing usage over callers gives the provider's totals. A failed
-request fails every call merged into it. `decide` is not batched. The workspace
-models and the eval provide it outside `Models.layerDecisionLimit`, so the limit
-and retries apply to merged requests. Subject decisions on one input, one per
-trait, therefore send the file once per request instead of once per trait.
-Assertion calls merge only when they start in the same window, which is rare: on
-the labelled eval with every trait, merging them saved about 1% of requests and
-left results unchanged.
+input share one provider request of up to `requests.batchSize` calls (32),
+collected over a real-time window of `requests.batchWindowMillis` (10 ms).
+Callers keep calling `DecisionModel.decideSettled` directly; batching is a
+property of the provided model, not of the code that asks. Merged decisions are
+named by caller index (`0.subject`, `1.subject`), and a call merged with no
+others is sent unchanged. Each caller receives only its own outcomes, the
+request's model and metadata, and an integer share of its token usage, so
+summing usage over callers gives the provider's totals. A failed request fails
+every call merged into it. `decide` is not batched. The workspace models and the
+eval provide it outside `Models.layerDecisionLimit`, so the limit and retries
+apply to merged requests. Subject decisions on one input, one per trait,
+therefore send the file once per request instead of once per trait. Assertion
+calls merge only when they start in the same window, which is rare: on the
+labelled eval with every trait, merging them saved about 1% of requests and left
+results unchanged.
 
 `check` gates each input of a trait with a subject on
 `TraitSubject.match({ subject }, input)` before any other work on that input.
-When the decision's `no` probability is at least 0.6 (`TraitSubject.rulesOut`),
-the input is reported as `Unmatched` with the subject probabilities, and neither
-its enrichments nor its assertion run; verdicts treat it as Pass. Otherwise the
+When the decision's `no` probability is at least `check.ruleOut` (0.6), the
+input is reported as `Unmatched` with the subject probabilities, and neither its
+enrichments nor its assertion run; verdicts treat it as Pass. Otherwise the
 input proceeds and records the probabilities as `subject`, so possibly in-scope
 code is still assessed. The gate uses this threshold rather than the model's
 label because the two mistakes cost differently: wrongly ruling a target out
@@ -84,14 +85,15 @@ hides a violation, while wrongly matching it costs one assessment. Answers near
 an even split also vary between requests and with the other subjects sharing
 them, so ruling out on the label alone missed labelled violations at random. In
 measurements on this repository, 0.6 removed those misses for about a fifth more
-tokens. `Models.layerDecisionLimit` caps simultaneous decision requests at the
-configured concurrency and retries transient provider failures (rate limits,
-network and internal provider errors) up to five times with jittered exponential
-backoff, waiting at least as long as a rate limit asks. A retrying request keeps
-its slot, so throttling slows the whole check instead of failing queued work. A
-failed or unanswered subject decision fails the input with an explanation and
-records its enrichments as `Cancelled`; explanations name the failure reason,
-such as `RateLimitError after retries`, `AuthenticationError (InvalidKey)`, or
+tokens. `Models.layerDecisionLimit` caps simultaneous decision requests at
+`concurrency` (16) and retries transient provider failures (rate limits, network
+and internal provider errors) up to `requests.retries` times (5) with jittered
+exponential backoff starting at `requests.retryDelayMillis` (1000 ms), waiting
+at least as long as a rate limit asks. A retrying request keeps its slot, so
+throttling slows the whole check instead of failing queued work. A failed or
+unanswered subject decision fails the input with an explanation and records its
+enrichments as `Cancelled`; explanations name the failure reason, such as
+`RateLimitError after retries`, `AuthenticationError (InvalidKey)`, or
 `unanswered (Invalid)`, but never provider text, defects, or source; trait
 recovery can cancel the decision like an assessment. Traits without a subject
 are not gated. Subject decision usage and model identities count toward the
@@ -194,10 +196,19 @@ A workspace keeps its configuration at its root and its traits under
   repository itself, whose traits source is inside the workspace and so always
   matches (a workspace that installs traits as a dependency may not use it),
   optional `extends`, the `models` for the language and decision roles, an
-  optional `concurrency`: the maximum number of simultaneous decision requests,
-  16 by default, and optional `exclude` patterns for checks of every project
-  file. It lists no traits, and unknown keys are rejected, so a trait list from
-  an earlier version is reported rather than ignored. Credentials come from the
+  optional `exclude` patterns for checks of every project file, and optional
+  settings (`Settings`, core), each defaulting when omitted: `concurrency`, the
+  maximum number of simultaneous decision requests (16); `check.ruleOut` (0.6),
+  `check.policy` (none), and the file, segmentation, and digest concurrency of
+  checks (16, 8, 8); `requests.batchSize` (32), `requests.batchWindowMillis`
+  (10), `requests.retries` (5), and `requests.retryDelayMillis` (1000); and
+  `derive.batchSize` (32), the existing traits compared per request. Core code
+  reads them from the `CurrentSettings` reference, whose default is
+  `Settings.make({})`: each field carries its default beside it, as both a
+  constructor and a decoding default, so hosts that provide nothing get the
+  defaults; the local check and derive provide the loaded `traits.json`. It
+  lists no traits, and unknown keys are rejected, so a trait list from an
+  earlier version is reported rather than ignored. Credentials come from the
   environment, falling back to the workspace's `.env` and then to the main
   checkout's `.env`, so linked Git worktrees share its credentials
   (`WorkspaceConfigProvider`). `TraitsConfig.load` fails with an agent-facing
@@ -294,25 +305,26 @@ proposed trait file into a saved one. It validates the proposal as its file
 would be read, including extension references, then uses
 `TraitDerivation.compare` (core) to ask the decision model how each existing
 trait relates to it: distinct, covered, clarification, conflict, or
-inconclusive, deciding up to 32 existing traits per request. Conflicting or
-inconclusive traits, or several clarification targets, return `Unresolved`. A
-proposal named after one of the clarified traits replaces that trait instead,
-since a proposal replaces at most one. Covering traits return `Covered`, with
-one exception: a proposal named after an existing trait is a new version of that
-trait, so other traits' covered labels do not compete with it. When its own
-trait covers it, it rewords that trait without changing its rule and is offered
-as an update, unless it would leave the trait's content unchanged. The decision
-model decides these relationships, and the language model then explains, in one
-request, why each trait the outcome reports relates as it does: `Unresolved` and
-`Covered` give a reason per trait, and the approval message for a clarification
-says why it counts as one, so the agent can reconcile the proposal with the
-user. A trait the model leaves unexplained gets a reason saying so; an unrelated
-trait with the same name returns `NameTaken`. Otherwise it calls `approve` once
-with the complete file text, and with the current file when a clarification
-replaces an existing trait under its name. The user's answer yields `Created` or
-`Updated` after writing, or `RevisionRequested` or `Skipped` without writing. A
-target file that changed while waiting for approval fails with
-`TraitChangedError` rather than overwriting it.
+inconclusive, deciding up to `derive.batchSize` (32) existing traits per
+request. Conflicting or inconclusive traits, or several clarification targets,
+return `Unresolved`. A proposal named after one of the clarified traits replaces
+that trait instead, since a proposal replaces at most one. Covering traits
+return `Covered`, with one exception: a proposal named after an existing trait
+is a new version of that trait, so other traits' covered labels do not compete
+with it. When its own trait covers it, it rewords that trait without changing
+its rule and is offered as an update, unless it would leave the trait's content
+unchanged. The decision model decides these relationships, and the language
+model then explains, in one request, why each trait the outcome reports relates
+as it does: `Unresolved` and `Covered` give a reason per trait, and the approval
+message for a clarification says why it counts as one, so the agent can
+reconcile the proposal with the user. A trait the model leaves unexplained gets
+a reason saying so; an unrelated trait with the same name returns `NameTaken`.
+Otherwise it calls `approve` once with the complete file text, and with the
+current file when a clarification replaces an existing trait under its name. The
+user's answer yields `Created` or `Updated` after writing, or
+`RevisionRequested` or `Skipped` without writing. A target file that changed
+while waiting for approval fails with `TraitChangedError` rather than
+overwriting it.
 
 The `WorkspaceDerive` service runs derivations one at a time with the configured
 models. The `traits.derive` MCP tool supplies `approve` as one form elicitation
@@ -324,11 +336,12 @@ proposals, since saving requires the user's approval.
 
 `traits check` writes only the report to stdout; verdicts and errors go to
 stderr. Without a policy it exits 0 whenever the check runs, because the report
-implies no thresholds. With `--fail` and `--pass` it derives the verdict with
-`Report.verdicts` and exits 0 for Pass, 1 for Fail, 2 for Incomplete, and 3 for
-Inconclusive. A check that cannot run, such as one with missing configuration or
-a partial policy, also exits 2, since the fix is to repair the setup and retry.
-Invalid command-line usage exits 1, as Effect's CLI does.
+implies no thresholds. With `--fail` and `--pass`, or else `check.policy` in
+`traits.json`, it derives the verdict with `Report.verdicts` and exits 0 for
+Pass, 1 for Fail, 2 for Incomplete, and 3 for Inconclusive. A check that cannot
+run, such as one with missing configuration or a partial policy, also exits 2,
+since the fix is to repair the setup and retry. Invalid command-line usage exits
+1, as Effect's CLI does.
 
 `traits update` prints the context an agent needs to migrate a workspace to the
 latest release: the workspace, installed, and latest versions and each
@@ -578,8 +591,8 @@ Each input report is tagged by execution state, independent of assertion
 acceptance:
 
 - `Unmatched`: the subject decision ruled the target out, with a `no`
-  probability of at least 0.6. It carries the subject probabilities, but no
-  enrichments, assessment, or explanation.
+  probability of at least `run.ruleOut`. It carries the subject probabilities,
+  but no enrichments, assessment, or explanation.
 - `Completed`: required work finished. Assertion inputs have an assessment;
   guidance-only inputs do not. Inputs of traits with a subject carry its
   probabilities. A high `fail` probability is still a completed evaluation, not
@@ -736,10 +749,11 @@ correct state in response to cancellation or recovery.
 semantics share a format, so an incompatible format change is a breaking
 release, as for any change to the exported `Report` schema. `run` records
 deterministic provenance without timestamps, hosts, or absolute paths: distinct
-sorted model identifiers reported by assessment responses, and token totals
-across received responses. Each total is omitted when any response did not
-report it, rather than understating usage. Responses lost to cancellation are
-not counted.
+sorted model identifiers reported by assessment responses, token totals across
+received responses, and `ruleOut`, the subject `no` probability at which the
+check ruled targets out, since it decides which inputs are `Unmatched`. Each
+total is omitted when any response did not report it, rather than understating
+usage. Responses lost to cancellation are not counted.
 
 Required `Report.changes` records before and/or after source identities for
 every supplied change in caller order. At least one side is required per change;

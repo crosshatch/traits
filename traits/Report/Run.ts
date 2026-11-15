@@ -1,5 +1,7 @@
 import { Schema as S } from "effect"
 
+import { Probability } from "../util/util.ts"
+
 const TokenCount = S.Finite.check(S.isGreaterThanOrEqualTo(0))
 
 /** Deterministic evaluation provenance, without timestamps, hosts, or absolute paths. */
@@ -18,5 +20,9 @@ export const Run = S.Struct({
   }).annotateKey({
     description:
       "Token totals across received assessment responses; a total is omitted when any response did not report it."
+  }),
+  /** The least subject no probability that ruled a target out (check.ruleOut in traits.json). */
+  ruleOut: Probability.annotateKey({
+    description: "The least subject no probability that ruled a target out (check.ruleOut in traits.json)."
   })
 }).annotate({ description: "Deterministic evaluation provenance, without timestamps, hosts, or absolute paths." })

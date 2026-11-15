@@ -28,6 +28,7 @@ import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
 import * as Models from "../Models.ts"
 import * as Report from "../Report/Report.ts"
+import { CurrentSettings } from "../Settings.ts"
 import { Trait } from "../Trait.ts"
 import { TraitName } from "../TraitName.ts"
 import { WorkspacePath } from "../util/util.ts"
@@ -130,14 +131,15 @@ const program = Effect.gen(function* () {
   const requests = yield* Ref.make(0)
   const models = DecisionBatching.layer.pipe(
     Layer.provideMerge(layerCountedDecisions(requests)),
-    Layer.provideMerge(Models.layerDecisionLimit(config.concurrency)),
+    Layer.provideMerge(Models.layerDecisionLimit),
     Layer.provideMerge(Models.layer(config.models).pipe(Layer.provide(WorkspaceConfigProvider.layer)))
   )
   const started = yield* Clock.currentTimeMillis
   const report = yield* check({ traits, changes }).pipe(
     Effect.provide(
       Layer.mergeAll(LocalSegmenterRegistry.layer, LocalEnrichmentRegistry.layer).pipe(Layer.provideMerge(models))
-    )
+    ),
+    Effect.provideService(CurrentSettings, config)
   )
   const seconds = yield* Clock.currentTimeMillis.pipe(Effect.map((finished) => (finished - started) / 1000))
   const requestCount = yield* Ref.get(requests)

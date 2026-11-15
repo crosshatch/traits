@@ -53,32 +53,47 @@ export const check = Command.make(
       ),
       Flag.optional
     ),
-    fail: threshold("fail", "Minimum fail probability that rejects an assessment; requires --pass"),
+    fail: threshold(
+      "fail",
+      "Minimum fail probability that rejects an assessment; requires --pass, and overrides check.policy in traits.json"
+    ),
     pass: threshold(
       "pass",
-      "Minimum probability that the assertion holds or does not apply that accepts an assessment; requires --fail"
+      "Minimum probability that the assertion holds or does not apply that accepts an assessment; requires --fail, and overrides check.policy in traits.json"
     )
   },
   Effect.fn("check")(
     function* (params) {
       const fail = Option.getOrUndefined(params.fail)
       const pass = Option.getOrUndefined(params.pass)
+      const environment = Option.getOrUndefined(params.environment)
       if ((fail === undefined) !== (pass === undefined)) {
         return yield* CheckError.make({ message: "Pass both --fail and --pass to apply a decision policy." })
       }
-      const report = yield* WorkspaceCheck.use((workspace) =>
-        workspace.check({
-          ...(params.paths.length > 0 ? { paths: params.paths } : {}),
-          ...(Option.isSome(params.environment) ? { environment: params.environment.value } : {}),
-          ...(params.traits.length > 0 ? { traits: params.traits } : {})
-        })
+      const { report, policy } = yield* WorkspaceCheck.use((workspace) =>
+        Effect.all(
+          {
+            report: workspace.check({
+              ...(params.paths.length > 0 ? { paths: params.paths } : {}),
+              ...(environment === undefined ? {} : { environment }),
+              ...(params.traits.length > 0 ? { traits: params.traits } : {})
+            }),
+            // The flags override the policy in traits.json.
+            policy:
+              fail === undefined || pass === undefined
+                ? workspace.policy
+                : Effect.succeed(DecisionPolicy.make({ fail, pass }))
+          },
+          // Two fixed effects.
+          { concurrency: "unbounded" }
+        )
       ).pipe(Effect.mapError((error) => CheckError.make({ message: error.message })))
       const encoded = yield* pipe(report, S.encodeEffect(Report), Effect.orDie)
       yield* Console.log(JSON.stringify(encoded, null, 2))
-      if (fail === undefined || pass === undefined) {
+      if (policy === undefined) {
         return
       }
-      const { verdict } = verdicts(report, DecisionPolicy.make({ fail, pass }))
+      const { verdict } = verdicts(report, policy)
       yield* Console.error(`Verdict: ${verdict}`)
       if (verdict !== "Pass") {
         return yield* VerdictExit.make({ verdict })
@@ -88,6 +103,6 @@ export const check = Command.make(
   )
 ).pipe(
   Command.withDescription(
-    "Check files against this workspace's traits and print the report as JSON. With --fail and --pass, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
+    "Check files against this workspace's traits and print the report as JSON. With --fail and --pass, or check.policy in traits.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
   )
 )

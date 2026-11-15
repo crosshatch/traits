@@ -23,6 +23,7 @@ import * as TraitsConfig from "../local/TraitsConfig.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as Models from "../Models.ts"
 import PackageJson from "../package.json" with { type: "json" }
+import * as Settings from "../Settings.ts"
 import * as Version from "../Version.ts"
 
 const models = {
@@ -38,6 +39,9 @@ it("validates the workspace configuration and each role's supported providers", 
   expect(decodes({ ...config, $schema: "https://example.com/traits.schema.json" })).toBe(true)
   expect(decodes({ ...config, concurrency: 4 })).toBe(true)
   expect(decodes({ ...config, concurrency: 0 })).toBe(false)
+  expect(decodes({ ...config, check: { ruleOut: 1.5 } })).toBe(false)
+  // A policy needs both cut-offs, like --fail and --pass.
+  expect(decodes({ ...config, check: { policy: { fail: 0.5 } } })).toBe(false)
   const { models: _models, ...withoutModels } = config
   expect(decodes(withoutModels)).toBe(false)
   expect(decodes({ ...config, version: "latest" })).toBe(false)
@@ -82,7 +86,14 @@ it.effect("loads traits.json and explains read, schema, and version failures", (
     const configured = yield* workspace(JSON.stringify(config))
     const loaded = yield* TraitsConfig.load.pipe(Effect.provide(configured))
     expect(loaded.models.decision).toEqual(models.decision)
-    expect(loaded.concurrency).toBe(16)
+    expect(loaded).toMatchObject(Settings.Settings.make({}))
+    const policy = { fail: 0.5, pass: 0.5 }
+    const tunedRoot = yield* workspace(JSON.stringify({ ...config, check: { ruleOut: 0.7, policy } }))
+    const tuned = yield* TraitsConfig.load.pipe(Effect.provide(tunedRoot))
+    // Omitted settings in a group that is present still take their defaults.
+    expect(tuned).toMatchObject(
+      Settings.Settings.make({ check: Settings.CheckSettings.make({ ruleOut: 0.7, policy }) })
+    )
     for (const [contents, tag] of [
       [undefined, "TraitsConfigReadError"],
       ["{", "TraitsConfigSyntaxError"],
@@ -158,7 +169,8 @@ it.live("limits simultaneous decision requests through the composed models layer
     })
     const decide = () => DecisionModel.decideSettled(decision, { input: "x" })
     yield* Effect.forEach(Array.range(1, 10), decide, { concurrency: "unbounded" }).pipe(
-      Effect.provide(Models.layerDecisionLimit(3).pipe(Layer.provideMerge(provider)))
+      Effect.provide(Models.layerDecisionLimit.pipe(Layer.provideMerge(provider))),
+      Effect.provideService(Settings.CurrentSettings, Settings.Settings.make({ concurrency: 3 }))
     )
     expect(peak).toBe(3)
   })
@@ -190,7 +202,7 @@ it.effect("retries transient decision failures with backoff and fails fast on pe
       Effect.gen(function* () {
         attempts = 0
         const fiber = yield* DecisionModel.decideSettled(decision, { input: "x" }).pipe(
-          Effect.provide(Models.layerDecisionLimit(1).pipe(Layer.provideMerge(layer))),
+          Effect.provide(Models.layerDecisionLimit.pipe(Layer.provideMerge(layer))),
           Effect.exit,
           Effect.forkChild
         )

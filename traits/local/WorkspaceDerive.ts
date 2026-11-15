@@ -1,5 +1,6 @@
 import { Array, Context, Effect, FileSystem, Layer, Option, Path, pipe, Schema as S, Semaphore, Struct } from "effect"
 
+import { CurrentSettings } from "../Settings.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
 import type { TraitName } from "../TraitName.ts"
@@ -174,7 +175,8 @@ const deriveWorkspace = Effect.fn("WorkspaceDerive.deriveWorkspace")(function* <
 ) {
   const config = yield* TraitsConfig.load
   return yield* Effect.forEach(documents, (document) => derive(document, approve)).pipe(
-    Effect.provide(WorkspaceModels.layer(config))
+    Effect.provide(WorkspaceModels.layer(config)),
+    Effect.provideService(CurrentSettings, config)
   )
 })
 

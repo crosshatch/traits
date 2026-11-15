@@ -2,6 +2,7 @@ import { Array, Effect, FileSystem, Path, pipe, Schema as S, String } from "effe
 
 import { Models } from "../Models.ts"
 import PackageJson from "../package.json" with { type: "json" }
+import { Settings } from "../Settings.ts"
 import { TraitSources } from "../TraitsEnvironment/TraitSources.ts"
 import * as Version from "../Version.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
@@ -32,10 +33,7 @@ export const TraitsConfig = S.Struct({
       description:
         "Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; none when omitted. Explicitly requested paths are always checked."
     }),
-  /** The maximum number of simultaneous decision model requests; 16 when omitted. */
-  concurrency: S.Int.check(S.isGreaterThanOrEqualTo(1))
-    .pipe(S.withDecodingDefaultKey(Effect.succeed(16)))
-    .annotateKey({ description: "The maximum number of simultaneous decision model requests; 16 when omitted." })
+  ...Settings.fields
 }).annotate({
   description:
     "The workspace configuration in traits.json at the workspace root: plain JSON, so it loads without executing code or installing JavaScript dependencies."

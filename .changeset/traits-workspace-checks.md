@@ -16,10 +16,10 @@ migrate a workspace:
   `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
   `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, in the environment or a
   Git-ignored `.env`. Rename `decisionConcurrency` to `concurrency` and
-  `excludes` to `exclude` (Git glob patterns, relative to the checkout root).
-  Remove `excludeGitignored` and `fileReadConcurrency`; Git-ignored files are
-  always skipped. Delete `traits.ts`, and remove provider packages installed
-  only for it.
+  `excludes` to `exclude` (Git glob patterns, relative to the checkout root),
+  and move `fileReadConcurrency` to `check.fileConcurrency`. Remove
+  `excludeGitignored`; Git-ignored files are always skipped. Delete `traits.ts`,
+  and remove provider packages installed only for it.
 - In each `.agents/traits/<name>.md`, rename the `requirement` frontmatter key
   to `assertion`, and fold `applicability` into `subject` as its scope and
   exceptions. Unknown keys are rejected. The Markdown body remains supporting
@@ -64,6 +64,13 @@ migrate a workspace:
   releases.
 - Reports record the traits version that produced them in `version`; reports
   from versions compatible under caret (`^`) semantics share a format.
+- `traits.json` accepts optional settings, each defaulting when omitted:
+  `check.ruleOut`, the subject `no` probability that rules a target out (0.6);
+  `check.policy`, a `{ "fail", "pass" }` verdict policy that `traits check`
+  applies when `--fail` and `--pass` are omitted; the concurrency of checks'
+  file reads, segmentation, and digests; decision request batching and retries
+  under `requests`; and `derive.batchSize`. Reports record the threshold they
+  used in `run.ruleOut`.
 - Checks remember completed decisions in `.agents/traits/.cache/`, which ignores
   itself in Git, so re-checking unchanged traits and files is nearly free.
 - `@traits/typescript/references` is a new enrichment that lists, for each

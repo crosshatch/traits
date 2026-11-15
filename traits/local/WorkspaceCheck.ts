@@ -16,6 +16,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { check } from "../Check/Check.ts"
 import { TraitOrigin } from "../Report/TraitOrigin.ts"
+import { CurrentSettings } from "../Settings.ts"
 import { WorkspacePath } from "../util/util.ts"
 import * as LocalDecisionCache from "./LocalDecisionCache.ts"
 import * as LocalEnrichmentRegistry from "./LocalEnrichmentRegistry.ts"
@@ -25,9 +26,6 @@ import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import * as WorkspaceModels from "./WorkspaceModels.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 import * as WorkspaceTraits from "./WorkspaceTraits.ts"
-
-/** Simultaneous file reads and `git show` subprocesses, so large path lists and trait sets stay within descriptor and process limits. */
-const fileConcurrency = 16
 
 /** Which workspace files to check, and which of the workspace's traits to check them against; every trait by default. */
 export interface WorkspaceCheckRequest extends WorkspaceTraits.TraitSelection {
@@ -75,6 +73,8 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
     return yield* ExtendsUnsupportedError.make({})
   }
   const names = yield* WorkspaceTraits.select(request)
+  // Bounds file reads and `git show` subprocesses, so large path lists and trait sets stay within descriptor and process limits.
+  const fileConcurrency = config.check.fileConcurrency
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
@@ -230,7 +230,7 @@ const checkWorkspace = Effect.fn("WorkspaceCheck.check")(function* (request: Wor
     // Unchanged traits and inputs reuse earlier decisions by the same decision model instead of asking it again.
     LocalDecisionCache.layer(JSON.stringify(config.models.decision))
   ).pipe(Layer.provideMerge(WorkspaceModels.layer(config)))
-  return yield* run(config, request).pipe(Effect.provide(registries))
+  return yield* run(config, request).pipe(Effect.provide(registries), Effect.provideService(CurrentSettings, config))
 })
 
 /** Checks workspace files against the workspace's traits and configured models; shared by the CLI and the MCP server. */
@@ -239,7 +239,12 @@ export class WorkspaceCheck extends Context.Service<WorkspaceCheck>()("traits/lo
     const services = yield* Effect.context<Effect.Services<ReturnType<typeof checkWorkspace>>>()
     return {
       /** Checks the requested files, reloading the workspace configuration and trait files on every call. */
-      check: (request: WorkspaceCheckRequest) => checkWorkspace(request).pipe(Effect.provideContext(services))
+      check: (request: WorkspaceCheckRequest) => checkWorkspace(request).pipe(Effect.provideContext(services)),
+      /** The verdict policy check.policy in traits.json sets, if any, reloading the configuration. */
+      policy: TraitsConfig.load.pipe(
+        Effect.map((config) => config.check.policy),
+        Effect.provideContext(services)
+      )
     }
   })
 }) {

@@ -1,6 +1,7 @@
 import { Array, Effect, Option, pipe, Record, Result, Schema as S, String } from "effect"
 import { Decision, DecisionModel, LanguageModel } from "effect/ai"
 
+import { CurrentSettings } from "./Settings.ts"
 import { TraitName } from "./TraitName.ts"
 import { rejectsAccount } from "./util/util.ts"
 
@@ -107,16 +108,15 @@ const relationships = {
   inconclusive: "The texts are too ambiguous to tell how they relate."
 }
 
-/** The most existing traits compared in one provider request; more are split across requests. */
-const traitsPerRequest = 32
-
 /** Labels how each existing trait relates to the proposal, given the proposal's name and serialized text and the existing traits' names and texts, using the decision model's label. */
 export const compare = Effect.fn("TraitDerivation.compare")(function* (
   name: TraitName,
   proposal: string,
   existing: ReadonlyArray<{ readonly name: TraitName; readonly text: string }>
 ) {
-  const groups = Array.chunksOf(existing, traitsPerRequest)
+  const { derive } = yield* CurrentSettings
+  // Existing traits beyond one request's batch size are split across requests.
+  const groups = Array.chunksOf(existing, derive.batchSize)
   const labelled = yield* Effect.forEach(
     groups,
     (group) =>

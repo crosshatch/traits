@@ -30,17 +30,6 @@ export const TraitSubjectMatch = S.Struct({
   description: "Subject-membership probabilities without an acceptance threshold or assertion assessment."
 })
 
-/**
- * The least no probability at which a subject decision rules a target out. Wrongly ruling a target out hides a
- * violation, while wrongly matching it costs one assessment, so no must be clearly likelier than not. Answers near an
- * even split vary between requests and with the other subjects sharing them; in measurements, 0.6 stopped violations
- * near the split from being ruled out at random, for about a fifth more tokens.
- */
-const ruleOutThreshold = 0.6
-
-/** Whether subject-membership probabilities rule a target out, so the trait is not assessed against it. */
-export const rulesOut = (match: TraitSubjectMatch): boolean => match.no >= ruleOutThreshold
-
 /** Keyed subject outcomes and request-wide usage/metadata; unanswered subjects do not discard valid siblings. */
 export type TraitSubjectMatches<Id extends string = string> = DecisionModel.DecideSettledResponse<
   Record<Id, Decision.Classify<"yes" | "no" | "uncertain">>

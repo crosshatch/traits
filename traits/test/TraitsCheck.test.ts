@@ -12,7 +12,7 @@ import * as Report from "../Report/Report.ts"
 const server = (check: WorkspaceCheck.WorkspaceCheck["Service"]["check"], latest: string, installed?: string) =>
   TraitsCheck.layer.pipe(
     Layer.provide([
-      Layer.succeed(WorkspaceCheck.WorkspaceCheck, { check }),
+      Layer.succeed(WorkspaceCheck.WorkspaceCheck, { check, policy: Effect.undefined }),
       installed === undefined
         ? NodeServices.layer
         : Layer.merge(
@@ -41,7 +41,7 @@ const messageOf = (result: { readonly encodedResult: unknown }) =>
   (result.encodedResult as { readonly message: string }).message
 const report = Report.Report.make({
   version: PackageJson.version,
-  run: { models: [], usage: {} },
+  run: { models: [], usage: {}, ruleOut: 0.6 },
   changes: [],
   diagnostics: [],
   traits: []

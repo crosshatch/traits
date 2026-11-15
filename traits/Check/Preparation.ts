@@ -4,6 +4,7 @@ import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import * as Report from "../Report/Report.ts"
 import * as Segmentation from "../Segmenter/Segmentation.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
+import { CurrentSettings } from "../Settings.ts"
 import type { Input, WorkspacePath } from "../util/util.ts"
 import type { CheckInput } from "./CheckInput.ts"
 
@@ -19,14 +20,12 @@ export interface Preparation {
   >
 }
 
-/** Simultaneous segmenter executions per module; segmenters are extension code that may spawn processes or call models, which nothing else limits. */
-const segmentationConcurrency = 8
-
 /** Collects immutable results; registry layers, not preparation, own setup caching. */
 export const make = Effect.fnUntraced(function* (
   request: CheckInput
 ): Effect.fn.Return<Preparation, never, SegmenterRegistry | EnrichmentRegistry> {
   const segmenterRegistry = yield* SegmenterRegistry
+  const { check } = yield* CurrentSettings
   const enrichmentRegistry = yield* EnrichmentRegistry
   const modules = {
     segmenters: Array.dedupe(
@@ -122,7 +121,8 @@ export const make = Effect.fnUntraced(function* (
             Effect.result
           )
         },
-        { concurrency: segmentationConcurrency }
+        // Segmenters are extension code that may spawn processes or call models, which nothing else limits.
+        { concurrency: check.segmentationConcurrency }
       ).pipe(Effect.map((results) => [module, results] as const))
     },
     // Distinct segmenter modules are few; the per-change executions inside are bounded.

@@ -1,8 +1,19 @@
-import { Array, Clock, Effect, Exit, Layer, Order, Record, Request, RequestResolver, Schema as S } from "effect"
+import {
+  Array,
+  Clock,
+  Duration,
+  Effect,
+  Exit,
+  Layer,
+  Order,
+  Record,
+  Request,
+  RequestResolver,
+  Schema as S
+} from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
-/** The most calls merged into one provider request; larger groups are split across requests. */
-const callsPerRequest = 32
+import { CurrentSettings } from "./Settings.ts"
 
 /** One decideSettled call, with its input already encoded to the JSON the provider receives. */
 class SettledCall extends Request.Class<
@@ -23,7 +34,7 @@ const share = (tokens: number | undefined, index: number, callers: number) =>
 
 /**
  * Wraps the DecisionModel in context so concurrent decideSettled calls that ask the same-named decisions about the same
- * input share one provider request; the input is sent once per request instead of once per call. Each caller receives
+ * input share one provider request of at most the settings' batch size, collected over its batch window; the input is sent once per request instead of once per call. Each caller receives
  * only its own outcomes, the request's model and metadata, and a share of its token usage, so usage summed over callers
  * equals the provider's. decide is passed through unchanged.
  */
@@ -31,6 +42,7 @@ export const layer = Layer.effect(
   DecisionModel.DecisionModel,
   Effect.gen(function* () {
     const model = yield* DecisionModel.DecisionModel
+    const { requests } = yield* CurrentSettings
     const resolver = RequestResolver.makeGrouped<SettledCall, string>({
       key: (entry) => entry.request.key,
       resolver: (entries) => {
@@ -80,9 +92,12 @@ export const layer = Layer.effect(
       // Calls about one input arrive over several scheduler ticks, so collect briefly before sending; this is negligible next
       // to model latency. The wait uses the real clock so callers testing under a TestClock are not blocked.
       RequestResolver.setDelayEffect(
-        Effect.sleep("10 millis").pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()))
+        Effect.sleep(Duration.millis(requests.batchWindowMillis)).pipe(
+          Effect.provideService(Clock.Clock, Clock.Clock.defaultValue())
+        )
       ),
-      RequestResolver.batchN(callsPerRequest)
+      // Larger groups are split across requests.
+      RequestResolver.batchN(requests.batchSize)
     )
     return DecisionModel.DecisionModel.of({
       ...model,

@@ -3,6 +3,7 @@ import type { Digest } from "effect/crypto"
 
 import PackageJson from "../package.json" with { type: "json" }
 import * as Report from "../Report/Report.ts"
+import { CurrentSettings } from "../Settings.ts"
 import { type InputSource, TextDigest } from "../util/util.ts"
 import { CheckInput } from "./CheckInput.ts"
 import * as Evaluation from "./Evaluation.ts"
@@ -17,12 +18,10 @@ const sourceIdentity = (source: InputSource) =>
     Effect.map((digest) => Report.SourceIdentity.make({ path: source.path, digest }))
   )
 
-/** Simultaneous source digests; each holds an encoded copy of its source text. */
-const digestConcurrency = 8
-
 /** Evaluates changes against traits. Keep registry layers alive across calls to share setup; execution results belong to one check. Fails for an invalid request, before any extension or model work, or with the decision model's AiError when its provider rejects the account (credentials, permissions, or quota), since no further decision could succeed; other decision failures are recorded on their inputs. */
 export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
   const input = yield* pipe(request, S.decodeEffect(CheckInput))
+  const { digestConcurrency, ruleOut } = (yield* CurrentSettings).check
   const preparation = yield* Preparation.make(input)
   const { models, usage, traits } = yield* Evaluation.evaluate(input, preparation)
   const changes = yield* Effect.forEach(
@@ -41,11 +40,12 @@ export const check = Effect.fn("Check.check")(function* (request: CheckInput) {
             },
             { concurrency: "unbounded" }
           ),
+    // Each digest holds an encoded copy of its source text.
     { concurrency: digestConcurrency }
   )
   return Report.Report.make({
     version: PackageJson.version,
-    run: { models, usage },
+    run: { models, usage, ruleOut },
     changes,
     traits,
     diagnostics: [

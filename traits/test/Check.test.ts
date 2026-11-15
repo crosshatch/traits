@@ -10,6 +10,7 @@ import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import * as Report from "../Report/Report.ts"
 import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
+import * as Settings from "../Settings.ts"
 import { Trait } from "../Trait.ts"
 import { TraitAssertion } from "../TraitAssertion.ts"
 import { TraitName } from "../TraitName.ts"
@@ -118,7 +119,7 @@ it.effect("uses whole files without segmentation and keeps execution success sep
       empty.digest
     ])
     expect(report.version).toBe(PackageJson.version)
-    expect(report.run).toEqual({ models: [], usage: {} })
+    expect(report.run).toEqual({ models: [], usage: {}, ruleOut: 0.6 })
     expect(Report.verdicts(report, { fail: 0.5, pass: 0.8 }).verdict).toBe("Fail")
     expect(Report.verdicts(report, { fail: 1, pass: 0 }).verdict).toBe("Pass")
     yield* pipe(report, S.decodeEffect(Report.Report))
@@ -644,6 +645,20 @@ it.effect("assesses a target whose subject decision leans no without being confi
     expect(inputsOf(report.traits[0]!)[0]).toMatchObject({ subject: { yes: 0.4, no: 0.55, uncertain: 0.05 } })
     expect(inputsOf(report.traits[0]!)[0]).toHaveProperty("assessment")
     expect(gated.calls()).toEqual({ subject: 2, assertion: 1 })
+    // A lower configured threshold rules the leaning target out, and the report records the threshold it used.
+    const lenient = yield* check({
+      traits: [{ origin, trait: trait("asserted", { subject, assertion }) }],
+      changes: [{ after: { path: WorkspacePath.make("leaning.ts"), text: "leaning" } }]
+    }).pipe(
+      Effect.provide(unused),
+      Effect.provideServiceEffect(DecisionModel.DecisionModel, gatedModel().model),
+      Effect.provideService(
+        Settings.CurrentSettings,
+        Settings.Settings.make({ check: Settings.CheckSettings.make({ ruleOut: 0.5 }) })
+      )
+    )
+    expect(Array.map(allInputsOf(lenient.traits[0]!), (input) => input._tag)).toEqual(["Unmatched"])
+    expect(lenient.run.ruleOut).toBe(0.5)
   })
 )
 
@@ -667,7 +682,7 @@ it.effect(
           after: { path: WorkspacePath.make(`${text}.ts`), text }
         }))
       }).pipe(
-        Effect.provide(Layer.merge(registry, DecisionBatching.layer)),
+        Effect.provide([registry, DecisionBatching.layer]),
         Effect.provideServiceEffect(DecisionModel.DecisionModel, gated.model)
       )
       // Both gated traits' subjects share one request per file.
@@ -751,7 +766,7 @@ it.effect("batches subject decisions per input, splits large batches, and counts
       })),
       changes: [{ after: { path: WorkspacePath.make("file.ts"), text: "export const a = 1" } }]
     }).pipe(
-      Effect.provide(Layer.merge(unused, DecisionBatching.layer)),
+      Effect.provide([unused, DecisionBatching.layer]),
       Effect.provideServiceEffect(
         DecisionModel.DecisionModel,
         DecisionModel.make({
