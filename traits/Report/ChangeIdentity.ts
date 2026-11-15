@@ -1,6 +1,8 @@
-import { Schema as S } from "effect"
+import { Effect, pipe, Schema as S } from "effect"
+import type { Digest } from "effect/crypto"
 
-import { SourceIdentity } from "./SourceIdentity.ts"
+import type { Change } from "../util/Change.ts"
+import { fromInputSource, SourceIdentity } from "./SourceIdentity.ts"
 
 /** The source versions of a change, retaining both sides of renames without source text. At least one side is required. */
 export type ChangeIdentity = typeof ChangeIdentity.Type
@@ -25,3 +27,19 @@ export const ChangeIdentity = S.Union([
   description:
     "The source versions of a change, retaining both sides of renames without source text. At least one side is required."
 })
+
+/** Identifies each source version a change supplies, so the report can name the change without retaining its text. */
+export const fromChange = (change: Change): Effect.Effect<ChangeIdentity, never, Digest.Digest> =>
+  change.after === undefined
+    ? pipe(
+        change.before!,
+        fromInputSource,
+        Effect.map((before) => ({ before }))
+      )
+    : Effect.all(
+        {
+          after: fromInputSource(change.after),
+          ...(change.before === undefined ? {} : { before: fromInputSource(change.before) })
+        },
+        { concurrency: "unbounded" }
+      )

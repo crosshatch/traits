@@ -1,17 +1,9 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, Exit, Schema as S } from "effect"
-import type { AiError } from "effect/ai"
+import { Array, Effect, Exit } from "effect"
 
-import { check } from "../Check/Check.ts"
 import * as Segmentation from "../Segmenter/Segmentation.ts"
 import { Segment } from "../util/Segment.ts"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
-
-it("fails only with request validation errors or a model provider's rejection of the account", () => {
-  const expected: [Effect.Error<ReturnType<typeof check>>] extends [S.SchemaError | AiError.AiError] ? true : false =
-    true
-  expect(expected).toBe(true)
-})
 
 it.effect("validates all segments before returning them in source/range order", () =>
   Effect.gen(function* () {

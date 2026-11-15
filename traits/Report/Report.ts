@@ -1,4 +1,4 @@
-import { Array, Function, Option, pipe, Schema as S } from "effect"
+import { Array, Function, Schema as S } from "effect"
 
 import { Segment } from "../util/Segment.ts"
 import { Version } from "../Version.ts"
@@ -13,7 +13,7 @@ import { Problem } from "./Problem.ts"
 import type { ReportVerdicts } from "./ReportVerdicts.ts"
 import { Run } from "./Run.ts"
 import { TraitReport } from "./TraitReport.ts"
-import type { Verdict } from "./Verdict.ts"
+import { combineVerdicts, type Verdict } from "./Verdict.ts"
 
 /** Portable, client-facing evaluation results grouped by trait and change, without source text or excerpts; retry tracking is external. */
 export type Report = typeof Report.Type
@@ -124,14 +124,6 @@ export const Report = S.Struct({
     )
   )
 
-/** Combines verdicts by precedence Fail, Incomplete, Inconclusive, then Pass; empty input passes. */
-const combineVerdicts = (verdicts: ReadonlyArray<Verdict>): Verdict =>
-  pipe(
-    ["Fail", "Incomplete", "Inconclusive"] as const,
-    Array.findFirst((verdict) => Array.contains(verdicts, verdict)),
-    Option.getOrElse((): Verdict => "Pass")
-  )
-
 /** Derives Fail, Incomplete, Inconclusive, or Pass for every input, change, trait, and the report from a runner-produced report and policy. Interrupted checks return no report. */
 export const verdicts: {
   (policy: DecisionPolicy): (report: Report) => ReportVerdicts
@@ -213,7 +205,6 @@ export const problems = (report: Report): ReadonlyArray<Problem> => [
 ]
 
 export * from "./Assessment.ts"
-export * from "./ChangeIdentity.ts"
 export * from "./ChangeReport.ts"
 export * from "./DecisionPolicy.ts"
 export * from "./Diagnostic.ts"
@@ -223,8 +214,12 @@ export * from "./Explanation.ts"
 export * from "./InputReport.ts"
 export * from "./Problem.ts"
 export * from "./ReportVerdicts.ts"
-export * from "./Run.ts"
-export * from "./SourceIdentity.ts"
+export * from "./SubjectMatch.ts"
 export * from "./TraitOrigin.ts"
 export * from "./TraitReport.ts"
 export * from "./Verdict.ts"
+// These modules also export the operations that build their types, named for use behind the module's own name
+// (ChangeIdentity.fromChange), so only their schemas join the report's exports.
+export { ChangeIdentity } from "./ChangeIdentity.ts"
+export { Run } from "./Run.ts"
+export { SourceIdentity } from "./SourceIdentity.ts"

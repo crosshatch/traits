@@ -3,6 +3,7 @@ import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Layer, Stream } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/http"
 
+import * as WorkspaceChanges from "../local/WorkspaceChanges.ts"
 import * as WorkspaceCheck from "../local/WorkspaceCheck.ts"
 import * as TraitsCheck from "../mcp/TraitsCheck.ts"
 import PackageJson from "../package.json" with { type: "json" }
@@ -52,7 +53,7 @@ it.effect("returns check failures and unexpected errors to the client as actiona
     const declared = yield* call.pipe(
       Effect.provide(
         server(
-          () => WorkspaceCheck.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." }),
+          () => WorkspaceChanges.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." }),
           PackageJson.version
         )
       )
@@ -106,7 +107,7 @@ it.effect("asks for a server restart when the installed package changed under it
     const failed = yield* call.pipe(
       Effect.provide(
         server(
-          () => WorkspaceCheck.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." }),
+          () => WorkspaceChanges.WorkspaceFileError.make({ path: "src/a.ts", problem: "it is outside the workspace." }),
           PackageJson.version,
           "999.0.0"
         )

@@ -1,7 +1,7 @@
-import { Array, Effect, flow, Function, Order, Schema as S } from "effect"
+import { Array, Effect, Function, Order, Schema as S } from "effect"
 
 import type { Change } from "../util/Change.ts"
-import { Input } from "../util/Input.ts"
+import { fromSegment, Input } from "../util/Input.ts"
 import { Segment } from "../util/Segment.ts"
 
 const segmentOrder = Order.make<Input>(
@@ -21,12 +21,19 @@ export const execute: {
 } = Function.dual(2, <E, R>(segment: SegmentChange<E, R>, change: Change) =>
   Effect.suspend(() => segment(change)).pipe(
     Effect.flatMap(S.decodeUnknownEffect(S.Array(Segment))),
-    Effect.flatMap(
-      flow(
-        Array.map((segment: Segment) => ({ _tag: segment._tag, change, segment })),
-        S.decodeUnknownEffect(S.Array(Input))
-      )
-    ),
+    Effect.flatMap(Effect.forEach((segment) => fromSegment(change, segment))),
     Effect.map(Array.sort(segmentOrder))
   )
 )
+
+/** The one input of a change that no segmenter divides: its whole after source, or the whole before source of a deletion. */
+export const whole = (change: Change): Input =>
+  change.after === undefined
+    ? Input.cases.Before.make({
+        change: { before: change.before! },
+        segment: Segment.cases.Before.make({ range: { start: 0, end: change.before!.text.length } })
+      })
+    : Input.cases.After.make({
+        change: { ...change, after: change.after },
+        segment: Segment.cases.After.make({ range: { start: 0, end: change.after.text.length } })
+      })

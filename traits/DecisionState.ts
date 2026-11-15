@@ -1,9 +1,9 @@
 import { Schema as S } from "effect"
 
-import { type Input, primarySource, targetText } from "./Input.ts"
-import { InputRange } from "./InputRange.ts"
-import { InputSource } from "./InputSource.ts"
-import { WorkspacePath } from "./WorkspacePath.ts"
+import { type Input, primarySource, targetText } from "./util/Input.ts"
+import { InputRange } from "./util/InputRange.ts"
+import { InputSource } from "./util/InputSource.ts"
+import { WorkspacePath } from "./util/WorkspacePath.ts"
 
 /** The compact evidence a decision model sees for one input: the target once, the rest of its file only when the target is part of it, and earlier text only when the segmenter mapped the target to it. */
 export type DecisionState = typeof DecisionState.Type
@@ -40,7 +40,7 @@ export const DecisionState = S.Struct({
 })
 
 /** Builds the decision state for an input without repeating text or sending earlier text whose correspondence is unknown. */
-export const decisionState = (input: Input): DecisionState => {
+export const fromInput = (input: Input): DecisionState => {
   const source = primarySource(input)
   const target = targetText(input)
   return {

@@ -1,9 +1,8 @@
 import { Effect, Function, Record, Schema as S, String } from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
-import { DecisionState, decisionState } from "./util/DecisionState.ts"
+import * as DecisionState from "./DecisionState.ts"
 import type { Input } from "./util/Input.ts"
-import { Probability } from "./util/Probability.ts"
 
 /** The kind of artifact, action, transaction, relationship, or situation to identify and assess. */
 export type TraitSubject = typeof TraitSubject.Type
@@ -12,25 +11,6 @@ export const TraitSubject = S.NonEmptyString.check(S.isPattern(/\S/u), S.isMaxLe
   .annotate({
     description: "The kind of artifact, action, transaction, relationship, or situation to identify and assess."
   })
-
-/** Subject-membership probabilities without an acceptance threshold or assertion assessment. */
-export type TraitSubjectMatch = typeof TraitSubjectMatch.Type
-export const TraitSubjectMatch = S.Struct({
-  /** Probability that the selected target is or contains an instance of the subject. */
-  yes: Probability.annotateKey({
-    description: "Probability that the selected target is or contains an instance of the subject."
-  }),
-  /** Probability that no part of the selected target is an instance of the subject. */
-  no: Probability.annotateKey({
-    description: "Probability that no part of the selected target is an instance of the subject."
-  }),
-  /** Probability that available evidence cannot establish subject membership. */
-  uncertain: Probability.annotateKey({
-    description: "Probability that available evidence cannot establish subject membership."
-  })
-}).annotate({
-  description: "Subject-membership probabilities without an acceptance threshold or assertion assessment."
-})
 
 /** What every subject decision is asked. Answers depend on this wording, so decision caches key on it. */
 export const question = {
@@ -84,12 +64,12 @@ export const match: {
     }
     return yield* DecisionModel.decideSettled(
       Decision.make({
-        input: DecisionState,
+        input: DecisionState.DecisionState,
         decisions: Record.map(subjects, (subject) =>
           Decision.classify({ instructions: { subject, task: question.task }, criteria: question.criteria })
         )
       }),
-      { input: decisionState(input) }
+      { input: DecisionState.fromInput(input) }
     )
   })
 )

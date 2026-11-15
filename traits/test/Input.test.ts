@@ -1,7 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { pipe, Schema as S } from "effect"
 
-import { decisionState } from "../util/DecisionState.ts"
 import { Input, targetText } from "../util/Input.ts"
 import { Segment } from "../util/Segment.ts"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
@@ -54,30 +53,4 @@ it("rejects missing selected sources, invalid UTF-16 ranges, and unavailable his
       segment: Segment.cases.After.make({ range: { start: 0, end: 2 }, before: [{ start: 0, end: 1 }] })
     })
   ).toThrow()
-})
-
-it("sends each decision the target once, its file only when partial, and earlier text only when mapped", () => {
-  const before = { path: WorkspacePath.make("old.ts"), text: "const a = 1" }
-  const after = { path: WorkspacePath.make("new.ts"), text: "const a = 2\nconst b = 3" }
-  const whole = Input.cases.After.make({
-    change: { before, after },
-    segment: Segment.cases.After.make({ range: { start: 0, end: after.text.length } })
-  })
-  expect(decisionState(whole)).toEqual({ path: "new.ts", version: "after", target: after.text })
-  const mapped = Input.cases.After.make({
-    change: { before, after },
-    segment: Segment.cases.After.make({ range: { start: 0, end: 11 }, before: [{ start: 0, end: 11 }] })
-  })
-  expect(decisionState(mapped)).toEqual({
-    path: "new.ts",
-    version: "after",
-    target: "const a = 2",
-    source: after.text,
-    history: { path: "old.ts", text: before.text, ranges: [{ start: 0, end: 11 }] }
-  })
-  const deleted = Input.cases.Before.make({
-    change: { before },
-    segment: Segment.cases.Before.make({ range: { start: 0, end: before.text.length } })
-  })
-  expect(decisionState(deleted)).toEqual({ path: "old.ts", version: "before", target: before.text })
 })

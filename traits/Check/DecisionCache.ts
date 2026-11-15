@@ -1,10 +1,12 @@
 import { Context, Effect, Option, pipe, Result, Schema as S } from "effect"
 import { DecisionModel } from "effect/ai"
 
+import * as DecisionState from "../DecisionState.ts"
 import PackageJson from "../package.json" with { type: "json" }
+import { Assessment } from "../Report/Assessment.ts"
+import { SubjectMatch } from "../Report/SubjectMatch.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
-import { decisionState } from "../util/DecisionState.ts"
 import type { Input } from "../util/Input.ts"
 import { digestText, TextDigest } from "../util/TextDigest.ts"
 
@@ -81,12 +83,12 @@ export const decideSubject = Effect.fn("DecisionCache.decideSubject")(function* 
   subject: TraitSubject.TraitSubject,
   input: Input
 ) {
-  const key = yield* keyOf("subject", [TraitSubject.question, subject, decisionState(input)])
+  const key = yield* keyOf("subject", [TraitSubject.question, subject, DecisionState.fromInput(input)])
   const hit = yield* lookup(
     key,
     S.Struct({
       label: S.Literals(["yes", "no", "uncertain"]),
-      probabilities: TraitSubject.TraitSubjectMatch
+      probabilities: SubjectMatch
     })
   )
   if (hit !== undefined) {
@@ -105,12 +107,12 @@ export const evaluateAssertion = Effect.fn("DecisionCache.evaluateAssertion")(fu
   assertion: TraitAssertion.TraitAssertionInput,
   input: Input
 ) {
-  const key = yield* keyOf("assertion", [TraitAssertion.question, assertion, decisionState(input)])
+  const key = yield* keyOf("assertion", [TraitAssertion.question, assertion, DecisionState.fromInput(input)])
   const hit = yield* lookup(
     key,
     S.Struct({
       label: S.Literals(["pass", "fail", "na", "uncertain"]),
-      probabilities: S.Struct({ pass: S.Finite, fail: S.Finite, na: S.Finite, uncertain: S.Finite })
+      probabilities: Assessment
     })
   )
   if (hit !== undefined) {

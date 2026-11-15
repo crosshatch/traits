@@ -69,7 +69,7 @@ const assess = Effect.fnUntraced(function* (trait: Trait, path: WorkspacePath, t
     traits: [
       {
         trait,
-        origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(WorkspaceLayout.traitFile(trait.name)) })
+        origin: WorkspaceTraits.origin(trait.name)
       }
     ],
     changes: [{ after: { path, text } }]

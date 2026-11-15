@@ -1,14 +1,14 @@
-import { Array, Data, Deferred, Effect, Order, Result } from "effect"
+import { Array, Data, Deferred, Effect, Result } from "effect"
 import type { AiError, Decision } from "effect/ai"
 
 import * as Enrichment from "../Enrichment/Enrichment.ts"
 import * as Report from "../Report/Report.ts"
+import * as Segmentation from "../Segmenter/Segmentation.ts"
 import { CurrentSettings } from "../Settings.ts"
-import * as TraitAssertion from "../TraitAssertion.ts"
-import * as TraitSubject from "../TraitSubject.ts"
-import { Input, primarySource, targetText } from "../util/Input.ts"
+import type * as TraitAssertion from "../TraitAssertion.ts"
+import type * as TraitSubject from "../TraitSubject.ts"
+import { type Input, primarySource, targetText } from "../util/Input.ts"
 import { rejectsAccount } from "../util/rejectsAccount.ts"
-import { Segment } from "../util/Segment.ts"
 import { digestText } from "../util/TextDigest.ts"
 import type { CheckInput } from "./CheckInput.ts"
 import * as DecisionCache from "./DecisionCache.ts"
@@ -20,7 +20,7 @@ type DecisionResponse = TraitAssertion.TraitAssertionEvaluations<"assertion"> | 
 type SubjectGate = Data.TaggedEnum<{
   readonly Decided: {
     readonly responses: ReadonlyArray<DecisionResponse>
-    readonly probabilities: TraitSubject.TraitSubjectMatch
+    readonly probabilities: Report.SubjectMatch
   }
   readonly Failed: { readonly responses: ReadonlyArray<DecisionResponse>; readonly failure: string | undefined }
   readonly Cancelled: {}
@@ -60,22 +60,7 @@ interface ChangeResult {
   readonly responses: ReadonlyArray<DecisionResponse>
 }
 
-/** Sorted model identifiers and token totals across received responses; a total is omitted when any response did not report it. */
-const provenance = (responses: ReadonlyArray<DecisionResponse>) => {
-  const total = (key: "inputTokens" | "outputTokens") =>
-    Array.every(responses, (response) => response.usage[key] !== undefined)
-      ? { [key]: Array.reduce(responses, 0, (sum, response) => sum + response.usage[key]!) }
-      : {}
-  return {
-    models: Array.sort(
-      Array.dedupe(Array.flatMap(responses, (response) => (response.modelId === undefined ? [] : [response.modelId]))),
-      Order.String
-    ),
-    usage: { ...total("inputTokens"), ...total("outputTokens") }
-  }
-}
-
-/** Builds each trait's per-change results and run provenance; Deferreds only coordinate recovery. */
+/** Builds each trait's per-change results and collects the decision responses received for them, from which the run's provenance derives; Deferreds only coordinate recovery. */
 export const evaluate = Effect.fnUntraced(function* (request: CheckInput, preparation: Preparation) {
   const { check } = yield* CurrentSettings
   // Decision requests are limited by DecisionLimit.layer, so the per-trait, per-change, and per-input fibers here stay cheap.
@@ -242,20 +227,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
         (change, index) => {
           const inputs =
             trait.segment === undefined
-              ? // Without a segmenter, the whole after source, or the before source of a deletion, is one input.
-                Result.succeed([
-                  change.after === undefined
-                    ? Input.cases.Before.make({
-                        change: { before: change.before! },
-                        segment: Segment.cases.Before.make({
-                          range: { start: 0, end: change.before!.text.length }
-                        })
-                      })
-                    : Input.cases.After.make({
-                        change: { ...change, after: change.after },
-                        segment: Segment.cases.After.make({ range: { start: 0, end: change.after.text.length } })
-                      })
-                ])
+              ? Result.succeed([Segmentation.whole(change)])
               : // Missing results mean the segmenter's setup failed, so it never ran for any change.
                 (preparation.segmentations.get(trait.segment)?.[index] ?? Result.fail(undefined))
           return Result.isFailure(inputs)
@@ -284,6 +256,6 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
   )
   return {
     traits: Array.map(traits, (trait) => trait.report),
-    ...provenance(Array.flatMap(traits, (trait) => trait.responses))
+    responses: Array.flatMap(traits, (trait) => trait.responses)
   }
 })

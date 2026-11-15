@@ -1,11 +1,11 @@
 import { Schema as S } from "effect"
 
-import { TraitSubjectMatch } from "../TraitSubject.ts"
 import { Segment } from "../util/Segment.ts"
 import { TextDigest } from "../util/TextDigest.ts"
 import { Assessment } from "./Assessment.ts"
 import { EnrichmentOutcome } from "./EnrichmentOutcome.ts"
 import { Explanation } from "./Explanation.ts"
+import { SubjectMatch } from "./SubjectMatch.ts"
 
 const target = {
   /** One primary before/after assessment target, with optional historical context for an after target. */
@@ -20,7 +20,7 @@ const target = {
 const fields = {
   ...target,
   /** Subject-membership probabilities; present when the trait has a subject and its decision completed without ruling the target out. */
-  subject: TraitSubjectMatch.annotateKey({
+  subject: SubjectMatch.annotateKey({
     description:
       "Subject-membership probabilities; present when the trait has a subject and its decision completed without ruling the target out."
   }).pipe(S.optionalKey),
@@ -45,7 +45,7 @@ export const InputReport = S.TaggedUnion({
   Unmatched: {
     ...target,
     /** Subject-membership probabilities from the decision that ruled the target out. */
-    subject: TraitSubjectMatch.annotateKey({
+    subject: SubjectMatch.annotateKey({
       description: "Subject-membership probabilities from the decision that ruled the target out."
     })
   },

@@ -117,7 +117,7 @@ const program = Effect.gen(function* () {
         Effect.map(WorkspaceTraits.load(name), (trait) => ({
           trait:
             segment !== undefined && Array.contains(cases.traits, name) ? Trait.make({ ...trait, segment }) : trait,
-          origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(WorkspaceLayout.traitFile(name)) })
+          origin: WorkspaceTraits.origin(name)
         }))
       ),
       changes: Effect.forEach(cases.fixtures, (fixture) =>

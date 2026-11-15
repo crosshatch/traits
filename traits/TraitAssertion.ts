@@ -1,11 +1,11 @@
 import { Effect, Function, Record, Schema as S, String } from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
+import * as DecisionState from "./DecisionState.ts"
 import { EnrichmentOutcome } from "./Report/EnrichmentOutcome.ts"
 import { TraitBody } from "./TraitBody.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
-import { DecisionState, decisionState } from "./util/DecisionState.ts"
 import type { Input } from "./util/Input.ts"
 
 /** The assertion to assess against the subject. */
@@ -85,11 +85,11 @@ export const evaluate: {
   }
   return DecisionModel.decideSettled(
     Decision.make({
-      input: S.Struct({ ...DecisionState.fields, assertions: S.Record(S.String, TraitAssertionInput) }),
+      input: S.Struct({ ...DecisionState.DecisionState.fields, assertions: S.Record(S.String, TraitAssertionInput) }),
       decisions: Record.map(assertions, (_request, assertionKey) =>
         Decision.classify({ instructions: { assertionKey, task: question.task }, criteria: question.criteria })
       )
     }),
-    { input: { ...decisionState(input), assertions } }
+    { input: { ...DecisionState.fromInput(input), assertions } }
   ).pipe(Effect.withSpan("TraitAssertion.evaluate"))
 })

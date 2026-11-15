@@ -13,6 +13,16 @@ lock that serializes their updates. It backs the experimental `auth` and
 `local/`; `Cli/` keeps only command handling and terminal prompts, and core
 modules never import from `local/`, `Cli/`, or `mcp/`.
 
+A module is named for the type or operation it owns and exports the operations
+on that type beside it, so it reads as a namespace: `TraitFile.parse`,
+`Version.isNewer`, `Segmentation.whole`. An operation that builds one type from
+another lives with the type it builds and is named for its source:
+`SourceIdentity.fromInputSource`, `ChangeIdentity.fromChange`,
+`Run.fromResponses`, `DecisionState.fromInput`. `util/` holds the schemas every
+other module shares, which the package root exports by name rather than as
+namespaces. `Report/Report.ts` exports the report's schemas as one namespace,
+leaving out the `from*` operations of the modules that have them.
+
 ## Runtime API
 
 `check({ traits, changes })` evaluates caller-ordered traits and changes and
@@ -170,15 +180,17 @@ maps of validated input-selection `Result`s. Successful segmenter setup
 functions are discarded once segmentation finishes. Registry layers still own
 setup caching. `Check/Evaluation.ts` builds each trait's `ChangeReport` directly
 from the request and preparation: `NotSegmented` when its segmentation failed,
-and otherwise `Evaluated` inputs. It also totals run usage and models from the
-responses it received. The enrichment registry validates extension output; typed
-error handlers use the existing `EnrichmentError.reason` to coordinate recovery,
-then record a safe explanation on the enrichment outcome. Recovery cancellation
-records a `Cancelled` outcome without context or explanation, and without
-constructing interrupted exits. Caller interruption still exits through Effect.
-Trait/input `Deferred`s coordinate recovery, not report storage. Evaluation
-returns the report's own `TraitReport`, `ChangeReport`, and `InputReport`
-shapes; no parallel result hierarchy or conversion layer is needed.
+and otherwise `Evaluated` inputs. It also returns the decision responses it
+received, from which `Run.fromResponses` derives the run's models and usage, and
+`ChangeIdentity.fromChange` identifies each supplied change. The enrichment
+registry validates extension output; typed error handlers use the existing
+`EnrichmentError.reason` to coordinate recovery, then record a safe explanation
+on the enrichment outcome. Recovery cancellation records a `Cancelled` outcome
+without context or explanation, and without constructing interrupted exits.
+Caller interruption still exits through Effect. Trait/input `Deferred`s
+coordinate recovery, not report storage. Evaluation returns the report's own
+`TraitReport`, `ChangeReport`, and `InputReport` shapes; no parallel result
+hierarchy or conversion layer is needed.
 
 Cancellation uses normal Effect fiber interruption: pending work is interrupted
 and execution cleanup completes, without returning a partial report. Callers do
@@ -243,13 +255,14 @@ A workspace keeps its configuration at its root and its traits under
 `WorkspaceTraits.select` checks every trait by default, narrows to an
 environment's traits when one is given, and then to the requested trait names.
 Names without trait files, requested traits outside the environment, and unknown
-or invalid environments fail with a message saying what to fix. Each path
-becomes a change pairing the working-tree text (after) with the text at Git
-`HEAD` (before): untracked files are new, deleted tracked files are deletions,
-and workspaces outside Git have no before text. Paths may be workspace-relative
-or absolute within the workspace. Each trait's report records its file as
-`origin`. Git is run through `local/Git`, which collects each command's exit
-code and output.
+or invalid environments fail with a message saying what to fix.
+`WorkspaceChanges.load` (`local/WorkspaceChanges`) turns each path into a change
+pairing the working-tree text (after) with the text at Git `HEAD` (before):
+untracked files are new, deleted tracked files are deletions, and workspaces
+outside Git have no before text. Paths may be workspace-relative or absolute
+within the workspace. Each trait's report records its file as `origin`, from
+`WorkspaceTraits.origin`. Git is run through `local/Git`, which collects each
+command's exit code and output.
 
 The `WorkspaceCheck` service owns the complete pipeline, independent of any
 front end: `check(request)` loads `traits.json` and the trait files, builds the
@@ -442,11 +455,11 @@ unambiguously identifies its configured enrichment in results and failures.
 ## Select ranges within a change
 
 When a trait has no segmenter, the evaluator uses the entire after-source, or
-the entire before-source for a whole-file deletion, as one input. No parser or
-segmentation extension runs. Internally this is represented by a full-file
-`After` or `Before` range, including `{ start: 0, end: 0 }` for an empty file.
-Default whole-file selection does not compute historical correspondence, so
-`After.before` is omitted.
+the entire before-source for a whole-file deletion, as one input
+(`Segmentation.whole`). No parser or segmentation extension runs. Internally
+this is represented by a full-file `After` or `Before` range, including
+`{ start: 0, end: 0 }` for an empty file. Default whole-file selection does not
+compute historical correspondence, so `After.before` is omitted.
 
 Within one evaluation, the runner segments each caller-supplied change once per
 resolved segmenter module, sharing the validated result or failure across all
@@ -869,11 +882,12 @@ context. Otherwise an input takes its assessment's verdict, and completed
 guidance-only inputs are `Pass`. An `Evaluated` change combines its inputs, so a
 change whose segmenter selected nothing passes; a `NotSegmented` change is
 `Incomplete`. A trait combines its changes. The report combines its traits and
-is `Incomplete` whenever any shared diagnostic exists. Verdicts combine by the
-precedence `Fail`, `Incomplete`, `Inconclusive`, `Pass`, and an empty selection
-is `Pass`. `Fail` takes precedence over `Incomplete`, so CI can distinguish "the
-code violates a trait, so block" from "a check failed to run, so retry". No
-probability threshold is implicit in the helper.
+is `Incomplete` whenever any shared diagnostic exists. Verdicts combine
+(`Report.combineVerdicts`) by the precedence `Fail`, `Incomplete`,
+`Inconclusive`, `Pass`, and an empty selection is `Pass`. `Fail` takes
+precedence over `Incomplete`, so CI can distinguish "the code violates a trait,
+so block" from "a check failed to run, so retry". No probability threshold is
+implicit in the helper.
 
 This relies on a complete runner-produced report. Structure guarantees that
 every trait/change pair and every configured enrichment is represented; the

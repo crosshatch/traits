@@ -59,6 +59,12 @@ const unusedLoaders = {
 const unused = hostFrom(unusedLoaders)
 const model = Layer.effect(DecisionModel.DecisionModel, DecisionModel.make({ decide: () => Effect.succeed(response) }))
 
+it("fails only with request validation errors or a model provider's rejection of the account", () => {
+  const expected: [Effect.Error<ReturnType<typeof check>>] extends [S.SchemaError | AiError.AiError] ? true : false =
+    true
+  expect(expected).toBe(true)
+})
+
 it.effect("uses whole files without segmentation and keeps execution success separate from assessment acceptance", () =>
   Effect.gen(function* () {
     let assessments = 0

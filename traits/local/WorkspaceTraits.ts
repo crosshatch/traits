@@ -1,9 +1,11 @@
 import { Array, Effect, FileSystem, Order, Path, pipe, Schema as S, String } from "effect"
 
+import { TraitOrigin } from "../Report/TraitOrigin.ts"
 import { Trait } from "../Trait.ts"
 import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitsEnvironment } from "../TraitsEnvironment.ts"
+import { WorkspacePath } from "../util/WorkspacePath.ts"
 import * as ExtensionModule from "./ExtensionModule.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
@@ -216,3 +218,7 @@ export const load = Effect.fn("WorkspaceTraits.load")(function* (name: TraitName
     .pipe(Effect.mapError((cause) => TraitFileReadError.make({ path: file, cause })))
   return yield* decode(name, file, text)
 })
+
+/** Where the named trait is defined: its file in the workspace's trait directory. */
+export const origin = (name: TraitName) =>
+  TraitOrigin.cases.File.make({ path: WorkspacePath.make(WorkspaceLayout.traitFile(name)) })
