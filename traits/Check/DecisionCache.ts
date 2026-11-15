@@ -74,7 +74,7 @@ const remember = Effect.fnUntraced(function* (
   })
 })
 
-/** Decides a subject on an input like TraitSubject.decide, reusing a cached decision when one exists. */
+/** Decides a subject on an input like TraitSubject.match, reusing a cached decision when one exists. */
 export const decideSubject = Effect.fn("DecisionCache.decideSubject")(function* (
   subject: TraitSubject.TraitSubject,
   input: Input
@@ -89,13 +89,13 @@ export const decideSubject = Effect.fn("DecisionCache.decideSubject")(function* 
   )
   if (hit !== undefined) {
     return {
-      response: { ...cachedResponse(hit.decision), outcomes: {} },
-      outcome: Result.succeed(hit.answer)
-    } satisfies TraitSubject.TraitSubjectDecision
+      ...cachedResponse(hit.decision),
+      outcomes: { subject: Result.succeed(hit.answer) }
+    } satisfies TraitSubject.TraitSubjectMatches<"subject">
   }
-  const decided = yield* TraitSubject.decide(subject, input)
-  yield* remember(key, decided.outcome, decided.response.modelId)
-  return decided
+  const response = yield* TraitSubject.match({ subject }, input)
+  yield* remember(key, response.outcomes.subject, response.modelId)
+  return response
 })
 
 /** Assesses one assertion on an input like TraitAssertion.evaluate, reusing a cached decision when one exists. */

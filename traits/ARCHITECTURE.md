@@ -37,8 +37,8 @@ remain in the Effect error channel. An empty record makes no provider request
 and reports zero token usage. Single-subject requests use the same API, for
 example `TraitSubject.match({ subject }, input)`. Matching neither evaluates an
 assertion nor applies a gating policy. Callers choose appropriately sized
-subject groups for the selected provider; this API does not batch unrelated
-inputs or impose an unmeasured numeric batch limit.
+subject groups for the selected provider; this API does not itself merge
+separate calls or impose a numeric batch limit.
 
 `TraitAssertion.evaluate(assertions, input)` similarly batches caller-keyed
 `TraitAssertionInput` values over shared source context with `decideSettled`.
@@ -55,26 +55,36 @@ and the earlier version with its mapped ranges only when the segmenter supplied
 that correspondence. Unmapped earlier text is omitted rather than sent with an
 instruction to ignore it.
 
-`check` gates each input of a trait with a subject on `TraitSubject.decide`
-before any other work on that input. `decide` issues an Effect request that a
-grouped resolver batches by input: concurrent subject decisions on the same
-input, typically one per trait, share one `TraitSubject.match` request of up to
-32 keyed questions, collected over a 10 ms real-time window. The file is
-therefore sent once per batch instead of once per trait, and run usage counts
-each shared response once. The resolver is the seam for later request-level
-optimizations, such as caching unchanged decisions or routing decision kinds to
-different models, without changing `check`. When the decision's `no` probability
-is at least 0.6 (`TraitSubject.rulesOut`), the input is reported as `Unmatched`
-with the subject probabilities, and neither its enrichments nor its assertion
-run; verdicts treat it as Pass. Otherwise the input proceeds and records the
-probabilities as `subject`, so possibly in-scope code is still assessed. The
-gate uses this threshold rather than the model's label because the two mistakes
-cost differently: wrongly ruling a target out hides a violation, while wrongly
-matching it costs one assessment. Answers near an even split also vary between
-requests and with the other subjects sharing them, so ruling out on the label
-alone missed labelled violations at random. In measurements on this repository,
-0.6 removed those misses for about a fifth more tokens.
-`Models.layerDecisionLimit` caps simultaneous decision requests at the
+`DecisionBatching.layer` wraps the `DecisionModel` in context so that concurrent
+`decideSettled` calls asking the same-named decisions about the same encoded
+input share one provider request of up to 32 calls, collected over a 10 ms
+real-time window. Callers keep calling `DecisionModel.decideSettled` directly;
+batching is a property of the provided model, not of the code that asks. Merged
+decisions are named by caller index (`0.subject`, `1.subject`), and a call
+merged with no others is sent unchanged. Each caller receives only its own
+outcomes, the request's model and metadata, and an integer share of its token
+usage, so summing usage over callers gives the provider's totals. A failed
+request fails every call merged into it. `decide` is not batched. The workspace
+models and the eval provide it outside `Models.layerDecisionLimit`, so the limit
+and retries apply to merged requests. Subject decisions on one input, one per
+trait, therefore send the file once per request instead of once per trait.
+Assertion calls merge only when they start in the same window, which is rare: on
+the labelled eval with every trait, merging them saved about 1% of requests and
+left results unchanged.
+
+`check` gates each input of a trait with a subject on
+`TraitSubject.match({ subject }, input)` before any other work on that input.
+When the decision's `no` probability is at least 0.6 (`TraitSubject.rulesOut`),
+the input is reported as `Unmatched` with the subject probabilities, and neither
+its enrichments nor its assertion run; verdicts treat it as Pass. Otherwise the
+input proceeds and records the probabilities as `subject`, so possibly in-scope
+code is still assessed. The gate uses this threshold rather than the model's
+label because the two mistakes cost differently: wrongly ruling a target out
+hides a violation, while wrongly matching it costs one assessment. Answers near
+an even split also vary between requests and with the other subjects sharing
+them, so ruling out on the label alone missed labelled violations at random. In
+measurements on this repository, 0.6 removed those misses for about a fifth more
+tokens. `Models.layerDecisionLimit` caps simultaneous decision requests at the
 configured concurrency and retries transient provider failures (rate limits,
 network and internal provider errors) up to five times with jittered exponential
 backoff, waiting at least as long as a rate limit asks. A retrying request keeps

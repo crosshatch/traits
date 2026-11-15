@@ -17,6 +17,7 @@ import { FetchHttpClient } from "effect/http"
 import { KeyValueStore } from "effect/persistence"
 
 import { check } from "../Check/Check.ts"
+import * as DecisionBatching from "../DecisionBatching.ts"
 import * as ExtensionModule from "../local/ExtensionModule.ts"
 import * as LocalEnrichmentRegistry from "../local/LocalEnrichmentRegistry.ts"
 import * as LocalSegmenterRegistry from "../local/LocalSegmenterRegistry.ts"
@@ -127,7 +128,8 @@ const program = Effect.gen(function* () {
     { concurrency: "unbounded" }
   )
   const requests = yield* Ref.make(0)
-  const models = layerCountedDecisions(requests).pipe(
+  const models = DecisionBatching.layer.pipe(
+    Layer.provideMerge(layerCountedDecisions(requests)),
     Layer.provideMerge(Models.layerDecisionLimit(config.concurrency)),
     Layer.provideMerge(Models.layer(config.models).pipe(Layer.provide(WorkspaceConfigProvider.layer)))
   )

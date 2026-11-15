@@ -53,10 +53,8 @@ interface ChangeResult {
   readonly responses: ReadonlyArray<DecisionResponse>
 }
 
-/** Sorted model identifiers and token totals across received responses, counting a response shared by batched decisions once; a total is omitted when any response did not report it. */
-const provenance = (received: ReadonlyArray<DecisionResponse>) => {
-  // Batched decisions share one response object, so deduplicate by identity rather than structural equality.
-  const responses = globalThis.Array.from(new Set(received))
+/** Sorted model identifiers and token totals across received responses; a total is omitted when any response did not report it. */
+const provenance = (responses: ReadonlyArray<DecisionResponse>) => {
   const total = (key: "inputTokens" | "outputTokens") =>
     Array.every(responses, (response) => response.usage[key] !== undefined)
       ? { [key]: Array.reduce(responses, 0, (sum, response) => sum + response.usage[key]!) }
@@ -93,16 +91,16 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
                     error !== undefined && rejectsAccount(error)
                       ? Effect.fail(error)
                       : Effect.succeed(SubjectGate.Failed({ responses: [], failure: failureReason(error) })),
-                  onSuccess: (subject) =>
+                  onSuccess: (response) =>
                     Effect.succeed(
-                      Result.isSuccess(subject.outcome)
+                      Result.isSuccess(response.outcomes.subject)
                         ? SubjectGate.Decided({
-                            responses: [subject.response],
-                            probabilities: subject.outcome.success.probabilities
+                            responses: [response],
+                            probabilities: response.outcomes.subject.success.probabilities
                           })
                         : SubjectGate.Failed({
-                            responses: [subject.response],
-                            failure: failureReason(subject.outcome.failure)
+                            responses: [response],
+                            failure: failureReason(response.outcomes.subject.failure)
                           })
                     )
                 }),

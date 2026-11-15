@@ -4,6 +4,7 @@ import { AiError, DecisionModel } from "effect/ai"
 import { Digest } from "effect/crypto"
 
 import { check, type CheckTrait } from "../Check/Check.ts"
+import * as DecisionBatching from "../DecisionBatching.ts"
 import * as Enrichment from "../Enrichment/Enrichment.ts"
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
 import PackageJson from "../package.json" with { type: "json" }
@@ -665,7 +666,10 @@ it.effect(
         changes: Array.map(["match", "skip", "maybe"], (text) => ({
           after: { path: WorkspacePath.make(`${text}.ts`), text }
         }))
-      }).pipe(Effect.provide(registry), Effect.provideServiceEffect(DecisionModel.DecisionModel, gated.model))
+      }).pipe(
+        Effect.provide(Layer.merge(registry, DecisionBatching.layer)),
+        Effect.provideServiceEffect(DecisionModel.DecisionModel, gated.model)
+      )
       // Both gated traits' subjects share one request per file.
       expect(gated.calls()).toEqual({ subject: 3, assertion: 2 + 3 })
       expect(enrichments).toBe(2)
@@ -737,7 +741,7 @@ it.effect("fails inputs whose subject decision fails, without running enrichment
   }).pipe(Effect.provide(Digest.layerWebCrypto))
 )
 
-it.effect("batches subject decisions per input, splits large batches, and counts shared usage once", () =>
+it.effect("batches subject decisions per input, splits large batches, and counts each request's usage once", () =>
   Effect.gen(function* () {
     const questions: Array<number> = []
     const report = yield* check({
@@ -747,7 +751,7 @@ it.effect("batches subject decisions per input, splits large batches, and counts
       })),
       changes: [{ after: { path: WorkspacePath.make("file.ts"), text: "export const a = 1" } }]
     }).pipe(
-      Effect.provide(unused),
+      Effect.provide(Layer.merge(unused, DecisionBatching.layer)),
       Effect.provideServiceEffect(
         DecisionModel.DecisionModel,
         DecisionModel.make({

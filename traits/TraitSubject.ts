@@ -1,17 +1,4 @@
-import {
-  Array,
-  Clock,
-  Effect,
-  Exit,
-  Function,
-  Hash,
-  pipe,
-  Record,
-  Request,
-  RequestResolver,
-  Schema as S,
-  String
-} from "effect"
+import { Effect, Function, Record, Schema as S, String } from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
 import { DecisionState, decisionState, type Input, Probability } from "./util/util.ts"
@@ -114,76 +101,4 @@ export const match: {
       { input: decisionState(input) }
     )
   })
-)
-
-/** The most subjects decided in one provider request; larger groups are split across requests. */
-const subjectsPerRequest = 32
-
-/** One subject's outcome on an input, with the provider response it was decided in; that response may also carry other subjects' decisions. */
-export interface TraitSubjectDecision {
-  readonly response: TraitSubjectMatches
-  readonly outcome: TraitSubjectMatches["outcomes"][string]
-}
-
-/** Identifies an input's decision state, so requests about the same input share provider requests. */
-const inputKey = (input: Input): string => {
-  const state = decisionState(input)
-  return pipe(
-    [
-      state.version,
-      state.path,
-      `${input.segment.range.start}-${input.segment.range.end}`,
-      `${Hash.string(state.target)}`,
-      state.source === undefined ? "" : `${Hash.string(state.source)}`,
-      state.history === undefined ? "" : `${Hash.string(JSON.stringify(state.history))}`
-    ],
-    Array.join("\u0000")
-  )
-}
-
-class SubjectDecisionRequest extends Request.Class<
-  { readonly subject: TraitSubject; readonly input: Input; readonly key: string },
-  TraitSubjectDecision,
-  AiError.AiError,
-  DecisionModel.DecisionModel
-> {}
-
-/** Decides each group of requests about one input in a single match, completing every request from its keyed outcome. */
-const subjectResolver = RequestResolver.makeGrouped<SubjectDecisionRequest, string>({
-  key: (entry) => entry.request.key,
-  resolver: (entries) =>
-    match(
-      Record.fromEntries(Array.map(entries, (entry, index) => [`${index}`, entry.request.subject] as const)),
-      entries[0].request.input
-    ).pipe(
-      Effect.provideContext(entries[0].context),
-      Effect.exit,
-      Effect.flatMap((exit) =>
-        Effect.sync(() =>
-          Array.forEach(entries, (entry, index) =>
-            entry.completeUnsafe(Exit.map(exit, (response) => ({ response, outcome: response.outcomes[`${index}`]! })))
-          )
-        )
-      )
-    )
-}).pipe(
-  // Requests for one input arrive over several scheduler ticks, so collect briefly before sending; this is negligible next to
-  // model latency. The wait uses the real clock so callers testing under a TestClock are not blocked.
-  RequestResolver.setDelayEffect(
-    Effect.sleep("10 millis").pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()))
-  ),
-  RequestResolver.batchN(subjectsPerRequest)
-)
-
-/** Decides one subject on an input; concurrent decisions on the same input share provider requests, so the input is sent once per batch rather than once per subject. */
-export const decide: {
-  (
-    input: Input
-  ): (subject: TraitSubject) => Effect.Effect<TraitSubjectDecision, AiError.AiError, DecisionModel.DecisionModel>
-  (
-    subject: TraitSubject,
-    input: Input
-  ): Effect.Effect<TraitSubjectDecision, AiError.AiError, DecisionModel.DecisionModel>
-} = Function.dual(2, (subject: TraitSubject, input: Input) =>
-  Effect.request(new SubjectDecisionRequest({ subject, input, key: inputKey(input) }), subjectResolver)
 )
