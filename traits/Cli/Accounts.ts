@@ -1,7 +1,7 @@
 import { Effect, FileSystem, pipe, Schema as S } from "effect"
 import { CliError } from "effect/cli"
 
-import * as AtomicFile from "./_util/AtomicFile.ts"
+import * as AtomicFile from "./AtomicFile.ts"
 import { CliPaths } from "./CliPaths.ts"
 import { ProviderAccount } from "./Provider/ProviderAccount.ts"
 import { UserFileSecurity } from "./UserFileSecurity.ts"

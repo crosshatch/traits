@@ -1,7 +1,7 @@
 import { Console, Effect, Option } from "effect"
 import { Command } from "effect/cli"
 
-import * as ApiKey from "../../../_util/ApiKey.ts"
+import * as ApiKey from "../../../ApiKey.ts"
 import { AccountName } from "../../../Provider/AccountName.ts"
 import { Credential } from "../../../Provider/Credential.ts"
 import { ProviderAccount, save } from "../../../Provider/ProviderAccount.ts"

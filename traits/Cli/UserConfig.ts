@@ -1,7 +1,7 @@
 import { Array, Effect, FileSystem, Option, pipe, Schema as S } from "effect"
 import { CliError } from "effect/cli"
 
-import * as AtomicFile from "./_util/AtomicFile.ts"
+import * as AtomicFile from "./AtomicFile.ts"
 import { CliPaths } from "./CliPaths.ts"
 import { Profile, ProfileName } from "./Profile/Profile.ts"
 
