@@ -32,9 +32,9 @@ export const TraitsCheck = Tool.make("traits.check", {
     String.trim
   ),
   parameters: S.Struct({
-    /** Files to check, relative to the workspace root; every project file when omitted. */
+    /** Files to check, relative to the workspace root; when omitted, every tracked or untracked text file that Git does not ignore. */
     paths: S.NonEmptyArray(S.NonEmptyString)
-      .annotateKey({
+      .annotate({
         description:
           "Files to check, relative to the workspace root; when omitted, every tracked or untracked text file that Git does not ignore."
       })
@@ -45,7 +45,7 @@ export const TraitsCheck = Tool.make("traits.check", {
     }).pipe(S.optionalKey),
     /** Traits to check, within the environment when one is given. */
     traits: S.NonEmptyArray(TraitName)
-      .annotateKey({ description: "Traits to check, within the environment when one is given." })
+      .annotate({ description: "Traits to check, within the environment when one is given." })
       .pipe(S.optionalKey)
   }),
   success: S.Struct({

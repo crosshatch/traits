@@ -54,6 +54,22 @@ it("validates the workspace configuration and each role's supported providers", 
   ]) {
     expect(decodes({ ...config, models: invalid })).toBe(false)
   }
+  // A constructed configuration takes the same defaults as a decoded one.
+  const decoded = pipe(config, S.decodeUnknownExit(TraitsConfig.TraitsConfig))
+  expect(
+    Exit.map(decoded, (decoded) => TraitsConfig.TraitsConfig.make({ version: decoded.version, models: decoded.models }))
+  ).toEqual(decoded)
+  expect(Exit.isSuccess(decoded)).toBe(true)
+  // Generated JSON Schema keeps each defaulted setting's description, so editors can show what it means.
+  const { properties } = S.toJsonSchemaDocument(TraitsConfig.TraitsConfig).schema
+  for (const [setting, meaning] of [
+    ["concurrency", "simultaneous decision model requests"],
+    ["exclude", "Git glob patterns"],
+    ["check", "ruleOut"],
+    ["requests", "retried"]
+  ] as const) {
+    expect(JSON.stringify(Object(properties)[setting])).toContain(meaning)
+  }
 })
 
 it("applies caret compatibility to configured versions", () => {

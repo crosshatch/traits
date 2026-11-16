@@ -30,13 +30,13 @@ export interface ApprovalRequest {
   readonly message: string
 }
 
-/** Why an existing trait relates to a proposal as it does, for the agent and user reconciling them. */
+/** Why the existing trait relates to the proposal as it does, citing their specific rules, for the agent and user reconciling them. */
 const Reason = S.String.annotate({
   description:
     "Why the existing trait relates to the proposal as it does, citing their specific rules, for the agent and user reconciling them."
 })
 
-/** How an existing trait relates to a proposal it blocks. */
+/** conflict: following one would violate the other; inconclusive: too ambiguous to tell; clarification: one of several traits the proposal could replace. */
 const BlockingRelationship = S.Literals(["conflict", "inconclusive", "clarification"]).annotate({
   description:
     "conflict: following one would violate the other; inconclusive: too ambiguous to tell; clarification: one of several traits the proposal could replace."

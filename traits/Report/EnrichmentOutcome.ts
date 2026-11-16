@@ -3,6 +3,7 @@ import { Schema as S } from "effect"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
 import { Explanation } from "./Explanation.ts"
 
+/** The configured enrichment module. */
 const module = WorkspacePath.annotateKey({ description: "The configured enrichment module." })
 
 /** What one configured enrichment produced for an input: context supplied to assessment, or why it produced none. */

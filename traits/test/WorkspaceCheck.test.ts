@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, DateTime, Effect, FileSystem, Layer, Order, Path, pipe, Schema as S } from "effect"
+import { Array, DateTime, Effect, FileSystem, Layer, Order, Path, pipe, Schema as S, String } from "effect"
 import { DecisionModel } from "effect/ai"
 import { Digest, SecureRandom } from "effect/crypto"
 import { FetchHttpClient } from "effect/http"
@@ -258,7 +258,15 @@ it.effect("parses trait frontmatter, rejects outdated or malformed files, and re
     expect(TraitFile.serialize(parsed)).toBe(
       "---\nname: a\nassertion: The code is correct.\npurpose: Protect correctness.\n---\n\nPrefer small functions.\n"
     )
-    for (const text of ["no frontmatter", "---\nname: [\n---\n", traitFile("a", "requirement: Legacy.\n")]) {
+    for (const text of [
+      "no frontmatter",
+      "---\nname: [\n---\n",
+      traitFile("a", "requirement: Legacy.\n"),
+      // Mistakes in a trait file are the user's to fix, so none of them may surface as a defect.
+      traitFile("a", "enrichments:\n  - ./context.mjs\n  - ./context.mjs\n"),
+      traitFile("a", `enrichments:\n${pipe("  - ./context.mjs\n", String.repeat(33))}`),
+      `${traitFile("a")}${pipe("x", String.repeat(1_000_001))}`
+    ]) {
       const malformed = yield* TraitFile.parse({ path: "traits/a.md", text }).pipe(Effect.flip)
       expect(malformed._tag).toBe("TraitFileParseError")
     }
@@ -277,6 +285,13 @@ it.effect("parses trait frontmatter, rejects outdated or malformed files, and re
     expect(trait.segment).toBe(".agents/traits/segmenter.mjs")
     const mismatch = yield* WorkspaceTraits.load(TraitName.make("b")).pipe(Effect.provide(workspaceRoot), Effect.flip)
     expect(mismatch._tag).toBe("TraitFileParseError")
+    // Two references that differ as written can still name one module.
+    yield* fs.writeFileString(
+      path.join(directory, ".agents", "traits", "c.md"),
+      traitFile("c", "enrichments:\n  - ./segmenter.mjs\n  - ../traits/segmenter.mjs\n")
+    )
+    const repeated = yield* WorkspaceTraits.load(TraitName.make("c")).pipe(Effect.provide(workspaceRoot), Effect.flip)
+    expect(repeated._tag).toBe("TraitFileParseError")
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
 

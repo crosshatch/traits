@@ -4,6 +4,7 @@ import * as Yaml from "yaml"
 import { Trait } from "./Trait.ts"
 import { TraitBody } from "./TraitBody.ts"
 
+/** A path relative to the trait file, or an ESM package reference, resolved from the trait file. */
 const reference = S.NonEmptyString.annotate({
   description: "A path relative to the trait file, or an ESM package reference, resolved from the trait file."
 })
@@ -16,9 +17,12 @@ export const TraitDocument = Trait.mapFields(
     segment: reference
       .annotateKey({ description: "The segmenter module reference; omitted to check whole files." })
       .pipe(S.optionalKey),
-    /** Enrichment module references, in order. */
+    /** Ordered, distinct enrichment module references, at most 32; omitted when none are configured. */
     enrichments: S.NonEmptyArray(reference)
-      .annotateKey({ description: "Enrichment module references, in order." })
+      .check(S.isMaxLength(32), S.isUnique())
+      .annotate({
+        description: "Ordered, distinct enrichment module references, at most 32; omitted when none are configured."
+      })
       .pipe(S.optionalKey)
   })
 ).annotate({
@@ -88,6 +92,16 @@ export const parse = Effect.fn("TraitFile.parse")(function* (input: { readonly p
       })
     )
   )
-  const body = pipe(bodyText, String.trim)
-  return TraitDocument.make(body === "" ? frontmatter : { ...frontmatter, body: TraitBody.make(body) })
+  const text = pipe(bodyText, String.trim)
+  if (text === "") {
+    return TraitDocument.make(frontmatter)
+  }
+  const body = yield* pipe(
+    text,
+    S.decodeEffect(TraitBody),
+    Effect.mapError((cause) =>
+      TraitFileParseError.make({ path: input.path, problem: `its body is not valid: ${cause.message}` })
+    )
+  )
+  return TraitDocument.make({ ...frontmatter, body })
 })

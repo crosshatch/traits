@@ -200,11 +200,21 @@ export const decode = Effect.fn("WorkspaceTraits.decode")(function* (name: Trait
       ? undefined
       : // A trait lists few enrichments, and resolving one only locates a module file, so resolve them together.
         yield* Effect.all(Array.map(enrichmentReferences, resolve), { concurrency: "unbounded" })
-  return Trait.make({
-    ...document,
-    ...(segment === undefined ? {} : { segment }),
-    ...(enrichments === undefined ? {} : { enrichments })
-  })
+  return yield* pipe(
+    {
+      ...document,
+      ...(segment === undefined ? {} : { segment }),
+      ...(enrichments === undefined ? {} : { enrichments })
+    },
+    // Two references can name the same module, which only shows once they are resolved.
+    S.decodeEffect(Trait),
+    Effect.mapError((cause) =>
+      TraitFile.TraitFileParseError.make({
+        path: file,
+        problem: `its extension references do not resolve to a valid trait: ${cause.message}`
+      })
+    )
+  )
 })
 
 /** Loads .agents/traits/<name>.md and resolves its extension references relative to the file. */

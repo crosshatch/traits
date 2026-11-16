@@ -5,6 +5,7 @@ import * as OpenAiCompatible from "@effect/ai-openai-compat"
 import { OpenRouterClient, OpenRouterDecisionModel, OpenRouterLanguageModel } from "@effect/ai-openrouter"
 import { Array, Config, type Context, Layer, Schema as S } from "effect"
 
+/** The provider's model ID. */
 const model = S.NonEmptyString.check(S.isTrimmed()).annotate({ description: "The provider's model ID." })
 
 /** An OpenAI model; the API key is read from OPENAI_API_KEY. */

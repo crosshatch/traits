@@ -1,4 +1,4 @@
-import { Context, Effect, Option, pipe, Result, Schema as S } from "effect"
+import { Context, Effect, Option, pipe, Result, Schema as S, Struct } from "effect"
 import { DecisionModel } from "effect/ai"
 
 import * as DecisionState from "../DecisionState.ts"
@@ -33,6 +33,18 @@ export class DecisionCache extends Context.Service<
     readonly set: (key: TextDigest, decision: CachedDecision) => Effect.Effect<void>
   }
 >()("traits/Check/DecisionCache") {}
+
+/** What a cached subject decision must still be to be reused: one of the labels subject decisions are asked for, with their probabilities. */
+const SubjectAnswer = S.Struct({
+  label: S.Literals(Struct.keys(TraitSubject.question.criteria)),
+  probabilities: SubjectMatch
+})
+
+/** What a cached assertion decision must still be to be reused: one of the labels assertion assessments are asked for, with their probabilities. */
+const AssertionAnswer = S.Struct({
+  label: S.Literals(Struct.keys(TraitAssertion.question.criteria)),
+  probabilities: Assessment
+})
 
 /** A stand-in for the response a cached decision came from: it used no tokens, but keeps the model that made it. */
 const cachedResponse = (decision: CachedDecision) => ({
@@ -86,14 +98,7 @@ export const forInput = Effect.fnUntraced(function* (input: Input) {
         return yield* TraitSubject.match({ subject }, input)
       }
       const key = yield* keyOf("subject", [TraitSubject.question, subject])
-      const hit = yield* lookup(
-        cache,
-        key,
-        S.Struct({
-          label: S.Literals(["yes", "no", "uncertain"]),
-          probabilities: SubjectMatch
-        })
-      )
+      const hit = yield* lookup(cache, key, SubjectAnswer)
       if (hit !== undefined) {
         return {
           ...cachedResponse(hit.decision),
@@ -112,14 +117,7 @@ export const forInput = Effect.fnUntraced(function* (input: Input) {
         return yield* TraitAssertion.evaluate({ assertion }, input)
       }
       const key = yield* keyOf("assertion", [TraitAssertion.question, assertion])
-      const hit = yield* lookup(
-        cache,
-        key,
-        S.Struct({
-          label: S.Literals(["pass", "fail", "na", "uncertain"]),
-          probabilities: Assessment
-        })
-      )
+      const hit = yield* lookup(cache, key, AssertionAnswer)
       if (hit !== undefined) {
         return {
           ...cachedResponse(hit.decision),

@@ -61,7 +61,7 @@ export const question = {
 
 /** Keyed assertion outcomes and request-wide usage/metadata, retaining the four existing assessment classifications. */
 export type TraitAssertionEvaluations<Id extends string = string> = DecisionModel.DecideSettledResponse<
-  Record<Id, Decision.Classify<"pass" | "fail" | "na" | "uncertain">>
+  Record<Id, Decision.Classify<keyof typeof question.criteria>>
 >
 
 /** Assesses caller-keyed assertions against one shared input, without subject gating or an acceptance threshold. */

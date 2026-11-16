@@ -35,7 +35,7 @@ export const question = {
 
 /** Keyed subject outcomes and request-wide usage/metadata; unanswered subjects do not discard valid siblings. */
 export type TraitSubjectMatches<Id extends string = string> = DecisionModel.DecideSettledResponse<
-  Record<Id, Decision.Classify<"yes" | "no" | "uncertain">>
+  Record<Id, Decision.Classify<keyof typeof question.criteria>>
 >
 
 /** Classifies several subjects against one shared input in one provider request, independently of trait evaluation. */
@@ -49,27 +49,21 @@ export const match: {
     subjects: Readonly<Record<Id, TraitSubject>>,
     input: Input
   ): Effect.Effect<TraitSubjectMatches<Id>, AiError.AiError, DecisionModel.DecisionModel>
-} = Function.dual(
-  2,
-  Effect.fn("TraitSubject.match")(function* <Id extends string>(
-    subjects: Readonly<Record<Id, TraitSubject>>,
-    input: Input
-  ): Effect.fn.Return<TraitSubjectMatches<Id>, AiError.AiError, DecisionModel.DecisionModel> {
-    if (Record.isEmptyRecord(subjects)) {
-      return {
-        outcomes: { ...subjects },
-        usage: DecisionModel.DecisionUsage.make({ inputTokens: 0, outputTokens: 0 }),
-        metadata: {}
-      }
-    }
-    return yield* DecisionModel.decideSettled(
-      Decision.make({
-        input: DecisionState.DecisionState,
-        decisions: Record.map(subjects, (subject) =>
-          Decision.classify({ instructions: { subject, task: question.task }, criteria: question.criteria })
-        )
-      }),
-      { input: DecisionState.fromInput(input) }
-    )
-  })
-)
+} = Function.dual(2, <Id extends string>(subjects: Readonly<Record<Id, TraitSubject>>, input: Input) => {
+  if (Record.isEmptyRecord(subjects)) {
+    return Effect.succeed<TraitSubjectMatches<Id>>({
+      outcomes: subjects,
+      usage: DecisionModel.DecisionUsage.make({ inputTokens: 0, outputTokens: 0 }),
+      metadata: {}
+    }).pipe(Effect.withSpan("TraitSubject.match"))
+  }
+  return DecisionModel.decideSettled(
+    Decision.make({
+      input: DecisionState.DecisionState,
+      decisions: Record.map(subjects, (subject) =>
+        Decision.classify({ instructions: { subject, task: question.task }, criteria: question.criteria })
+      )
+    }),
+    { input: DecisionState.fromInput(input) }
+  ).pipe(Effect.withSpan("TraitSubject.match"))
+})

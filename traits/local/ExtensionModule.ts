@@ -5,7 +5,7 @@ import type { ExtensionServices } from "../ExtensionServices.ts"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
-/** A module whose default export initializes a trait extension. */
+/** A module whose default export is an Effect that initializes a trait extension. */
 export const ExtensionModule = <A, E>() =>
   S.Struct({
     default: S.declare((value): value is Effect.Effect<A, E, ExtensionServices> => Effect.isEffect(value))
@@ -16,7 +16,7 @@ export const ExtensionModule = <A, E>() =>
 /** An extension reference and the explicit file URL supplying its resolution context. */
 export type ResolveInput = typeof ResolveInput.Type
 export const ResolveInput = S.Struct({
-  /** The unresolved reference supplied by the host, not extension source text. */
+  /** The unresolved extension path or ESM package reference supplied by the host. */
   reference: S.String.annotate({
     description: "The unresolved extension path or ESM package reference supplied by the host."
   }),
@@ -29,7 +29,7 @@ export const ResolveInput = S.Struct({
 /** A host could not resolve an extension reference to a module file within the workspace. */
 export class ModuleResolutionError extends S.TaggedError<ModuleResolutionError>()("ModuleResolutionError", {
   input: ResolveInput,
-  /** The original resolution or validation failure; not serialized into check diagnostics. */
+  /** The original resolution or validation failure, kept outside check diagnostics. */
   cause: S.Defect().annotate({
     description: "The original resolution or validation failure, kept outside check diagnostics."
   })

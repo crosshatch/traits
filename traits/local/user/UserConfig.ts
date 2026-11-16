@@ -10,10 +10,10 @@ export const UserConfig = S.Struct({
   profiles: S.Array(S.Struct({ name: ProfileName, profile: Profile })),
   /** Profile overrides keyed by canonical Git common directory, or canonical cwd outside Git. */
   workspaceProfiles: S.Record(S.NonEmptyString.check(S.isTrimmed()), ProfileName)
-    .pipe(S.withDecodingDefaultKey(Effect.succeed({})))
     .annotateKey({
       description: "Profile overrides keyed by canonical Git common directory, or canonical cwd outside Git."
     })
+    .pipe(S.withDecodingDefaultKey(Effect.succeed({})))
 }).annotate({
   description:
     "User-level profiles and workspace overrides; the profile named default is the fallback. Contains no credentials."

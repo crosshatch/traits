@@ -1,4 +1,4 @@
-import { Array, Data, Deferred, Effect, Result } from "effect"
+import { Array, Data, Deferred, Effect, Result, Struct } from "effect"
 import type { AiError, Decision } from "effect/ai"
 
 import * as Enrichment from "../Enrichment/Enrichment.ts"
@@ -238,7 +238,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
             return yield* decisions
               .evaluateAssertion({
                 assertion: trait.assertion,
-                context: trait,
+                context: Struct.pick(trait, ["subject", "purpose", "body"]),
                 enrichments: Array.filter(enrichments, Report.EnrichmentOutcome.guards.Succeeded)
               })
               .pipe(

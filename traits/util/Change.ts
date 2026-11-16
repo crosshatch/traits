@@ -2,7 +2,9 @@ import { Schema as S } from "effect"
 
 import { InputSource } from "./InputSource.ts"
 
+/** The source before the change, with its original path. */
 const before = InputSource.annotateKey({ description: "The source before the change, with its original path." })
+/** The source after the change, with its current path. */
 const after = InputSource.annotateKey({ description: "The source after the change, with its current path." })
 
 /** A change with a before source; the after source may also be present. */

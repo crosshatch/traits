@@ -22,11 +22,11 @@ export const TraitsConfig = S.Struct({
   models: Models,
   /** Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; none when omitted. Explicitly requested paths are always checked. */
   exclude: S.Array(S.NonEmptyString)
-    .pipe(S.withDecodingDefaultKey(Effect.succeed([])))
     .annotateKey({
       description:
         "Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; none when omitted. Explicitly requested paths are always checked."
-    }),
+    })
+    .pipe(S.withConstructorDefault(Effect.succeed([])), S.withDecodingDefaultKey(Effect.succeed([]))),
   ...Settings.fields
 }).annotate({
   description:
