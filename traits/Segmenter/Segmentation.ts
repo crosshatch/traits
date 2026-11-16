@@ -21,7 +21,7 @@ export const execute: {
 } = Function.dual(2, <E, R>(segment: SegmentChange<E, R>, change: Change) =>
   Effect.suspend(() => segment(change)).pipe(
     Effect.flatMap(S.decodeUnknownEffect(S.Array(Segment))),
-    Effect.flatMap(Effect.forEach((segment) => fromSegment(change, segment))),
+    Effect.flatMap(Effect.forEach((segment) => fromSegment(change, segment), { concurrency: 1 })),
     Effect.map(Array.sort(segmentOrder))
   )
 )

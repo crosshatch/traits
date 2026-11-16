@@ -19,20 +19,23 @@ const proposal = TraitFile.TraitDocument.make({
 /** Reports each proposal's approval as the outcome derivation would produce for it, without comparing or saving. */
 const deriver = Layer.succeed(WorkspaceDerive, {
   derive: (documents, approve) =>
-    Effect.forEach(documents, (document) =>
-      approve({ name: document.name, action: "Create", message: TraitFile.serialize(document) }).pipe(
-        Effect.map((approval) =>
-          TraitDerivation.Approval.match(approval, {
-            Save: () => TraitDerivation.TraitDerivation.cases.Created.make({ name: document.name, path: "saved" }),
-            Revise: (revise) =>
-              TraitDerivation.TraitDerivation.cases.RevisionRequested.make({
-                name: document.name,
-                feedback: revise.feedback
-              }),
-            Skip: () => TraitDerivation.TraitDerivation.cases.Skipped.make({ name: document.name })
-          })
-        )
-      )
+    Effect.forEach(
+      documents,
+      (document) =>
+        approve({ name: document.name, action: "Create", message: TraitFile.serialize(document) }).pipe(
+          Effect.map((approval) =>
+            TraitDerivation.Approval.match(approval, {
+              Save: () => TraitDerivation.TraitDerivation.cases.Created.make({ name: document.name, path: "saved" }),
+              Revise: (revise) =>
+                TraitDerivation.TraitDerivation.cases.RevisionRequested.make({
+                  name: document.name,
+                  feedback: revise.feedback
+                }),
+              Skip: () => TraitDerivation.TraitDerivation.cases.Skipped.make({ name: document.name })
+            })
+          )
+        ),
+      { concurrency: 1 }
     )
 })
 

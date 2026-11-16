@@ -70,15 +70,18 @@ const program = Effect.gen(function* () {
       with: Trait.make({ ...definition, enrichments: Array.append(others, references) })
     }
     const files = Record.toEntries(scenario.labels)
-    const changes = yield* Effect.forEach(files, ([file]) =>
-      Effect.gen(function* () {
-        const relative = yield* pipe(
-          path.relative(directory, path.join(scenarios, id, file)),
-          S.decodeEffect(WorkspacePath)
-        )
-        const text = yield* fs.readFileString(path.join(directory, relative))
-        return { after: { path: relative, text } }
-      })
+    const changes = yield* Effect.forEach(
+      files,
+      ([file]) =>
+        Effect.gen(function* () {
+          const relative = yield* pipe(
+            path.relative(directory, path.join(scenarios, id, file)),
+            S.decodeEffect(WorkspacePath)
+          )
+          const text = yield* fs.readFileString(path.join(directory, relative))
+          return { after: { path: relative, text } }
+        }),
+      { concurrency: 1 }
     )
     const correct = { without: 0, with: 0 }
     const rows: Array<string> = []

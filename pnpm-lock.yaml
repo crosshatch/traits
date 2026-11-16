@@ -177,32 +177,32 @@ catalogs:
       specifier: ^3.0.3
       version: 3.0.3
     '@effect/ai-anthropic':
-      specifier: 4.1.2
-      version: 4.1.2
+      specifier: 4.1.4
+      version: 4.1.4
     '@effect/ai-cloudflare':
-      specifier: 4.1.2
-      version: 4.1.2
+      specifier: 4.1.4
+      version: 4.1.4
     '@effect/ai-openai':
-      specifier: 4.1.2
-      version: 4.1.2
+      specifier: 4.1.4
+      version: 4.1.4
     '@effect/ai-openai-compat':
-      specifier: 4.1.2
-      version: 4.1.2
+      specifier: 4.1.4
+      version: 4.1.4
     '@effect/ai-openrouter':
-      specifier: 4.1.2
-      version: 4.1.2
+      specifier: 4.1.4
+      version: 4.1.4
     '@effect/atom-react':
-      specifier: ^4.1.2
-      version: 4.1.2
+      specifier: ^4.1.4
+      version: 4.1.4
     '@effect/platform-node':
-      specifier: ^4.1.2
-      version: 4.1.2
+      specifier: ^4.1.4
+      version: 4.1.4
     '@effect/tsgo':
-      specifier: 0.67.3
-      version: 0.67.3
+      specifier: 0.69.0
+      version: 0.69.0
     '@effect/vitest':
-      specifier: ^4.1.2
-      version: 4.1.2
+      specifier: ^4.1.4
+      version: 4.1.4
     '@fontsource/libre-baskerville':
       specifier: ^5.3.0
       version: 5.3.0
@@ -219,8 +219,8 @@ catalogs:
       specifier: ^2.0.0-beta.85
       version: 2.0.0-beta.85
     effect:
-      specifier: ^4.1.2
-      version: 4.1.2
+      specifier: ^4.1.4
+      version: 4.1.4
     fs-native-extensions:
       specifier: ^1.5.3
       version: 1.5.3
@@ -250,8 +250,8 @@ catalogs:
       version: 2.9.1
 
 overrides:
-  '@effect/sql-d1': ^4.1.2
-  '@effect/sql-sqlite-do': ^4.1.2
+  '@effect/sql-d1': ^4.1.4
+  '@effect/sql-sqlite-do': ^4.1.4
   vite@*: npm:@voidzero-dev/vite-plus-core@^1.5.0
   vitest@*: ^5.1.0
 
@@ -261,10 +261,10 @@ importers:
     devDependencies:
       '@alchemy.run/cloudflare':
         specifier: 'catalog:'
-        version: 2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@effect/sql-libsql@4.1.2(effect@4.1.2))(@types/node@26.6.6)(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)
+        version: 2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@effect/sql-libsql@4.1.2(effect@4.1.4))(@types/node@26.6.6)(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)
       '@alchemy.run/github':
         specifier: 'catalog:'
-        version: 2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)
+        version: 2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)
       '@changesets/changelog-github':
         specifier: 'catalog:'
         version: 1.0.1
@@ -273,10 +273,10 @@ importers:
         version: 3.0.3
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)(redis@6.3.1)
+        version: 4.1.4(effect@4.1.4)(redis@6.3.1)
       '@effect/tsgo':
         specifier: 'catalog:'
-        version: 0.67.3
+        version: 0.69.0
       '@traits/typescript':
         specifier: workspace:*
         version: link:@traits/typescript
@@ -285,10 +285,10 @@ importers:
         version: 26.6.6
       alchemy:
         specifier: 'catalog:'
-        version: 2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
+        version: 2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
       effect:
         specifier: 'catalog:'
-        version: 4.1.2
+        version: 4.1.4
       pkg-pr-new:
         specifier: 'catalog:'
         version: 0.0.93
@@ -313,13 +313,13 @@ importers:
     devDependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)(redis@6.3.1)
+        version: 4.1.4(effect@4.1.4)(redis@6.3.1)
       '@effect/vitest':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)(vitest@5.1.0)
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.0)
       effect:
         specifier: 'catalog:'
-        version: 4.1.2
+        version: 4.1.4
       traits:
         specifier: workspace:*
         version: link:../../traits
@@ -328,19 +328,19 @@ importers:
     dependencies:
       '@effect/ai-anthropic':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)
+        version: 4.1.4(effect@4.1.4)
       '@effect/ai-cloudflare':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)
+        version: 4.1.4(effect@4.1.4)
       '@effect/ai-openai':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)
+        version: 4.1.4(effect@4.1.4)
       '@effect/ai-openai-compat':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)
+        version: 4.1.4(effect@4.1.4)
       '@effect/ai-openrouter':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)
+        version: 4.1.4(effect@4.1.4)
       import-meta-resolve:
         specifier: 'catalog:'
         version: 4.2.0
@@ -350,13 +350,13 @@ importers:
     devDependencies:
       '@effect/platform-node':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)(redis@6.3.1)
+        version: 4.1.4(effect@4.1.4)(redis@6.3.1)
       '@effect/vitest':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)(vitest@5.1.0)
+        version: 4.1.4(effect@4.1.4)(vitest@5.1.0)
       effect:
         specifier: 'catalog:'
-        version: 4.1.2
+        version: 4.1.4
     optionalDependencies:
       fs-native-extensions:
         specifier: 'catalog:'
@@ -366,13 +366,13 @@ importers:
     dependencies:
       '@effect/atom-react':
         specifier: 'catalog:'
-        version: 4.1.2(effect@4.1.2)(react@19.3.1)(scheduler@0.28.0)
+        version: 4.1.4(effect@4.1.4)(react@19.3.1)(scheduler@0.28.0)
       '@fontsource/libre-baskerville':
         specifier: 'catalog:'
         version: 5.3.0
       effect:
         specifier: 'catalog:'
-        version: 4.1.2
+        version: 4.1.4
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -620,8 +620,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workers-types@5.20261104.1':
-    resolution: {integrity: sha512-XSPcK88JXnW/oC82wuXvaP7vgyk2myydugbgOd/RcLKwqkwW0cP09Ozp9ItACa4IAZ7uKtMIfxZpUTXajYVd1Q==}
+  '@cloudflare/workers-types@5.20261115.1':
+    resolution: {integrity: sha512-p0i+8isig1e9qK3KJDGxy6Ng3RTONO6DMFrMrLmpt9/KJRAY5gEfgIm9bGrsQhz9p1PkMGwOx9OHA3I8al/5cw==}
 
   '@distilled.cloud/acme@1.0.0-rc.18':
     resolution: {integrity: sha512-OWO6NG9IcpDqZCzlrN5T4MIQqSbpZ5cw61Ru/dYn1vr3AIyx3Vlg+Ew8NhlunpURr4wqDUW2/7QW3fKbrmfwLg==}
@@ -658,104 +658,104 @@ packages:
     peerDependencies:
       effect: ^4.0.5
 
-  '@effect/ai-anthropic@4.1.2':
-    resolution: {integrity: sha512-HeFop5b4QY5YKKWXmdM1FJdqIqk91wueqt6hcGGTd9bASpQX2Pw2tjIzCsu+HxZgOKVW2EDQ9G1MpVOC+Tvs8g==}
+  '@effect/ai-anthropic@4.1.4':
+    resolution: {integrity: sha512-VDcsyL3k76HhF7YqH8z0gQ0bUybX4ti5RHv3JadDXZvEgNpvUT3p4YBssvKR2HAGa7NXr9yfmFedRilhQM7tdQ==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
 
-  '@effect/ai-cloudflare@4.1.2':
-    resolution: {integrity: sha512-2v+IJV3LovAlGHS0tlN1FWM6dNLsotIjLj8xQPqPXmcTdAheTNeHXtojjBZOWYCg+tvJNOap1FEc2W5HckTv8Q==}
+  '@effect/ai-cloudflare@4.1.4':
+    resolution: {integrity: sha512-AO1kovaFfQ1fHqrJv5AqyamvGqOGj9WqLwgd6C/hsOFMc+wHQ+NjTjAepQDGpFjsN5UoCWFfpaiMw37lAJGdQw==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
 
-  '@effect/ai-openai-compat@4.1.2':
-    resolution: {integrity: sha512-6NRpW6GTLoCIuGcs0mCX3cBSZZKJRX1Fo0oDA6NwUKraaAoYJM1gw8/P2vRfi0+G9xXS7EqO2Asgf7ecJb5/AQ==}
+  '@effect/ai-openai-compat@4.1.4':
+    resolution: {integrity: sha512-Rmb6tcV/5zv7PFHvZt08eSqSI5G8JyEGOBeIwyKKz1mBes9WAgeYv7Kplzy5rBSWH1LtUA4CIuREzS7ovXDhRw==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
 
-  '@effect/ai-openai@4.1.2':
-    resolution: {integrity: sha512-u2RkBOj718eQQmZan3mJh0PJDLzhbZ4qFmMc/uSJhS0jmUoiaQI8SsCzENpNk0TRkt8lxEK4urohpeV5/xDWBQ==}
+  '@effect/ai-openai@4.1.4':
+    resolution: {integrity: sha512-xodZLHmt1N7Ziw94jr0nTfG/fgyMZioYKS85fyy2L1kscNurWGllaDaTQyHUSYd8wghqMoc8vV3XPei0+c9NIQ==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
 
-  '@effect/ai-openrouter@4.1.2':
-    resolution: {integrity: sha512-iWNUPM4I8t6PZIDj7biJHZF7GUaVyevIiXNOyrd7vhZ4eYeuMyIimuELH+qwPt0AKnpU72mkY11ngBranM7/Lw==}
+  '@effect/ai-openrouter@4.1.4':
+    resolution: {integrity: sha512-xnubaIw9iGhHUcjSDVgwzcelm2bftBmTpn9lxywpJEO7KBbErqXYmLhXyARo6KH8Tz7Egut52360JEsTfWhkfg==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
 
-  '@effect/atom-react@4.1.2':
-    resolution: {integrity: sha512-XRAm4lks2kzNFQIz9QTGKR02CaDTR9VJNRXDjDAR8OzM15ybrK4YkB7OlFZ9U+hxXe3DXJZx7RU1/xI2Em2PGQ==}
+  '@effect/atom-react@4.1.4':
+    resolution: {integrity: sha512-Xj58DcAzKsysHhzBCPaz2v1QAJq6NvMdGVmG7SV4zkw1RMiTZv8gaOXA1VqIRlpmvdspMwRe/BQ4eayuzRZTpQ==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
       react: '>=19.0.0 <20.0.0'
       scheduler: '>=0.25.0 <0.29.0'
 
-  '@effect/platform-node-shared@4.1.2':
-    resolution: {integrity: sha512-wSwl9A/G1hcVvF8nLI+YfB3EyOIDvWS6+lsTZBkmgDnPBL7m8YWZF+1HD+mdEsb52SUGfukip46Q3gRwSdk3QA==}
+  '@effect/platform-node-shared@4.1.4':
+    resolution: {integrity: sha512-DWdfphHGOFJNj/mYadgpT3jIm8aRXDcPrQiGXFBH4p2H4XmA7iYMrPsI8NxVgZ7kNX0q1+FGJZJama0tINHRAg==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
 
-  '@effect/platform-node@4.1.2':
-    resolution: {integrity: sha512-ye0UjxORdd5Qu3paZ1LljgGOALWHt7muP9VTpjUSCNfcesiB/Hm7wPJIvZeu4gnwpTe5BtEnO1VHngWqjJp8mA==}
+  '@effect/platform-node@4.1.4':
+    resolution: {integrity: sha512-h7QExTPq/RfYtHP/8tMlgfBvqYsuJKhxfkU6w0+NaF/ihqQ8Y3GH9t28ltupQjoqMM7P6W5gy8rOji7F0qVrmg==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
       redis: '>=5.1.0 <7.0.0'
 
-  '@effect/sql-d1@4.1.2':
-    resolution: {integrity: sha512-7uzFwDg/SQali/+Edp6H/t0nQSXtdDsNO8dHkC8xl45/YITJ6F5Os0pBZdXMCdtqehekhDM3qzTtJut4rLGcEA==}
+  '@effect/sql-d1@4.1.4':
+    resolution: {integrity: sha512-x7UtDPNCgcAz6lvGbrf0INHxztV0qV8i4qleqPb31ADeilz7MnGYJ5Qhprqod+ySBUNPdsvXNRE9vm36TznIdg==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
 
   '@effect/sql-libsql@4.1.2':
     resolution: {integrity: sha512-1VIaOiP0w8r63hUuNSF5VHoqL2/yrvf7C38FRuSTG7NV21vI5eJx1eo7/11X59SdWSr9Zc4N0B/AAhci/EfzNQ==}
     peerDependencies:
       effect: ^4.1.2
 
-  '@effect/tsgo-darwin-arm64@0.67.3':
-    resolution: {integrity: sha512-9GnBnz1vuqRQ8fvxwNEYlnLqYXzASbABGzk1H9YXMnC34TlRmVTKquQ1muPOiIGskb2XhmoqBQBN7GiQWNqxEg==}
+  '@effect/tsgo-darwin-arm64@0.69.0':
+    resolution: {integrity: sha512-XSkC5Ot7906NmN3tW0uQb+58DV7oVgyX7A20w3Zu7Y26kTve/YibhiDn8ZxhNRH/SiBouyA6IKR6THWjRs1cow==}
     cpu: [arm64]
     os: [darwin]
 
-  '@effect/tsgo-darwin-x64@0.67.3':
-    resolution: {integrity: sha512-i02pQfv41x3MPqjh+2V6lPTkXZxWzG0NKuftpv/Mfq+VMbVqASZqOqS+CR4kHhE7aZcEpgHyb3ytSSSa94J0Hw==}
+  '@effect/tsgo-darwin-x64@0.69.0':
+    resolution: {integrity: sha512-QXVmbe8l0gtkByP2yazqPR7Pw9ImJZ6mX+YqYRED6h39DRRgFF4LvzM6jJQ7PVQFQpk816YpOHztO7bJTjSW1A==}
     cpu: [x64]
     os: [darwin]
 
-  '@effect/tsgo-linux-arm64@0.67.3':
-    resolution: {integrity: sha512-aydOt1en+fo8zrXR6VccbmZZo070osDz7sJHrWYqD7LwLL0YuYNKlxT+ahGDB9goFFxE19F/K7mxah4zL0TRgA==}
+  '@effect/tsgo-linux-arm64@0.69.0':
+    resolution: {integrity: sha512-BWb3NxRnpYJikfgr2xD2U9DBM5gHm7rScdHYs8tAGXJytqQ6ioAOOYqDa1XZx2MwO2lG3BEAw2liI77mHMVRfQ==}
     cpu: [arm64]
     os: [linux]
 
-  '@effect/tsgo-linux-arm@0.67.3':
-    resolution: {integrity: sha512-nwuNsWuEYC6a83MeiEV82+ErRTTX/7g9UNYkIp8zK4ldgIukeij5lFsnx2eCJJhHojiqZlmmnq+35vW+DRVYkw==}
+  '@effect/tsgo-linux-arm@0.69.0':
+    resolution: {integrity: sha512-XewLmpBZC3CkaKCjhe2f2ZOGfdewZ0hgGIjiCUNiEmHl6Kwt8H8dzNAsYgWPPeahVTi09CSyo5f8iEwEIHt95g==}
     cpu: [arm]
     os: [linux]
 
-  '@effect/tsgo-linux-x64@0.67.3':
-    resolution: {integrity: sha512-csK8tTycGZpaneCPUk+QcA8CBcDqaNeZmKtjloJi7jdlSScFDrZp3JPgy5KFWjt4vFsn9bGGDNR6dXUpWpM9Mg==}
+  '@effect/tsgo-linux-x64@0.69.0':
+    resolution: {integrity: sha512-LZ3joeZ5D/Tv/tQN4r5uA7yoTQ5cHvCjICF3NcTX9ntlhQ51gJlhRcbOvP8v8AzTkOtrty7YXZW++iUOY0OKpw==}
     cpu: [x64]
     os: [linux]
 
-  '@effect/tsgo-win32-arm64@0.67.3':
-    resolution: {integrity: sha512-vX/ZviuQKqJIs54xwBNt10mm1xZ1CdVdyhIC/k2S//+psQUd7glpiI0lXEjyq7w7srLjL3AXv10E03I8sr3DXA==}
+  '@effect/tsgo-win32-arm64@0.69.0':
+    resolution: {integrity: sha512-ZlysvNK8BJa0WaQ8KVCUjpY0VgxiqzqchHCQj2+ECJcBwhn178OXcgl4+ZhmFbnr/T4b3ZtsOj0+UXtkr+fPbg==}
     cpu: [arm64]
     os: [win32]
 
-  '@effect/tsgo-win32-x64@0.67.3':
-    resolution: {integrity: sha512-5Yop4EohYfmDzpg15kBz0ja1J4fmmrCN1ft91CiBGzp7kKiuY9im4g17ECXG2E8RfEGjo2Wyk3DBgrFWn9U85A==}
+  '@effect/tsgo-win32-x64@0.69.0':
+    resolution: {integrity: sha512-EIxwudo6cSjandzmfputEmpTfdlAfTd2sWQ29vWh3F3qFb6MC9JDCAYHXQFWSGOPNhMBK6NXd/8humPW/WkpGA==}
     cpu: [x64]
     os: [win32]
 
-  '@effect/tsgo@0.67.3':
-    resolution: {integrity: sha512-ZGJNKmkk2ieOwsf2J14xiDrZgA+qegm3QkfO+2Q4cL1w+oA1mjlrDL2YSDznCiswpmifNXpL9ayvD1Pby2FdCQ==}
+  '@effect/tsgo@0.69.0':
+    resolution: {integrity: sha512-ypgO19woAyrfAG0LzU2QwQnprMpV2G30nEo9ffd4Bc0ow0vXupcx0mcSLG1EfvmRGl0jhiQ3yAbsCuJhqwnRhg==}
     hasBin: true
 
-  '@effect/vitest@4.1.2':
-    resolution: {integrity: sha512-JJPwAHkJHxvM/woW9mMW/khjasAHcmwWdOMAgMy16rfqsxcVhFDnrRsvN9VI2+kMv8zDCCyBE2q1n5hzZlfE0w==}
+  '@effect/vitest@4.1.4':
+    resolution: {integrity: sha512-AKpZ6zKihCRhY7hDbiQ2yp/krw+afIkxDRjFMwwzMiyhd0iYk0WaHa9J6GGC7TUF/C7HP2dZyMVq5xC0Qm/2/g==}
     peerDependencies:
-      effect: ^4.1.2
+      effect: ^4.1.4
       vitest: ^5.1.0
 
   '@emnapi/runtime@1.11.3':
@@ -2070,8 +2070,8 @@ packages:
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
 
-  effect@4.1.2:
-    resolution: {integrity: sha512-d3Oah1WyKxFLFh19yWheS5IXIVaITzxZ71JkE1rkUozq/6EcJSU5nPk5bF2QrSygZ3SQoiNQB8TsxFriyMeMaQ==}
+  effect@4.1.4:
+    resolution: {integrity: sha512-Tgrv/9FN+TZYyOn8XSli+fVqAfwDrDAkiX5Uu9vztINb675VTQdhD0gWI5Kzvhlh9QqzjZvw72iugqw5pwoghQ==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -2580,20 +2580,20 @@ packages:
 
 snapshots:
 
-  '@alchemy.run/acme@2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)':
+  '@alchemy.run/acme@2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/acme': 1.0.0-rc.18(effect@4.1.2)
-      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
-      effect: 4.1.2
+      '@distilled.cloud/acme': 1.0.0-rc.18(effect@4.1.4)
+      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
+      effect: 4.1.4
 
-  '@alchemy.run/cloudflare-runtime@2.0.0-beta.85(@distilled.cloud/cloudflare@1.0.0-rc.18(effect@4.1.2))(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(effect@4.1.2)(jiti@2.7.0)(rolldown@1.2.13)(typescript@7.0.2)(yaml@2.9.1)':
+  '@alchemy.run/cloudflare-runtime@2.0.0-beta.85(@distilled.cloud/cloudflare@1.0.0-rc.18(effect@4.1.4))(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(effect@4.1.4)(jiti@2.7.0)(rolldown@1.2.13)(typescript@7.0.2)(yaml@2.9.1)':
     dependencies:
       '@alchemy.run/node-utils': 2.0.0-beta.85
       '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261026.1)
-      '@distilled.cloud/cloudflare': 1.0.0-rc.18(effect@4.1.2)
+      '@distilled.cloud/cloudflare': 1.0.0-rc.18(effect@4.1.4)
       '@puppeteer/browsers': 3.2.6(yauzl@3.4.0)
       capnp-es: 0.0.16(typescript@7.0.2)
-      effect: 4.1.2
+      effect: 4.1.4
       magic-string: 0.30.21
       mime: 4.1.2
       sharp: 0.35.5(@types/node@26.6.6)
@@ -2602,7 +2602,7 @@ snapshots:
       workerd: 1.20261026.1
       yauzl: 3.4.0
     optionalDependencies:
-      '@effect/platform-node': 4.1.2(effect@4.1.2)(redis@6.3.1)
+      '@effect/platform-node': 4.1.4(effect@4.1.4)(redis@6.3.1)
       rolldown: 1.2.13
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
@@ -2628,27 +2628,27 @@ snapshots:
       - vue-tsc
       - yaml
 
-  '@alchemy.run/cloudflare@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@effect/sql-libsql@4.1.2(effect@4.1.2))(@types/node@26.6.6)(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)':
+  '@alchemy.run/cloudflare@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@effect/sql-libsql@4.1.2(effect@4.1.4))(@types/node@26.6.6)(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)':
     dependencies:
-      '@alchemy.run/acme': 2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)
-      '@alchemy.run/cloudflare-runtime': 2.0.0-beta.85(@distilled.cloud/cloudflare@1.0.0-rc.18(effect@4.1.2))(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(effect@4.1.2)(jiti@2.7.0)(rolldown@1.2.13)(typescript@7.0.2)(yaml@2.9.1)
-      '@alchemy.run/docker': 2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)
-      '@alchemy.run/sql': 2.0.0-beta.85(@effect/sql-libsql@4.1.2(effect@4.1.2))(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)
-      '@distilled.cloud/aws': 1.0.0-rc.18(effect@4.1.2)
-      '@distilled.cloud/aws4signer': 1.0.0-rc.18(effect@4.1.2)
-      '@distilled.cloud/cloudflare': 1.0.0-rc.18(effect@4.1.2)
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      '@distilled.cloud/iceberg': 1.0.0-rc.18(effect@4.1.2)
-      '@effect/sql-d1': 4.1.2(effect@4.1.2)
-      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
-      effect: 4.1.2
+      '@alchemy.run/acme': 2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)
+      '@alchemy.run/cloudflare-runtime': 2.0.0-beta.85(@distilled.cloud/cloudflare@1.0.0-rc.18(effect@4.1.4))(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(effect@4.1.4)(jiti@2.7.0)(rolldown@1.2.13)(typescript@7.0.2)(yaml@2.9.1)
+      '@alchemy.run/docker': 2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)
+      '@alchemy.run/sql': 2.0.0-beta.85(@effect/sql-libsql@4.1.2(effect@4.1.4))(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)
+      '@distilled.cloud/aws': 1.0.0-rc.18(effect@4.1.4)
+      '@distilled.cloud/aws4signer': 1.0.0-rc.18(effect@4.1.4)
+      '@distilled.cloud/cloudflare': 1.0.0-rc.18(effect@4.1.4)
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      '@distilled.cloud/iceberg': 1.0.0-rc.18(effect@4.1.4)
+      '@effect/sql-d1': 4.1.4(effect@4.1.4)
+      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
+      effect: 4.1.4
       pathe: 2.0.3
       picomatch: 4.0.7
       rolldown: 1.2.13
       tinyglobby: 0.2.17
       vite: '@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)'
     optionalDependencies:
-      '@effect/platform-node': 4.1.2(effect@4.1.2)(redis@6.3.1)
+      '@effect/platform-node': 4.1.4(effect@4.1.4)(redis@6.3.1)
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
       - '@effect/sql-libsql'
@@ -2678,18 +2678,18 @@ snapshots:
       - vue-tsc
       - yaml
 
-  '@alchemy.run/docker@2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)':
+  '@alchemy.run/docker@2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)':
     dependencies:
-      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
-      effect: 4.1.2
+      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
+      effect: 4.1.4
       rolldown: 1.2.13
 
-  '@alchemy.run/github@2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)':
+  '@alchemy.run/github@2.0.0-beta.85(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      '@distilled.cloud/github': 1.0.0-rc.18(effect@4.1.2)
-      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
-      effect: 4.1.2
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      '@distilled.cloud/github': 1.0.0-rc.18(effect@4.1.4)
+      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
+      effect: 4.1.4
       libsodium-wrappers: 0.8.4
 
   '@alchemy.run/node-utils@2.0.0-beta.85':
@@ -2701,12 +2701,12 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@alchemy.run/sql@2.0.0-beta.85(@effect/sql-libsql@4.1.2(effect@4.1.2))(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.2)':
+  '@alchemy.run/sql@2.0.0-beta.85(@effect/sql-libsql@4.1.2(effect@4.1.4))(alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1))(effect@4.1.4)':
     dependencies:
-      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
-      effect: 4.1.2
+      alchemy: 2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1)
+      effect: 4.1.4
     optionalDependencies:
-      '@effect/sql-libsql': 4.1.2(effect@4.1.2)
+      '@effect/sql-libsql': 4.1.2(effect@4.1.4)
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -2866,136 +2866,136 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20261026.1':
     optional: true
 
-  '@cloudflare/workers-types@5.20261104.1': {}
+  '@cloudflare/workers-types@5.20261115.1': {}
 
-  '@distilled.cloud/acme@1.0.0-rc.18(effect@4.1.2)':
+  '@distilled.cloud/acme@1.0.0-rc.18(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      effect: 4.1.2
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      effect: 4.1.4
 
-  '@distilled.cloud/aws4signer@1.0.0-rc.18(effect@4.1.2)':
+  '@distilled.cloud/aws4signer@1.0.0-rc.18(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      effect: 4.1.2
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      effect: 4.1.4
 
-  '@distilled.cloud/aws@1.0.0-rc.18(effect@4.1.2)':
+  '@distilled.cloud/aws@1.0.0-rc.18(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/aws4signer': 1.0.0-rc.18(effect@4.1.2)
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      effect: 4.1.2
+      '@distilled.cloud/aws4signer': 1.0.0-rc.18(effect@4.1.4)
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      effect: 4.1.4
 
-  '@distilled.cloud/cloudflare@1.0.0-rc.18(effect@4.1.2)':
+  '@distilled.cloud/cloudflare@1.0.0-rc.18(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      effect: 4.1.2
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      effect: 4.1.4
 
-  '@distilled.cloud/core@1.0.0-rc.18(effect@4.1.2)':
+  '@distilled.cloud/core@1.0.0-rc.18(effect@4.1.4)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
 
-  '@distilled.cloud/github@1.0.0-rc.18(effect@4.1.2)':
+  '@distilled.cloud/github@1.0.0-rc.18(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      effect: 4.1.2
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      effect: 4.1.4
 
-  '@distilled.cloud/iceberg@1.0.0-rc.18(effect@4.1.2)':
+  '@distilled.cloud/iceberg@1.0.0-rc.18(effect@4.1.4)':
     dependencies:
-      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.2)
-      effect: 4.1.2
+      '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
+      effect: 4.1.4
 
-  '@effect/ai-anthropic@4.1.2(effect@4.1.2)':
+  '@effect/ai-anthropic@4.1.4(effect@4.1.4)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
 
-  '@effect/ai-cloudflare@4.1.2(effect@4.1.2)':
+  '@effect/ai-cloudflare@4.1.4(effect@4.1.4)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
 
-  '@effect/ai-openai-compat@4.1.2(effect@4.1.2)':
+  '@effect/ai-openai-compat@4.1.4(effect@4.1.4)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
 
-  '@effect/ai-openai@4.1.2(effect@4.1.2)':
+  '@effect/ai-openai@4.1.4(effect@4.1.4)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
 
-  '@effect/ai-openrouter@4.1.2(effect@4.1.2)':
+  '@effect/ai-openrouter@4.1.4(effect@4.1.4)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
 
-  '@effect/atom-react@4.1.2(effect@4.1.2)(react@19.3.1)(scheduler@0.28.0)':
+  '@effect/atom-react@4.1.4(effect@4.1.4)(react@19.3.1)(scheduler@0.28.0)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
       react: 19.3.1
       scheduler: 0.28.0
 
-  '@effect/platform-node-shared@4.1.2(effect@4.1.2)':
+  '@effect/platform-node-shared@4.1.4(effect@4.1.4)':
     dependencies:
       '@types/ws': 8.18.2
-      effect: 4.1.2
+      effect: 4.1.4
       ws: 8.22.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1)':
+  '@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1)':
     dependencies:
-      '@effect/platform-node-shared': 4.1.2(effect@4.1.2)
-      effect: 4.1.2
+      '@effect/platform-node-shared': 4.1.4(effect@4.1.4)
+      effect: 4.1.4
       redis: 6.3.1
       undici: 8.12.4
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/sql-d1@4.1.2(effect@4.1.2)':
+  '@effect/sql-d1@4.1.4(effect@4.1.4)':
     dependencies:
-      '@cloudflare/workers-types': 5.20261104.1
-      effect: 4.1.2
+      '@cloudflare/workers-types': 5.20261115.1
+      effect: 4.1.4
 
-  '@effect/sql-libsql@4.1.2(effect@4.1.2)':
+  '@effect/sql-libsql@4.1.2(effect@4.1.4)':
     dependencies:
       '@libsql/client': 0.18.0
-      effect: 4.1.2
+      effect: 4.1.4
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
     optional: true
 
-  '@effect/tsgo-darwin-arm64@0.67.3':
+  '@effect/tsgo-darwin-arm64@0.69.0':
     optional: true
 
-  '@effect/tsgo-darwin-x64@0.67.3':
+  '@effect/tsgo-darwin-x64@0.69.0':
     optional: true
 
-  '@effect/tsgo-linux-arm64@0.67.3':
+  '@effect/tsgo-linux-arm64@0.69.0':
     optional: true
 
-  '@effect/tsgo-linux-arm@0.67.3':
+  '@effect/tsgo-linux-arm@0.69.0':
     optional: true
 
-  '@effect/tsgo-linux-x64@0.67.3':
+  '@effect/tsgo-linux-x64@0.69.0':
     optional: true
 
-  '@effect/tsgo-win32-arm64@0.67.3':
+  '@effect/tsgo-win32-arm64@0.69.0':
     optional: true
 
-  '@effect/tsgo-win32-x64@0.67.3':
+  '@effect/tsgo-win32-x64@0.69.0':
     optional: true
 
-  '@effect/tsgo@0.67.3':
+  '@effect/tsgo@0.69.0':
     optionalDependencies:
-      '@effect/tsgo-darwin-arm64': 0.67.3
-      '@effect/tsgo-darwin-x64': 0.67.3
-      '@effect/tsgo-linux-arm': 0.67.3
-      '@effect/tsgo-linux-arm64': 0.67.3
-      '@effect/tsgo-linux-x64': 0.67.3
-      '@effect/tsgo-win32-arm64': 0.67.3
-      '@effect/tsgo-win32-x64': 0.67.3
+      '@effect/tsgo-darwin-arm64': 0.69.0
+      '@effect/tsgo-darwin-x64': 0.69.0
+      '@effect/tsgo-linux-arm': 0.69.0
+      '@effect/tsgo-linux-arm64': 0.69.0
+      '@effect/tsgo-linux-x64': 0.69.0
+      '@effect/tsgo-win32-arm64': 0.69.0
+      '@effect/tsgo-win32-x64': 0.69.0
 
-  '@effect/vitest@4.1.2(effect@4.1.2)(vitest@5.1.0)':
+  '@effect/vitest@4.1.4(effect@4.1.4)(vitest@5.1.0)':
     dependencies:
-      effect: 4.1.2
+      effect: 4.1.4
       vitest: 5.1.0(@types/node@26.6.6)(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0)(@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1))(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)
 
   '@emnapi/runtime@1.11.3':
@@ -3788,12 +3788,12 @@ snapshots:
 
   '@yuku-toolchain/types@0.19.0': {}
 
-  alchemy@2.0.0-beta.85(@effect/platform-node@4.1.2(effect@4.1.2)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.2)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1):
+  alchemy@2.0.0-beta.85(@effect/platform-node@4.1.4(effect@4.1.4)(redis@6.3.1))(@types/node@26.6.6)(@types/react@19.3.0)(effect@4.1.4)(jiti@2.7.0)(typescript@7.0.2)(ws@8.22.1):
     dependencies:
       '@alchemy.run/node-utils': 2.0.0-beta.85
       '@alchemy.run/sigil': 0.1.0-alpha.1(@types/react@19.3.0)
       capnweb: 0.12.0
-      effect: 4.1.2
+      effect: 4.1.4
       fflate: 0.8.3
       pathe: 2.0.3
       picomatch: 4.0.7
@@ -3802,7 +3802,7 @@ snapshots:
       vite: '@voidzero-dev/vite-plus-core@1.5.0(@types/node@26.6.6)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)'
       yaml: 2.9.1
     optionalDependencies:
-      '@effect/platform-node': 4.1.2(effect@4.1.2)(redis@6.3.1)
+      '@effect/platform-node': 4.1.4(effect@4.1.4)(redis@6.3.1)
       ws: 8.22.1
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
@@ -3895,7 +3895,7 @@ snapshots:
 
   dom-accessibility-api@0.5.16: {}
 
-  effect@4.1.2: {}
+  effect@4.1.4: {}
 
   emoji-regex@10.6.0: {}
 

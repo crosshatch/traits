@@ -77,17 +77,20 @@ export const all = Effect.gen(function* () {
     .readDirectory(traitsDirectory)
     .pipe(Effect.mapError((cause) => TraitsDirectoryError.make({ path: traitsDirectory, problem: cause.message })))
   const files = Array.filter(entries, String.endsWith(".md"))
-  const names = yield* Effect.forEach(files, (file) =>
-    pipe(
-      String.slice(0, -".md".length)(file),
-      S.decodeEffect(TraitName),
-      Effect.mapError(() =>
-        TraitsDirectoryError.make({
-          path: traitsDirectory,
-          problem: `${file} is not named for a trait. Trait file names are kebab-case trait names starting with a letter, such as small-functions.md.`
-        })
-      )
-    )
+  const names = yield* Effect.forEach(
+    files,
+    (file) =>
+      pipe(
+        String.slice(0, -".md".length)(file),
+        S.decodeEffect(TraitName),
+        Effect.mapError(() =>
+          TraitsDirectoryError.make({
+            path: traitsDirectory,
+            problem: `${file} is not named for a trait. Trait file names are kebab-case trait names starting with a letter, such as small-functions.md.`
+          })
+        )
+      ),
+    { concurrency: 1 }
   )
   return Array.sort(names, Order.String)
 }).pipe(Effect.withSpan("WorkspaceTraits.all"))

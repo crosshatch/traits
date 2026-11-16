@@ -108,7 +108,8 @@ export const load = Effect.fn("WorkspaceChanges.load")(function* (options: {
         S.decodeEffect(WorkspacePath),
         Effect.mapError(() => WorkspaceFileError.make({ path: requested, problem: "it is outside the workspace." }))
       )
-    })
+    }),
+    { concurrency: fileConcurrency }
   )
   return yield* Effect.forEach(
     Array.dedupe(workspacePaths),

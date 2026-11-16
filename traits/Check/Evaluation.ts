@@ -73,8 +73,10 @@ interface SharedInput {
 export const evaluate = Effect.fnUntraced(function* (request: CheckInput, preparation: Preparation) {
   const { check } = yield* CurrentSettings
   // A trait's stop signal covers its inputs in every change.
-  const traits = yield* Effect.forEach(request.traits, (entry) =>
-    Effect.map(Deferred.make<void>(), (traitStopped) => ({ ...entry, traitStopped }))
+  const traits = yield* Effect.forEach(
+    request.traits,
+    (entry) => Effect.map(Deferred.make<void>(), (traitStopped) => ({ ...entry, traitStopped })),
+    { concurrency: 1 }
   )
   // Whole changes, and each segmenter's selections, are shared by the traits that use them.
   const selectors = Array.dedupe(Array.map(traits, (entry) => entry.trait.segment))

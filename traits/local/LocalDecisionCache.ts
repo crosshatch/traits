@@ -36,6 +36,7 @@ export const layer = (model: string) =>
         .pipe(Effect.map(Array.filter((name) => name !== `${current}` && name !== `${current - 1}`)))
       // At most a few directories: one per generation that has passed since the last check.
       yield* Effect.forEach(expired, (name) => fs.remove(path.join(generations, name), { recursive: true }), {
+        concurrency: 1,
         discard: true
       })
       const store = (name: string) =>

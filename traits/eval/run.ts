@@ -113,17 +113,23 @@ const program = Effect.gen(function* () {
           )
   const { traits, changes } = yield* Effect.all(
     {
-      traits: Effect.forEach(names, (name) =>
-        Effect.map(WorkspaceTraits.load(name), (trait) => ({
-          trait:
-            segment !== undefined && Array.contains(cases.traits, name) ? Trait.make({ ...trait, segment }) : trait,
-          origin: WorkspaceTraits.origin(name)
-        }))
+      traits: Effect.forEach(
+        names,
+        (name) =>
+          Effect.map(WorkspaceTraits.load(name), (trait) => ({
+            trait:
+              segment !== undefined && Array.contains(cases.traits, name) ? Trait.make({ ...trait, segment }) : trait,
+            origin: WorkspaceTraits.origin(name)
+          })),
+        { concurrency: 1 }
       ),
-      changes: Effect.forEach(cases.fixtures, (fixture) =>
-        Effect.map(fs.readFileString(path.join(import.meta.dirname, "fixtures", `${fixture.id}.txt`)), (text) => ({
-          after: { path: fixture.path, text }
-        }))
+      changes: Effect.forEach(
+        cases.fixtures,
+        (fixture) =>
+          Effect.map(fs.readFileString(path.join(import.meta.dirname, "fixtures", `${fixture.id}.txt`)), (text) => ({
+            after: { path: fixture.path, text }
+          })),
+        { concurrency: 1 }
       )
     },
     // Two fixed effects.

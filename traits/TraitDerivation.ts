@@ -150,12 +150,16 @@ export const compare = Effect.fn("TraitDerivation.compare")(function* (
           (error) => TraitComparisonError.make({ trait: name, reason: error.reason._tag })
         ),
         Effect.flatMap((response) =>
-          Effect.forEach(group, (entry, index) => {
-            const outcome = response.outcomes[`${index}`]!
-            return Result.isSuccess(outcome)
-              ? Effect.succeed({ name: entry.name, label: outcome.success.label })
-              : TraitComparisonError.make({ trait: name, reason: outcome.failure._tag })
-          })
+          Effect.forEach(
+            group,
+            (entry, index) => {
+              const outcome = response.outcomes[`${index}`]!
+              return Result.isSuccess(outcome)
+                ? Effect.succeed({ name: entry.name, label: outcome.success.label })
+                : TraitComparisonError.make({ trait: name, reason: outcome.failure._tag })
+            },
+            { concurrency: 1 }
+          )
         )
       ),
     // Decision requests are limited by DecisionLimit.layer, so these fibers stay cheap.

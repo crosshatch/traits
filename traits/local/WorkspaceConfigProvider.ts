@@ -20,13 +20,16 @@ export const layer = Effect.gen(function* () {
   const root = yield* mainCheckoutRoot
   const files = Array.dedupe([path.join(directory, ".env"), ...(root === undefined ? [] : [path.join(root, ".env")])])
   // The workspace's .env takes precedence over the main checkout's, in file order.
-  return yield* Effect.forEach(files, (file) =>
-    fs
-      .exists(file)
-      .pipe(
-        Effect.flatMap((exists) =>
-          exists ? ConfigProvider.fromDotEnv({ path: file }).pipe(Effect.asSome) : Effect.succeedNone
-        )
-      )
+  return yield* Effect.forEach(
+    files,
+    (file) =>
+      fs
+        .exists(file)
+        .pipe(
+          Effect.flatMap((exists) =>
+            exists ? ConfigProvider.fromDotEnv({ path: file }).pipe(Effect.asSome) : Effect.succeedNone
+          )
+        ),
+    { concurrency: 1 }
   ).pipe(Effect.map(Array.getSomes), Effect.map(Array.reduce(ConfigProvider.fromUnknown({}), ConfigProvider.orElse)))
 }).pipe(Effect.withSpan("WorkspaceConfigProvider.load"), ConfigProvider.layerAdd)

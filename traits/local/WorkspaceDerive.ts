@@ -130,7 +130,7 @@ const deriveWorkspace = Effect.fn("WorkspaceDerive.deriveWorkspace")(function* <
   approve: Approve<E>
 ) {
   const config = yield* TraitsConfig.load
-  return yield* Effect.forEach(documents, (document) => derive(document, approve)).pipe(
+  return yield* Effect.forEach(documents, (document) => derive(document, approve), { concurrency: 1 }).pipe(
     // The models layer also provides the configuration's settings.
     Effect.provide(WorkspaceModels.layer(config))
   )
