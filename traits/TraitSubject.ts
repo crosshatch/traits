@@ -3,14 +3,13 @@ import { type AiError, Decision, DecisionModel } from "effect/ai"
 
 import * as DecisionState from "./DecisionState.ts"
 import type { Input } from "./util/Input.ts"
+import { NonBlankString } from "./util/NonBlankString.ts"
 
 /** The kind of artifact, action, transaction, relationship, or situation to identify and assess. */
 export type TraitSubject = typeof TraitSubject.Type
-export const TraitSubject = S.NonEmptyString.check(S.isPattern(/\S/u), S.isMaxLength(500))
-  .pipe(S.brand("traits/TraitSubject"))
-  .annotate({
-    description: "The kind of artifact, action, transaction, relationship, or situation to identify and assess."
-  })
+export const TraitSubject = NonBlankString.check(S.isMaxLength(500)).pipe(S.brand("traits/TraitSubject")).annotate({
+  description: "The kind of artifact, action, transaction, relationship, or situation to identify and assess."
+})
 
 /** What every subject decision is asked. Answers depend on this wording, so decision caches key on it. */
 export const question = {

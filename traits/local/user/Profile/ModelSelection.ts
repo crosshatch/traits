@@ -1,5 +1,6 @@
 import { Array, pipe, Schema as S, SchemaTransformation, String } from "effect"
 
+import { ModelId } from "../../Models.ts"
 import { AccountName } from "../Provider/AccountName.ts"
 
 /** A saved provider model or custom Effect AI layer module; role capabilities are validated when resolved. */
@@ -7,10 +8,7 @@ export type ModelSelection = typeof ModelSelection.Type
 export const ModelSelection = S.TaggedUnion({
   Provider: {
     account: AccountName,
-    /** The provider's model ID, without whitespace; it may contain slashes, such as `anthropic/claude`. */
-    model: S.NonEmptyString.check(S.isPattern(/^\S+$/u)).annotate({
-      description: "The provider's model ID, without whitespace; it may contain slashes, such as `anthropic/claude`."
-    })
+    model: ModelId
   },
   Custom: {
     /** Path to a TypeScript file whose default export is an Effect AI layer; the CLI stores an absolute path. */

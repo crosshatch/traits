@@ -1,5 +1,6 @@
 import { Array, Effect, FileSystem, Order, Path, pipe, Schema as S, String } from "effect"
 
+import type { EnvironmentName } from "../EnvironmentName.ts"
 import { TraitOrigin } from "../Report/TraitOrigin.ts"
 import { Trait } from "../Trait.ts"
 import * as TraitFile from "../TraitFile.ts"
@@ -9,18 +10,6 @@ import { WorkspacePath } from "../util/WorkspacePath.ts"
 import * as ExtensionModule from "./ExtensionModule.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
-
-/** A kebab-case environment name starting with a letter, matching .agents/traits/_environments/<name>.json. */
-export type EnvironmentName = typeof EnvironmentName.Type
-export const EnvironmentName = S.NonEmptyString.check(
-  S.isPattern(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u),
-  S.isMaxLength(200)
-)
-  .pipe(S.brand("traits/EnvironmentName"))
-  .annotate({
-    description:
-      "A kebab-case environment name starting with a letter, matching .agents/traits/_environments/<name>.json."
-  })
 
 /** Which of the workspace's traits to check; all of them when neither is given. */
 export interface TraitSelection {

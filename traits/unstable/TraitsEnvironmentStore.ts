@@ -1,17 +1,21 @@
 import { type Effect, Schema as S } from "effect"
 
+import { EnvironmentName } from "../EnvironmentName.ts"
 import { TraitsEnvironment } from "../TraitsEnvironment.ts"
 
 /** Reads and writes authored environments within one configured store; does not synthesize the default environment. */
 export interface TraitsEnvironmentStore {
   /** Lists authored environment names, excluding the implicit default environment. */
-  readonly list: () => Effect.Effect<ReadonlyArray<string>, TraitsEnvironmentListError>
+  readonly list: () => Effect.Effect<ReadonlyArray<EnvironmentName>, TraitsEnvironmentListError>
   /** Reads an authored environment by name; fails when it does not exist. */
-  readonly read: (name: string) => Effect.Effect<TraitsEnvironment, TraitsEnvironmentReadError>
+  readonly read: (name: EnvironmentName) => Effect.Effect<TraitsEnvironment, TraitsEnvironmentReadError>
   /** Creates or replaces an authored environment; the implicit default name is reserved. */
-  readonly write: (name: string, environment: TraitsEnvironment) => Effect.Effect<void, TraitsEnvironmentWriteError>
+  readonly write: (
+    name: EnvironmentName,
+    environment: TraitsEnvironment
+  ) => Effect.Effect<void, TraitsEnvironmentWriteError>
   /** Removes an authored environment; fails when it does not exist or the name is default. */
-  readonly remove: (name: string) => Effect.Effect<void, TraitsEnvironmentRemoveError>
+  readonly remove: (name: EnvironmentName) => Effect.Effect<void, TraitsEnvironmentRemoveError>
 }
 
 /** A failure listing authored environments in a store. */
@@ -28,7 +32,7 @@ export class TraitsEnvironmentReadError extends S.TaggedError<TraitsEnvironmentR
   "TraitsEnvironmentReadError",
   {
     /** The name of the environment involved in the failed operation. */
-    environmentName: S.NonEmptyString.check(S.isTrimmed()).annotateKey({
+    environmentName: EnvironmentName.annotateKey({
       description: "The name of the environment involved in the failed operation."
     }),
     /** The underlying storage failure. */
@@ -41,7 +45,7 @@ export class TraitsEnvironmentWriteError extends S.TaggedError<TraitsEnvironment
   "TraitsEnvironmentWriteError",
   {
     /** The name of the environment involved in the failed operation. */
-    environmentName: S.NonEmptyString.check(S.isTrimmed()).annotateKey({
+    environmentName: EnvironmentName.annotateKey({
       description: "The name of the environment involved in the failed operation."
     }),
     /** The environment definition that could not be written. */
@@ -58,7 +62,7 @@ export class TraitsEnvironmentRemoveError extends S.TaggedError<TraitsEnvironmen
   "TraitsEnvironmentRemoveError",
   {
     /** The name of the environment involved in the failed operation. */
-    environmentName: S.NonEmptyString.check(S.isTrimmed()).annotateKey({
+    environmentName: EnvironmentName.annotateKey({
       description: "The name of the environment involved in the failed operation."
     }),
     /** The underlying storage failure. */

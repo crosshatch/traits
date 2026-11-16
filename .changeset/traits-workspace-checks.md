@@ -12,8 +12,8 @@ migrate a workspace:
   `{ "version": "0.6.0", "models": { "decision": { "provider", "model" }, "language": { "provider", "model" } } }`.
   Decision providers are `openrouter`, `openai`, and `cloudflare`; language
   providers are `openrouter`, `openai`, `anthropic`, and `openai-compatible`
-  (with `url` and optional `apiKeyEnv`). Credentials come from
-  `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
+  (with an `http://` or `https://` `url` and optional `apiKeyEnv`). Credentials
+  come from `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
   `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, in the environment or a
   Git-ignored `.env`. Rename `decisionConcurrency` to `concurrency` and
   `excludes` to `exclude` (Git glob patterns, relative to the checkout root),

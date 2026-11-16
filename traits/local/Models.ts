@@ -5,26 +5,30 @@ import * as OpenAiCompatible from "@effect/ai-openai-compat"
 import { OpenRouterClient, OpenRouterDecisionModel, OpenRouterLanguageModel } from "@effect/ai-openrouter"
 import { Array, Config, type Context, Layer, Schema as S } from "effect"
 
-/** The provider's model ID. */
-const model = S.NonEmptyString.check(S.isTrimmed()).annotate({ description: "The provider's model ID." })
+/** The provider's model ID, without whitespace; it may contain slashes, such as `anthropic/claude`. */
+export const ModelId = S.String.check(
+  S.isPattern(/^\S+$/u, { message: "Expected a model ID without whitespace." })
+).annotate({
+  description: "The provider's model ID, without whitespace; it may contain slashes, such as `anthropic/claude`."
+})
 
 /** An OpenAI model; the API key is read from OPENAI_API_KEY. */
-const OpenAi = S.Struct({ provider: S.Literal("openai"), model }).annotate({
+const OpenAi = S.Struct({ provider: S.Literal("openai"), model: ModelId }).annotate({
   description: "An OpenAI model; the API key is read from OPENAI_API_KEY."
 })
 
 /** An Anthropic model; the API key is read from ANTHROPIC_API_KEY. */
-const Anthropic = S.Struct({ provider: S.Literal("anthropic"), model }).annotate({
+const Anthropic = S.Struct({ provider: S.Literal("anthropic"), model: ModelId }).annotate({
   description: "An Anthropic model; the API key is read from ANTHROPIC_API_KEY."
 })
 
 /** An OpenRouter model; the API key is read from OPENROUTER_API_KEY. */
-const OpenRouter = S.Struct({ provider: S.Literal("openrouter"), model }).annotate({
+const OpenRouter = S.Struct({ provider: S.Literal("openrouter"), model: ModelId }).annotate({
   description: "An OpenRouter model; the API key is read from OPENROUTER_API_KEY."
 })
 
 /** A Cloudflare Workers AI model; credentials are read from CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN. */
-const Cloudflare = S.Struct({ provider: S.Literal("cloudflare"), model }).annotate({
+const Cloudflare = S.Struct({ provider: S.Literal("cloudflare"), model: ModelId }).annotate({
   description:
     "A Cloudflare Workers AI model; credentials are read from CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN."
 })
@@ -32,9 +36,11 @@ const Cloudflare = S.Struct({ provider: S.Literal("cloudflare"), model }).annota
 /** A model served by any OpenAI-compatible API, such as a local or self-hosted server. */
 const OpenAiCompatibleModel = S.Struct({
   provider: S.Literal("openai-compatible"),
-  model,
-  /** The API base URL. */
-  url: S.NonEmptyString.annotate({ description: "The API base URL." }),
+  model: ModelId,
+  /** The API base URL, starting with http:// or https://. */
+  url: S.String.check(
+    S.isPattern(/^https?:\/\/\S+$/u, { message: "Expected a URL starting with http:// or https://." })
+  ).annotate({ description: "The API base URL, starting with http:// or https://." }),
   /** The environment variable holding the API key; omitted when the server needs none. */
   apiKeyEnv: S.NonEmptyString.annotateKey({
     description: "The environment variable holding the API key; omitted when the server needs none."

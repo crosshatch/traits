@@ -50,7 +50,10 @@ it("validates the workspace configuration and each role's supported providers", 
   for (const invalid of [
     { ...models, decision: { provider: "anthropic", model: "claude-sonnet" } },
     { ...models, language: { provider: "cloudflare", model: "clef" } },
-    { ...models, language: { provider: "openai-compatible", model: "llama-3" } }
+    { ...models, language: { provider: "openai-compatible", model: "llama-3" } },
+    // A base URL names its scheme, and no model ID contains whitespace.
+    { ...models, language: { provider: "openai-compatible", model: "llama-3", url: "localhost:11434/v1" } },
+    { ...models, decision: { provider: "openrouter", model: "openai/gpt 5" } }
   ]) {
     expect(decodes({ ...config, models: invalid })).toBe(false)
   }

@@ -1,9 +1,9 @@
 import { Cause, Effect, FileSystem, Fiber, Option, Path, pipe, Ref, Schema as S, String } from "effect"
 import { Tool, Toolkit } from "effect/ai"
 
+import { EnvironmentName } from "../EnvironmentName.ts"
 import * as Changelog from "../local/Changelog.ts"
 import * as WorkspaceCheck from "../local/WorkspaceCheck.ts"
-import { EnvironmentName } from "../local/WorkspaceTraits.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { Report } from "../Report/Report.ts"
 import { TraitName } from "../TraitName.ts"

@@ -1,6 +1,7 @@
-import { Array, Schema as S } from "effect"
+import { Schema as S } from "effect"
 
 import { TraitOrigin } from "../Report/TraitOrigin.ts"
+import { unambiguousIdentities } from "../Report/unambiguousIdentities.ts"
 import { Trait } from "../Trait.ts"
 import { Change } from "../util/Change.ts"
 
@@ -24,21 +25,4 @@ export const CheckInput = S.Struct({
   })
 })
   .annotate({ description: "Caller-ordered, uniquely named traits and text changes with distinct after paths." })
-  .check(
-    S.makeFilter(
-      (input) => {
-        const names = Array.map(input.traits, (entry) => entry.trait.name)
-        return Array.dedupe(names).length === names.length
-      },
-      { message: "Trait names must be unique." }
-    ),
-    S.makeFilter(
-      (input) => {
-        const afterPaths = Array.flatMap(input.changes, (change) =>
-          change.after === undefined ? [] : [change.after.path]
-        )
-        return Array.dedupe(afterPaths).length === afterPaths.length
-      },
-      { message: "No two changes may share an after path." }
-    )
-  )
+  .check(...unambiguousIdentities)

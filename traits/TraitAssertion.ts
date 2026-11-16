@@ -7,10 +7,11 @@ import { TraitBody } from "./TraitBody.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
 import type { Input } from "./util/Input.ts"
+import { NonBlankString } from "./util/NonBlankString.ts"
 
 /** The assertion to assess against the subject. */
 export type TraitAssertion = typeof TraitAssertion.Type
-export const TraitAssertion = S.NonEmptyString.check(S.isPattern(/\S/u), S.isMaxLength(4_000))
+export const TraitAssertion = NonBlankString.check(S.isMaxLength(4_000))
   .pipe(S.brand("traits/TraitAssertion"))
   .annotate({
     description: "The assertion to assess against the subject."

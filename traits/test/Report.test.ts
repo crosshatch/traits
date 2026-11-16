@@ -203,6 +203,10 @@ it("requires portable, unambiguous identities", () => {
     )
   ).toBe(false)
   expect(S.is(Report.Report)({ ...valid, run: { ...run, models: ["a", "a"] } })).toBe(false)
+  // Provenance is deterministic: models are sorted, and token totals are whole numbers.
+  expect(S.is(Report.Report)({ ...valid, run: { ...run, models: ["a", "b"], usage: { inputTokens: 12 } } })).toBe(true)
+  expect(S.is(Report.Report)({ ...valid, run: { ...run, models: ["b", "a"] } })).toBe(false)
+  expect(S.is(Report.Report)({ ...valid, run: { ...run, usage: { inputTokens: 1.5 } } })).toBe(false)
 })
 
 it("records each trait's origin", () => {

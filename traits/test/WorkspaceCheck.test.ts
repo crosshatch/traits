@@ -8,6 +8,7 @@ import { KeyValueStore } from "effect/persistence"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
+import { EnvironmentName } from "../EnvironmentName.ts"
 import * as TraitsConfig from "../local/TraitsConfig.ts"
 import * as WorkspaceCheck from "../local/WorkspaceCheck.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
@@ -193,7 +194,7 @@ it.live(
       const select = (selection: WorkspaceTraits.TraitSelection) =>
         WorkspaceTraits.select(selection).pipe(Effect.provide(WorkspaceRoot.layer(directory)))
       const fail = (selection: WorkspaceTraits.TraitSelection) => Effect.flip(select(selection))
-      const environment = WorkspaceTraits.EnvironmentName.make("ci")
+      const environment = EnvironmentName.make("ci")
       const small = TraitName.make("small")
       const correct = TraitName.make("correct")
 
@@ -214,7 +215,7 @@ it.live(
       const outside = yield* fail({ environment, traits: [correct] })
       expect(outside._tag).toBe("UnknownTraitsError")
       expect(outside.message).toContain('not in environment "ci"')
-      const unknown = yield* fail({ environment: WorkspaceTraits.EnvironmentName.make("nightly") })
+      const unknown = yield* fail({ environment: EnvironmentName.make("nightly") })
       expect(unknown.message).toContain("Available environments: ci")
 
       for (const [contents, tag] of [
@@ -235,7 +236,7 @@ it.live(
 
       // Names start with a letter, so the underscored environments directory sorts before every trait file.
       expect(S.is(TraitName)("2-space-indent")).toBe(false)
-      expect(S.is(WorkspaceTraits.EnvironmentName)("2-ci")).toBe(false)
+      expect(S.is(EnvironmentName)("2-ci")).toBe(false)
       for (const file of ["README.md", "2-space-indent.md"]) {
         yield* fs.writeFileString(path.join(directory, ".agents", "traits", file), "# Not a trait\n")
         const misnamed = yield* fail({})

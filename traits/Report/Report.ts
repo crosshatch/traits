@@ -13,6 +13,7 @@ import { Problem } from "./Problem.ts"
 import type { ReportVerdicts } from "./ReportVerdicts.ts"
 import { Run } from "./Run.ts"
 import { TraitReport } from "./TraitReport.ts"
+import { unambiguousIdentities } from "./unambiguousIdentities.ts"
 import { combineVerdicts, type Verdict } from "./Verdict.ts"
 
 /** Portable, client-facing evaluation results grouped by trait and change, without source text or excerpts; retry tracking is external. */
@@ -42,16 +43,7 @@ export const Report = S.Struct({
       "Portable, client-facing evaluation results grouped by trait and change, without source text or excerpts; retry tracking is external."
   })
   .check(
-    S.makeFilter(
-      (report) => {
-        const names = Array.map(report.traits, (trait) => trait.trait.name)
-        const afterPaths = Array.flatMap(report.changes, (change) =>
-          change.after === undefined ? [] : [change.after.path]
-        )
-        return Array.dedupe(names).length === names.length && Array.dedupe(afterPaths).length === afterPaths.length
-      },
-      { message: "Trait names must be unique, and no two changes may share an after path." }
-    ),
+    ...unambiguousIdentities,
     S.makeFilter(
       (report) =>
         Array.every(report.traits, (trait) => trait.changes.length === report.changes.length) &&
