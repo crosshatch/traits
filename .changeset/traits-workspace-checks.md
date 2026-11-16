@@ -68,9 +68,9 @@ migrate a workspace:
   `check.ruleOut`, the subject `no` probability that rules a target out (0.6);
   `check.policy`, a `{ "fail", "pass" }` verdict policy that `traits check`
   applies when `--fail` and `--pass` are omitted; the concurrency of checks'
-  file reads, segmentation, and digests; decision request batching and retries
-  under `requests`; and `derive.batchSize`. Reports record the threshold they
-  used in `run.ruleOut`.
+  file reads, evaluation, segmentation, and digests; decision request batching
+  and retries under `requests`; and `derive.batchSize`. Reports record the
+  threshold they used in `run.ruleOut`.
 - Checks remember completed decisions in `.agents/traits/.cache/`, which ignores
   itself in Git, so re-checking unchanged traits and files is nearly free.
   Decisions no check has used for one to two months are removed automatically.

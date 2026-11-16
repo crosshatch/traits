@@ -36,6 +36,14 @@ export const CheckSettings = S.Struct({
     S.withConstructorDefault(Effect.succeed(8)),
     S.withDecodingDefaultTypeKey(Effect.succeed(8))
   ).annotateKey({ description: "Changes segmented at a time by each segmenter; 8 when omitted." }),
+  /** Changes evaluated at a time, each against every selected trait, so a check's memory does not grow with the number of files; 32 when omitted. */
+  evaluationConcurrency: Count.pipe(
+    S.withConstructorDefault(Effect.succeed(32)),
+    S.withDecodingDefaultTypeKey(Effect.succeed(32))
+  ).annotateKey({
+    description:
+      "Changes evaluated at a time, each against every selected trait, so a check's memory does not grow with the number of files; 32 when omitted."
+  }),
   /** Source texts digested at a time for the report; 8 when omitted. */
   digestConcurrency: Count.pipe(
     S.withConstructorDefault(Effect.succeed(8)),

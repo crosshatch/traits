@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Layer, Option, Path, Record } from "effect"
+import { Array, Effect, FileSystem, Layer, Option, Path, pipe, Record, String } from "effect"
 import { DecisionModel } from "effect/ai"
 import { Digest } from "effect/crypto"
 import { TestClock } from "effect/testing"
@@ -97,6 +97,41 @@ it.effect("reuses cached decisions for unchanged traits and inputs without askin
     }
     yield* check(changed).pipe(Effect.provide([host, model.layer, cache]))
     expect(model.calls.count).toBe(4)
+  })
+)
+
+it.effect("digests an input's text once for every trait checked against it", () =>
+  Effect.gen(function* () {
+    const model = countingModel(passing)
+    // Far longer than any decision key, so digests of the text can be told apart from digests of keys.
+    const text = pipe("export const f = () => 1\n", String.repeat(4000))
+    const digested: Array<number> = []
+    const digest = Layer.effect(
+      Digest.Digest,
+      Effect.map(Digest.Digest, (digest) =>
+        Digest.Digest.of({
+          ...digest,
+          digestHex: (algorithm, data) => {
+            digested.push(data.length)
+            return digest.digestHex(algorithm, data)
+          }
+        })
+      )
+    ).pipe(Layer.provide(Digest.layerWebCrypto))
+    yield* check({
+      traits: Array.map(Array.range(1, 5), (index) => ({
+        ...request.traits[0]!,
+        trait: {
+          ...request.traits[0]!.trait,
+          name: TraitName.make(`small-functions-${index}`),
+          subject: TraitSubject.make(`Functions of kind ${index}.`)
+        }
+      })),
+      changes: [{ after: { path: WorkspacePath.make("a.ts"), text } }]
+    }).pipe(Effect.provide(digest), Effect.provide([host, model.layer, memoryCache()]))
+    expect(model.calls.count).toBe(10)
+    // The target, its decision state, and the change's identity; the ten decisions key on the state's digest.
+    expect(Array.filter(digested, (length) => length >= text.length)).toHaveLength(3)
   })
 )
 

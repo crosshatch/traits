@@ -804,3 +804,45 @@ it.effect("batches subject decisions per input, splits large batches, and counts
     yield* pipe(report, S.decodeEffect(Report.Report))
   })
 )
+
+it.live("evaluates only as many changes at a time as the settings allow, however many are given", () =>
+  Effect.gen(function* () {
+    const active = new Map<string, number>()
+    let peak = 0
+    const report = yield* check({
+      traits: Array.map(Array.range(1, 3), (index) => ({ origin, trait: trait(`asserted-${index}`, { assertion }) })),
+      changes: Array.map(Array.range(1, 8), (index) => ({
+        after: { path: WorkspacePath.make(`file-${index}.ts`), text: `export const a = ${index}` }
+      }))
+    }).pipe(
+      Effect.provide(unused),
+      Effect.provideServiceEffect(
+        DecisionModel.DecisionModel,
+        DecisionModel.make({
+          decide: (options) =>
+            Effect.gen(function* () {
+              const { path } = yield* pipe(options.state, S.decodeUnknownEffect(S.Struct({ path: S.String })))
+              active.set(path, (active.get(path) ?? 0) + 1)
+              peak = Math.max(peak, active.size)
+              yield* Effect.sleep("5 millis")
+              if (active.get(path) === 1) {
+                active.delete(path)
+              } else {
+                active.set(path, active.get(path)! - 1)
+              }
+              return response
+            }).pipe(Effect.orDie)
+        })
+      ),
+      Effect.provideService(
+        Settings.CurrentSettings,
+        Settings.Settings.make({ check: Settings.CheckSettings.make({ evaluationConcurrency: 2 }) })
+      )
+    )
+    // Decisions were in flight for at most two of the eight files at once, and every trait still assessed every file.
+    expect(peak).toBe(2)
+    expect(Array.map(report.traits, (entry) => Array.map(inputsOf(entry), (input) => input._tag))).toEqual(
+      Array.makeBy(3, () => Array.makeBy(8, () => "Completed"))
+    )
+  })
+)

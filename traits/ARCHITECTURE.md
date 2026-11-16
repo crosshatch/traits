@@ -123,6 +123,15 @@ assessment-execution failure; a trait without an assertion completes with its
 static context and enrichments. It does not yet coalesce work across traits;
 their existing recovery and cancellation boundaries are unchanged.
 
+`check` evaluates `check.evaluationConcurrency` changes at a time (32), each
+against every trait at once. The subject decisions about one input therefore
+still start together and share requests, while the work a check holds in memory
+is that of a few changes, however many files it is given. Each input's target
+digest and the digest of its decision state are computed once and shared by the
+traits assessed against it. A value below `concurrency` can leave decision
+requests idle when few traits are checked, since each change then contributes
+about one request at a time.
+
 An enrichment setup failure is reported once and disables that enrichment for
 the check. Assessment still proceeds with remaining context unless an
 input-scoped or trait-scoped execution recovery signal prevents it. There is no
@@ -219,8 +228,8 @@ A workspace keeps its configuration at its root and its traits under
   checks of every project file, and optional settings (`Settings`, core), each
   defaulting when omitted: `concurrency`, the maximum number of simultaneous
   decision requests (16); `check.ruleOut` (0.6), `check.policy` (none), and the
-  file, segmentation, and digest concurrency of checks (16, 8, 8);
-  `requests.batchSize` (32), `requests.batchWindowMillis` (10),
+  file, evaluation, segmentation, and digest concurrency of checks (16, 32, 8,
+  8); `requests.batchSize` (32), `requests.batchWindowMillis` (10),
   `requests.retries` (5), and `requests.retryDelayMillis` (1000); and
   `derive.batchSize` (32), the existing traits compared per request. Core code
   reads them from the `CurrentSettings` reference, whose default is
@@ -315,7 +324,9 @@ Completed subject and assertion decisions are remembered by the optional
 `DecisionCache` service, keyed by a digest of the traits version, the decision's
 kind, and everything sent to the model: the wording of the question
 (`TraitSubject.question` or `TraitAssertion.question`), the subject or assertion
-with its context and enrichment outputs, and the input's decision state. A
+with its context and enrichment outputs, and the input's decision state. That
+state is digested once per input, and each decision's key digests its own
+wording with that digest, so the input's text is not digested for every trait. A
 repeated check of unchanged traits and files therefore asks the model nothing,
 reports zero tokens for those decisions, and still lists the model that made
 them. Failed or unanswered decisions are never cached. `LocalDecisionCache`
