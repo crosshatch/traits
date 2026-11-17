@@ -5,6 +5,38 @@ import { Probability } from "./util/Probability.ts"
 
 const Count = S.Int.check(S.isGreaterThanOrEqualTo(1))
 
+/** How close calls are settled: a subject or assessment decision whose deciding probability lands near its threshold is asked again and its answers averaged, so a check gives the same verdict on every run. */
+export const ResamplingSettings = S.Struct({
+  /** A decision whose deciding probability is within this distance of its threshold is asked again; 0.15 when omitted. */
+  margin: Probability.annotateKey({
+    description:
+      "A decision whose deciding probability is within this distance of its threshold is asked again; 0.15 when omitted."
+  }).pipe(S.withConstructorDefault(Effect.succeed(0.15)), S.withDecodingDefaultKey(Effect.succeed(0.15))),
+  /** How many answers a decision within margin of its threshold averages; 1 asks once, turning resampling off; 3 when omitted. */
+  samples: Count.annotateKey({
+    description:
+      "How many answers a decision within margin of its threshold averages; 1 asks once, turning resampling off; 3 when omitted."
+  }).pipe(S.withConstructorDefault(Effect.succeed(3)), S.withDecodingDefaultKey(Effect.succeed(3))),
+  /** A decision whose averaged probability is still within this distance of its threshold is asked again; 0.05 when omitted. */
+  closeMargin: Probability.annotateKey({
+    description:
+      "A decision whose averaged probability is still within this distance of its threshold is asked again; 0.05 when omitted."
+  }).pipe(S.withConstructorDefault(Effect.succeed(0.05)), S.withDecodingDefaultKey(Effect.succeed(0.05))),
+  /** How many answers a decision still within closeMargin averages, at least samples; 5 when omitted. */
+  closeSamples: Count.annotateKey({
+    description: "How many answers a decision still within closeMargin averages, at least samples; 5 when omitted."
+  }).pipe(S.withConstructorDefault(Effect.succeed(5)), S.withDecodingDefaultKey(Effect.succeed(5)))
+})
+  .annotate({
+    description:
+      "How close calls are settled: a subject or assessment decision whose deciding probability lands near its threshold is asked again and its answers averaged, so a check gives the same verdict on every run."
+  })
+  .check(
+    S.makeFilter((settings) => settings.closeSamples >= settings.samples, {
+      message: "closeSamples must be at least samples."
+    })
+  )
+
 /** How checks gate, judge, and parallelize their work. */
 export const CheckSettings = S.Struct({
   /**
@@ -23,6 +55,11 @@ export const CheckSettings = S.Struct({
     description:
       "The verdict policy traits check applies when --fail and --pass are omitted; with neither, it prints no verdict."
   }).pipe(S.optionalKey),
+  /** How close calls are settled. Assessments are settled against policy, or fail and pass thresholds of 0.5 without one. */
+  resampling: ResamplingSettings.pipe(
+    S.withConstructorDefault(Effect.sync(() => ResamplingSettings.make({}))),
+    S.withDecodingDefaultKey(Effect.succeed({}))
+  ),
   /** Workspace files and Git revisions read at a time; 16 when omitted. */
   fileConcurrency: Count.annotateKey({
     description: "Workspace files and Git revisions read at a time; 16 when omitted."

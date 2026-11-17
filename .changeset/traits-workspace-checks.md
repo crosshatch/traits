@@ -66,6 +66,9 @@ migrate a workspace:
   from versions compatible under caret (`^`) semantics share a format.
 - `traits.json` accepts optional settings, each defaulting when omitted:
   `check.ruleOut`, the subject `no` probability that rules a target out (0.6);
+  `check.resampling`, which asks a decision near its threshold again and
+  averages the answers (by default 3 answers within 0.15 of the threshold, and 5
+  while the average is within 0.05), so checks of unchanged code agree;
   `check.policy`, a `{ "fail", "pass" }` verdict policy that `traits check`
   applies when `--fail` and `--pass` are omitted; the concurrency of checks'
   file reads, evaluation, segmentation, and digests; decision request batching

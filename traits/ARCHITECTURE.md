@@ -117,6 +117,22 @@ recovery can cancel the decision like an assessment. Traits without a subject
 are not gated. Subject decision usage and model identities count toward the
 run's provenance.
 
+Answers to identical requests vary, so a single answer near a threshold decides
+a verdict at random. `Resampling.settle` (`Check/Resampling.ts`) settles such
+close calls: when a subject's `no` probability is within
+`check.resampling.margin` (0.15) of `check.ruleOut`, or an assessment's `fail`
+or `pass` plus `na` is that close to `check.policy` (or 0.5 and 0.5 without a
+policy), the decision is asked again until it has `samples` answers (3), and
+again until `closeSamples` (5) when their average is still within `closeMargin`
+(0.05). The report records the averaged probabilities and the usage of every
+request; further requests that fail or go unanswered are left out of the
+average. `samples: 1` turns it off. Verdict policies given only on the command
+line are not known when the check runs, so their close calls are settled against
+`check.policy` or 0.5. Measured on this repository's 126 source files against
+all 168 traits over six identical checks each, settling close calls cut the
+files whose pass or fail changed between two checks from 9.7% to 4.5%, and the
+results that changed from about 15 to 7, for about a third more cost.
+
 After the gate, `check` delegates each ready trait/input assessment to the
 assertion collection API, converting an unanswered outcome to an
 assessment-execution failure; a trait without an assertion completes with its
@@ -228,24 +244,25 @@ A workspace keeps its configuration at its root and its traits under
   checks of every project file, and optional settings (`Settings`, core), each
   defaulting when omitted: `concurrency`, the maximum number of simultaneous
   decision requests (16); `check.ruleOut` (0.6), `check.policy` (none), and the
-  file, evaluation, segmentation, and digest concurrency of checks (16, 32, 8,
-  8); `requests.batchSize` (32), `requests.batchWindowMillis` (10),
-  `requests.retries` (5), and `requests.retryDelayMillis` (1000); and
-  `derive.batchSize` (32), the existing traits compared per request. Core code
-  reads them from the `CurrentSettings` reference, whose default is
-  `Settings.make({})`: each field carries its default beside it, as both a
-  constructor and a decoding default, so hosts that provide nothing get the
-  defaults. Locally, `WorkspaceModels.layer(config)` provides the loaded
-  `traits.json` together with the models it limits and batches, and
-  `WorkspaceCheck.run` provides the configuration it is given to the check, so
-  one configuration governs a whole check or derivation. It lists no traits, and
-  unknown keys are rejected, so a trait list from an earlier version is reported
-  rather than ignored. Credentials come from the environment, falling back to
-  the workspace's `.env` and then to the main checkout's `.env`, so linked Git
-  worktrees share its credentials (`WorkspaceConfigProvider`).
-  `TraitsConfig.load` fails with an agent-facing message when the file is
-  missing, invalid, or written for an incompatible version under caret
-  semantics.
+  resampling of close calls (`check.resampling`: margin 0.15, 3 samples, close
+  margin 0.05, 5 samples); the file, evaluation, segmentation, and digest
+  concurrency of checks (16, 32, 8, 8); `requests.batchSize` (32),
+  `requests.batchWindowMillis` (10), `requests.retries` (5), and
+  `requests.retryDelayMillis` (1000); and `derive.batchSize` (32), the existing
+  traits compared per request. Core code reads them from the `CurrentSettings`
+  reference, whose default is `Settings.make({})`: each field carries its
+  default beside it, as both a constructor and a decoding default, so hosts that
+  provide nothing get the defaults. Locally, `WorkspaceModels.layer(config)`
+  provides the loaded `traits.json` together with the models it limits and
+  batches, and `WorkspaceCheck.run` provides the configuration it is given to
+  the check, so one configuration governs a whole check or derivation. It lists
+  no traits, and unknown keys are rejected, so a trait list from an earlier
+  version is reported rather than ignored. Credentials come from the
+  environment, falling back to the workspace's `.env` and then to the main
+  checkout's `.env`, so linked Git worktrees share its credentials
+  (`WorkspaceConfigProvider`). `TraitsConfig.load` fails with an agent-facing
+  message when the file is missing, invalid, or written for an incompatible
+  version under caret semantics.
 - `.agents/traits/<name>.md` defines each trait: YAML frontmatter with `name`,
   `purpose`, and optional `subject`, `assertion`, `segment`, and `enrichments`,
   and a Markdown body of supporting context. Unknown frontmatter keys are
@@ -324,20 +341,21 @@ Completed subject and assertion decisions are remembered by the optional
 `DecisionCache` service, keyed by a digest of the traits version, the decision's
 kind, and everything sent to the model: the wording of the question
 (`TraitSubject.question` or `TraitAssertion.question`), the subject or assertion
-with its context and enrichment outputs, and the input's decision state. That
-state is digested once per input, and each decision's key digests its own
-wording with that digest, so the input's text is not digested for every trait. A
-repeated check of unchanged traits and files therefore asks the model nothing,
-reports zero tokens for those decisions, and still lists the model that made
-them. Failed or unanswered decisions are never cached. `LocalDecisionCache`
-stores entries under `.agents/traits/.cache/`, which ignores itself in Git, and
-scopes keys to the configured decision model. Entries are kept in 30-day
-generations: a decision found only in the previous generation moves to the
-current one, and older generations are deleted, so a decision is dropped once a
-whole generation passes without a check using it. When the directory cannot be
-prepared, such as in a read-only checkout, checks run without remembering
-decisions. The evaluation runner uses no cache, so accuracy measurements always
-ask the model.
+with its context and enrichment outputs, the input's decision state, and the
+thresholds and resampling settings its close call was settled with, since the
+cache stores the settled, averaged answer rather than the first. That state is
+digested once per input, and each decision's key digests its own wording with
+that digest, so the input's text is not digested for every trait. A repeated
+check of unchanged traits and files therefore asks the model nothing, reports
+zero tokens for those decisions, and still lists the model that made them.
+Failed or unanswered decisions are never cached. `LocalDecisionCache` stores
+entries under `.agents/traits/.cache/`, which ignores itself in Git, and scopes
+keys to the configured decision model. Entries are kept in 30-day generations: a
+decision found only in the previous generation moves to the current one, and
+older generations are deleted, so a decision is dropped once a whole generation
+passes without a check using it. When the directory cannot be prepared, such as
+in a read-only checkout, checks run without remembering decisions. The
+evaluation runner uses no cache, so accuracy measurements always ask the model.
 
 ## Derive traits
 

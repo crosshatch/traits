@@ -653,7 +653,8 @@ it.effect("assesses a target whose subject decision leans no without being confi
     expect(Array.map(allInputsOf(report.traits[0]!), (input) => input._tag)).toEqual(["Completed", "Unmatched"])
     expect(inputsOf(report.traits[0]!)[0]).toMatchObject({ subject: { yes: 0.4, no: 0.55, uncertain: 0.05 } })
     expect(inputsOf(report.traits[0]!)[0]).toHaveProperty("assessment")
-    expect(gated.calls()).toEqual({ subject: 2, assertion: 1 })
+    // The leaning answer stays within the close margin of the threshold, so it is asked five times; skip once.
+    expect(gated.calls()).toEqual({ subject: 6, assertion: 1 })
     // A lower configured threshold rules the leaning target out, and the report records the threshold it used.
     const lenient = yield* check({
       traits: [{ origin, trait: trait("asserted", { subject, assertion }) }],
@@ -845,4 +846,70 @@ it.live("evaluates only as many changes at a time as the settings allow, however
       Array.makeBy(3, () => Array.makeBy(8, () => "Completed"))
     )
   })
+)
+
+it.effect(
+  "asks close calls again and averages them, so a near-threshold answer does not decide a verdict at random",
+  () =>
+    Effect.gen(function* () {
+      // Assertion answers for one target, in the order they are given: a close call, then answers on either side.
+      const sequence = (fails: ReadonlyArray<number>) => {
+        const calls = { count: 0 }
+        const model = DecisionModel.make({
+          decide: () =>
+            Effect.sync((): DecisionModel.ProviderResponse => {
+              const fail = fails[Math.min(calls.count, fails.length - 1)]!
+              calls.count++
+              return {
+                answers: {
+                  assertion: {
+                    _tag: "Classify",
+                    label: fail >= 0.5 ? "fail" : "pass",
+                    probabilities: { pass: 0.9 - fail, fail, na: 0.05, uncertain: 0.05 }
+                  }
+                },
+                usage: { inputTokens: 10, outputTokens: 1 }
+              }
+            })
+        })
+        return { calls, model }
+      }
+      const run = (fails: ReadonlyArray<number>, settings = Settings.Settings.make({})) => {
+        const model = sequence(fails)
+        return check({
+          traits: [{ origin, trait: trait("asserted", { assertion }) }],
+          changes: [{ after: { path: WorkspacePath.make("a.ts"), text: "a" } }]
+        }).pipe(
+          Effect.provide(unused),
+          Effect.provideServiceEffect(DecisionModel.DecisionModel, model.model),
+          Effect.provideService(Settings.CurrentSettings, settings),
+          Effect.map((report) => ({ report, calls: model.calls.count }))
+        )
+      }
+      const assessed = (report: Report.Report) => {
+        const input = inputsOf(report.traits[0]!)[0]!
+        return Report.InputReport.guards.Completed(input) ? input.assessment : undefined
+      }
+      // A clear answer is asked once.
+      const clear = yield* run([0.05])
+      expect(clear.calls).toBe(1)
+      // A close call is asked three times and averaged, with the usage of every request.
+      const close = yield* run([0.55, 0.25, 0.25])
+      expect(close.calls).toBe(3)
+      expect(assessed(close.report)?.fail).toBeCloseTo(0.35)
+      expect(close.report.run.usage).toEqual({ inputTokens: 30, outputTokens: 3 })
+      // An average still within the close margin is asked five times in all.
+      const contested = yield* run([0.52, 0.45, 0.5, 0.2, 0.2])
+      expect(contested.calls).toBe(5)
+      expect(assessed(contested.report)?.fail).toBeCloseTo(0.374)
+      // One sample turns resampling off.
+      const off = yield* run(
+        [0.55, 0.25],
+        Settings.Settings.make({
+          check: Settings.CheckSettings.make({ resampling: Settings.ResamplingSettings.make({ samples: 1 }) })
+        })
+      )
+      expect(off.calls).toBe(1)
+      expect(assessed(off.report)?.fail).toBeCloseTo(0.55)
+    })
 )

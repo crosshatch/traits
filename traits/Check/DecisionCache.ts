@@ -5,10 +5,12 @@ import * as DecisionState from "../DecisionState.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { Assessment } from "../Report/Assessment.ts"
 import { SubjectMatch } from "../Report/SubjectMatch.ts"
+import { CurrentSettings } from "../Settings.ts"
 import * as TraitAssertion from "../TraitAssertion.ts"
 import * as TraitSubject from "../TraitSubject.ts"
 import type { Input } from "../util/Input.ts"
 import { digestText, TextDigest } from "../util/TextDigest.ts"
+import * as Resampling from "./Resampling.ts"
 
 /** A decision a model completed, kept so the same question is not asked again. */
 export type CachedDecision = typeof CachedDecision.Type
@@ -81,12 +83,28 @@ const remember = (
       })
 
 /**
- * The decisions about one input, each reusing a cached decision when one exists; without a cache they ask the model
- * directly. The input's decision state is digested once, when a decision first needs its key, and every decision about
- * the input keys on that digest, so checking many traits against one input does not digest its text once per trait.
+ * The decisions about one input, each reusing a cached decision when one exists, and otherwise asking the model and
+ * settling a close call by asking again (Resampling.settle). The input's decision state is digested once, when a
+ * decision first needs its key, and every decision about the input keys on that digest, so checking many traits against
+ * one input does not digest its text once per trait. Keys also cover the thresholds and resampling settings a decision
+ * was settled with, so changing them asks again.
  */
 export const forInput = Effect.fnUntraced(function* (input: Input) {
   const cache = yield* Effect.serviceOption(DecisionCache).pipe(Effect.map(Option.getOrUndefined))
+  const {
+    check: { ruleOut, policy = { fail: 0.5, pass: 0.5 }, resampling }
+  } = yield* CurrentSettings
+  const settleSubject = (subject: TraitSubject.TraitSubject) =>
+    Resampling.settle("subject", TraitSubject.match({ subject }, input), (probabilities) =>
+      Math.abs(probabilities.no - ruleOut)
+    )
+  const settleAssertion = (assertion: TraitAssertion.TraitAssertionInput) =>
+    Resampling.settle("assertion", TraitAssertion.evaluate({ assertion }, input), (probabilities) =>
+      Math.min(
+        Math.abs(probabilities.fail - policy.fail),
+        Math.abs(probabilities.pass + probabilities.na - policy.pass)
+      )
+    )
   const state = yield* Effect.cached(digestText(JSON.stringify(DecisionState.fromInput(input))))
   /** Digests a decision's kind, the question it is asked, and its inputs with the traits version, so changed wording or schemas never reuse old answers. */
   const keyOf = (kind: "subject" | "assertion", material: unknown) =>
@@ -95,9 +113,9 @@ export const forInput = Effect.fnUntraced(function* (input: Input) {
     /** Decides a subject on the input like TraitSubject.match. */
     decideSubject: Effect.fn("DecisionCache.decideSubject")(function* (subject: TraitSubject.TraitSubject) {
       if (cache === undefined) {
-        return yield* TraitSubject.match({ subject }, input)
+        return yield* settleSubject(subject)
       }
-      const key = yield* keyOf("subject", [TraitSubject.question, subject])
+      const key = yield* keyOf("subject", [TraitSubject.question, subject, ruleOut, resampling])
       const hit = yield* lookup(cache, key, SubjectAnswer)
       if (hit !== undefined) {
         return {
@@ -105,7 +123,7 @@ export const forInput = Effect.fnUntraced(function* (input: Input) {
           outcomes: { subject: Result.succeed(hit.answer) }
         } satisfies TraitSubject.TraitSubjectMatches<"subject">
       }
-      const response = yield* TraitSubject.match({ subject }, input)
+      const response = yield* settleSubject(subject)
       yield* remember(cache, key, response.outcomes.subject, response.modelId)
       return response
     }),
@@ -114,9 +132,9 @@ export const forInput = Effect.fnUntraced(function* (input: Input) {
       assertion: TraitAssertion.TraitAssertionInput
     ) {
       if (cache === undefined) {
-        return yield* TraitAssertion.evaluate({ assertion }, input)
+        return yield* settleAssertion(assertion)
       }
-      const key = yield* keyOf("assertion", [TraitAssertion.question, assertion])
+      const key = yield* keyOf("assertion", [TraitAssertion.question, assertion, policy, resampling])
       const hit = yield* lookup(cache, key, AssertionAnswer)
       if (hit !== undefined) {
         return {
@@ -124,7 +142,7 @@ export const forInput = Effect.fnUntraced(function* (input: Input) {
           outcomes: { assertion: Result.succeed(hit.answer) }
         } satisfies TraitAssertion.TraitAssertionEvaluations<"assertion">
       }
-      const response = yield* TraitAssertion.evaluate({ assertion }, input)
+      const response = yield* settleAssertion(assertion)
       yield* remember(cache, key, response.outcomes.assertion, response.modelId)
       return response
     })
