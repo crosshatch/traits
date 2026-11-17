@@ -81,11 +81,11 @@ export const CheckSettings = S.Struct({
 
 /** How decision model requests are batched and retried. */
 export const RequestSettings = S.Struct({
-  /** The most decisions that concurrent decision calls about one input merge into one request; a call with more is sent alone; 32 when omitted. */
+  /** The most decisions that concurrent decision calls about one input merge into one request; a call with more is sent alone. 1 when omitted, so each subject is decided alone: sharing a request with other subjects makes the model rule real violations out, which in measurements missed up to 2 of 16 at 32. */
   batchSize: Count.annotateKey({
     description:
-      "The most decisions that concurrent decision calls about one input merge into one request; a call with more is sent alone; 32 when omitted."
-  }).pipe(S.withConstructorDefault(Effect.succeed(32)), S.withDecodingDefaultKey(Effect.succeed(32))),
+      "The most decisions that concurrent decision calls about one input merge into one request; a call with more is sent alone. 1 when omitted, so each subject is decided alone: sharing a request with other subjects makes the model rule real violations out, which in measurements missed up to 2 of 16 at 32."
+  }).pipe(S.withConstructorDefault(Effect.succeed(1)), S.withDecodingDefaultKey(Effect.succeed(1))),
   /** How long decision calls about one input are collected before their request is sent, in milliseconds; 10 when omitted. */
   batchWindowMillis: S.Natural.annotateKey({
     description:

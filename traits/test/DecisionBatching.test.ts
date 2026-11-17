@@ -30,6 +30,10 @@ it.effect(
         { concurrency: "unbounded" }
       ).pipe(
         Effect.provide(DecisionBatching.layer),
+        Effect.provideService(
+          Settings.CurrentSettings,
+          Settings.Settings.make({ requests: Settings.RequestSettings.make({ batchSize: 32 }) })
+        ),
         Effect.provideServiceEffect(
           DecisionModel.DecisionModel,
           DecisionModel.make({
@@ -88,6 +92,10 @@ it.effect("fails every merged call when their shared request fails", () =>
       { concurrency: "unbounded" }
     ).pipe(
       Effect.provide(DecisionBatching.layer),
+      Effect.provideService(
+        Settings.CurrentSettings,
+        Settings.Settings.make({ requests: Settings.RequestSettings.make({ batchSize: 32 }) })
+      ),
       Effect.provideServiceEffect(
         DecisionModel.DecisionModel,
         DecisionModel.make({ decide: () => Effect.fail(failure) })

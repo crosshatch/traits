@@ -695,8 +695,8 @@ it.effect(
         Effect.provide([registry, DecisionBatching.layer]),
         Effect.provideServiceEffect(DecisionModel.DecisionModel, gated.model)
       )
-      // Both gated traits' subjects share one request per file.
-      expect(gated.calls()).toEqual({ subject: 3, assertion: 2 + 3 })
+      // Each gated trait's subject is decided in its own request, two per file.
+      expect(gated.calls()).toEqual({ subject: 2 * 3, assertion: 2 + 3 })
       expect(enrichments).toBe(2)
       const [asserted, guidance, ungated] = report.traits
       expect(Array.map(allInputsOf(asserted!), (input) => input._tag)).toEqual(["Completed", "Unmatched", "Completed"])
@@ -777,6 +777,10 @@ it.effect("batches subject decisions per input, splits large batches, and counts
       changes: [{ after: { path: WorkspacePath.make("file.ts"), text: "export const a = 1" } }]
     }).pipe(
       Effect.provide([unused, DecisionBatching.layer]),
+      Effect.provideService(
+        Settings.CurrentSettings,
+        Settings.Settings.make({ requests: Settings.RequestSettings.make({ batchSize: 32 }) })
+      ),
       Effect.provideServiceEffect(
         DecisionModel.DecisionModel,
         DecisionModel.make({

@@ -73,23 +73,29 @@ instruction to ignore it.
 
 `DecisionBatching.layer` wraps the `DecisionModel` in context so that concurrent
 `decideSettled` calls asking the same-named decisions about the same encoded
-input share provider requests of up to `requests.batchSize` decisions (32),
-collected over a real-time window of `requests.batchWindowMillis` (10 ms). The
-limit counts decisions rather than calls, so merging never builds a larger
-request than its callers chose to send: a call that already carries that many
-decisions, such as one group of a derivation's comparisons, is sent alone.
-Callers keep calling `DecisionModel.decideSettled` directly; batching is a
-property of the provided model, not of the code that asks. Merged decisions are
-named by caller index (`0.subject`, `1.subject`), and a call merged with no
-others is sent unchanged. Each caller receives only its own outcomes, the
-request's model and metadata, and an integer share of its token usage, so
-summing usage over callers gives the provider's totals. A failed request fails
-every call merged into it. `decide` is not batched. The workspace models and the
-eval provide it outside `DecisionLimit.layer`, so the limit and retries apply to
-merged requests. Subject decisions on one input, one per trait, therefore send
-the file once per request instead of once per trait. Assertion calls merge only
-when they start in the same window, which is rare: on the labelled eval with
-every trait, merging them saved about 1% of requests and left results unchanged.
+input share provider requests of up to `requests.batchSize` decisions, collected
+over a real-time window of `requests.batchWindowMillis` (10 ms). The limit
+counts decisions rather than calls, so merging never builds a larger request
+than its callers chose to send: a call that already carries that many decisions,
+such as one group of a derivation's comparisons, is sent alone. Callers keep
+calling `DecisionModel.decideSettled` directly; batching is a property of the
+provided model, not of the code that asks. Merged decisions are named by caller
+index (`0.subject`, `1.subject`), and a call merged with no others is sent
+unchanged. Each caller receives only its own outcomes, the request's model and
+metadata, and an integer share of its token usage, so summing usage over callers
+gives the provider's totals. A failed request fails every call merged into it.
+`decide` is not batched. The workspace models and the eval provide it outside
+`DecisionLimit.layer`, so the limit and retries apply to merged requests. Only
+subject decisions merge: each trait's assertion is part of its decision's input,
+so assertion calls about one input never share one.
+
+The batch size is 1 by default, so each subject is decided in its own request.
+Merging subjects sends a file once per request instead of once per trait, but
+the model then rules real violations out: on the labelled eval with all 168
+traits loaded, three runs at each size caught 14–15 of 16 violations sharing
+requests of up to 32 subjects, 13–14 at 8, and all 16 every time at 1, for about
+2.7 times the input tokens. Asked alone, subjects' answers also stay consistent
+with the further answers that settle close calls.
 
 `check` gates each input of a trait with a subject on
 `TraitSubject.match({ subject }, input)` before any other work on that input.
@@ -246,7 +252,7 @@ A workspace keeps its configuration at its root and its traits under
   decision requests (16); `check.ruleOut` (0.6), `check.policy` (none), and the
   resampling of close calls (`check.resampling`: margin 0.15, 3 samples, close
   margin 0.05, 5 samples); the file, evaluation, segmentation, and digest
-  concurrency of checks (16, 32, 8, 8); `requests.batchSize` (32),
+  concurrency of checks (16, 32, 8, 8); `requests.batchSize` (1),
   `requests.batchWindowMillis` (10), `requests.retries` (5), and
   `requests.retryDelayMillis` (1000); and `derive.batchSize` (32), the existing
   traits compared per request. Core code reads them from the `CurrentSettings`
