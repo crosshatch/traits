@@ -61,7 +61,7 @@ const lookup = <A>(cache: DecisionCache["Service"], key: TextDigest, answer: S.C
     pipe(
       stored,
       Option.flatMap((decision) =>
-        Option.map(S.decodeOption(answer)(decision), (decoded) => ({ decision, answer: decoded }))
+        Option.map(pipe(decision, S.decodeOption(answer)), (decoded) => ({ decision, answer: decoded }))
       ),
       Option.getOrUndefined
     )

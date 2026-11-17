@@ -35,7 +35,7 @@ export const ModelSelectionFromString = S.String.pipe(
         return { _tag: "Provider", account, model: pipe(model, Array.join("/")) }
       },
       encode: (selection) =>
-        selection._tag === "Provider" ? `${selection.account}/${selection.model}` : selection.path
+        ModelSelection.guards.Provider(selection) ? `${selection.account}/${selection.model}` : selection.path
     })
   )
 ).annotate({

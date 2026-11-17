@@ -6,6 +6,7 @@ import {
   Exit,
   Layer,
   Order,
+  pipe,
   Record,
   Request,
   RequestResolver,
@@ -124,7 +125,9 @@ export const layer = Layer.effect(
     return DecisionModel.DecisionModel.of({
       ...model,
       decideSettled: (definition, options) =>
-        S.encodeEffect(S.toCodecJson(definition.input))(options.input).pipe(
+        pipe(
+          options.input,
+          S.encodeEffect(S.toCodecJson(definition.input)),
           Effect.matchEffect({
             // The model reports the encoding failure in its own terms.
             onFailure: () => model.decideSettled(definition, options),

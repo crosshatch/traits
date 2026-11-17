@@ -23,10 +23,11 @@ const unavailable = (cause: Cause.Cause<unknown>) => {
   })
 }
 
+/** The workspace services the tools use: checking and deriving, built however the host chooses. */
+type WorkspaceServices<E, R> = Layer.Layer<WorkspaceCheck.WorkspaceCheck | WorkspaceDerive.WorkspaceDerive, E, R>
+
 /** The tool handlers, built with the workspace services, or stand-ins returning why they could not be built. */
-export const handlers = <E, R>(
-  services: Layer.Layer<WorkspaceCheck.WorkspaceCheck | WorkspaceDerive.WorkspaceDerive, E, R>
-) =>
+export const handlers = <E, R>(services: WorkspaceServices<E, R>) =>
   Layer.mergeAll(TraitsDerive.layer, TraitsCheck.layer).pipe(
     Layer.provide(services),
     Layer.catchCause((cause) =>
@@ -38,9 +39,7 @@ export const handlers = <E, R>(
   )
 
 /** The traits MCP server over stdio, registering its tools before it reads its first request. Its tools use the given workspace services; if they or the tools cannot be built, the server still starts, and every tool call returns why. */
-export const layer = <E, R>(
-  services: Layer.Layer<WorkspaceCheck.WorkspaceCheck | WorkspaceDerive.WorkspaceDerive, E, R>
-) =>
+export const layer = <E, R>(services: WorkspaceServices<E, R>) =>
   McpServer.layerStdio({
     name: "traits",
     version: PackageJson.version,

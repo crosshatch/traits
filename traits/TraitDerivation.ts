@@ -263,14 +263,18 @@ export const explain = Effect.fn("TraitDerivation.explain")(function* (
   related: ReadonlyArray<{ readonly name: TraitName; readonly text: string; readonly relationship: string }>
 ) {
   // Encoding keeps only these fields of each trait.
-  const comparison = yield* S.encodeEffect(
-    S.fromJsonString(
-      S.Struct({
-        proposal: S.String,
-        existing: S.Array(S.Struct({ name: S.String, relationship: S.String, text: S.String }))
-      })
-    )
-  )({ proposal, existing: related }).pipe(Effect.orDie)
+  const comparison = yield* pipe(
+    { proposal, existing: related },
+    S.encodeEffect(
+      S.fromJsonString(
+        S.Struct({
+          proposal: S.String,
+          existing: S.Array(S.Struct({ name: S.String, relationship: S.String, text: S.String }))
+        })
+      )
+    ),
+    Effect.orDie
+  )
   const response = yield* LanguageModel.generateObject({
     prompt: [
       {
