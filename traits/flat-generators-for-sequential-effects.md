@@ -23,5 +23,5 @@ export default Effect.gen(function* () {
     const { input } = yield* Enrichment.EnrichmentContext
     return yield* describe(fs, input)
   })
-})
+}) satisfies Enrichment.Enrichment
 ```

@@ -189,7 +189,7 @@ export default Effect.gen(function* () {
       snapshot.getProjects(),
       (project) => project.program.getSourceFile(absolute) !== undefined
     )
-    const fallback = included ? undefined : yield* nearestConfig(file)
+    const fallback = included ? undefined : yield* nearestConfig(file).pipe(Effect.orDie)
     if (fallback !== undefined && !opened.has(fallback)) {
       opened.add(fallback)
       snapshot = yield* Effect.sync(() => api.updateSnapshot({ openProjects: [...opened] }))
@@ -275,4 +275,4 @@ export default Effect.gen(function* () {
     })
     return `Uses of the declarations ${file} exports in other files of the workspace, with counts. Re-exports, including wildcard export * re-exports, are listed separately and are not uses. Public API marks a declaration that a package entry point exports, directly or through a chain of re-exporting modules.\n${Array.join(lines, "\n")}`
   })
-})
+}) satisfies Enrichment.Enrichment<WorkspaceRoot>

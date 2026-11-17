@@ -8,11 +8,12 @@ import type { EnrichmentContext } from "./EnrichmentContext.ts"
  * Shared setup producing a per-input context Effect without modifying the trait body.
  * Map expected failures to stage-specific errors with recovery guidance and execution scope.
  * Unexpected defects become runner-normalized diagnostics without inferred recovery targets.
+ * R declares additional host services, such as a local WorkspaceRoot, without coupling the core to that host.
  */
-export type Enrichment = Effect.Effect<
-  Effect.Effect<string, EnrichmentError, EnrichmentContext | ExtensionServices>,
+export type Enrichment<R = never> = Effect.Effect<
+  Effect.Effect<string, EnrichmentError, EnrichmentContext | ExtensionServices | R>,
   EnrichmentSetupError,
-  ExtensionServices
+  ExtensionServices | R
 >
 
 /** Requested execution skip scope: Enrichment skips only this invocation, Input prevents the current input's assessment, and Trait stops remaining work for this trait; unrelated traits are unaffected. */

@@ -1,4 +1,17 @@
-import { Array, Effect, FileSystem, flow, Option, Path, pipe, Predicate, Record, Schema as S, String } from "effect"
+import {
+  Array,
+  Effect,
+  FileSystem,
+  flow,
+  Option,
+  Path,
+  pipe,
+  Predicate,
+  Record,
+  Schema as S,
+  String,
+  Struct
+} from "effect"
 import { Enrichment } from "traits"
 import { WorkspaceRoot } from "traits/local"
 
@@ -26,7 +39,14 @@ export default Effect.gen(function* () {
       Array.join(Array.dropRight(segments, depth), "/")
     )
     const packageDirectory = yield* Effect.findFirst(packageDirectories, (candidate) =>
-      fs.exists(path.join(directory, candidate, "package.json"))
+      fs.exists(path.join(directory, candidate, "package.json")).pipe(
+        Effect.mapError(() =>
+          Enrichment.EnrichmentError.make({
+            reason: Enrichment.EnrichmentErrorReason.cases.Enrichment.make({}),
+            instruction: `Could not inspect ${candidate === "" ? "package.json" : `${candidate}/package.json`}. Check filesystem access and directory permissions, then check again.`
+          })
+        )
+      )
     ).pipe(Effect.map(Option.getOrUndefined))
     // The workspace root is the empty string, so only undefined means no package encloses the file.
     if (packageDirectory === undefined) {
@@ -38,10 +58,10 @@ export default Effect.gen(function* () {
         S.decodeEffect(
           S.fromJsonString(
             S.Struct({
-              name: S.String.pipe(S.optionalKey),
-              main: S.String.pipe(S.optionalKey),
-              exports: S.Unknown.pipe(S.optionalKey)
-            })
+              name: S.String,
+              main: S.String,
+              exports: S.Unknown
+            }).mapFields(Struct.map(S.optionalKey))
           )
         )
       ),
@@ -77,4 +97,4 @@ export default Effect.gen(function* () {
       ? `${file} is an entry point of package ${name}, which ${listed}.`
       : `${file} is not a package entry point; it is internal to package ${name}, which ${listed}.`
   })
-})
+}) satisfies Enrichment.Enrichment<WorkspaceRoot>

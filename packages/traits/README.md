@@ -101,6 +101,12 @@ reuse setup. Extension identities remain normalized `WorkspacePath` values, but
 these registries do not resolve or import files. Missing identities should fail,
 not silently produce an empty selection.
 
+Constrain default-exported extension effects with
+`satisfies Enrichment.Enrichment` or `satisfies Segmenter.Segmenter` to check
+their error channels and service requirements without widening inferred types.
+Enrichments using additional host services can declare them as
+`Enrichment.Enrichment<WorkspaceRoot>` for local workspace access.
+
 ### Check a local workspace
 
 ```ts
