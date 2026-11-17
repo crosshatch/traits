@@ -24,7 +24,7 @@
   <g transform="translate(0 16)">
   <g transform="translate(-150 10)">
   <rect x="286" y="285" width="1058" height="792" fill="#201a23" fill-opacity=".6" stroke="#504052"/>
-  <text x="318" y="318" class="mono" fill="#9f929f" style="font-size:23px">.agents/traits/colocate-small-domain-errors.md</text>
+  <text x="318" y="318" class="mono" fill="#9f929f" style="font-size:23px">traits/colocate-small-domain-errors.md</text>
   <path d="M286 337h1058" stroke="#504052"/>
   <g class="mono" fill="#ece0cf">
     <text x="318" y="369" fill="#958997">---</text>

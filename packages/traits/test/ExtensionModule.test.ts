@@ -63,12 +63,9 @@ it.effect(
         const fs = yield* FileSystem.FileSystem
         const path = yield* Path.Path
         const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-module-specifier-" })
-        yield* fs.makeDirectory(path.join(directory, ".agents", "traits", "extensions"), { recursive: true })
-        yield* fs.writeFileString(
-          path.join(directory, ".agents", "traits", "extensions", "local.mjs"),
-          "export default 1"
-        )
-        const baseUrl = yield* path.toFileUrl(path.join(directory, ".agents", "traits", "example.md"))
+        yield* fs.makeDirectory(path.join(directory, "traits", "extensions"), { recursive: true })
+        yield* fs.writeFileString(path.join(directory, "traits", "extensions", "local.mjs"), "export default 1")
+        const baseUrl = yield* path.toFileUrl(path.join(directory, "traits", "example.md"))
         const workspace = WorkspaceRoot.layer(directory).pipe(Layer.provide(NodeServices.layer))
         for (const reference of [
           "./extensions/local.mjs",
@@ -76,7 +73,7 @@ it.effect(
           "./extensions/local.mjs#copy"
         ]) {
           const local = yield* ExtensionModule.resolve({ reference, baseUrl }).pipe(Effect.provide(workspace))
-          expect(local).toBe(".agents/traits/extensions/local.mjs")
+          expect(local).toBe("traits/extensions/local.mjs")
         }
         const outside = yield* ExtensionModule.resolve({
           reference: import.meta.resolve("effect"),

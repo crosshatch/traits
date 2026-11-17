@@ -41,8 +41,8 @@ const workspace = (label: string) =>
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-derivation-" })
-    yield* fs.makeDirectory(path.join(directory, ".agents", "traits"), { recursive: true })
-    yield* fs.writeFileString(path.join(directory, ".agents", "traits", "existing.md"), existing)
+    yield* fs.makeDirectory(path.join(directory, "traits"), { recursive: true })
+    yield* fs.writeFileString(path.join(directory, "traits", "existing.md"), existing)
     const model = DecisionModel.make({
       decide: (options) =>
         Effect.succeed({
@@ -61,8 +61,8 @@ const workspace = (label: string) =>
     })
     return {
       directory,
-      read: (name: string) => fs.readFileString(path.join(directory, ".agents", "traits", `${name}.md`)),
-      exists: (name: string) => fs.exists(path.join(directory, ".agents", "traits", `${name}.md`)),
+      read: (name: string) => fs.readFileString(path.join(directory, "traits", `${name}.md`)),
+      exists: (name: string) => fs.exists(path.join(directory, "traits", `${name}.md`)),
       services: Layer.mergeAll(
         WorkspaceRoot.layer(directory),
         Layer.effect(DecisionModel.DecisionModel, model),
@@ -82,7 +82,7 @@ it.live("saves an approved distinct proposal as a trait file that loads back unc
       })
     ).pipe(Effect.provide(services))
     expect(result).toEqual(
-      TraitDerivation.TraitDerivation.cases.Created.make({ name: proposal.name, path: ".agents/traits/proposed.md" })
+      TraitDerivation.TraitDerivation.cases.Created.make({ name: proposal.name, path: "traits/proposed.md" })
     )
     expect(Array.map(requests, (request) => request.action)).toEqual(["Create"])
     const saved = yield* read("proposed")
@@ -122,7 +122,7 @@ it.live("replaces the trait a clarification is named after, even when others are
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const other = "---\nname: other\nassertion: Functions are pure.\npurpose: Keep code testable.\n---\n"
-    yield* fs.writeFileString(path.join(directory, ".agents", "traits", "other.md"), other)
+    yield* fs.writeFileString(path.join(directory, "traits", "other.md"), other)
     const save = () => Effect.succeed(TraitDerivation.Approval.cases.Save.make({}))
     const named = yield* WorkspaceDerive.derive({ ...proposal, name: TraitName.make("existing") }, save).pipe(
       Effect.provide(services)
@@ -160,12 +160,12 @@ it.live("offers a rewording of the trait it is named after as an update, unless 
     })
     // Another trait the model also calls covering does not compete with a new version of the named trait.
     yield* fs.writeFileString(
-      path.join(directory, ".agents", "traits", "other.md"),
+      path.join(directory, "traits", "other.md"),
       "---\nname: other\nassertion: Functions are pure.\npurpose: Keep code testable.\n---\n"
     )
     // The same content in other YAML formatting is not a change.
     const quoted = '---\nname: "existing"\nassertion: "Functions are small."\npurpose: Keep code readable.\n---\n'
-    yield* fs.writeFileString(path.join(directory, ".agents", "traits", "existing.md"), quoted)
+    yield* fs.writeFileString(path.join(directory, "traits", "existing.md"), quoted)
     const unchanged = yield* WorkspaceDerive.derive(same, () => Effect.die("approval must not be requested")).pipe(
       Effect.provide(services)
     )
@@ -182,7 +182,7 @@ it.live("offers a rewording of the trait it is named after as an update, unless 
         })
     ).pipe(Effect.provide(services))
     expect(reworded).toEqual(
-      TraitDerivation.TraitDerivation.cases.Updated.make({ name: same.name, path: ".agents/traits/existing.md" })
+      TraitDerivation.TraitDerivation.cases.Updated.make({ name: same.name, path: "traits/existing.md" })
     )
     expect(requests[0]).toMatchObject({ name: "existing", action: "Update" })
     expect(requests[0]!.message).toContain("rewording, which keeps its rule")
@@ -247,7 +247,7 @@ it.live("rejects invalid proposals before asking, and files changed while waitin
     const edited = "---\nname: existing\nassertion: Edited meanwhile.\npurpose: Keep code readable.\n---\n"
     const changed = yield* WorkspaceDerive.derive(proposal, () =>
       fs
-        .writeFileString(path.join(directory, ".agents", "traits", "existing.md"), edited)
+        .writeFileString(path.join(directory, "traits", "existing.md"), edited)
         .pipe(Effect.as(TraitDerivation.Approval.cases.Save.make({})), Effect.orDie)
     ).pipe(Effect.provide(services), Effect.flip)
     expect(changed._tag).toBe("TraitChangedError")

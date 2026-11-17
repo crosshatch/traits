@@ -28,7 +28,7 @@ const trait = (name: string, options: Partial<Omit<Trait, "name" | "purpose">> =
     ...options
   })
 /** Where every test trait is said to be loaded from. */
-const origin = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/example.md") })
+const origin = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make("traits/example.md") })
 const allInputsOf = (trait: Report.TraitReport) =>
   Array.flatMap(trait.changes, (change) => (Report.ChangeReport.guards.Evaluated(change) ? change.inputs : []))
 /** Inputs that passed the subject gate, so their enrichments ran or were recorded. */
@@ -587,7 +587,7 @@ it.effect("records enrichments cancelled by another enrichment's Input recovery"
 
 it.effect("reports each trait's origin and requires one", () =>
   Effect.gen(function* () {
-    const loaded = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/with-origin.md") })
+    const loaded = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make("traits/with-origin.md") })
     const change = { after: { path: WorkspacePath.make("file.ts"), text: "source" } }
     const report = yield* check({ traits: [{ trait: trait("with-origin"), origin: loaded }], changes: [change] }).pipe(
       Effect.provide([unused, model])

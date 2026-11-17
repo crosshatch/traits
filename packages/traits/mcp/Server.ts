@@ -46,7 +46,7 @@ export const layer = <E, R>(services: WorkspaceServices<E, R>) =>
     protocols: [McpProtocol.v2025_11_25],
     instructions: pipe(
       String.stripMargin(`
-    |Traits are this workspace's durable rules, one per .agents/traits/<name>.md file.
+    |Traits are this workspace's durable rules, one per traits/<name>.md file.
     |Whenever user feedback may contain an insight worth applying beyond the current task, call traits.derive; only it saves traits, after the user approves.
     |Before finishing a task, call traits.check once, in a single call, on every file the task created, edited, or deleted, against every trait; do not check after each edit. After fixing findings, recheck only the affected files and traits. When a trait is created or changed, call traits.check with that trait and no paths once its wording is final.
     |Read the trait and the code before acting on a finding. Fix confirmed violations with minimal edits that keep behavior, and check again. Never weaken a trait or skip a check to silence a finding; if a trait seems wrong, ask the user and propose a clarification through traits.derive.

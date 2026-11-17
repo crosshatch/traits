@@ -29,7 +29,7 @@ const request = {
         assertion: TraitAssertion.make("Functions are small."),
         purpose: TraitPurpose.make("Keep code readable.")
       }),
-      origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/small-functions.md") })
+      origin: Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make("traits/small-functions.md") })
     }
   ],
   changes: [{ after: { path: WorkspacePath.make("a.ts"), text: "export const f = () => 1\n" } }]
@@ -165,7 +165,7 @@ it.effect("keeps decisions in the workspace across runs, ignored by Git and scop
     const otherModel = yield* cacheFor("model-b")
     const missing = yield* otherModel.get(key)
     expect(Option.isNone(missing)).toBe(true)
-    const ignore = yield* fs.readFileString(path.join(directory, ".agents", "traits", ".cache", ".gitignore"))
+    const ignore = yield* fs.readFileString(path.join(directory, "traits", ".cache", ".gitignore"))
     expect(ignore).toBe("*\n")
   }).pipe(Effect.scoped, Effect.provide([NodeServices.layer, Digest.layerWebCrypto]))
 )
@@ -202,7 +202,7 @@ it.effect("checks without remembering decisions when the cache directory cannot 
     const path = yield* Path.Path
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-decision-cache-" })
     // A file where the cache's parent directory belongs.
-    yield* fs.writeFileString(path.join(directory, ".agents"), "")
+    yield* fs.writeFileString(path.join(directory, "traits"), "")
     const cache = yield* DecisionCache.pipe(
       Effect.provide(LocalDecisionCache.layer("model").pipe(Layer.provide(WorkspaceRoot.layer(directory))))
     )

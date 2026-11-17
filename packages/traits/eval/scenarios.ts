@@ -43,7 +43,7 @@ const program = Effect.gen(function* () {
       Effect.map(Array.filter((id) => onlyIndex === -1 || id === process.argv[onlyIndex + 1])),
       Effect.map(Array.sort((a: string, b: string) => (a < b ? -1 : 1)))
     )
-  const baseUrl = yield* path.toFileUrl(path.join(directory, ".agents", "traits", "scenario.md"))
+  const baseUrl = yield* path.toFileUrl(path.join(directory, "traits", "scenario.md"))
   const references = yield* ExtensionModule.resolve({ reference: "@traits/typescript/references", baseUrl })
   const totals = new Map<string, { readonly without: number; readonly with: number; readonly judgments: number }>()
   for (const id of ids) {

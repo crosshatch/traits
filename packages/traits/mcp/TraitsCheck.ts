@@ -16,7 +16,7 @@ export class TraitsCheckFailure extends S.TaggedError<TraitsCheckFailure>()("Tra
   message: S.String.annotateKey({ description: "What prevented the check, and how to fix it." })
 }) {}
 
-/** Checks workspace files against the workspace's traits using the models configured in traits.json. */
+/** Checks workspace files against the workspace's traits using the models configured in traits/config.json. */
 export const TraitsCheck = Tool.make("traits.check", {
   description: pipe(
     String.stripMargin(`
@@ -39,9 +39,9 @@ export const TraitsCheck = Tool.make("traits.check", {
           "Files to check, relative to the workspace root; when omitted, every tracked or untracked text file that Git does not ignore."
       })
       .pipe(S.optionalKey),
-    /** An environment in .agents/traits/_environments whose traits to check; every trait when omitted. */
+    /** An environment in traits/_environments whose traits to check; every trait when omitted. */
     environment: EnvironmentName.annotateKey({
-      description: "An environment in .agents/traits/_environments whose traits to check; every trait when omitted."
+      description: "An environment in traits/_environments/<name>.json whose traits to check; every trait when omitted."
     }).pipe(S.optionalKey),
     /** Traits to check, within the environment when one is given. */
     traits: S.NonEmptyArray(TraitName)

@@ -35,7 +35,7 @@ design keeps that core and makes the case source a detail.
 ### Layout
 
 ```text
-.agents/traits/_cases/<trait>/<case>/
+traits/_cases/<trait>/<case>/
   case.json
   files/...        the files the case needs, at workspace-relative paths
 ```
@@ -78,10 +78,10 @@ code change silently turn a `fail` case into a pass.
 
 Case files are deliberately non-compliant code inside the repository.
 
-- `traits check` always skips `.agents/traits/_cases/`, without needing
-  `exclude` in `traits.json`.
+- `traits check` always skips `traits/_cases/`, without needing `exclude` in
+  `traits/config.json`.
 - Trait loading already ignores the directory, because it reads only the `.md`
-  files directly in `.agents/traits/`.
+  files directly in `traits/`.
 - TypeScript, linters, and formatters must also skip the directory. Traits
   cannot do this for them. `traits eval` and `traits update` warn when a
   tsconfig in the workspace includes the directory, and `SETUP.md` gives the
@@ -154,7 +154,7 @@ traits eval [--trait <name>]... [--environment <name>] [--runs 3]
 - **Cache:** results are cached by trait digest, case digest, models, runs, and
   traits version. CI only re-evaluates traits or cases that changed.
 - **`--decision-model`:** evaluates the same cases with another model, such as a
-  cheaper one, without editing `traits.json`.
+  cheaper one, without editing `traits/config.json`.
 - **`--generate`:** writes generated cases for traits that have too few. Enough
   means at least one `fail`, one `pass`, and one near miss, which is compliant
   code that resembles a violation. It writes files, so it only runs when asked.

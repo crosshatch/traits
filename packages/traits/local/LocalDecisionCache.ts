@@ -11,7 +11,7 @@ import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 const generation = Duration.days(30)
 
 /**
- * Decisions remembered in the workspace's .agents/traits/.cache directory, which ignores itself in Git, with keys
+ * Decisions remembered in the workspace's traits/.cache directory, which ignores itself in Git, with keys
  * scoped to the decision model that made them so switching models starts afresh. Decisions are kept in generations:
  * a decision found only in the previous generation moves to the current one, and older generations are deleted. If
  * the directory cannot be prepared, such as in a read-only checkout, checks run without remembering decisions.

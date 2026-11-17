@@ -48,18 +48,16 @@ export const check = Command.make(
     environment: Flag.String("environment").pipe(
       Flag.withSchema(EnvironmentName),
       Flag.withAlias("e"),
-      Flag.withDescription(
-        "Check only the traits in .agents/traits/_environments/<name>.json; every trait when omitted"
-      ),
+      Flag.withDescription("Check only the traits in traits/_environments/<name>.json; every trait when omitted"),
       Flag.optional
     ),
     fail: threshold(
       "fail",
-      "Minimum fail probability that rejects an assessment; requires --pass, and overrides check.policy in traits.json"
+      "Minimum fail probability that rejects an assessment; requires --pass, and overrides check.policy in traits/config.json"
     ),
     pass: threshold(
       "pass",
-      "Minimum probability that the assertion holds or does not apply that accepts an assessment; requires --fail, and overrides check.policy in traits.json"
+      "Minimum probability that the assertion holds or does not apply that accepts an assessment; requires --fail, and overrides check.policy in traits/config.json"
     )
   },
   Effect.fn("check")(
@@ -77,7 +75,7 @@ export const check = Command.make(
           ...(params.traits.length > 0 ? { traits: params.traits } : {})
         })
       ).pipe(Effect.mapError((error) => CheckError.make({ message: error.message })))
-      // The flags override the policy in traits.json.
+      // The flags override the policy in traits/config.json.
       const applied = fail === undefined || pass === undefined ? policy : DecisionPolicy.make({ fail, pass })
       const encoded = yield* pipe(report, S.encodeEffect(Report), Effect.orDie)
       yield* Console.log(JSON.stringify(encoded, null, 2))
@@ -94,6 +92,6 @@ export const check = Command.make(
   )
 ).pipe(
   Command.withDescription(
-    "Check files against this workspace's traits and print the report as JSON. With --fail and --pass, or check.policy in traits.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
+    "Check files against this workspace's traits and print the report as JSON. With --fail and --pass, or check.policy in traits/config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
   )
 )

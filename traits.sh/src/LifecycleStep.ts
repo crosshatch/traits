@@ -19,7 +19,7 @@ export const steps: ReadonlyArray<LifecycleStep> = [
     heading: "You decide what the agent should remember.",
     description:
       "The agent proposes a trait, which is compared with the traits you already have. Save it, ask for changes, or skip it. Only approved traits are saved with your project for future sessions.",
-    note: "Traits are Markdown files that live in the .agents/traits directory. You approve any changes to existing traits.",
+    note: "Traits are Markdown files that live in the traits directory. You approve any changes to existing traits.",
     visual: "remember"
   },
   {

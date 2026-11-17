@@ -123,7 +123,7 @@ export const TraitAnatomy = () => (
       >
         <div className="anatomy-filename">
           <span className="anatomy-document-label">A TRAIT, IN FULL</span>
-          <code>.agents/traits/colocate-small-domain-errors.md</code>
+          <code>traits/colocate-small-domain-errors.md</code>
         </div>
         <pre className="anatomy-delimiter">
           <code>---</code>

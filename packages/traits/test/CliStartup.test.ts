@@ -197,7 +197,7 @@ it.live(
       const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-check-exit-" })
       const missing = yield* runCli(["check", "src/a.ts"], {}, false, cwd)
       expect(missing).toMatchObject({ code: 2, stdout: "" })
-      expect(missing.stderr).toContain("traits.json")
+      expect(missing.stderr).toContain("traits/config.json")
       expect(missing.stderr).not.toContain("    at ")
       const partialPolicy = yield* runCli(["check", "--fail", "0.5", "src/a.ts"], {}, false, cwd)
       expect(partialPolicy).toMatchObject({ code: 2, stdout: "" })
@@ -214,7 +214,7 @@ it.live(
   )
 )
 
-it.effect("applies check.policy from traits.json unless --fail and --pass override it", () =>
+it.effect("applies check.policy from traits/config.json unless --fail and --pass override it", () =>
   Effect.gen(function* () {
     const digest = `sha256:${pipe("0", String.repeat(64))}`
     // One assessment that is likelier a violation than not.
@@ -227,7 +227,7 @@ it.effect("applies check.policy from traits.json unless --fail and --pass overri
         traits: [
           {
             trait: { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." },
-            origin: { _tag: "File", path: ".agents/traits/example.md" },
+            origin: { _tag: "File", path: "traits/example.md" },
             changes: [
               {
                 _tag: "Evaluated",
@@ -266,7 +266,7 @@ it.live(
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-      // A workspace without traits.json.
+      // A workspace without traits/config.json.
       const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-mcp-failure-" })
       const messages = [
         {
@@ -328,7 +328,7 @@ it.live(
         Array.map((part) => part.text),
         Array.join("\n")
       )
-      expect(text).toContain("traits.json")
+      expect(text).toContain("traits/config.json")
       expect(text).toContain("no restart is needed")
     },
     Effect.scoped,

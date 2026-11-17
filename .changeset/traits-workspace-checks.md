@@ -8,7 +8,7 @@ before assessing the assertion, checks run from the CLI and MCP with full
 reports, and traits are saved only after the user approves them in a form. To
 migrate a workspace:
 
-- Replace `traits.ts` with `traits.json` at the checkout root:
+- Replace `traits.ts` with `traits/config.json`:
   `{ "version": "0.6.0", "models": { "decision": { "provider", "model" }, "language": { "provider", "model" } } }`.
   Decision providers are `openrouter`, `openai`, and `cloudflare`; language
   providers are `openrouter`, `openai`, `anthropic`, and `openai-compatible`
@@ -20,22 +20,25 @@ migrate a workspace:
   and move `fileReadConcurrency` to `check.fileConcurrency`. Remove
   `excludeGitignored`; Git-ignored files are always skipped. Delete `traits.ts`,
   and remove provider packages installed only for it.
-- In each `.agents/traits/<name>.md`, rename the `requirement` frontmatter key
-  to `assertion`, and fold `applicability` into `subject` as its scope and
+- Move `.agents/traits/` to the checkout's top-level `traits/` directory,
+  preserving environments and local state. If already using `traits.json`, move
+  it to `traits/config.json`; the old paths are no longer loaded. Keep relative
+  extension references pointing to the same modules after the move.
+- In each `traits/<name>.md`, rename the `requirement` frontmatter key to
+  `assertion`, and fold `applicability` into `subject` as its scope and
   exceptions. Unknown keys are rejected. The Markdown body remains supporting
   context.
-- Delete `.agents/traits/traits.sqlite*` and their entries in
-  `.agents/traits/.gitignore`; traits are read from their Markdown files.
+- Delete `traits/traits.sqlite*` and their entries in `traits/.gitignore`;
+  traits are read from their Markdown files.
 - Remove `// traits-ignore-file` directives, which are no longer honored; add
   files that should never be checked to `exclude` instead.
 - Change the agent's Traits MCP server command to `traits mcp`, for example
   `npx traits mcp`. The tools are now `traits.check` and `traits.derive`.
   `traits.check` takes explicit `paths` (no globs; omit them to check every
   project file), optional `traits`, and an optional `environment` from
-  `.agents/traits/_environments/<name>.json`. `traits.derive` takes complete
-  trait files in `traits` and asks for approval through an MCP form, so it
-  requires a client that supports form elicitation; there is no `approved`
-  parameter.
+  `traits/_environments/<name>.json`. `traits.derive` takes complete trait files
+  in `traits` and asks for approval through an MCP form, so it requires a client
+  that supports form elicitation; there is no `approved` parameter.
 - `traits.check` returns `{ report, notice? }`. The notice tells the agent once
   per server when a newer traits release is published, and on every check when
   the package was upgraded while the MCP server kept running, so the user can
@@ -64,7 +67,7 @@ migrate a workspace:
   releases.
 - Reports record the traits version that produced them in `version`; reports
   from versions compatible under caret (`^`) semantics share a format.
-- `traits.json` accepts optional settings, each defaulting when omitted:
+- `traits/config.json` accepts optional settings, each defaulting when omitted:
   `check.ruleOut`, the subject `no` probability that rules a target out (0.6);
   `check.resampling`, which asks a decision near its threshold again and
   averages the answers (by default 3 answers within 0.15 of the threshold, and 5
@@ -76,9 +79,9 @@ migrate a workspace:
   in its own request, since sharing requests made the model miss violations);
   and `derive.batchSize`. Reports record the threshold they used in
   `run.ruleOut`.
-- Checks remember completed decisions in `.agents/traits/.cache/`, which ignores
-  itself in Git, so re-checking unchanged traits and files is nearly free.
-  Decisions no check has used for one to two months are removed automatically.
+- Checks remember completed decisions in `traits/.cache/`, which ignores itself
+  in Git, so re-checking unchanged traits and files is nearly free. Decisions no
+  check has used for one to two months are removed automatically.
 - `@traits/typescript/references` is a new enrichment that lists, for each
   declaration a TypeScript file exports, the other files that use it and how
   often, across every TypeScript project in the workspace. Re-exports are listed

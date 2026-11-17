@@ -119,7 +119,7 @@ export const layer = toolkit.toLayer(
                 : TraitsDeriveFailure.make({
                     message: ToolFailure.describe(cause, {
                       outcome:
-                        "Deriving stopped before returning its results. Proposals approved before the failure may already be saved, so read .agents/traits before deriving them again.",
+                        "Deriving stopped before returning its results. Proposals approved before the failure may already be saved, so read traits/ before deriving them again.",
                       recovery:
                         "Once it is fixed, derive the remaining proposals again; configuration and trait files are reloaded on every call, so no restart is needed."
                     })

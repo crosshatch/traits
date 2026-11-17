@@ -9,7 +9,7 @@ const digest = `sha256:${pipe("0", String.repeat(64))}`
 const trait = { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." }
 const guidance = { name: trait.name, purpose: trait.purpose }
 const run = { models: [], usage: {}, ruleOut: 0.6 }
-const origin = { _tag: "File", path: ".agents/traits/example.md" }
+const origin = { _tag: "File", path: "traits/example.md" }
 const assessment = { pass: 0.9, fail: 0.05, na: 0.03, uncertain: 0.02 }
 const fields = { segment: Segment.cases.After.make({ range: { start: 0, end: 1 } }), digest, enrichments: [] }
 const completed = { _tag: "Completed", ...fields, assessment }
@@ -215,7 +215,7 @@ it("records each trait's origin", () => {
     traits: [{ trait, origin: traitOrigin, changes: [evaluated(completed)] }]
   })
   expect(S.is(Report.Report)(withOrigin(origin))).toBe(true)
-  expect(S.is(Report.Report)(withOrigin({ path: ".agents/traits/example.md" }))).toBe(false)
+  expect(S.is(Report.Report)(withOrigin({ path: "traits/example.md" }))).toBe(false)
   expect(S.is(Report.Report)(withOrigin({ _tag: "File", path: "/absolute/example.md" }))).toBe(false)
   expect(S.is(Report.Report)({ ...reportWith(), traits: [{ trait, changes: [evaluated(completed)] }] })).toBe(false)
 })

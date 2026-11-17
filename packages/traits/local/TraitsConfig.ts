@@ -7,7 +7,7 @@ import { Models } from "./Models.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
-/** The workspace configuration in traits.json at the workspace root: plain JSON, so it loads without executing code or installing JavaScript dependencies. Every .agents/traits/<name>.md file is a trait; environments narrow which are checked. Unknown keys are rejected so outdated files are reported rather than misread. */
+/** The workspace configuration in traits/config.json: plain JSON, so it loads without executing code or installing JavaScript dependencies. Every traits/<name>.md file is a trait; environments narrow which are checked. Unknown keys are rejected so outdated files are reported rather than misread. */
 export type TraitsConfig = typeof TraitsConfig.Type
 export const TraitsConfig = S.Struct({
   /** A JSON Schema URL for editor validation and completion; ignored by traits. */
@@ -30,7 +30,7 @@ export const TraitsConfig = S.Struct({
   ...Settings.fields
 }).annotate({
   description:
-    "The workspace configuration in traits.json at the workspace root: plain JSON, so it loads without executing code or installing JavaScript dependencies."
+    "The workspace configuration in traits/config.json: plain JSON, so it loads without executing code or installing JavaScript dependencies."
 })
 
 /** The configuration file could not be read. */
@@ -53,7 +53,7 @@ export class TraitsConfigSyntaxError extends S.TaggedError<TraitsConfigSyntaxErr
   cause: S.Defect().annotateKey({ description: "The JSON parser's failure, with the position of the problem." })
 }) {
   override get message(): string {
-    return `${this.path} is not valid JSON: ${this.cause instanceof Error ? this.cause.message : globalThis.String(this.cause)}. Fix the syntax there; traits.json is plain JSON, without comments or trailing commas.`
+    return `${this.path} is not valid JSON: ${this.cause instanceof Error ? this.cause.message : globalThis.String(this.cause)}. Fix the syntax there; traits/config.json is plain JSON, without comments or trailing commas.`
   }
 }
 
@@ -100,7 +100,7 @@ export class TraitsConfigInternalVersionError extends S.TaggedError<TraitsConfig
   }
 }
 
-/** Reads only the version from traits.json at the workspace root, since the rest may not match the current schema yet; undefined when the file is missing or its version is invalid. */
+/** Reads only the version from traits/config.json, since the rest may not match the current schema yet; undefined when the file is missing or its version is invalid. */
 export const loadVersion = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -121,7 +121,7 @@ export const loadVersion = Effect.gen(function* () {
   )
 })
 
-/** Loads and validates traits.json from the workspace root, failing when it was written for an incompatible traits version. */
+/** Loads and validates traits/config.json, failing when it was written for an incompatible traits version. */
 export const load = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path

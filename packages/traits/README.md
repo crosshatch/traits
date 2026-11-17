@@ -7,7 +7,7 @@
 [![discord](https://img.shields.io/badge/discord-join-6D5BD0?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/CSXCRUKjh9)
 
 Traits turns feedback into preferences your agent can use across tasks and
-sessions. Each trait is a Markdown file in `.agents/traits/<name>.md`:
+sessions. Each trait is a Markdown file in `traits/<name>.md`:
 
 ```markdown
 ---

@@ -32,7 +32,7 @@ export const run = Effect.fn("WorkspaceCheck.run")(function* (
   return yield* check({ traits, changes }).pipe(Effect.provideService(CurrentSettings, config))
 })
 
-/** Loads traits.json, builds its models, fresh extension registries, and the workspace's decision cache, and checks the requested files; returns the report with the verdict policy that configuration sets, if any. */
+/** Loads traits/config.json, builds its models, fresh extension registries, and the workspace's decision cache, and checks the requested files; returns the report with the verdict policy that configuration sets, if any. */
 const checkWorkspace = Effect.fn("WorkspaceCheck.check")(function* (request: WorkspaceCheckRequest) {
   const config = yield* TraitsConfig.load
   const registries = Layer.mergeAll(
@@ -50,7 +50,7 @@ export class WorkspaceCheck extends Context.Service<WorkspaceCheck>()("traits/lo
   make: Effect.gen(function* () {
     const services = yield* Effect.context<Effect.Services<ReturnType<typeof checkWorkspace>>>()
     return {
-      /** Checks the requested files, reloading the workspace configuration and trait files on every call; returns the report with the verdict policy check.policy in traits.json sets, if any. */
+      /** Checks the requested files, reloading the workspace configuration and trait files on every call; returns the report with the verdict policy check.policy in traits/config.json sets, if any. */
       check: (request: WorkspaceCheckRequest) => checkWorkspace(request).pipe(Effect.provideContext(services))
     }
   })

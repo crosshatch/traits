@@ -13,7 +13,7 @@ import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 
 /** Which of the workspace's traits to check; all of them when neither is given. */
 export interface TraitSelection {
-  /** An environment in .agents/traits/_environments whose traits to check. */
+  /** An environment in traits/_environments whose traits to check. */
   readonly environment?: EnvironmentName | undefined
   /** Trait names to check, within the environment when one is given. */
   readonly traits?: ReadonlyArray<TraitName> | undefined
@@ -39,7 +39,7 @@ export class TraitFileReadError extends S.TaggedError<TraitFileReadError>()("Tra
   cause: S.Defect().annotateKey({ description: "The underlying filesystem failure." })
 }) {
   override get message(): string {
-    return `Could not read trait file ${this.path}. Every checked trait needs a .agents/traits/<name>.md file.`
+    return `Could not read trait file ${this.path}. Every checked trait needs a traits/<name>.md file.`
   }
 }
 
@@ -67,7 +67,7 @@ export class UnknownTraitsError extends S.TaggedError<UnknownTraitsError>()("Unk
   }
 }
 
-/** Every trait the workspace defines: the names of its .agents/traits/<name>.md files, sorted. */
+/** Every trait the workspace defines: the names of its traits/<name>.md files, sorted. */
 export const all = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -95,7 +95,7 @@ export const all = Effect.gen(function* () {
   return Array.sort(names, Order.String)
 }).pipe(Effect.withSpan("WorkspaceTraits.all"))
 
-/** Loads .agents/traits/_environments/<name>.json. */
+/** Loads traits/_environments/<name>.json. */
 export const environment = Effect.fn("WorkspaceTraits.environment")(function* (name: EnvironmentName) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -209,7 +209,7 @@ export const decode = Effect.fn("WorkspaceTraits.decode")(function* (name: Trait
   )
 })
 
-/** Loads .agents/traits/<name>.md and resolves its extension references relative to the file. */
+/** Loads traits/<name>.md and resolves its extension references relative to the file. */
 export const load = Effect.fn("WorkspaceTraits.load")(function* (name: TraitName) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path

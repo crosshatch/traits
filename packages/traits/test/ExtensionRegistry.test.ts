@@ -40,7 +40,7 @@ import { TraitPurpose } from "../TraitPurpose.ts"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 /** Where every test trait is said to be loaded from. */
-const origin = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/example.md") })
+const origin = Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make("traits/example.md") })
 const allInputsOf = (trait: Report.TraitReport) =>
   Array.flatMap(trait.changes, (change) => (Report.ChangeReport.guards.Evaluated(change) ? change.inputs : []))
 /** Inputs that passed the subject gate, so their enrichments ran or were recorded. */
@@ -88,7 +88,7 @@ it.live("resolves relative and consumer-only import-condition packages before us
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-consumer-resolution-" })
-      const traitDirectory = path.join(directory, ".agents", "traits")
+      const traitDirectory = path.join(directory, "traits")
       const packageDirectory = path.join(directory, "node_modules", "@traits-resolution-test", "consumer-only")
       yield* fs.makeDirectory(traitDirectory, { recursive: true })
       yield* fs.makeDirectory(packageDirectory, { recursive: true })

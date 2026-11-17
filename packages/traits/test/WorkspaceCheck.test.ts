@@ -46,14 +46,14 @@ const workspace = Effect.gen(function* () {
       stdout: "ignore",
       stderr: "ignore"
     }).pipe(spawner.exitCode)
-  yield* fs.makeDirectory(path.join(directory, ".agents", "traits"), { recursive: true })
+  yield* fs.makeDirectory(path.join(directory, "traits"), { recursive: true })
   yield* fs.makeDirectory(path.join(directory, "src"))
   yield* fs.writeFileString(
-    path.join(directory, "traits.json"),
+    path.join(directory, "traits", "config.json"),
     JSON.stringify({ version: PackageJson.version, models, check: { ruleOut: 0.7 } })
   )
-  yield* fs.writeFileString(path.join(directory, ".agents", "traits", "correct.md"), traitFile("correct"))
-  yield* fs.writeFileString(path.join(directory, ".agents", "traits", "small.md"), traitFile("small"))
+  yield* fs.writeFileString(path.join(directory, "traits", "correct.md"), traitFile("correct"))
+  yield* fs.writeFileString(path.join(directory, "traits", "small.md"), traitFile("small"))
   yield* fs.writeFileString(path.join(directory, "src", "modified.ts"), "export const a = 1\n")
   yield* fs.writeFileString(path.join(directory, "src", "deleted.ts"), "export const b = 2\n")
   yield* fs.symlink("modified.ts", path.join(directory, "src", "link.ts"))
@@ -105,7 +105,7 @@ it.live("checks working-tree files against their text at HEAD and reports trait 
       [undefined, "src/untracked.ts"]
     ])
     expect(Array.map(report.traits, (trait) => [trait.trait.name, trait.origin])).toEqual([
-      ["small", Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make(".agents/traits/small.md") })]
+      ["small", Report.TraitOrigin.cases.File.make({ path: WorkspacePath.make("traits/small.md") })]
     ])
     expect(report.traits[0]!.trait.body).toBe("Prefer small functions.")
     // The configuration's settings govern the check without the caller providing them.
@@ -130,24 +130,24 @@ it.live("checks every project file Git does not ignore when no paths are given, 
     const report = yield* check({ traits: [TraitName.make("small")] }).pipe(Effect.provide(services(directory)))
     const checked = Array.flatMap(report.changes, (change) => (change.after === undefined ? [] : [change.after.path]))
     expect(Array.sort(checked, Order.String)).toEqual([
-      ".agents/traits/correct.md",
-      ".agents/traits/small.md",
       ".gitignore",
       "src/modified.ts",
       "src/untracked.ts",
-      "traits.json"
+      "traits/config.json",
+      "traits/correct.md",
+      "traits/small.md"
     ])
     yield* fs.writeFileString(
-      path.join(directory, "traits.json"),
-      JSON.stringify({ version: PackageJson.version, models, exclude: [".agents/**", "traits.json"] })
+      path.join(directory, "traits", "config.json"),
+      JSON.stringify({ version: PackageJson.version, models, exclude: ["traits/**"] })
     )
     const narrowed = yield* check({ traits: [TraitName.make("small")] }).pipe(Effect.provide(services(directory)))
     const kept = Array.flatMap(narrowed.changes, (change) => (change.after === undefined ? [] : [change.after.path]))
     expect(Array.sort(kept, Order.String)).toEqual([".gitignore", "src/modified.ts", "src/untracked.ts"])
     // Outside Git there is no project file listing, so the request explains how to proceed.
     const outside = yield* fs.makeTempDirectoryScoped({ prefix: "traits-no-git-" })
-    yield* fs.makeDirectory(path.join(outside, ".agents", "traits"), { recursive: true })
-    yield* fs.copyFile(path.join(directory, "traits.json"), path.join(outside, "traits.json"))
+    yield* fs.makeDirectory(path.join(outside, "traits"), { recursive: true })
+    yield* fs.copyFile(path.join(directory, "traits", "config.json"), path.join(outside, "traits", "config.json"))
     const unlisted = yield* check({}).pipe(Effect.provide(services(outside)), Effect.flip)
     expect(unlisted._tag).toBe("ProjectFilesError")
     expect(unlisted.message).toContain("pass the paths")
@@ -173,10 +173,7 @@ it.live("explains requests and workspaces it cannot check", () =>
     expect(unreadable.message).toContain("cannot be read")
     const unknown = yield* run({ paths: ["src/modified.ts"], traits: [TraitName.make("unknown")] })
     expect(unknown._tag).toBe("UnknownTraitsError")
-    yield* fs.writeFileString(
-      path.join(directory, ".agents", "traits", "small.md"),
-      traitFile("small", "requirement: Legacy.\n")
-    )
+    yield* fs.writeFileString(path.join(directory, "traits", "small.md"), traitFile("small", "requirement: Legacy.\n"))
     const outdated = yield* run({ paths: ["src/modified.ts"] })
     expect(outdated._tag).toBe("TraitFileParseError")
     expect(outdated.message).toContain("traits update")
@@ -190,7 +187,7 @@ it.live(
       const directory = yield* workspace
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
-      const environments = path.join(directory, ".agents", "traits", "_environments")
+      const environments = path.join(directory, "traits", "_environments")
       const select = (selection: WorkspaceTraits.TraitSelection) =>
         WorkspaceTraits.select(selection).pipe(Effect.provide(WorkspaceRoot.layer(directory)))
       const fail = (selection: WorkspaceTraits.TraitSelection) => Effect.flip(select(selection))
@@ -238,10 +235,10 @@ it.live(
       expect(S.is(TraitName)("2-space-indent")).toBe(false)
       expect(S.is(EnvironmentName)("2-ci")).toBe(false)
       for (const file of ["README.md", "2-space-indent.md"]) {
-        yield* fs.writeFileString(path.join(directory, ".agents", "traits", file), "# Not a trait\n")
+        yield* fs.writeFileString(path.join(directory, "traits", file), "# Not a trait\n")
         const misnamed = yield* fail({})
         expect(misnamed._tag).toBe("TraitsDirectoryError")
-        yield* fs.remove(path.join(directory, ".agents", "traits", file))
+        yield* fs.remove(path.join(directory, "traits", file))
       }
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )
@@ -274,21 +271,18 @@ it.effect("parses trait frontmatter, rejects outdated or malformed files, and re
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-trait-file-" })
-    yield* fs.makeDirectory(path.join(directory, ".agents", "traits"), { recursive: true })
-    yield* fs.writeFileString(path.join(directory, ".agents", "traits", "segmenter.mjs"), "export default 1")
-    yield* fs.writeFileString(
-      path.join(directory, ".agents", "traits", "a.md"),
-      traitFile("a", "segment: ./segmenter.mjs\n")
-    )
-    yield* fs.writeFileString(path.join(directory, ".agents", "traits", "b.md"), traitFile("a"))
+    yield* fs.makeDirectory(path.join(directory, "traits"), { recursive: true })
+    yield* fs.writeFileString(path.join(directory, "traits", "segmenter.mjs"), "export default 1")
+    yield* fs.writeFileString(path.join(directory, "traits", "a.md"), traitFile("a", "segment: ./segmenter.mjs\n"))
+    yield* fs.writeFileString(path.join(directory, "traits", "b.md"), traitFile("a"))
     const workspaceRoot = WorkspaceRoot.layer(directory)
     const trait = yield* WorkspaceTraits.load(TraitName.make("a")).pipe(Effect.provide(workspaceRoot))
-    expect(trait.segment).toBe(".agents/traits/segmenter.mjs")
+    expect(trait.segment).toBe("traits/segmenter.mjs")
     const mismatch = yield* WorkspaceTraits.load(TraitName.make("b")).pipe(Effect.provide(workspaceRoot), Effect.flip)
     expect(mismatch._tag).toBe("TraitFileParseError")
     // Two references that differ as written can still name one module.
     yield* fs.writeFileString(
-      path.join(directory, ".agents", "traits", "c.md"),
+      path.join(directory, "traits", "c.md"),
       traitFile("c", "enrichments:\n  - ./segmenter.mjs\n  - ../traits/segmenter.mjs\n")
     )
     const repeated = yield* WorkspaceTraits.load(TraitName.make("c")).pipe(Effect.provide(workspaceRoot), Effect.flip)

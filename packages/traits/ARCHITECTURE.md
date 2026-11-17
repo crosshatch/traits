@@ -239,18 +239,17 @@ Static traits + provided inputs
 
 ## Check a workspace
 
-A workspace keeps its configuration at its root and its traits under
-`.agents/traits/`:
+A workspace keeps its configuration at its root and its traits under `traits/`:
 
-- `traits.json` at the workspace root is plain JSON, so it loads without
-  executing code or installing JavaScript dependencies. It records the traits
-  `version` the workspace was last migrated to, or `"internal"` in the traits
-  repository itself, whose traits source is inside the workspace and so always
-  matches (a workspace that installs traits as a dependency may not use it), the
-  `models` for the language and decision roles, optional `exclude` patterns for
-  checks of every project file, and optional settings (`Settings`, core), each
-  defaulting when omitted: `concurrency`, the maximum number of simultaneous
-  decision requests (16); `check.ruleOut` (0.6), `check.policy` (none), and the
+- `traits/config.json` is plain JSON, so it loads without executing code or
+  installing JavaScript dependencies. It records the traits `version` the
+  workspace was last migrated to, or `"internal"` in the traits repository
+  itself, whose traits source is inside the workspace and so always matches (a
+  workspace that installs traits as a dependency may not use it), the `models`
+  for the language and decision roles, optional `exclude` patterns for checks of
+  every project file, and optional settings (`Settings`, core), each defaulting
+  when omitted: `concurrency`, the maximum number of simultaneous decision
+  requests (16); `check.ruleOut` (0.6), `check.policy` (none), and the
   resampling of close calls (`check.resampling`: margin 0.15, 3 samples, close
   margin 0.05, 5 samples); the file, evaluation, segmentation, and digest
   concurrency of checks (16, 32, 8, 8); `requests.batchSize` (1),
@@ -260,17 +259,17 @@ A workspace keeps its configuration at its root and its traits under
   reference, whose default is `Settings.make({})`: each field carries its
   default beside it, as both a constructor and a decoding default, so hosts that
   provide nothing get the defaults. Locally, `WorkspaceModels.layer(config)`
-  provides the loaded `traits.json` together with the models it limits and
-  batches, and `WorkspaceCheck.run` provides the configuration it is given to
-  the check, so one configuration governs a whole check or derivation. It lists
-  no traits, and unknown keys are rejected, so a trait list from an earlier
-  version is reported rather than ignored. Credentials come from the
+  provides the loaded `traits/config.json` together with the models it limits
+  and batches, and `WorkspaceCheck.run` provides the configuration it is given
+  to the check, so one configuration governs a whole check or derivation. It
+  lists no traits, and unknown keys are rejected, so a trait list from an
+  earlier version is reported rather than ignored. Credentials come from the
   environment, falling back to the workspace's `.env` and then to the main
   checkout's `.env`, so linked Git worktrees share its credentials
   (`WorkspaceConfigProvider`). `TraitsConfig.load` fails with an agent-facing
   message when the file is missing, invalid, or written for an incompatible
   version under caret semantics.
-- `.agents/traits/<name>.md` defines each trait: YAML frontmatter with `name`,
+- `traits/<name>.md` defines each trait: YAML frontmatter with `name`,
   `purpose`, and optional `subject`, `assertion`, `segment`, and `enrichments`,
   and a Markdown body of supporting context. Unknown frontmatter keys are
   rejected, so outdated files are reported rather than misread. Extension
@@ -279,7 +278,7 @@ A workspace keeps its configuration at its root and its traits under
   `TraitFile` (core) parses and serializes the format; `WorkspaceTraits.load`
   (`local/WorkspaceTraits`) reads a workspace trait file and resolves its
   extension references.
-- `.agents/traits/_environments/<name>.json` defines an optional environment,
+- `traits/_environments/<name>.json` defines an optional environment,
   `{ "traits": [...] }`, naming a subset of the workspace's traits to check,
   such as a smaller set for CI. Unknown keys are rejected.
 
@@ -298,9 +297,9 @@ within the workspace. Each trait's report records its file as `origin`, from
 command's exit code and output.
 
 The `WorkspaceCheck` service owns the complete pipeline, independent of any
-front end: `check(request)` loads `traits.json` and the trait files, builds the
-configured models and fresh extension registries, and returns the full report
-with the verdict policy that same configuration sets, if any.
+front end: `check(request)` loads `traits/config.json` and the trait files,
+builds the configured models and fresh extension registries, and returns the
+full report with the verdict policy that same configuration sets, if any.
 `WorkspaceCheck.layer` declares the host services it needs (the platform, HTTP,
 WebCrypto digests and randomness, a key-value store, the local time zone, and
 `WorkspaceRoot`); the program provides them once at its entry point. The
@@ -356,8 +355,8 @@ that digest, so the input's text is not digested for every trait. A repeated
 check of unchanged traits and files therefore asks the model nothing, reports
 zero tokens for those decisions, and still lists the model that made them.
 Failed or unanswered decisions are never cached. `LocalDecisionCache` stores
-entries under `.agents/traits/.cache/`, which ignores itself in Git, and scopes
-keys to the configured decision model. Entries are kept in 30-day generations: a
+entries under `traits/.cache/`, which ignores itself in Git, and scopes keys to
+the configured decision model. Entries are kept in 30-day generations: a
 decision found only in the previous generation moves to the current one, and
 older generations are deleted, so a decision is dropped once a whole generation
 passes without a check using it. When the directory cannot be prepared, such as
@@ -412,11 +411,11 @@ proposals, since saving requires the user's approval.
 `traits check` writes only the report to stdout; verdicts and errors go to
 stderr. Without a policy it exits 0 whenever the check runs, because the report
 implies no thresholds. With `--fail` and `--pass`, or else `check.policy` in
-`traits.json`, it derives the verdict with `Report.verdicts` and exits 0 for
-Pass, 1 for Fail, 2 for Incomplete, and 3 for Inconclusive. A check that cannot
-run, such as one with missing configuration or a partial policy, also exits 2,
-since the fix is to repair the setup and retry. Invalid command-line usage exits
-1, as Effect's CLI does.
+`traits/config.json`, it derives the verdict with `Report.verdicts` and exits 0
+for Pass, 1 for Fail, 2 for Incomplete, and 3 for Inconclusive. A check that
+cannot run, such as one with missing configuration or a partial policy, also
+exits 2, since the fix is to repair the setup and retry. Invalid command-line
+usage exits 1, as Effect's CLI does.
 
 Every command reports an expected failure on stderr by its message alone,
 without a stack trace, so each error's message says what went wrong and how to
@@ -826,7 +825,7 @@ failed enrichment. The schemas cannot establish whether the runner assigned the
 correct state in response to cancellation or recovery.
 
 `version` is the traits version that produced the report, the same version
-`traits.json` records. Reports from versions compatible under caret (`^`)
+`traits/config.json` records. Reports from versions compatible under caret (`^`)
 semantics share a format, so an incompatible format change is a breaking
 release, as for any change to the exported `Report` schema. `run` records
 deterministic provenance without timestamps, hosts, or absolute paths: distinct
