@@ -13,8 +13,8 @@
   "exclude": [
     "**/*.svg",
     "pnpm-lock.yaml",
-    "traits/eval/fixtures/**",
-    "traits/eval/generated/**",
-    "traits/eval/scenarios/**"
+    "packages/traits/eval/fixtures/**",
+    "packages/traits/eval/generated/**",
+    "packages/traits/eval/scenarios/**"
   ]
 }

@@ -16,22 +16,22 @@ purpose: Keep the core usable by other hosts, such as a hosted service, and make
 ---
 
 ```diff
--// traits/Segmenter/SegmenterRegistry.ts (core)
+-// packages/traits/Segmenter/SegmenterRegistry.ts (core)
 -import * as ExtensionRegistry from "../local/ExtensionRegistry.ts"
 -export class SegmenterRegistry extends Context.Service<SegmenterRegistry>()("traits/Segmenter/SegmenterRegistry", {
 -  make: ExtensionRegistry.make(/* imports workspace files */)
 -}) {}
-+// traits/Segmenter/SegmenterRegistry.ts (core): the contract only
++// packages/traits/Segmenter/SegmenterRegistry.ts (core): the contract only
 +export class SegmenterRegistry extends Context.Service<SegmenterRegistry, SegmentChange>()(
 +  "traits/Segmenter/SegmenterRegistry"
 +) {}
 +
-+// traits/local/LocalSegmenterRegistry.ts (host): the implementation, used as LocalSegmenterRegistry.layer
++// packages/traits/local/LocalSegmenterRegistry.ts (host): the implementation, used as LocalSegmenterRegistry.layer
 +export const layer = Layer.effect(SegmenterRegistry, ExtensionRegistry.make(/* ... */))
 ```
 
-Correct: `traits/mcp/Server.ts` and `traits/Cli/Cli.ts` import `WorkspaceCheck` from `traits/local/`, while `traits/Check/` depends only on the registry tags.
+Correct: `packages/traits/mcp/Server.ts` and `packages/traits/Cli/Cli.ts` import `WorkspaceCheck` from `traits/local/`, while `packages/traits/Check/` depends only on the registry tags.
 
-Violation: the core entry point re-exporting a front end, such as `export * as Accounts from "./Cli/Accounts.ts"` in traits/index.ts. A re-export is an import; expose such modules from an entry point in their own directory.
+Violation: the core entry point re-exporting a front end, such as `export * as Accounts from "./Cli/Accounts.ts"` in packages/traits/index.ts. A re-export is an import; expose such modules from an entry point in their own directory.
 
 Not a violation: a module inside a front-end directory that imports only that front end's modules, the core, local/, or Effect platform services, such as Cli/commands/profile/create.ts (FileSystem, Path, ../../UserConfig.ts) and show.ts. Its path already shows its host. It would move to local/ only if another front end, such as mcp/, imported it.

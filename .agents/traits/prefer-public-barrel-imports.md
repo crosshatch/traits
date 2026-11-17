@@ -16,4 +16,4 @@ Violation: `import { WorkspaceRoot } from "../../traits/local/WorkspaceRoot.ts"`
 
 Not a violation: `import { WorkspaceRoot } from "traits/local"`, `import { Atom } from "effect/reactivity"` (a public subpath barrel), or `import * as Input from "../util/Input.ts"` within the same package.
 
-In this workspace each package is a top-level directory with its own package.json (`traits/`, `@traits/typescript/`, `traits.sh/`). A relative import leaves its package only when it climbs above that directory, so `../../../Report/Report.ts` or `../../../mcp/index.ts` from `traits/Cli/commands/check/check.ts` stays within `traits` and is out of scope, however many `../` it has.
+In this workspace each package has its own package.json (`packages/traits/`, `packages/@traits/typescript/`, `traits.sh/`). A relative import leaves its package only when it climbs above that directory, so `../../../Report/Report.ts` or `../../../mcp/index.ts` from `packages/traits/Cli/commands/check/check.ts` stays within `traits` and is out of scope, however many `../` it has.

@@ -279,7 +279,7 @@ importers:
         version: 0.69.0
       '@traits/typescript':
         specifier: workspace:*
-        version: link:@traits/typescript
+        version: link:packages/@traits/typescript
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
@@ -294,7 +294,7 @@ importers:
         version: 0.0.93
       traits:
         specifier: workspace:*
-        version: link:traits
+        version: link:packages/traits
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -302,7 +302,7 @@ importers:
         specifier: 'catalog:'
         version: 1.5.0(@types/node@26.6.6)(@vitest/ui@5.1.0)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.1)
 
-  '@traits/typescript':
+  packages/@traits/typescript:
     dependencies:
       oxc-parser:
         specifier: 'catalog:'
@@ -324,7 +324,7 @@ importers:
         specifier: workspace:*
         version: link:../../traits
 
-  traits:
+  packages/traits:
     dependencies:
       '@effect/ai-anthropic':
         specifier: 'catalog:'

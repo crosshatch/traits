@@ -1,6 +1,6 @@
 packages:
-  - "@traits/*"
-  - traits
+  - "packages/@traits/*"
+  - packages/traits
   - traits.sh
 
 allowBuilds:

@@ -1,8 +1,8 @@
 {
   "files": [],
   "references": [
-    { "path": "./@traits/typescript" },
-    { "path": "./traits" },
+    { "path": "./packages/@traits/typescript" },
+    { "path": "./packages/traits" },
     { "path": "./traits.sh" },
     { "path": "./tsconfig.node.json" }
   ]

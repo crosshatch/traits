@@ -7,7 +7,7 @@ subject: Configuration lists and fields whose ordering has no semantic
 assertion: 'Prefer alphabetical ordering for miscellaneous configuration lists
   and fields when their order has no semantic significance: projects:
   ["oxlints/vite.config.ts", "traits.sh/vite.config.ts",
-  "traits/vite.config.ts"]. Preserve intentional dependency, execution,
+  "packages/traits/vite.config.ts"]. Preserve intentional dependency, execution,
   precedence, and user-facing order, key order that a formatter enforces, and
   any order another trait prescribes, such as packages first in
   pnpm-workspace.yaml (see workspace-packages-first), rather than sorting those
@@ -19,11 +19,11 @@ purpose: Make unordered configuration easy to scan and reduce incidental diff
 ---
 
 ```diff
--projects: ["traits/vite.config.ts", "oxlints/vite.config.ts"]
-+projects: ["oxlints/vite.config.ts", "traits/vite.config.ts"]
+-projects: ["packages/traits/vite.config.ts", "oxlints/vite.config.ts"]
++projects: ["oxlints/vite.config.ts", "packages/traits/vite.config.ts"]
 ```
 
-Not a violation: `"references": [{ "path": "./@traits/typescript" }, { "path": "./traits" }, { "path": "./traits.sh" }, { "path": "./tsconfig.node.json" }]`, which is already in order: `@` sorts before letters, and `./traits` before `./traits.sh`.
+Not a violation: `"references": [{ "path": "./packages/@traits/typescript" }, { "path": "./packages/traits" }, { "path": "./traits.sh" }, { "path": "./tsconfig.node.json" }]`, which is already in order: `@` sorts before letters within `packages`, and `./packages` before `./traits.sh`.
 
 Not a violation: package.json keys in the conventional order the formatter enforces, such as `name`, `version`, `license` at the top level, `type`, `url`, `directory` in `repository`, and `exports`, `access` in `publishConfig`; sorting them by hand is undone on the next format. Also not a violation: a `files` list with its included patterns in order followed by its excluded (`!`) patterns in order, since an exclusion must follow what it excludes.
 

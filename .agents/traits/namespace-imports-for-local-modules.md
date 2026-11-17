@@ -41,7 +41,7 @@ import { CachedDecision, DecisionCache } from "../Check/DecisionCache.ts"
 // Names sharing a prefix, not aliased, only two: fine.
 import { Profile, ProfileName } from "./Profile/Profile.ts"
 // Module under a util/ directory: excluded regardless of count.
-import { Change, ChangeWithAfter, ChangeWithBefore } from "./Change.ts" // inside traits/util/
+import { Change, ChangeWithAfter, ChangeWithBefore } from "./Change.ts" // inside packages/traits/util/
 import { Input, InputRange, InputSource } from "../util/Input.ts"
 // Barrel/re-export module: excluded.
 import { Enrichment, EnrichmentError, EnrichmentName } from "./index.ts"

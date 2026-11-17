@@ -5,7 +5,7 @@ import { defineConfig } from "vite-plus"
 import custom from "./oxlints/oxlints.ts"
 
 // Evaluation scenarios are small standalone projects that deliberately break conventions.
-const toolingIgnores = ["**/.worktrees/**", ".agents/**", "repos/**", "traits/eval/scenarios/**"]
+const toolingIgnores = ["**/.worktrees/**", ".agents/**", "packages/traits/eval/scenarios/**", "repos/**"]
 
 export default defineConfig({
   fmt: {
@@ -58,6 +58,6 @@ export default defineConfig({
     }
   },
   test: {
-    projects: ["@traits/*/vite.config.ts", "oxlints/vite.config.ts", "traits/vite.config.ts"]
+    projects: ["oxlints/vite.config.ts", "packages/@traits/*/vite.config.ts", "packages/traits/vite.config.ts"]
   }
 })
