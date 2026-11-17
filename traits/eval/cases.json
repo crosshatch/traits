@@ -3,10 +3,15 @@
     "always-brace-if-bodies",
     "blank-lines-between-class-methods",
     "direct-property-access-in-parameters",
+    "explicit-undefined-in-optional-properties",
     "module-named-files-over-internal-index",
+    "name-repeated-types-for-shared-abstractions",
     "omit-nominal-brands-on-schema-errors",
+    "pipe-immediate-curried-applications",
     "provide-layer-arrays-directly",
-    "shared-layers-at-program-boundaries"
+    "shared-layers-at-program-boundaries",
+    "tagged-union-case-guards",
+    "terminology-in-site-copy"
   ],
   "fixtures": [
     {
@@ -34,6 +39,22 @@
       "path": "traits/Cli/CliPaths.ts"
     },
     {
+      "id": "decision-batching",
+      "path": "traits/DecisionBatching.ts"
+    },
+    {
+      "id": "decision-batching-piped",
+      "path": "traits/DecisionBatchingPiped.ts"
+    },
+    {
+      "id": "decision-cache",
+      "path": "traits/Check/DecisionCache.ts"
+    },
+    {
+      "id": "decision-cache-piped",
+      "path": "traits/Check/DecisionCachePiped.ts"
+    },
+    {
       "id": "enrichment-error",
       "path": "traits/Enrichment/EnrichmentError.ts"
     },
@@ -58,6 +79,22 @@
       "path": "traits/mcp/Server.ts"
     },
     {
+      "id": "mcp-server-layers",
+      "path": "traits/mcp/ServerLayers.ts"
+    },
+    {
+      "id": "mcp-server-layers-named",
+      "path": "traits/mcp/ServerLayersNamed.ts"
+    },
+    {
+      "id": "model-selection",
+      "path": "traits/local/user/Profile/ModelSelection.ts"
+    },
+    {
+      "id": "model-selection-guarded",
+      "path": "traits/local/user/Profile/ModelSelectionGuarded.ts"
+    },
+    {
       "id": "package-json",
       "path": "traits/package.json"
     },
@@ -76,6 +113,14 @@
     {
       "id": "report-index",
       "path": "traits/Report/index.ts"
+    },
+    {
+      "id": "trait-derivation",
+      "path": "traits/TraitDerivation.ts"
+    },
+    {
+      "id": "trait-derivation-piped",
+      "path": "traits/TraitDerivationPiped.ts"
     },
     {
       "id": "trait-file",
@@ -116,6 +161,10 @@
     {
       "id": "workspace-check-local-infra",
       "path": "traits/WorkspaceCheck.ts"
+    },
+    {
+      "id": "workspace-derive",
+      "path": "traits/local/WorkspaceDerive.ts"
     },
     {
       "id": "workspace-root",
@@ -214,6 +263,9 @@
       "workspace-root": "pass",
       "workspace-traits": "pass"
     },
+    "explicit-undefined-in-optional-properties": {
+      "user-config": "pass"
+    },
     "module-named-files-over-internal-index": {
       "accounts": "pass",
       "architecture": "unmatched",
@@ -231,6 +283,10 @@
       "version": "pass",
       "workspace-root": "pass",
       "workspace-traits": "pass"
+    },
+    "name-repeated-types-for-shared-abstractions": {
+      "mcp-server-layers": "fail",
+      "mcp-server-layers-named": "pass"
     },
     "omit-nominal-brands-on-schema-errors": {
       "accounts": "pass",
@@ -260,6 +316,14 @@
       "version-unbraced": "unmatched",
       "workspace-root": "unmatched",
       "workspace-traits": "pass"
+    },
+    "pipe-immediate-curried-applications": {
+      "decision-batching": "fail",
+      "decision-batching-piped": "pass",
+      "decision-cache": "fail",
+      "decision-cache-piped": "pass",
+      "trait-derivation": "fail",
+      "trait-derivation-piped": "pass"
     },
     "provide-layer-arrays-directly": {
       "accounts": "unmatched",
@@ -293,6 +357,15 @@
     "shared-layers-at-program-boundaries": {
       "workspace-check": "pass",
       "workspace-check-local-infra": "fail"
+    },
+    "tagged-union-case-guards": {
+      "model-selection": "fail",
+      "model-selection-guarded": "pass"
+    },
+    "terminology-in-site-copy": {
+      "mcp-server-layers": "unmatched",
+      "mcp-server-layers-named": "unmatched",
+      "workspace-derive": "unmatched"
     }
   }
 }

@@ -6,8 +6,10 @@
  * labels: "fail" cases should fail, while "pass" and "unmatched" cases should not. With --all-traits, every workspace
  * trait is checked so labeled traits share batches with realistic neighbors, but only labeled traits are scored.
  * With --segment <module>, labeled traits use that segmenter, such as @traits/typescript/segmenter, without editing their
- * trait files. With --decision-model <model>, decisions use that OpenRouter model instead of the configured one.
- * Usage: node traits/eval/run.ts [--all-traits] [--segment <module>] [--decision-model <model>]
+ * trait files. With --decision-model <model>, decisions use that OpenRouter model instead of the configured one. With
+ * --batch-size <n>, at most n decisions about one input share a request, such as 1 to ask each subject alone; subject
+ * decisions share requests, so this changes what the subject gate sees only with --all-traits.
+ * Usage: node traits/eval/run.ts [--all-traits] [--segment <module>] [--decision-model <model>] [--batch-size <n>]
  */
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Array, Clock, Console, DateTime, Effect, FileSystem, Layer, Path, pipe, Ref, Schema as S } from "effect"
@@ -89,16 +91,21 @@ const program = Effect.gen(function* () {
     { concurrency: "unbounded" }
   )
   const modelIndex = process.argv.indexOf("--decision-model")
-  const config =
-    modelIndex === -1
-      ? configured
+  const batchSizeIndex = process.argv.indexOf("--batch-size")
+  const config = {
+    ...configured,
+    ...(modelIndex === -1
+      ? {}
       : {
-          ...configured,
           models: {
             ...configured.models,
             decision: { provider: "openrouter" as const, model: process.argv[modelIndex + 1]! }
           }
-        }
+        }),
+    ...(batchSizeIndex === -1
+      ? {}
+      : { requests: { ...configured.requests, batchSize: Number(process.argv[batchSizeIndex + 1]) } })
+  }
   const names = process.argv.includes("--all-traits") ? yield* WorkspaceTraits.all : cases.traits
   const segmentIndex = process.argv.indexOf("--segment")
   const segment =
