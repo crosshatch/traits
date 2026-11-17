@@ -66,6 +66,11 @@
     "@effect/platform-node": "catalog:",
     "effect": "catalog:"
   },
+  "peerDependenciesMeta": {
+    "@effect/platform-node": {
+      "optional": true
+    }
+  },
   "optionalDependencies": {
     "fs-native-extensions": "catalog:"
   }

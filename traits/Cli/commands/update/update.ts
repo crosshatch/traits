@@ -1,22 +1,12 @@
 import { Array, Console, Effect, Option, pipe, String } from "effect"
 import { Command, Flag } from "effect/cli"
 
-import * as Changelog from "../../../local/Changelog.ts"
-import * as TraitsConfig from "../../../local/TraitsConfig.ts"
-import PackageJson from "../../../package.json" with { type: "json" }
+import * as WorkspaceUpdate from "../../../local/WorkspaceUpdate.ts"
+import type { UpdateContext } from "../../../local/WorkspaceUpdate.ts"
 import * as Version from "../../../Version.ts"
 
 /** Everything an agent needs to migrate a workspace from one traits version to the latest release. */
-export interface UpdateContext {
-  /** The version the workspace was last migrated to, and where that version came from. */
-  readonly from: { readonly version: string; readonly source: "flag" | "workspace" | "installed" | "internal" }
-  /** The installed traits version. */
-  readonly installed: string
-  /** The latest published traits version. */
-  readonly latest: string
-  /** Releases after `from` up to `latest`, oldest first. */
-  readonly releases: ReadonlyArray<Changelog.Release>
-}
+export type { UpdateContext } from "../../../local/WorkspaceUpdate.ts"
 
 const sourceLabel = {
   flag: "--from",
@@ -79,23 +69,7 @@ export const update = Command.make(
     )
   },
   Effect.fn("update")(function* (params) {
-    const flagged = Option.getOrUndefined(params.from)
-    const configured = flagged === undefined ? yield* TraitsConfig.loadVersion : undefined
-    const from: UpdateContext["from"] =
-      flagged !== undefined
-        ? { version: flagged, source: "flag" }
-        : configured === "internal"
-          ? // The traits repository tracks its own source, so there is nothing to migrate from.
-            { version: PackageJson.version, source: "internal" }
-          : configured !== undefined
-            ? { version: configured, source: "workspace" }
-            : { version: PackageJson.version, source: "installed" }
-    const latest = yield* Changelog.latestVersion
-    let releases: ReadonlyArray<Changelog.Release> = []
-    if (Version.isNewer(latest, from.version)) {
-      const changelog = yield* Changelog.fetchReleases(latest)
-      releases = Changelog.between(changelog, { from: from.version, to: latest })
-    }
-    yield* Console.log(render({ from, installed: PackageJson.version, latest, releases }))
+    const context = yield* WorkspaceUpdate.load({ from: Option.getOrUndefined(params.from) })
+    yield* Console.log(render(context))
   })
 ).pipe(Command.withDescription("Print the changes since this workspace's traits version so an agent can migrate it"))

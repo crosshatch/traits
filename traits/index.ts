@@ -1,6 +1,7 @@
 export * as Check from "./Check/Check.ts"
 export * as DecisionCache from "./Check/DecisionCache.ts"
 export * as DecisionLimit from "./DecisionLimit.ts"
+export * as DecisionBatching from "./DecisionBatching.ts"
 export * as Enrichment from "./Enrichment/Enrichment.ts"
 export * as EnrichmentRegistry from "./Enrichment/EnrichmentRegistry.ts"
 export * as EnvironmentName from "./EnvironmentName.ts"

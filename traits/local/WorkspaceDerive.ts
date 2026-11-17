@@ -1,4 +1,4 @@
-import { Array, Context, Effect, FileSystem, Layer, Option, Path, Schema as S, Semaphore, Struct } from "effect"
+import { Context, Effect, FileSystem, Layer, Path, Schema as S, Semaphore } from "effect"
 
 import { CurrentSettings } from "../Settings.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
@@ -43,57 +43,17 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     // Trait files are small, but a workspace can have hundreds.
     { concurrency: check.fileConcurrency }
   )
-  const related = yield* TraitDerivation.compare(document.name, proposal, existing)
-  /** The reported traits, each with the language model's reason for its relationship to the proposal. */
-  const explained = Effect.fnUntraced(function* <
-    Entry extends { readonly name: TraitName; readonly relationship: string }
-  >(entries: Array.NonEmptyReadonlyArray<Entry>) {
-    const reasons = yield* TraitDerivation.explain(
-      proposal,
-      Array.map(entries, (entry) => ({
-        ...entry,
-        text: Array.findFirst(existing, (trait) => trait.name === entry.name).pipe(
-          Option.map((trait) => trait.text),
-          Option.getOrElse(() => "")
-        )
-      }))
-    )
-    return Array.map(entries, (entry) => ({ ...entry, reason: reasons[entry.name]! }))
-  })
-  const resolution = yield* TraitDerivation.resolve(document.name, proposal, existing, related)
-  if (TraitDerivation.Resolution.$is("Unresolved")(resolution)) {
-    const traits = yield* explained(resolution.traits)
-    return TraitDerivation.TraitDerivation.cases.Unresolved.make({ name: document.name, traits })
-  }
-  if (TraitDerivation.Resolution.$is("Covered")(resolution)) {
-    const covers = yield* explained(resolution.by)
-    return TraitDerivation.TraitDerivation.cases.Covered.make({
-      name: document.name,
-      by: Array.map(covers, Struct.pick(["name", "reason"]))
-    })
-  }
-  if (TraitDerivation.Resolution.$is("NameTaken")(resolution)) {
-    return TraitDerivation.TraitDerivation.cases.NameTaken.make({ name: document.name })
-  }
-  const replaced = TraitDerivation.Resolution.$is("Replace")(resolution) ? resolution : undefined
-  // A clarification or rewording replaces the existing trait under its name.
-  const saved = replaced === undefined ? document : { ...document, name: replaced.name }
-  const text = TraitFile.serialize(saved)
+  const plan = yield* TraitDerivation.prepare(document, existing)
+  if (plan._tag !== "Proposed") return plan
+  const { document: saved, text, current, reason: why } = plan
   const relative = WorkspaceLayout.traitFile(saved.name)
-  const current = Array.findFirst(existing, (entry) => entry.name === replaced?.name).pipe(
-    Option.map((entry) => entry.text),
-    Option.getOrUndefined
-  )
-  // The user sees why the proposal counts as a clarification or a rewording before replacing the trait.
-  const why =
-    replaced === undefined ? undefined : yield* explained([replaced]).pipe(Effect.map(([entry]) => entry.reason))
   const approval = yield* approve({
     name: saved.name,
     action: current === undefined ? "Create" : "Update",
     message:
       current === undefined
         ? `Save this new trait as ${relative}?\n\n${text}`
-        : `Replace ${relative} with this ${replaced?.relationship === "covered" ? "rewording, which keeps its rule" : "clarified version"}?\n\nWhy: ${why ?? ""}\n\nCurrent:\n\n${current}\nReplacement:\n\n${text}`
+        : `Replace ${relative} with this ${plan.relationship === "covered" ? "rewording, which keeps its rule" : "clarified version"}?\n\nWhy: ${why ?? ""}\n\nCurrent:\n\n${current}\nReplacement:\n\n${text}`
   })
   if (TraitDerivation.Approval.guards.Revise(approval)) {
     return TraitDerivation.TraitDerivation.cases.RevisionRequested.make({

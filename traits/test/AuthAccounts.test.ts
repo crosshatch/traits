@@ -3,6 +3,9 @@ import { expect, it } from "@effect/vitest"
 import { Array, Effect, FileSystem, Layer, Path, Redacted } from "effect"
 
 import * as Accounts from "../local/user/Accounts.ts"
+import { ModelSelection } from "../local/user/Profile/ModelSelection.ts"
+import { Profile, ProfileName } from "../local/user/Profile/Profile.ts"
+import * as Profiles from "../local/user/Profiles.ts"
 import { AccountName } from "../local/user/Provider/AccountName.ts"
 import { Credential } from "../local/user/Provider/Credential.ts"
 import { ProviderAccount } from "../local/user/Provider/ProviderAccount.ts"
@@ -52,6 +55,57 @@ it.live(
       expect(after).toBe(before)
     }).pipe(Effect.provideService(UserPaths, paths), Effect.provideService(UserConfigLock, withLock))
   }, Effect.provide(runtime)),
+  60000
+)
+
+it.live(
+  "manages profiles and prevents removing referenced credentials through the library API",
+  () =>
+    Effect.gen(function* () {
+      const { paths, withLock } = yield* fixture
+      yield* Effect.gen(function* () {
+        const name = ProfileName.make("work")
+        const selection = ModelSelection.cases.Provider.make({ account: AccountName.make("primary"), model: "test" })
+        const profile = Profile.make({ language: selection, decision: selection })
+        yield* Profiles.save(name, profile)
+        const duplicate = yield* Profiles.save(name, profile).pipe(Effect.flip)
+        expect(duplicate).toBeInstanceOf(Profiles.ProfileOperationError)
+        yield* Profiles.use(name)
+        expect((yield* Profiles.get()).name).toBe(name)
+        const referenced = yield* Accounts.remove(AccountName.make("primary")).pipe(Effect.flip)
+        expect(referenced).toBeInstanceOf(Accounts.AccountRemovalError)
+        const protectedProfile = yield* Profiles.remove(name).pipe(Effect.flip)
+        expect(protectedProfile).toBeInstanceOf(Profiles.ProfileOperationError)
+        const summaries = yield* Accounts.list
+        expect(summaries).toEqual([{ id: "primary", provider: "openai", method: "api-key", credentialType: "ApiKey" }])
+        expect(JSON.stringify(summaries)).not.toContain("fake-original-key")
+        yield* Profiles.remove(name, { force: true })
+        yield* Accounts.remove(AccountName.make("primary"))
+        const remainingProfiles = yield* Profiles.list
+        const remainingAccounts = yield* Accounts.list
+        expect(remainingProfiles).toEqual([])
+        expect(remainingAccounts).toEqual([])
+      }).pipe(Effect.provideService(UserPaths, paths), Effect.provideService(UserConfigLock, withLock))
+    }).pipe(Effect.scoped, Effect.provide(runtime)),
+  60000
+)
+
+it.live(
+  "rejects profiles referencing missing accounts without saving them",
+  () =>
+    Effect.gen(function* () {
+      const { paths, withLock } = yield* fixture
+      yield* Effect.gen(function* () {
+        const selection = ModelSelection.cases.Provider.make({ account: AccountName.make("missing"), model: "test" })
+        const result = yield* Profiles.save(
+          ProfileName.make("work"),
+          Profile.make({ language: selection, decision: selection })
+        ).pipe(Effect.flip)
+        expect(result).toBeInstanceOf(Profiles.ProfileOperationError)
+        const saved = yield* Profiles.list
+        expect(saved).toEqual([])
+      }).pipe(Effect.provideService(UserPaths, paths), Effect.provideService(UserConfigLock, withLock))
+    }).pipe(Effect.scoped, Effect.provide(runtime)),
   60000
 )
 

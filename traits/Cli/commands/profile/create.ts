@@ -1,12 +1,10 @@
-import { Array, Console, Effect, FileSystem, Path } from "effect"
+import { Console, Effect } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import * as Accounts from "../../../local/user/Accounts.ts"
-import { ModelSelection, ModelSelectionFromString } from "../../../local/user/Profile/ModelSelection.ts"
+import { ModelSelectionFromString } from "../../../local/user/Profile/ModelSelection.ts"
 import { Profile } from "../../../local/user/Profile/Profile.ts"
 import { ProfileName } from "../../../local/user/Profile/ProfileName.ts"
-import * as UserConfig from "../../../local/user/UserConfig.ts"
-import { withLock } from "../../../local/user/UserConfigLock.ts"
+import * as Profiles from "../../../local/user/Profiles.ts"
 import { withExperimentalDescription } from "../_common.ts"
 
 const selectionFlag = (role: string) =>
@@ -15,26 +13,10 @@ const selectionFlag = (role: string) =>
       "Account/model reference or custom .ts layer file (use ./, ../, or an absolute path for directories)"
     ),
     Flag.withSchema(ModelSelectionFromString),
-    Flag.mapEffect(
-      Effect.fn("profile.modelSelection")(function* (selection) {
-        if (ModelSelection.guards.Custom(selection)) {
-          const path = yield* Path.Path
-          const fs = yield* FileSystem.FileSystem
-          const filename = path.resolve(selection.path)
-          yield* fs.stat(filename).pipe(
-            Effect.catchTags({
-              PlatformError: () =>
-                CliError.UserError.make({ cause: `Cannot access custom model layer file: ${filename}` })
-            }),
-            Effect.filterOrFail(
-              (info) => info.type === "File",
-              () => CliError.UserError.make({ cause: `Custom model layer path is not a file: ${filename}` })
-            )
-          )
-          return ModelSelection.cases.Custom.make({ path: filename })
-        }
-        return selection
-      })
+    Flag.mapEffect((selection) =>
+      Profiles.resolveSelection(selection).pipe(
+        Effect.mapError((error) => CliError.UserError.make({ cause: error.message }))
+      )
     )
   )
 
@@ -49,31 +31,11 @@ export const create = Command.make(
   Effect.fn("profile.create")(function* (params) {
     const { name, language, decision, replace } = params
     const profile = Profile.make({ language, decision })
-    const providerSelections = Array.filter([language, decision], ModelSelection.guards.Provider)
-    const config = yield* UserConfig.read.pipe(
-      Effect.filterOrFail(
-        (config) => replace || !Array.some(config.profiles, (entry) => entry.name === name),
-        () => CliError.UserError.make({ cause: `Profile ${name} already exists. Use --replace to overwrite it.` })
-      )
-    )
-    if (providerSelections.length > 0) {
-      const accounts = yield* Accounts.read
-      for (const selection of providerSelections) {
-        if (!Array.some(accounts, (account) => account.id === selection.account)) {
-          return yield* CliError.UserError.make({
-            cause: `Unknown account: ${selection.account}. Run traits auth login first.`
-          })
-        }
-      }
-    }
-    yield* UserConfig.write({
-      ...config,
-      profiles: [...Array.filter(config.profiles, (entry) => entry.name !== name), { name, profile }]
-    })
+    yield* Profiles.save(name, profile, { replace })
     yield* Console.log(
       `Saved profile ${name}. Model availability and role capabilities are checked when models are resolved.`
     )
-  }, withLock)
+  })
 ).pipe(
   withExperimentalDescription(
     "Save a profile selecting the language and decision models; --replace overwrites one with the same name"

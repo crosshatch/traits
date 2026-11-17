@@ -8,10 +8,10 @@ export const list = Command.make(
   "list",
   {},
   Effect.fn("auth.list")(function* () {
-    const accounts = yield* Accounts.read
+    const accounts = yield* Accounts.list
     if (accounts.length === 0) {
       return yield* Console.log("No saved accounts. Run traits auth login <provider>.")
     }
-    for (const account of accounts) yield* Console.log(`${account.id}\t${account.provider}\t${account.credential._tag}`)
+    for (const account of accounts) yield* Console.log(`${account.id}\t${account.provider}\t${account.credentialType}`)
   })
 ).pipe(withExperimentalDescription("List saved provider accounts"))

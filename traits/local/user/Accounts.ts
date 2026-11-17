@@ -1,8 +1,10 @@
 import { Array, Effect, FileSystem, pipe, Schema as S } from "effect"
 
 import { writeAtomic } from "./_common.ts"
+import { ModelSelection } from "./Profile/ModelSelection.ts"
 import { AccountName } from "./Provider/AccountName.ts"
 import { ProviderAccount } from "./Provider/ProviderAccount.ts"
+import * as UserConfig from "./UserConfig.ts"
 import { withLock } from "./UserConfigLock.ts"
 import { UserFileSecurity } from "./UserFileSecurity.ts"
 import { UserPaths } from "./UserPaths.ts"
@@ -103,4 +105,45 @@ export const save = Effect.fn("Accounts.save")(function* (entry: ProviderAccount
     )
   )
   yield* write([...Array.filter(accounts, (saved) => saved.id !== entry.id), entry])
+}, withLock)
+
+/** Account metadata safe to display; never includes credentials or connection settings. */
+export const list = read.pipe(
+  Effect.map((accounts) =>
+    Array.map(accounts, (account) => ({
+      id: account.id,
+      provider: account.provider,
+      method: account.method,
+      credentialType: account.credential._tag
+    }))
+  )
+)
+
+/** An account cannot be removed because it is missing or referenced by profiles. */
+export class AccountRemovalError extends S.TaggedError<AccountRemovalError>()("AccountRemovalError", {
+  message: S.String
+}) {}
+
+/** Removes local credentials, not the remote provider key, after checking profile references under the user configuration lock. */
+export const remove = Effect.fn("Accounts.remove")(function* (account: AccountName) {
+  const accounts = yield* read
+  if (!Array.some(accounts, (entry) => entry.id === account)) {
+    return yield* AccountRemovalError.make({ message: `Unknown account: ${account}` })
+  }
+  const { profiles } = yield* UserConfig.read
+  const references = Array.filter(profiles, (entry) =>
+    Array.some(
+      [entry.profile.language, entry.profile.decision],
+      (selection) => ModelSelection.guards.Provider(selection) && selection.account === account
+    )
+  )
+  if (references.length > 0) {
+    return yield* AccountRemovalError.make({
+      message: `Account ${account} is referenced by profiles: ${Array.join(
+        Array.map(references, (entry) => entry.name),
+        ", "
+      )}. Update or remove them first.`
+    })
+  }
+  yield* write(Array.filter(accounts, (entry) => entry.id !== account))
 }, withLock)

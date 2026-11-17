@@ -1,4 +1,4 @@
-import { Array, Data, Effect, Option, pipe, Record, Result, Schema as S, String } from "effect"
+import { Array, Data, Effect, Option, pipe, Record, Result, Schema as S, String, Struct } from "effect"
 import { Decision, DecisionModel, LanguageModel } from "effect/ai"
 
 import { CurrentSettings } from "./Settings.ts"
@@ -306,4 +306,72 @@ export const explain = Effect.fn("TraitDerivation.explain")(function* (
       )
     ])
   )
+})
+
+/** A derivation ready for host-controlled approval and persistence, or an explained outcome requiring no write. */
+export type Plan = Data.TaggedEnum<{
+  readonly Covered: Omit<Extract<TraitDerivation, { readonly _tag: "Covered" }>, "_tag">
+  readonly Unresolved: Omit<Extract<TraitDerivation, { readonly _tag: "Unresolved" }>, "_tag">
+  readonly NameTaken: Omit<Extract<TraitDerivation, { readonly _tag: "NameTaken" }>, "_tag">
+  readonly Proposed: {
+    readonly document: TraitFile.TraitDocument
+    /** Exact replacement text; hosts should persist this only after approval. */
+    readonly text: string
+    /** Snapshot to compare against before replacing an existing trait; absent for creation. */
+    readonly current: string | undefined
+    readonly relationship: "covered" | "clarification" | undefined
+    readonly reason: string | undefined
+  }
+}>
+export const Plan = Data.taggedEnum<Plan>()
+
+/** Compares and explains a proposal without loading files, requesting approval, or writing. The host owns validation of extension references and persistence, including checking that the approved snapshot is still current. */
+export const prepare = Effect.fn("TraitDerivation.prepare")(function* (
+  document: TraitFile.TraitDocument,
+  existing: ReadonlyArray<{ readonly name: TraitName; readonly text: string }>
+) {
+  const proposal = TraitFile.serialize(document)
+  const related = yield* compare(document.name, proposal, existing)
+  const resolution = yield* resolve(document.name, proposal, existing, related)
+  const explained = Effect.fnUntraced(function* <
+    Entry extends { readonly name: TraitName; readonly relationship: string }
+  >(entries: Array.NonEmptyReadonlyArray<Entry>) {
+    const reasons = yield* explain(
+      proposal,
+      Array.map(entries, (entry) => ({
+        ...entry,
+        text: Array.findFirst(existing, (trait) => trait.name === entry.name).pipe(
+          Option.map((trait) => trait.text),
+          Option.getOrElse(() => "")
+        )
+      }))
+    )
+    return Array.map(entries, (entry) => ({ ...entry, reason: reasons[entry.name]! }))
+  })
+  if (Resolution.$is("Unresolved")(resolution)) {
+    return Plan.Unresolved({ name: document.name, traits: yield* explained(resolution.traits) })
+  }
+  if (Resolution.$is("Covered")(resolution)) {
+    const covers = yield* explained(resolution.by)
+    return Plan.Covered({
+      name: document.name,
+      by: Array.map(covers, Struct.pick(["name", "reason"]))
+    })
+  }
+  if (Resolution.$is("NameTaken")(resolution)) {
+    return Plan.NameTaken({ name: document.name })
+  }
+  const replaced = Resolution.$is("Replace")(resolution) ? resolution : undefined
+  const saved = replaced === undefined ? document : { ...document, name: replaced.name }
+  const reason = replaced === undefined ? undefined : (yield* explained([replaced]))[0].reason
+  return Plan.Proposed({
+    document: saved,
+    text: TraitFile.serialize(saved),
+    current: Array.findFirst(existing, (entry) => entry.name === replaced?.name).pipe(
+      Option.map((entry) => entry.text),
+      Option.getOrUndefined
+    ),
+    relationship: replaced?.relationship,
+    reason
+  })
 })

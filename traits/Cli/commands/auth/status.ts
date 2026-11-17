@@ -12,7 +12,7 @@ export const status = Command.make(
   },
   Effect.fn("auth.status")(function* (params) {
     const account = Option.getOrUndefined(params.account)
-    const accounts = yield* Accounts.read
+    const accounts = yield* Accounts.list
     const selected = account !== undefined ? Array.filter(accounts, (entry) => entry.id === account) : accounts
     if (account !== undefined && selected.length === 0) {
       return yield* CliError.UserError.make({ cause: `Unknown account: ${account}` })

@@ -1,9 +1,8 @@
-import { Array, Console, Effect, Record } from "effect"
-import { Argument, CliError, Command, Flag } from "effect/cli"
+import { Console, Effect } from "effect"
+import { Argument, Command, Flag } from "effect/cli"
 
 import { ProfileName } from "../../../local/user/Profile/ProfileName.ts"
-import * as UserConfig from "../../../local/user/UserConfig.ts"
-import { withLock } from "../../../local/user/UserConfigLock.ts"
+import * as Profiles from "../../../local/user/Profiles.ts"
 import { withExperimentalDescription } from "../_common.ts"
 
 export const remove = Command.make(
@@ -17,27 +16,9 @@ export const remove = Command.make(
   },
   Effect.fn("profile.remove")(function* (params) {
     const { name } = params
-    const config = yield* UserConfig.read.pipe(
-      Effect.filterOrFail(
-        (config) => Array.some(config.profiles, (entry) => entry.name === name),
-        () => CliError.UserError.make({ cause: `Unknown profile: ${name}` })
-      )
-    )
-    if (
-      !params.force &&
-      (name === "default" || Record.some(config.workspaceProfiles, (selected) => selected === name))
-    ) {
-      return yield* CliError.UserError.make({
-        cause: `Profile ${name} is the default profile or selected by a workspace. Use --force to remove it and clear its workspace selections.`
-      })
-    }
-    yield* UserConfig.write({
-      ...config,
-      profiles: Array.filter(config.profiles, (entry) => entry.name !== name),
-      workspaceProfiles: Record.filter(config.workspaceProfiles, (selected) => selected !== name)
-    })
+    yield* Profiles.remove(name, { force: params.force })
     yield* Console.log(`Removed profile ${name}.`)
-  }, withLock)
+  })
 ).pipe(
   withExperimentalDescription("Remove a profile; --force also removes the default profile or one a workspace uses")
 )

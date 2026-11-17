@@ -8,10 +8,11 @@ its filesystem, and extension loading lives in `local/`, exported as
 `traits/local`, including the configured models (`Models`), which wire the
 provider SDKs and read their credentials. `local/user/` holds user-level state
 on the machine: profiles, provider accounts, their owner-only storage, and the
-lock that serializes their updates. It backs the experimental `auth` and
-`profile` commands and is not exported. The CLI and MCP server build on
-`local/`; `Cli/` keeps only command handling and terminal prompts, and core
-modules never import from `local/`, `Cli/`, or `mcp/`.
+lock that serializes their updates. Its supported operations are exported as the
+experimental `User` namespace from `traits/local`, backing the `auth` and
+`profile` commands without exposing raw storage writes. The CLI and MCP server
+build on `local/`; `Cli/` keeps only command handling and terminal prompts, and
+core modules never import from `local/`, `Cli/`, or `mcp/`.
 
 A module is named for the type or operation it owns and exports the operations
 on that type beside it, so it reads as a namespace: `TraitFile.parse`,
@@ -364,6 +365,13 @@ in a read-only checkout, checks run without remembering decisions. The
 evaluation runner uses no cache, so accuracy measurements always ask the model.
 
 ## Derive traits
+
+`TraitDerivation.prepare(document, existing)` is the portable planning
+operation: it compares supplied snapshots, resolves and explains relationships,
+and returns either a no-write outcome or a `Proposed` document with its
+serialized replacement and current snapshot. Approval, extension-reference
+validation, and persistence belong to the host. `WorkspaceDerive` uses the same
+planner before requesting approval and writing workspace files.
 
 `WorkspaceDerive.derive(document, approve)` (`local/WorkspaceDerive`) turns one
 proposed trait file into a saved one. It validates the proposal as its file
