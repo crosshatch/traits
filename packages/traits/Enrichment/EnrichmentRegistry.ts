@@ -1,7 +1,7 @@
 import { Context, Effect, flow, Layer, Schema as S, type Scope } from "effect"
 import type { Chat } from "effect/ai"
 
-import * as ExtensionRegistry from "../util/ExtensionRegistry.ts"
+import * as ExtensionRuntime from "../ExtensionRuntime.ts"
 import type { WorkspacePath } from "../util/WorkspacePath.ts"
 import type { EnrichmentError, EnrichmentSetupError } from "./Enrichment.ts"
 import * as Enrichment from "./Enrichment.ts"
@@ -31,7 +31,7 @@ export const layer = <R>(
   Layer.effect(
     EnrichmentRegistry,
     Effect.gen(function* () {
-      const { get, run } = yield* ExtensionRegistry.make(setup, Enrichment.EnrichmentError)
+      const { get, run } = yield* ExtensionRuntime.make(setup, Enrichment.EnrichmentError)
       return flow(get, Effect.map(flow(run, Effect.flatMap(S.decodeUnknownEffect(S.String)))))
     })
   )

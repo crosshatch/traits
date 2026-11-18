@@ -1,10 +1,10 @@
 import { Schema as S } from "effect"
 
-import { Probability } from "../util/Probability.ts"
+import { Probability } from "./util/Probability.ts"
 
 /** Subject-membership probabilities; normalization is owned by the decision model, and checks apply the rule-out threshold. */
-export type SubjectMatch = typeof SubjectMatch.Type
-export const SubjectMatch = S.Struct({
+export type TraitSubjectMatch = typeof TraitSubjectMatch.Type
+export const TraitSubjectMatch = S.Struct({
   /** Probability that the selected target is or contains an instance of the subject. */
   yes: Probability.annotateKey({
     description: "Probability that the selected target is or contains an instance of the subject."

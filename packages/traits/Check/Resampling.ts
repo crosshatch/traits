@@ -1,20 +1,8 @@
 import { Array, Effect, Order, Record, Result } from "effect"
-import { type Decision, DecisionModel } from "effect/ai"
 
+import type { ClassificationResponse } from "../ClassificationResponse.ts"
+import * as DecisionUsage from "../DecisionUsage.ts"
 import { CurrentSettings } from "../Settings.ts"
-
-type Response<Key extends string, Label extends string> = DecisionModel.DecideSettledResponse<
-  Record<Key, Decision.Classify<Label>>
->
-
-/** A token count summed over responses, or unreported when any response did not report it. */
-const total = (
-  responses: ReadonlyArray<{ readonly usage: DecisionModel.DecisionUsage }>,
-  count: "inputTokens" | "outputTokens"
-) =>
-  Array.every(responses, (response) => response.usage[count] !== undefined)
-    ? Array.reduce(responses, 0, (sum, response) => sum + response.usage[count]!)
-    : undefined
 
 /**
  * Settles a close call: when the answer's deciding probability is within check.resampling.margin of its threshold,
@@ -25,7 +13,7 @@ const total = (
  */
 export const settle = Effect.fnUntraced(function* <Key extends string, Label extends string, E, R>(
   key: Key,
-  ask: Effect.Effect<Response<Key, Label>, E, R>,
+  ask: Effect.Effect<ClassificationResponse<Key, Label>, E, R>,
   /** How far the answer's probabilities are from the threshold that decides its verdict. */
   distance: (probabilities: { readonly [L in Label]: number }) => number
 ) {
@@ -72,9 +60,6 @@ export const settle = Effect.fnUntraced(function* <Key extends string, Label ext
   return {
     ...first,
     outcomes: Record.set(first.outcomes, key, Result.succeed({ label: label!, probabilities })),
-    usage: DecisionModel.DecisionUsage.make({
-      inputTokens: total(responses, "inputTokens"),
-      outputTokens: total(responses, "outputTokens")
-    })
+    usage: DecisionUsage.sum(Array.map(responses, (response) => response.usage))
   }
 })

@@ -1,6 +1,7 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Layer, Stream } from "effect"
+import { AiError } from "effect/ai"
 import { HttpClient, HttpClientResponse } from "effect/http"
 
 import * as WorkspaceChanges from "../local/WorkspaceChanges.ts"
@@ -74,6 +75,27 @@ it.effect("returns check failures and unexpected errors to the client as actiona
     // An unexpected error is likely a bug, so the agent offers to report it instead of asking the user to fix it.
     expect(message).toContain("crosshatch/traits")
     expect(message).toContain("Open it only if they agree")
+  })
+)
+
+it.effect("surfaces provider details and billing recovery to the MCP check client", () =>
+  Effect.gen(function* () {
+    const failure = AiError.make({
+      module: "OpenRouterClient",
+      method: "createDecisions",
+      reason: AiError.UnknownError.make({
+        description: "Insufficient credits. Add more using https://openrouter.ai/settings/credits",
+        http: { response: { status: 402, headers: {} } }
+      })
+    })
+    const result = yield* call.pipe(Effect.provide(server(() => Effect.fail(failure), PackageJson.version)))
+    expect(result.isFailure).toBe(true)
+    const message = messageOf(result)
+    expect(message).toContain("Insufficient credits")
+    expect(message).toContain("https://openrouter.ai/settings/credits")
+    expect(message).toContain("HTTP 402")
+    expect(message).toContain("Check billing")
+    expect(message).toContain("neither a pass nor a finding")
   })
 )
 

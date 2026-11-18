@@ -418,7 +418,11 @@ it.effect("fails the whole check when the provider rejects the account, instead 
   Effect.gen(function* () {
     for (const reason of [
       AiError.AuthenticationError.make({ kind: "InvalidKey", description: "Invalid API key." }),
-      AiError.QuotaExhaustedError.make({})
+      AiError.QuotaExhaustedError.make({}),
+      AiError.UnknownError.make({
+        description: "Insufficient credits.",
+        http: { response: { status: 402, headers: {} } }
+      })
     ]) {
       let requests = 0
       const failure = yield* check({

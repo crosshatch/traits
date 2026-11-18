@@ -1,20 +1,16 @@
-import { Array, Function, Schema as S } from "effect"
+import { Array, Schema as S } from "effect"
 
+import { checkIdentityConstraints } from "../Check/checkIdentityConstraints.ts"
 import { Segment } from "../util/Segment.ts"
 import { Version } from "../Version.ts"
 import { ChangeIdentity } from "./ChangeIdentity.ts"
 import { ChangeReport } from "./ChangeReport.ts"
-import type { DecisionPolicy } from "./DecisionPolicy.ts"
 import { Diagnostic } from "./Diagnostic.ts"
 import { DiagnosticOrigin } from "./DiagnosticOrigin.ts"
 import { EnrichmentOutcome } from "./EnrichmentOutcome.ts"
 import { InputReport } from "./InputReport.ts"
-import { Problem } from "./Problem.ts"
-import type { ReportVerdicts } from "./ReportVerdicts.ts"
 import { Run } from "./Run.ts"
 import { TraitReport } from "./TraitReport.ts"
-import { unambiguousIdentities } from "./unambiguousIdentities.ts"
-import { combineVerdicts, type Verdict } from "./Verdict.ts"
 
 /** Portable, client-facing evaluation results grouped by trait and change, without source text or excerpts; retry tracking is external. */
 export type Report = typeof Report.Type
@@ -43,7 +39,7 @@ export const Report = S.Struct({
       "Portable, client-facing evaluation results grouped by trait and change, without source text or excerpts; retry tracking is external."
   })
   .check(
-    ...unambiguousIdentities,
+    ...checkIdentityConstraints,
     S.makeFilter(
       (report) =>
         Array.every(report.traits, (trait) => trait.changes.length === report.changes.length) &&
@@ -116,98 +112,21 @@ export const Report = S.Struct({
     )
   )
 
-/** Derives Fail, Incomplete, Inconclusive, or Pass for every input, change, trait, and the report from a runner-produced report and policy. Interrupted checks return no report. */
-export const verdicts: {
-  (policy: DecisionPolicy): (report: Report) => ReportVerdicts
-  (report: Report, policy: DecisionPolicy): ReportVerdicts
-} = Function.dual(2, (report: Report, policy: DecisionPolicy): ReportVerdicts => {
-  const inputVerdict = (input: InputReport): Verdict =>
-    InputReport.match(input, {
-      Completed: (completed): Verdict => {
-        const { assessment } = completed
-        // A likely violation outranks every other outcome, including reduced enrichment context.
-        if (assessment !== undefined && assessment.fail >= policy.fail) {
-          return "Fail"
-        }
-        if (!Array.every(completed.enrichments, EnrichmentOutcome.guards.Succeeded)) {
-          return "Incomplete"
-        }
-        // Completed guidance-only inputs have no assessment and pass. An assertion that holds and one that does not
-        // apply are both acceptable, so their probabilities count together.
-        return assessment === undefined || assessment.pass + assessment.na >= policy.pass ? "Pass" : "Inconclusive"
-      },
-      // The trait does not apply to a target its subject decision ruled out.
-      Unmatched: (): Verdict => "Pass",
-      Failed: (): Verdict => "Incomplete",
-      Cancelled: (): Verdict => "Incomplete"
-    })
-  const traits = Array.map(report.traits, (trait) => {
-    const changes = Array.map(
-      trait.changes,
-      (change): { readonly verdict: Verdict; readonly inputs: ReadonlyArray<Verdict> } =>
-        ChangeReport.match(change, {
-          NotSegmented: () => ({ verdict: "Incomplete" as const, inputs: [] }),
-          Evaluated: (evaluated) => {
-            const inputs = Array.map(evaluated.inputs, inputVerdict)
-            return { verdict: combineVerdicts(inputs), inputs }
-          }
-        })
-    )
-    return {
-      verdict: combineVerdicts(Array.map(changes, (change) => change.verdict)),
-      changes
-    }
-  })
-  return {
-    verdict: combineVerdicts([
-      ...Array.map(traits, (trait) => trait.verdict),
-      ...(report.diagnostics.length > 0 ? (["Incomplete"] as const) : [])
-    ]),
-    traits
-  }
-})
+export { fromReport as verdicts } from "./ReportVerdicts.ts"
+export { fromReport as problems } from "./Problem.ts"
 
-/** Lists every failure in a report with its location: shared diagnostics first, then enrichment and assessment failures in trait, change, and input order. */
-export const problems = (report: Report): ReadonlyArray<Problem> => [
-  ...Array.map(report.diagnostics, (diagnostic) => Problem.cases.Shared.make({ diagnostic })),
-  ...Array.flatMap(report.traits, (traitReport, trait) =>
-    Array.flatMap(traitReport.changes, (result, change) =>
-      ChangeReport.guards.Evaluated(result)
-        ? Array.flatMap(result.inputs, (inputReport, input) => [
-            ...Array.flatMap(InputReport.guards.Unmatched(inputReport) ? [] : inputReport.enrichments, (enrichment) =>
-              EnrichmentOutcome.guards.Failed(enrichment)
-                ? [
-                    Problem.cases.Enrichment.make({
-                      trait,
-                      change,
-                      input,
-                      module: enrichment.module,
-                      explanation: enrichment.explanation
-                    })
-                  ]
-                : []
-            ),
-            ...(InputReport.guards.Failed(inputReport) && inputReport.explanation !== undefined
-              ? [Problem.cases.Assessment.make({ trait, change, input, explanation: inputReport.explanation })]
-              : [])
-          ])
-        : []
-    )
-  )
-]
-
-export * from "./Assessment.ts"
+export { TraitAssessment as Assessment } from "../TraitAssessment.ts"
 export * from "./ChangeReport.ts"
-export * from "./DecisionPolicy.ts"
+export * from "../DecisionPolicy.ts"
 export * from "./Diagnostic.ts"
 export * from "./DiagnosticOrigin.ts"
 export * from "./EnrichmentOutcome.ts"
 export * from "./Explanation.ts"
 export * from "./InputReport.ts"
-export * from "./Problem.ts"
-export * from "./ReportVerdicts.ts"
-export * from "./SubjectMatch.ts"
-export * from "./TraitOrigin.ts"
+export { Problem } from "./Problem.ts"
+export { ReportVerdicts } from "./ReportVerdicts.ts"
+export { TraitSubjectMatch as SubjectMatch } from "../TraitSubjectMatch.ts"
+export * from "../TraitOrigin.ts"
 export * from "./TraitReport.ts"
 export * from "./Verdict.ts"
 // These modules also export the operations that build their types, named for use behind the module's own name

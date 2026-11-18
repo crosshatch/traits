@@ -14,8 +14,8 @@ export const ExtensionModule = <A, E>() =>
   })
 
 /** An extension reference and the explicit file URL supplying its resolution context. */
-export type ResolveInput = typeof ResolveInput.Type
-export const ResolveInput = S.Struct({
+export type ExtensionResolutionInput = typeof ExtensionResolutionInput.Type
+export const ExtensionResolutionInput = S.Struct({
   /** The unresolved extension path or ESM package reference supplied by the host. */
   reference: S.String.annotate({
     description: "The unresolved extension path or ESM package reference supplied by the host."
@@ -28,7 +28,7 @@ export const ResolveInput = S.Struct({
 
 /** A host could not resolve an extension reference to a module file within the workspace. */
 export class ModuleResolutionError extends S.TaggedError<ModuleResolutionError>()("ModuleResolutionError", {
-  input: ResolveInput,
+  input: ExtensionResolutionInput,
   /** The original resolution or validation failure, kept outside check diagnostics. */
   cause: S.Defect().annotate({
     description: "The original resolution or validation failure, kept outside check diagnostics."
@@ -41,7 +41,7 @@ export class ModuleResolutionError extends S.TaggedError<ModuleResolutionError>(
 
 /** Resolves an ESM reference from a trait file or explicit host-module URL, not from the traits installation, to the canonical module file's workspace path. */
 export const resolve = Effect.fn("ExtensionModule.resolve")(
-  function* (input: ResolveInput) {
+  function* (input: ExtensionResolutionInput) {
     const { directory } = yield* WorkspaceRoot
     const path = yield* Path.Path
     const url = yield* Effect.try({
@@ -75,3 +75,5 @@ export const load = Effect.fnUntraced(function* <A, E>(
   )
   return yield* pipe(execute, S.decodeUnknownEffect(result))
 })
+
+export { ExtensionResolutionInput as ResolveInput }

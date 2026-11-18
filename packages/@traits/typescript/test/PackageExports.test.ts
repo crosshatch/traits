@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Path, PlatformError } from "effect"
+import { Effect, FileSystem, Layer, Path, PlatformError } from "effect"
 import { Enrichment, fromSegment, Segment, Trait, TraitName, TraitPurpose, WorkspacePath } from "traits"
 import { WorkspaceRoot } from "traits/local"
 
@@ -32,7 +32,7 @@ it.effect("reports manifest lookup access failures as recoverable enrichment err
     expect(error.reason._tag).toBe("Enrichment")
     expect(error.instruction).toContain("pkg/package.json")
     expect(error.instruction).toContain("permissions")
-  }).pipe(Effect.provide(WorkspaceRoot.layer(".")), Effect.provide(NodeServices.layer))
+  }).pipe(Effect.provide(WorkspaceRoot.layer(".").pipe(Layer.provideMerge(NodeServices.layer))))
 )
 
 it.live("states whether a file is an entry point of its nearest package", () =>

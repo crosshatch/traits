@@ -24,6 +24,34 @@ other module shares, which the package root exports by name rather than as
 namespaces. `Report/Report.ts` exports the report's schemas as one namespace,
 leaving out the `from*` operations of the modules that have them.
 
+Classification batches share `ClassificationResponse`; `DecisionProvenance`
+describes only the model and usage needed to assemble a run. `DecisionUsage.sum`
+owns token aggregation, including unknown counts. `Check/InputDecisions` owns
+per-input subject/assertion execution, resampling, and cache-key policy;
+`Check/DecisionCache` owns only the storage contract and stored decision schema.
+Custom callers use `InputDecisions.forInput` rather than
+`DecisionCache.forInput`.
+
+`TraitOrigin`, `TraitAssessment`, `TraitSubjectMatch`, and `DecisionPolicy` are
+core domain modules, re-exported under their existing `Report` names for
+callers. `ReportVerdicts.fromReport` and `Problem.fromReport` own derived views;
+`Report.verdicts` and `Report.problems` remain their public convenience names.
+`EnrichmentResult` owns successful context data. Assertion requests retain their
+existing `Succeeded` tag and encoding without depending on report outcomes.
+
+`TraitComparison` owns comparison criteria, model calls, explanations, and
+comparison errors. `TraitDerivationPlan` owns plans and the shared no-write
+outcomes; `TraitApproval` owns the approval contract. `TraitDerivation`
+assembles plans and completed outcomes and re-exports the earlier public names.
+
+`ModelId` and `local/ModelConfiguration` describe selections without loading
+provider SDKs; `local/Models` builds provider clients. User configuration
+storage stays in `UserConfig`; selection precedence belongs to
+`Profiles.resolve`, and custom selection paths are resolved by
+`Profile/ModelSelection.resolve`. `WorkspaceEnvironments.load` reads
+environments; `WorkspaceTraits.select` combines them with available and
+explicitly requested traits.
+
 ## Runtime API
 
 `check({ traits, changes })` evaluates caller-ordered traits and changes and
@@ -35,12 +63,13 @@ assessed. Guidance-only traits do not call the decision model. The request is
 decoded first: duplicate trait names or two changes sharing an after path fail
 with a `SchemaError` before any extension or model work. The check also fails,
 with the decision model's `AiError`, when the provider rejects the account
-itself (`AuthenticationError` or `QuotaExhaustedError`, per `rejectsAccount`):
-no further decision could succeed, so a report of failed inputs would only hide
-the cause. Other decision failures are recorded on their inputs. Decisions
-completed before the failure stay in the decision cache, so the check after the
-fix is cheap. Success of the Effect means report assembly finished, not that its
-assessments satisfy a caller's acceptance policy; use `Report.verdicts` with a
+itself (`AuthenticationError`, `QuotaExhaustedError`, or HTTP 401/402/403 even
+when an adapter labels it `UnknownError`, per `rejectsAccount`): no further
+decision could succeed, so a report of failed inputs would only hide the cause.
+Other decision failures are recorded on their inputs. Decisions completed before
+the failure stay in the decision cache, so the check after the fix is cheap.
+Success of the Effect means report assembly finished, not that its assessments
+satisfy a caller's acceptance policy; use `Report.verdicts` with a
 `DecisionPolicy` for that interpretation.
 
 Subject identification is also available independently as
@@ -172,7 +201,7 @@ chat and scope the registry creates for each execution. Local hosts additionally
 provide `WorkspaceRoot`, so extensions can read workspace files that change
 paths are relative to. Keep the same model/account bindings for the lifetime of
 those registries. Each registry owns its own typed cache; the internal
-`ExtensionRegistry.make` shares cache lifecycle, setup-scope ownership, service
+`ExtensionRuntime.make` shares cache lifecycle, setup-scope ownership, service
 capture, and fresh execution contexts without a kind discriminator. It accepts
 setup-result, setup-error, and execution-error schemas; `ExtensionModule.load`
 owns importing, module/result validation, and rejection of undeclared setup
@@ -365,6 +394,15 @@ evaluation runner uses no cache, so accuracy measurements always ask the model.
 
 ## Derive traits
 
+Comparison request failures propagate as their original `AiError`, preserving
+the provider's description for the MCP error boundary. `TraitComparisonError`
+represents an unanswered comparison, including its missing/refused/invalid
+reason, rather than replacing request failures with an error tag. MCP failures
+include the original cause, provider operation, reason tag, HTTP status when
+available, and billing/access or retry guidance. Account detection uses typed
+reasons and HTTP status, not text matching against provider messages. Raw HTTP
+context is not separately serialized into tool output or report entries.
+
 `TraitDerivation.prepare(document, existing)` is the portable planning
 operation: it compares supplied snapshots, resolves and explains relationships,
 and returns either a no-write outcome or a `Proposed` document with its
@@ -375,7 +413,7 @@ planner before requesting approval and writing workspace files.
 `WorkspaceDerive.derive(document, approve)` (`local/WorkspaceDerive`) turns one
 proposed trait file into a saved one. It validates the proposal as its file
 would be read, including extension references, then uses
-`TraitDerivation.compare` (core) to ask the decision model how each existing
+`TraitComparison.compare` (core) to ask the decision model how each existing
 trait relates to it: distinct, covered, clarification, conflict, or
 inconclusive, deciding up to `derive.batchSize` (32) existing traits per
 request. `TraitDerivation.resolve` (core) then decides from those labels what to

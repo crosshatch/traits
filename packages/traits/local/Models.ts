@@ -5,69 +5,9 @@ import * as OpenAiCompatible from "@effect/ai-openai-compat"
 import { OpenRouterClient, OpenRouterDecisionModel, OpenRouterLanguageModel } from "@effect/ai-openrouter"
 import { Array, Config, type Context, Layer, Schema as S } from "effect"
 
-/** The provider's model ID, without whitespace; it may contain slashes, such as `anthropic/claude`. */
-export const ModelId = S.String.check(
-  S.isPattern(/^\S+$/u, { message: "Expected a model ID without whitespace." })
-).annotate({
-  description: "The provider's model ID, without whitespace; it may contain slashes, such as `anthropic/claude`."
-})
-
-/** An OpenAI model; the API key is read from OPENAI_API_KEY. */
-const OpenAi = S.Struct({ provider: S.Literal("openai"), model: ModelId }).annotate({
-  description: "An OpenAI model; the API key is read from OPENAI_API_KEY."
-})
-
-/** An Anthropic model; the API key is read from ANTHROPIC_API_KEY. */
-const Anthropic = S.Struct({ provider: S.Literal("anthropic"), model: ModelId }).annotate({
-  description: "An Anthropic model; the API key is read from ANTHROPIC_API_KEY."
-})
-
-/** An OpenRouter model; the API key is read from OPENROUTER_API_KEY. */
-const OpenRouter = S.Struct({ provider: S.Literal("openrouter"), model: ModelId }).annotate({
-  description: "An OpenRouter model; the API key is read from OPENROUTER_API_KEY."
-})
-
-/** A Cloudflare Workers AI model; credentials are read from CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN. */
-const Cloudflare = S.Struct({ provider: S.Literal("cloudflare"), model: ModelId }).annotate({
-  description:
-    "A Cloudflare Workers AI model; credentials are read from CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN."
-})
-
-/** A model served by any OpenAI-compatible API, such as a local or self-hosted server. */
-const OpenAiCompatibleModel = S.Struct({
-  provider: S.Literal("openai-compatible"),
-  model: ModelId,
-  /** The API base URL, starting with http:// or https://. */
-  url: S.String.check(
-    S.isPattern(/^https?:\/\/\S+$/u, { message: "Expected a URL starting with http:// or https://." })
-  ).annotate({ description: "The API base URL, starting with http:// or https://." }),
-  /** The environment variable holding the API key; omitted when the server needs none. */
-  apiKeyEnv: S.NonEmptyString.annotateKey({
-    description: "The environment variable holding the API key; omitted when the server needs none."
-  }).pipe(S.optionalKey)
-}).annotate({ description: "A model served by any OpenAI-compatible API, such as a local or self-hosted server." })
-
-/** A provider and model for free-form generation by extensions. */
-export type LanguageModelSelection = typeof LanguageModelSelection.Type
-export const LanguageModelSelection = S.Union([OpenAi, Anthropic, OpenRouter, OpenAiCompatibleModel])
-  .annotate({ description: "A provider and model for free-form generation by extensions." })
-  .pipe(S.toTaggedUnion("provider"))
-
-/** A provider and model for trait assessments and subject matching. */
-export type DecisionModelSelection = typeof DecisionModelSelection.Type
-export const DecisionModelSelection = S.Union([OpenAi, OpenRouter, Cloudflare])
-  .annotate({ description: "A provider and model for trait assessments and subject matching." })
-  .pipe(S.toTaggedUnion("provider"))
-
-/** The models a workspace checks traits with, kept in version control so reviewers can see which models are used. */
-export type Models = typeof Models.Type
-export const Models = S.Struct({
-  language: LanguageModelSelection,
-  decision: DecisionModelSelection
-}).annotate({
-  description:
-    "The models a workspace checks traits with, kept in version control so reviewers can see which models are used."
-})
+import { DecisionModelSelection, LanguageModelSelection, ModelConfiguration } from "./ModelConfiguration.ts"
+export { ModelId } from "../ModelId.ts"
+export { DecisionModelSelection, LanguageModelSelection, ModelConfiguration as Models } from "./ModelConfiguration.ts"
 
 /** A selected provider's credentials are missing from the environment and the workspace's .env files. */
 export class ModelCredentialsError extends S.TaggedError<ModelCredentialsError>()("ModelCredentialsError", {
@@ -103,7 +43,9 @@ const openRouterClient = OpenRouterClient.layerConfig({ apiKey: Config.Redacted(
 const cloudflareClient = CloudflareClient.layerConfig().pipe(
   requiring(CloudflareClient.CloudflareClient, "Cloudflare", ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"])
 )
-const openAiCompatibleClient = (selection: typeof OpenAiCompatibleModel.Type) =>
+const openAiCompatibleClient = (
+  selection: Extract<LanguageModelSelection, { readonly provider: "openai-compatible" }>
+) =>
   OpenAiCompatible.OpenAiClient.layerConfig({
     apiUrl: Config.succeed(selection.url),
     ...(selection.apiKeyEnv === undefined ? {} : { apiKey: Config.Redacted(selection.apiKeyEnv) })
@@ -114,7 +56,7 @@ const openAiCompatibleClient = (selection: typeof OpenAiCompatibleModel.Type) =>
   )
 
 /** Language and decision model services for the selected providers; credentials are read from the active ConfigProvider. */
-export const layer = (models: Models) =>
+export const layer = (models: ModelConfiguration) =>
   Layer.mergeAll(
     LanguageModelSelection.match(models.language, {
       openai: (selection) => OpenAiLanguageModel.layer({ model: selection.model }).pipe(Layer.provide(openAiClient)),

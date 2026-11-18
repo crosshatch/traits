@@ -61,3 +61,4 @@ export class EnrichmentSetupError extends S.TaggedError<EnrichmentSetupError>()(
 }
 
 export * from "./EnrichmentContext.ts"
+export * from "./EnrichmentResult.ts"

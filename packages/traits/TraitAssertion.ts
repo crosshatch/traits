@@ -1,8 +1,9 @@
 import { Effect, Function, Record, Schema as S, String } from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
+import type { ClassificationResponse } from "./ClassificationResponse.ts"
 import * as DecisionState from "./DecisionState.ts"
-import { EnrichmentOutcome } from "./Report/EnrichmentOutcome.ts"
+import { EnrichmentResult } from "./Enrichment/EnrichmentResult.ts"
 import { TraitBody } from "./TraitBody.ts"
 import { TraitPurpose } from "./TraitPurpose.ts"
 import { TraitSubject } from "./TraitSubject.ts"
@@ -32,7 +33,8 @@ export const TraitAssertionInput = S.Struct({
     body: TraitBody.pipe(S.optionalKey)
   }).annotateKey({ description: "Static applicability and explanatory context for this assertion only." }),
   /** Successful input-specific enrichment context for this assertion only. */
-  enrichments: S.Array(EnrichmentOutcome.cases.Succeeded).annotateKey({
+  // Retain the existing request tag and encoding so moving the payload's owner does not change model requests.
+  enrichments: S.Array(S.TaggedStruct("Succeeded", EnrichmentResult.fields)).annotateKey({
     description: "Successful input-specific enrichment context for this assertion only."
   })
 }).annotate({
@@ -61,8 +63,9 @@ export const question = {
 }
 
 /** Keyed assertion outcomes and request-wide usage/metadata, retaining the four existing assessment classifications. */
-export type TraitAssertionEvaluations<Id extends string = string> = DecisionModel.DecideSettledResponse<
-  Record<Id, Decision.Classify<keyof typeof question.criteria>>
+export type TraitAssertionEvaluations<Id extends string = string> = ClassificationResponse<
+  Id,
+  keyof typeof question.criteria
 >
 
 /** Assesses caller-keyed assertions against one shared input, without subject gating or an acceptance threshold. */

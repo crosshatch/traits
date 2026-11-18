@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect"
 
 import { ModelSelection } from "../local/user/Profile/ModelSelection.ts"
 import { Profile, ProfileName } from "../local/user/Profile/Profile.ts"
+import * as Profiles from "../local/user/Profiles.ts"
 import * as UserConfig from "../local/user/UserConfig.ts"
 import { UserPaths } from "../local/user/UserPaths.ts"
 
@@ -16,10 +17,10 @@ const config = UserConfig.UserConfig.make({
   workspaceProfiles: { "/a/.git": ProfileName.make("work"), "/b/.git": ProfileName.make("missing") }
 })
 
-it.effect("resolves an explicit profile, then the workspace override, then the profile named default", () =>
+it.effect("resolves profiles from an explicit name, workspace override, or default", () =>
   Effect.gen(function* () {
     const resolve = (workspaceKey: string, explicitName?: ProfileName) =>
-      UserConfig.resolveProfile(config, explicitName).pipe(
+      Profiles.resolve(config, explicitName).pipe(
         Effect.provide(
           Layer.succeed(
             UserPaths,

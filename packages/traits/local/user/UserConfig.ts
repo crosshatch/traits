@@ -1,4 +1,4 @@
-import { Array, Effect, FileSystem, Option, pipe, Schema as S } from "effect"
+import { Effect, FileSystem, pipe, Schema as S } from "effect"
 
 import { writeAtomic } from "./_common.ts"
 import { Profile, ProfileName } from "./Profile/Profile.ts"
@@ -43,16 +43,6 @@ export class UserConfigWriteError extends S.TaggedError<UserConfigWriteError>()(
   }
 }
 
-/** The selected profile does not exist. */
-export class ProfileNotFoundError extends S.TaggedError<ProfileNotFoundError>()("ProfileNotFoundError", {
-  /** The selected profile name. */
-  profile: ProfileName.annotateKey({ description: "The selected profile name." })
-}) {
-  override get message(): string {
-    return `Selected profile ${this.profile} does not exist. Create it with traits profile create ${this.profile}, or select an existing workspace profile with traits profile use <name>.`
-  }
-}
-
 /** Reads fresh profile settings; missing configuration is empty. */
 export const read = Effect.gen(function* () {
   const { config } = yield* UserPaths
@@ -77,21 +67,3 @@ export const write = Effect.fn("UserConfig.write")(
   },
   Effect.catch((cause) => UserPaths.use((paths) => UserConfigWriteError.make({ path: paths.config, cause })))
 )
-
-/** Resolves an explicit name, workspace override, or the profile named default; missing profiles fail. */
-export const resolveProfile = Effect.fn("UserConfig.resolveProfile")(function* (
-  config: UserConfig,
-  explicitName?: ProfileName
-) {
-  let selected = explicitName
-  if (selected === undefined) {
-    const { workspaceKey } = yield* UserPaths
-    selected = config.workspaceProfiles[workspaceKey] ?? ProfileName.make("default")
-  }
-  return yield* Array.findFirst(config.profiles, (entry) => entry.name === selected).pipe(
-    Option.match({
-      onSome: Effect.succeed,
-      onNone: () => ProfileNotFoundError.make({ profile: selected })
-    })
-  )
-})

@@ -1,28 +1,25 @@
 import { Array, Data, Deferred, Effect, Result, Struct } from "effect"
 import type { AiError, Decision } from "effect/ai"
 
+import type { DecisionProvenance } from "../DecisionProvenance.ts"
 import * as Enrichment from "../Enrichment/Enrichment.ts"
 import * as Report from "../Report/Report.ts"
 import * as Segmentation from "../Segmenter/Segmentation.ts"
 import { CurrentSettings } from "../Settings.ts"
-import type * as TraitAssertion from "../TraitAssertion.ts"
-import type * as TraitSubject from "../TraitSubject.ts"
 import { type Input, primarySource, targetText } from "../util/Input.ts"
 import { rejectsAccount } from "../util/rejectsAccount.ts"
 import { digestText, type TextDigest } from "../util/TextDigest.ts"
 import type { CheckInput } from "./CheckInput.ts"
-import * as DecisionCache from "./DecisionCache.ts"
+import * as InputDecisions from "./InputDecisions.ts"
 import type { Preparation } from "./Preparation.ts"
-
-type DecisionResponse = TraitAssertion.TraitAssertionEvaluations<"assertion"> | TraitSubject.TraitSubjectMatches
 
 /** How one input's subject decision ended: decided, failed for the reason in failure when known, or cancelled because its trait stopped. */
 type SubjectGate = Data.TaggedEnum<{
   readonly Decided: {
-    readonly responses: ReadonlyArray<DecisionResponse>
+    readonly responses: ReadonlyArray<DecisionProvenance>
     readonly probabilities: Report.SubjectMatch
   }
-  readonly Failed: { readonly responses: ReadonlyArray<DecisionResponse>; readonly failure: string | undefined }
+  readonly Failed: { readonly responses: ReadonlyArray<DecisionProvenance>; readonly failure: string | undefined }
   readonly Cancelled: {}
 }>
 const SubjectGate = Data.taggedEnum<SubjectGate>()
@@ -55,9 +52,9 @@ const decisionFailed = (decision: string, reason: string | undefined) =>
   })
 
 /** One change's report and the subject and assertion decision responses received while producing it. */
-interface ChangeResult {
+interface ChangeEvaluation {
   readonly report: Report.ChangeReport
-  readonly responses: ReadonlyArray<DecisionResponse>
+  readonly responses: ReadonlyArray<DecisionProvenance>
 }
 
 /** One input with what every trait assessing it shares, so neither is worked out again for each trait. */
@@ -66,7 +63,7 @@ interface SharedInput {
   /** The digest of the input's target text. */
   readonly digest: TextDigest
   /** The decisions about the input, which digest its decision state once. */
-  readonly decisions: Effect.Success<ReturnType<typeof DecisionCache.forInput>>
+  readonly decisions: Effect.Success<ReturnType<typeof InputDecisions.forInput>>
 }
 
 /** Builds each trait's per-change results and collects the decision responses received for them, from which the run's provenance derives; Deferreds only coordinate recovery. */
@@ -100,7 +97,7 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
             inputs.success,
             (input) =>
               Effect.all(
-                { digest: digestText(targetText(input)), decisions: DecisionCache.forInput(input) },
+                { digest: digestText(targetText(input)), decisions: InputDecisions.forInput(input) },
                 // Two fixed effects.
                 { concurrency: "unbounded" }
               ).pipe(Effect.map((shared): SharedInput => ({ input, ...shared }))),
@@ -273,9 +270,12 @@ export const evaluate = Effect.fnUntraced(function* (request: CheckInput, prepar
           })
           const inputs = selections.get(trait.segment)
           return inputs === undefined
-            ? Effect.succeed<ChangeResult>({ report: Report.ChangeReport.cases.NotSegmented.make({}), responses: [] })
+            ? Effect.succeed<ChangeEvaluation>({
+                report: Report.ChangeReport.cases.NotSegmented.make({}),
+                responses: []
+              })
             : Effect.forEach(inputs, evaluateInput, { concurrency: "unbounded" }).pipe(
-                Effect.map((results): ChangeResult => ({
+                Effect.map((results): ChangeEvaluation => ({
                   report: Report.ChangeReport.cases.Evaluated.make({
                     inputs: Array.map(results, (result) => result.report)
                   }),

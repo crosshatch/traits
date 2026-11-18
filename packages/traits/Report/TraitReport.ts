@@ -1,10 +1,10 @@
 import { Array, Schema as S } from "effect"
 
 import { Trait } from "../Trait.ts"
+import { TraitOrigin } from "../TraitOrigin.ts"
 import { ChangeReport } from "./ChangeReport.ts"
 import { EnrichmentOutcome } from "./EnrichmentOutcome.ts"
 import { InputReport } from "./InputReport.ts"
-import { TraitOrigin } from "./TraitOrigin.ts"
 
 /** One trait's static definition and origin, with one result per supplied change. */
 export type TraitReport = typeof TraitReport.Type

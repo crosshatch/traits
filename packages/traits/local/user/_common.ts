@@ -1,13 +1,6 @@
-import { Effect, FileSystem, Path, Schema as S } from "effect"
+import { Effect, FileSystem, Path } from "effect"
 
 import { UserFileSecurity } from "./UserFileSecurity.ts"
-
-/** A name the user gives a saved account or profile: lowercase letters, digits, dots, underscores, or hyphens, starting with a letter or digit. It carries no description, so each name built on it describes its own meaning. */
-export const SavedName = S.String.check(
-  S.isPattern(/^[a-z0-9][a-z0-9._-]*$/u, {
-    message: "Expected lowercase letters, digits, dots, underscores, or hyphens, starting with a letter or digit."
-  })
-)
 
 /** Replaces a file atomically after securing its directory and temporary file. */
 export const writeAtomic = Effect.fn("writeAtomic")(function* (filename: string, text: string) {

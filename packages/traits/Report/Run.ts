@@ -1,6 +1,7 @@
 import { Array, Function, Order, Schema as S } from "effect"
-import type { DecisionModel } from "effect/ai"
 
+import type { DecisionProvenance } from "../DecisionProvenance.ts"
+import * as DecisionUsage from "../DecisionUsage.ts"
 import { Probability } from "../util/Probability.ts"
 
 /** Deterministic evaluation provenance, without timestamps, hosts, or absolute paths. */
@@ -34,24 +35,21 @@ export const Run = S.Struct({
   })
 }).annotate({ description: "Deterministic evaluation provenance, without timestamps, hosts, or absolute paths." })
 
-/** What a decision response contributes to a run's provenance: the model that answered and the tokens it used. */
-type Response = Pick<DecisionModel.DecideSettledResponse<Record<string, never>>, "modelId" | "usage">
-
 /** Derives a run's provenance from the decision responses it received and the rule-out threshold it used: their distinct model identifiers, sorted, and their token totals, each omitted when any response did not report it. */
 export const fromResponses: {
-  (ruleOut: Probability): (responses: ReadonlyArray<Response>) => Run
-  (responses: ReadonlyArray<Response>, ruleOut: Probability): Run
-} = Function.dual(2, (responses: ReadonlyArray<Response>, ruleOut: Probability): Run => {
-  const total = (key: "inputTokens" | "outputTokens") =>
-    Array.every(responses, (response) => response.usage[key] !== undefined)
-      ? { [key]: Array.reduce(responses, 0, (sum, response) => sum + response.usage[key]!) }
-      : {}
+  (ruleOut: Probability): (responses: ReadonlyArray<DecisionProvenance>) => Run
+  (responses: ReadonlyArray<DecisionProvenance>, ruleOut: Probability): Run
+} = Function.dual(2, (responses: ReadonlyArray<DecisionProvenance>, ruleOut: Probability): Run => {
+  const usage = DecisionUsage.sum(Array.map(responses, (response) => response.usage))
   return {
     models: Array.sort(
       Array.dedupe(Array.flatMap(responses, (response) => (response.modelId === undefined ? [] : [response.modelId]))),
       Order.String
     ),
-    usage: { ...total("inputTokens"), ...total("outputTokens") },
+    usage: {
+      ...(usage.inputTokens === undefined ? {} : { inputTokens: usage.inputTokens }),
+      ...(usage.outputTokens === undefined ? {} : { outputTokens: usage.outputTokens })
+    },
     ruleOut
   }
 })

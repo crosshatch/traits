@@ -1,9 +1,9 @@
 import { Console, Effect, Option, pipe, Runtime, Schema as S } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
 
+import { DecisionPolicy } from "../../../DecisionPolicy.ts"
 import { EnvironmentName } from "../../../EnvironmentName.ts"
 import { WorkspaceCheck } from "../../../local/WorkspaceCheck.ts"
-import { DecisionPolicy } from "../../../Report/DecisionPolicy.ts"
 import { Report, verdicts } from "../../../Report/Report.ts"
 import { Verdict } from "../../../Report/Verdict.ts"
 import { TraitName } from "../../../TraitName.ts"

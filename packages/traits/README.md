@@ -145,8 +145,8 @@ optional peer for portable consumers.
 
 `TraitDerivation.prepare(document, existing)` accepts a
 `TraitFile.TraitDocument` and existing `{ name, text }` snapshots. Provide
-decision and language model layers. It returns `Covered`, `Unresolved`,
-`NameTaken`, or `Proposed`.
+decision and language model layers. It returns `Blocked` or `Proposed`. A
+blocked plan carries a `reason`: `Covered`, `Unresolved`, or `NameTaken`.
 
 A `Proposed` plan carries the final `document`, exact serialized `text`,
 optional `current` snapshot, and replacement relationship and explanation. Your
@@ -161,7 +161,8 @@ API.
 - `WorkspaceUpdate.load({ from? })` returns structured migration context without
   changing files or upgrading packages.
 - Experimental `User.Profiles` provides `list`, `get`, `save`, `use`, `remove`,
-  and `resolveSelection`. Resolve custom layer paths before saving them.
+  and `resolve`. Use `User.Profiles.resolveSelection` to resolve custom layer
+  paths before saving them; it delegates to the model-selection module.
 - Experimental `User.Accounts.save`, `User.Accounts.list`, and
   `User.Accounts.remove` manage owner-only local credentials. Lists contain
   metadata, not secrets; removal checks profile references and does not revoke

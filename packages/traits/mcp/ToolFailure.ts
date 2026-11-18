@@ -1,6 +1,8 @@
-import { Array, Cause, Function, pipe, String } from "effect"
+import { Array, Cause, Function, Option, pipe, String } from "effect"
+import { AiError } from "effect/ai"
 
 import PackageJson from "../package.json" with { type: "json" }
+import { rejectsAccount } from "../util/rejectsAccount.ts"
 
 /** What happened to a failed call's work, and how to retry once the user has fixed an expected failure. */
 interface Guidance {
@@ -18,10 +20,25 @@ interface Guidance {
 export const describe: {
   (guidance: Guidance): (cause: Cause.Cause<unknown>) => string
   (cause: Cause.Cause<unknown>, guidance: Guidance): string
-} = Function.dual(2, (cause: Cause.Cause<unknown>, guidance: Guidance): string =>
-  pipe(
+} = Function.dual(2, (cause: Cause.Cause<unknown>, guidance: Guidance): string => {
+  const provider = Cause.findErrorOption(cause).pipe(Option.filter(AiError.isAiError), Option.getOrUndefined)
+  const status =
+    provider !== undefined && "http" in provider.reason ? provider.reason.http?.response?.status : undefined
+  return pipe(
     [
       Cause.pretty(cause),
+      ...(provider === undefined
+        ? []
+        : [
+            `Model request failed: ${provider.module}.${provider.method}; ${provider.reason._tag}${status === undefined ? "" : `; HTTP ${status}`}.`,
+            rejectsAccount(provider)
+              ? status === 402 || provider.reason._tag === "QuotaExhaustedError"
+                ? "The provider account has insufficient credits or exhausted quota. Check billing, credits, and account limits before retrying."
+                : "The provider rejected account access. Check credentials and permissions before retrying."
+              : provider.isRetryable
+                ? "The provider failure is retryable; retry after the provider's indicated delay or once the service recovers."
+                : "This failure is not marked retryable. Resolve the provider error above before retrying."
+          ]),
       "",
       guidance.outcome,
       Cause.hasDies(cause)
@@ -31,4 +48,4 @@ export const describe: {
     Array.join("\n"),
     String.trim
   )
-)
+})

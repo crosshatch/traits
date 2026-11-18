@@ -1,6 +1,6 @@
 import { Context, Effect, Schema as S } from "effect"
 
-import { DecisionPolicy } from "./Report/DecisionPolicy.ts"
+import { DecisionPolicy } from "./DecisionPolicy.ts"
 import { Probability } from "./util/Probability.ts"
 
 const Count = S.Int.check(S.isGreaterThanOrEqualTo(1))

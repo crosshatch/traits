@@ -117,8 +117,11 @@ it.effect("returns explained blocking outcomes without proposing a write", () =>
       { name: TraitName.make("existing"), text: TraitFile.serialize(proposal) }
     ])
     expect(plan).toMatchObject({
-      _tag: "Unresolved",
-      traits: [{ name: "existing", relationship: "conflict", reason: "Same rule." }]
+      _tag: "Blocked",
+      reason: {
+        _tag: "Unresolved",
+        traits: [{ name: "existing", relationship: "conflict", reason: "Same rule." }]
+      }
     })
   }).pipe(Effect.provide(models("conflict")))
 )

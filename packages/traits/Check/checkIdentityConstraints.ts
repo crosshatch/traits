@@ -1,7 +1,7 @@
 import { Array, Schema as S } from "effect"
 
 /** What a check request and its report must both keep unambiguous: a trait is identified by its name, and a change by its after path. */
-export const unambiguousIdentities = [
+export const checkIdentityConstraints = [
   S.makeFilter(
     (value: { readonly traits: ReadonlyArray<{ readonly trait: { readonly name: string } }> }) => {
       const names = Array.map(value.traits, (entry) => entry.trait.name)

@@ -1,7 +1,7 @@
 import { Console, Effect } from "effect"
 import { Argument, CliError, Command, Flag } from "effect/cli"
 
-import { ModelSelectionFromString } from "../../../local/user/Profile/ModelSelection.ts"
+import * as ModelSelection from "../../../local/user/Profile/ModelSelection.ts"
 import { Profile } from "../../../local/user/Profile/Profile.ts"
 import { ProfileName } from "../../../local/user/Profile/ProfileName.ts"
 import * as Profiles from "../../../local/user/Profiles.ts"
@@ -12,9 +12,9 @@ const selectionFlag = (role: string) =>
     Flag.withDescription(
       "Account/model reference or custom .ts layer file (use ./, ../, or an absolute path for directories)"
     ),
-    Flag.withSchema(ModelSelectionFromString),
+    Flag.withSchema(ModelSelection.ModelSelectionFromString),
     Flag.mapEffect((selection) =>
-      Profiles.resolveSelection(selection).pipe(
+      ModelSelection.resolve(selection).pipe(
         Effect.mapError((error) => CliError.UserError.make({ cause: error.message }))
       )
     )

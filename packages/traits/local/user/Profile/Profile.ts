@@ -12,5 +12,5 @@ export const Profile = S.Struct({
     "User-level model selections by role, using saved provider accounts or custom layer modules; contains no credentials."
 })
 
-export * from "./ModelSelection.ts"
+export { ModelSelection, ModelSelectionFromString, ModelSelectionResolutionError } from "./ModelSelection.ts"
 export * from "./ProfileName.ts"

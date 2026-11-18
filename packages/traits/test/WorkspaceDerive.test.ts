@@ -35,7 +35,7 @@ const explainer = LanguageModel.make({
   streamText: () => Stream.empty
 })
 
-/** A workspace with one saved trait, whose relationship to every proposal the decision model reports as label. */
+/** A workspace derivation fixture with one saved trait and a fixed comparison label. */
 const workspace = (label: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem

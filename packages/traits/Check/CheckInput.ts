@@ -1,9 +1,9 @@
 import { Schema as S } from "effect"
 
-import { TraitOrigin } from "../Report/TraitOrigin.ts"
-import { unambiguousIdentities } from "../Report/unambiguousIdentities.ts"
 import { Trait } from "../Trait.ts"
+import { TraitOrigin } from "../TraitOrigin.ts"
 import { Change } from "../util/Change.ts"
+import { checkIdentityConstraints } from "./checkIdentityConstraints.ts"
 
 /** A static trait to evaluate, with where the host loaded it from. */
 export type CheckTrait = typeof CheckTrait.Type
@@ -25,4 +25,4 @@ export const CheckInput = S.Struct({
   })
 })
   .annotate({ description: "Caller-ordered, uniquely named traits and text changes with distinct after paths." })
-  .check(...unambiguousIdentities)
+  .check(...checkIdentityConstraints)

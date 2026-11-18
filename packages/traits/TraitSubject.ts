@@ -1,6 +1,7 @@
 import { Effect, Function, Record, Schema as S, String } from "effect"
 import { type AiError, Decision, DecisionModel } from "effect/ai"
 
+import type { ClassificationResponse } from "./ClassificationResponse.ts"
 import * as DecisionState from "./DecisionState.ts"
 import type { Input } from "./util/Input.ts"
 import { NonBlankString } from "./util/NonBlankString.ts"
@@ -33,9 +34,7 @@ export const question = {
 }
 
 /** Keyed subject outcomes and request-wide usage/metadata; unanswered subjects do not discard valid siblings. */
-export type TraitSubjectMatches<Id extends string = string> = DecisionModel.DecideSettledResponse<
-  Record<Id, Decision.Classify<keyof typeof question.criteria>>
->
+export type TraitSubjectMatches<Id extends string = string> = ClassificationResponse<Id, keyof typeof question.criteria>
 
 /** Classifies several subjects against one shared input in one provider request, independently of trait evaluation. */
 export const match: {

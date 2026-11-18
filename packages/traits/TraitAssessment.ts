@@ -1,10 +1,10 @@
 import { Schema as S } from "effect"
 
-import { Probability } from "../util/Probability.ts"
+import { Probability } from "./util/Probability.ts"
 
 /** Assertion outcome probabilities; normalization is owned by the decision model, and consumers apply explicit decision policies. */
-export type Assessment = typeof Assessment.Type
-export const Assessment = S.Struct({
+export type TraitAssessment = typeof TraitAssessment.Type
+export const TraitAssessment = S.Struct({
   /** Probability that the input satisfies the assertion. */
   pass: Probability.annotateKey({ description: "Probability that the input satisfies the assertion." }),
   /** Probability that the input violates the assertion. */

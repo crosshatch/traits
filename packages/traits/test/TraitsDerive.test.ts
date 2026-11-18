@@ -1,10 +1,13 @@
 import { expect, it } from "@effect/vitest"
-import { Effect, Layer, Stream } from "effect"
-import { McpSchema } from "effect/ai"
+import { ConfigProvider, Effect, Layer, Stream } from "effect"
+import { AiError, McpSchema } from "effect/ai"
+import { HttpClient, HttpClientResponse } from "effect/http"
 
+import * as Models from "../local/Models.ts"
 import { WorkspaceDerive } from "../local/WorkspaceDerive.ts"
 import * as TraitsDerive from "../mcp/TraitsDerive.ts"
 import { TraitAssertion } from "../TraitAssertion.ts"
+import * as TraitComparison from "../TraitComparison.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
 import { TraitName } from "../TraitName.ts"
@@ -89,5 +92,61 @@ it.effect("explains that clients without forms cannot approve, and returns the p
     const { message } = unsupported.encodedResult as { readonly message: string }
     expect(message).toContain("cannot show approval forms")
     expect(message).toContain(TraitFile.serialize(proposal))
+  })
+)
+
+it.effect("preserves an OpenRouter billing failure through comparison and the MCP derive handler", () =>
+  Effect.gen(function* () {
+    const message = "Insufficient credits. Add more using https://openrouter.ai/settings/credits"
+    const models = Models.layer({
+      language: { provider: "openrouter", model: "test" },
+      decision: { provider: "openrouter", model: "test" }
+    }).pipe(
+      Layer.provide([
+        ConfigProvider.layer(ConfigProvider.fromUnknown({ OPENROUTER_API_KEY: "test-secret" })),
+        Layer.succeed(
+          HttpClient.HttpClient,
+          HttpClient.make((request) =>
+            Effect.succeed(
+              HttpClientResponse.fromWeb(
+                request,
+                new Response(JSON.stringify({ error: { code: 402, message } }), { status: 402 })
+              )
+            )
+          )
+        )
+      ])
+    )
+    const compare = TraitComparison.compare(proposal.name, TraitFile.serialize(proposal), [
+      { name: TraitName.make("existing"), text: "Keep functions small." }
+    ]).pipe(Effect.provide(models))
+    const failure = yield* compare.pipe(Effect.flip)
+    expect(AiError.isAiError(failure)).toBe(true)
+    expect(failure.message).toContain(message)
+    const handled = yield* Effect.gen(function* () {
+      const { handle } = yield* TraitsDerive.toolkit
+      const results = yield* handle("traits.derive", { traits: [proposal] })
+      return yield* Stream.runLast(results).pipe(Effect.flatMap(Effect.fromOption))
+    }).pipe(
+      Effect.provide([
+        TraitsDerive.layer.pipe(
+          Layer.provide(
+            Layer.succeed(WorkspaceDerive, {
+              derive: () => compare.pipe(Effect.as([]))
+            })
+          )
+        ),
+        Layer.succeed(
+          McpSchema.McpServerClient,
+          client({ elicitation: {} }, { action: "accept", content: { decision: "Save" } })
+        )
+      ])
+    )
+    expect(handled.isFailure).toBe(true)
+    const encoded = handled.encodedResult as { readonly message: string }
+    expect(encoded.message).toContain(message)
+    expect(encoded.message).toContain("HTTP 402")
+    expect(encoded.message).toContain("Check billing")
+    expect(encoded.message).not.toContain("test-secret")
   })
 )

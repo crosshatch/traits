@@ -1,9 +1,9 @@
-import { Array, Effect, FileSystem, Path, Record, Schema as S } from "effect"
+import { Array, Effect, Option, Record, Schema as S } from "effect"
 
 import * as Accounts from "./Accounts.ts"
 import { ModelSelection } from "./Profile/ModelSelection.ts"
 import type { Profile } from "./Profile/Profile.ts"
-import type { ProfileName } from "./Profile/ProfileName.ts"
+import { ProfileName } from "./Profile/ProfileName.ts"
 import * as UserConfig from "./UserConfig.ts"
 import { withLock } from "./UserConfigLock.ts"
 import { UserPaths } from "./UserPaths.ts"
@@ -19,25 +19,33 @@ export const list = UserConfig.read.pipe(Effect.map((config) => config.profiles)
 /** Resolves an explicit profile, workspace selection, or default. */
 export const get = Effect.fn("Profiles.get")(function* (name?: ProfileName) {
   const config = yield* UserConfig.read
-  return yield* UserConfig.resolveProfile(config, name)
+  return yield* resolve(config, name)
 })
 
-/** Resolves and validates a custom layer file relative to the host's Path service; provider references are unchanged. Does not import or execute the module. */
-export const resolveSelection = Effect.fn("Profiles.resolveSelection")(function* (selection: ModelSelection) {
-  if (selection._tag === "Provider") return selection
-  const path = yield* Path.Path
-  const fs = yield* FileSystem.FileSystem
-  const filename = path.resolve(selection.path)
-  yield* fs.stat(filename).pipe(
-    Effect.mapError(() =>
-      ProfileOperationError.make({ message: `Cannot access custom model layer file: ${filename}` })
-    ),
-    Effect.filterOrFail(
-      (info) => info.type === "File",
-      () => ProfileOperationError.make({ message: `Custom model layer path is not a file: ${filename}` })
-    )
+export { resolve as resolveSelection } from "./Profile/ModelSelection.ts"
+
+/** The selected profile does not exist. */
+export class ProfileNotFoundError extends S.TaggedError<ProfileNotFoundError>()("ProfileNotFoundError", {
+  profile: ProfileName.annotateKey({ description: "The selected profile name." })
+}) {
+  override get message(): string {
+    return `Selected profile ${this.profile} does not exist. Create it with traits profile create ${this.profile}, or select an existing workspace profile with traits profile use <name>.`
+  }
+}
+
+/** Resolves an explicit name, workspace override, or default from a configuration snapshot. */
+export const resolve = Effect.fn("Profiles.resolve")(function* (
+  config: UserConfig.UserConfig,
+  explicitName?: ProfileName
+) {
+  let selected = explicitName
+  if (selected === undefined) {
+    const { workspaceKey } = yield* UserPaths
+    selected = config.workspaceProfiles[workspaceKey] ?? ProfileName.make("default")
+  }
+  return yield* Array.findFirst(config.profiles, (entry) => entry.name === selected).pipe(
+    Option.match({ onSome: Effect.succeed, onNone: () => ProfileNotFoundError.make({ profile: selected }) })
   )
-  return ModelSelection.cases.Custom.make({ path: filename })
 })
 
 /** Saves model selections after checking account references; custom module paths must already be resolved by the host. */

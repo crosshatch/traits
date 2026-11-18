@@ -1,6 +1,7 @@
 import { Context, Effect, FileSystem, Layer, Path, Schema as S, Semaphore } from "effect"
 
 import { CurrentSettings } from "../Settings.ts"
+import type { Approve } from "../TraitApproval.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
 import * as TraitFile from "../TraitFile.ts"
 import type { TraitName } from "../TraitName.ts"
@@ -11,7 +12,7 @@ import { WorkspaceRoot } from "./WorkspaceRoot.ts"
 import * as WorkspaceTraits from "./WorkspaceTraits.ts"
 
 /** Asks the user whether to save one proposal; the host supplies it, for example as an MCP elicitation form. */
-export type Approve<E> = (request: TraitDerivation.ApprovalRequest) => Effect.Effect<TraitDerivation.Approval, E>
+export type { Approve } from "../TraitApproval.ts"
 
 /** The trait file to be written changed while the user was deciding, so the approval may not match it. */
 export class TraitChangedError extends S.TaggedError<TraitChangedError>()("TraitChangedError", {
@@ -26,7 +27,7 @@ export class TraitChangedError extends S.TaggedError<TraitChangedError>()("Trait
 /** Validates a proposed trait, compares it with the workspace's traits, asks the user to approve saving it, and writes it when approved. */
 export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
   document: TraitFile.TraitDocument,
-  approve: (request: TraitDerivation.ApprovalRequest) => Effect.Effect<TraitDerivation.Approval, E, R>
+  approve: Approve<E, R>
 ) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
@@ -44,7 +45,9 @@ export const derive = Effect.fn("WorkspaceDerive.derive")(function* <E, R>(
     { concurrency: check.fileConcurrency }
   )
   const plan = yield* TraitDerivation.prepare(document, existing)
-  if (plan._tag !== "Proposed") return plan
+  if (TraitDerivation.Plan.$is("Blocked")(plan)) {
+    return plan.reason
+  }
   const { document: saved, text, current, reason: why } = plan
   const relative = WorkspaceLayout.traitFile(saved.name)
   const approval = yield* approve({
