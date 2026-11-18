@@ -53,11 +53,11 @@ export const check = Command.make(
     ),
     fail: threshold(
       "fail",
-      "Minimum fail probability that rejects an assessment; requires --pass, and overrides check.policy in traits/config.json"
+      "Minimum fail probability that rejects an assessment; requires --pass, and overrides check.policy in traits/_config.json"
     ),
     pass: threshold(
       "pass",
-      "Minimum probability that the assertion holds or does not apply that accepts an assessment; requires --fail, and overrides check.policy in traits/config.json"
+      "Minimum probability that the assertion holds or does not apply that accepts an assessment; requires --fail, and overrides check.policy in traits/_config.json"
     )
   },
   Effect.fn("check")(
@@ -75,7 +75,7 @@ export const check = Command.make(
           ...(params.traits.length > 0 ? { traits: params.traits } : {})
         })
       ).pipe(Effect.mapError((error) => CheckError.make({ message: error.message })))
-      // The flags override the policy in traits/config.json.
+      // The flags override the policy in traits/_config.json.
       const applied = fail === undefined || pass === undefined ? policy : DecisionPolicy.make({ fail, pass })
       const encoded = yield* pipe(report, S.encodeEffect(Report), Effect.orDie)
       yield* Console.log(JSON.stringify(encoded, null, 2))
@@ -92,6 +92,6 @@ export const check = Command.make(
   )
 ).pipe(
   Command.withDescription(
-    "Check files against this workspace's traits and print the report as JSON. With --fail and --pass, or check.policy in traits/config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
+    "Check files against this workspace's traits and print the report as JSON. With --fail and --pass, or check.policy in traits/_config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
   )
 )

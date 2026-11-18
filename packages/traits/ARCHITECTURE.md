@@ -270,7 +270,7 @@ Static traits + provided inputs
 
 A workspace keeps its configuration at its root and its traits under `traits/`:
 
-- `traits/config.json` is plain JSON, so it loads without executing code or
+- `traits/_config.json` is plain JSON, so it loads without executing code or
   installing JavaScript dependencies. It records the traits `version` the
   workspace was last migrated to, or `"internal"` in the traits repository
   itself, whose traits source is inside the workspace and so always matches (a
@@ -288,7 +288,7 @@ A workspace keeps its configuration at its root and its traits under `traits/`:
   reference, whose default is `Settings.make({})`: each field carries its
   default beside it, as both a constructor and a decoding default, so hosts that
   provide nothing get the defaults. Locally, `WorkspaceModels.layer(config)`
-  provides the loaded `traits/config.json` together with the models it limits
+  provides the loaded `traits/_config.json` together with the models it limits
   and batches, and `WorkspaceCheck.run` provides the configuration it is given
   to the check, so one configuration governs a whole check or derivation. It
   lists no traits, and unknown keys are rejected, so a trait list from an
@@ -326,7 +326,7 @@ within the workspace. Each trait's report records its file as `origin`, from
 command's exit code and output.
 
 The `WorkspaceCheck` service owns the complete pipeline, independent of any
-front end: `check(request)` loads `traits/config.json` and the trait files,
+front end: `check(request)` loads `traits/_config.json` and the trait files,
 builds the configured models and fresh extension registries, and returns the
 full report with the verdict policy that same configuration sets, if any.
 `WorkspaceCheck.layer` declares the host services it needs (the platform, HTTP,
@@ -449,7 +449,7 @@ proposals, since saving requires the user's approval.
 `traits check` writes only the report to stdout; verdicts and errors go to
 stderr. Without a policy it exits 0 whenever the check runs, because the report
 implies no thresholds. With `--fail` and `--pass`, or else `check.policy` in
-`traits/config.json`, it derives the verdict with `Report.verdicts` and exits 0
+`traits/_config.json`, it derives the verdict with `Report.verdicts` and exits 0
 for Pass, 1 for Fail, 2 for Incomplete, and 3 for Inconclusive. A check that
 cannot run, such as one with missing configuration or a partial policy, also
 exits 2, since the fix is to repair the setup and retry. Invalid command-line
@@ -863,8 +863,8 @@ failed enrichment. The schemas cannot establish whether the runner assigned the
 correct state in response to cancellation or recovery.
 
 `version` is the traits version that produced the report, the same version
-`traits/config.json` records. Reports from versions compatible under caret (`^`)
-semantics share a format, so an incompatible format change is a breaking
+`traits/_config.json` records. Reports from versions compatible under caret
+(`^`) semantics share a format, so an incompatible format change is a breaking
 release, as for any change to the exported `Report` schema. `run` records
 deterministic provenance without timestamps, hosts, or absolute paths: distinct
 sorted model identifiers reported by assessment responses, token totals across

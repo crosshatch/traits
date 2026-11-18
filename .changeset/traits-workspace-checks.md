@@ -8,7 +8,7 @@ before assessing the assertion, checks run from the CLI and MCP with full
 reports, and traits are saved only after the user approves them in a form. To
 migrate a workspace:
 
-- Replace `traits.ts` with `traits/config.json`:
+- Replace `traits.ts` with `traits/_config.json`:
   `{ "version": "0.6.0", "models": { "decision": { "provider", "model" }, "language": { "provider", "model" } } }`.
   Decision providers are `openrouter`, `openai`, and `cloudflare`; language
   providers are `openrouter`, `openai`, `anthropic`, and `openai-compatible`
@@ -22,7 +22,7 @@ migrate a workspace:
   and remove provider packages installed only for it.
 - Move `.agents/traits/` to the checkout's top-level `traits/` directory,
   preserving environments and local state. If already using `traits.json`, move
-  it to `traits/config.json`; the old paths are no longer loaded. Keep relative
+  it to `traits/_config.json`; the old paths are no longer loaded. Keep relative
   extension references pointing to the same modules after the move.
 - In each `traits/<name>.md`, rename the `requirement` frontmatter key to
   `assertion`, and fold `applicability` into `subject` as its scope and
@@ -67,7 +67,7 @@ migrate a workspace:
   releases.
 - Reports record the traits version that produced them in `version`; reports
   from versions compatible under caret (`^`) semantics share a format.
-- `traits/config.json` accepts optional settings, each defaulting when omitted:
+- `traits/_config.json` accepts optional settings, each defaulting when omitted:
   `check.ruleOut`, the subject `no` probability that rules a target out (0.6);
   `check.resampling`, which asks a decision near its threshold again and
   averages the answers (by default 3 answers within 0.15 of the threshold, and 5

@@ -98,12 +98,12 @@ const workspace = (contents: string | undefined) =>
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-config-" })
     if (contents !== undefined) {
       yield* fs.makeDirectory(path.join(directory, "traits"))
-      yield* fs.writeFileString(path.join(directory, "traits", "config.json"), contents)
+      yield* fs.writeFileString(path.join(directory, "traits", "_config.json"), contents)
     }
     return WorkspaceRoot.layer(directory)
   })
 
-it.effect("loads traits/config.json and explains read, schema, and version failures", () =>
+it.effect("loads traits/_config.json and explains read, schema, and version failures", () =>
   Effect.gen(function* () {
     const configured = yield* workspace(JSON.stringify(config))
     const loaded = yield* TraitsConfig.load.pipe(Effect.provide(configured))
@@ -137,9 +137,9 @@ it.effect("loads traits/config.json and explains read, schema, and version failu
       const root = yield* workspace(contents)
       const error = yield* TraitsConfig.load.pipe(Effect.provide(root), Effect.flip)
       expect(error._tag).toBe(tag)
-      expect(error.message).toContain("traits/config.json")
+      expect(error.message).toContain("traits/_config.json")
     }
-    // This repository's own traits/config.json is "internal": its traits source is inside the workspace.
+    // This repository's own traits/_config.json is "internal": its traits source is inside the workspace.
     const path = yield* Path.Path
     const own = yield* TraitsConfig.load.pipe(
       Effect.provide(WorkspaceRoot.layer(path.resolve(import.meta.dirname, "..", "..", "..")))

@@ -49,7 +49,7 @@ const workspace = Effect.gen(function* () {
   yield* fs.makeDirectory(path.join(directory, "traits"), { recursive: true })
   yield* fs.makeDirectory(path.join(directory, "src"))
   yield* fs.writeFileString(
-    path.join(directory, "traits", "config.json"),
+    path.join(directory, "traits", "_config.json"),
     JSON.stringify({ version: PackageJson.version, models, check: { ruleOut: 0.7 } })
   )
   yield* fs.writeFileString(path.join(directory, "traits", "correct.md"), traitFile("correct"))
@@ -133,12 +133,12 @@ it.live("checks every project file Git does not ignore when no paths are given, 
       ".gitignore",
       "src/modified.ts",
       "src/untracked.ts",
-      "traits/config.json",
+      "traits/_config.json",
       "traits/correct.md",
       "traits/small.md"
     ])
     yield* fs.writeFileString(
-      path.join(directory, "traits", "config.json"),
+      path.join(directory, "traits", "_config.json"),
       JSON.stringify({ version: PackageJson.version, models, exclude: ["traits/**"] })
     )
     const narrowed = yield* check({ traits: [TraitName.make("small")] }).pipe(Effect.provide(services(directory)))
@@ -147,7 +147,7 @@ it.live("checks every project file Git does not ignore when no paths are given, 
     // Outside Git there is no project file listing, so the request explains how to proceed.
     const outside = yield* fs.makeTempDirectoryScoped({ prefix: "traits-no-git-" })
     yield* fs.makeDirectory(path.join(outside, "traits"), { recursive: true })
-    yield* fs.copyFile(path.join(directory, "traits", "config.json"), path.join(outside, "traits", "config.json"))
+    yield* fs.copyFile(path.join(directory, "traits", "_config.json"), path.join(outside, "traits", "_config.json"))
     const unlisted = yield* check({}).pipe(Effect.provide(services(outside)), Effect.flip)
     expect(unlisted._tag).toBe("ProjectFilesError")
     expect(unlisted.message).toContain("pass the paths")

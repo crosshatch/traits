@@ -6,7 +6,7 @@ All paths below are relative to the repository root.
 
 - `packages/traits/`: Effect-based MCP server and trait SDK.
 - `packages/@traits/`: Trait extension packages.
-- `traits/`: workspace trait definitions, `config.json`, environments, and local decision cache.
+- `traits/`: workspace trait definitions, `_config.json`, environments, and local decision cache.
 - `traits.sh/`: static Vite + React site; deployment is defined by root `alchemy.run.ts`.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
 - Use `pnpm --filter traits.sh dev` for the local Vite server and `pnpm --filter traits.sh build` to build static assets.

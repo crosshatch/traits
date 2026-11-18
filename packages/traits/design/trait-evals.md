@@ -79,7 +79,7 @@ code change silently turn a `fail` case into a pass.
 Case files are deliberately non-compliant code inside the repository.
 
 - `traits check` always skips `traits/_cases/`, without needing `exclude` in
-  `traits/config.json`.
+  `traits/_config.json`.
 - Trait loading already ignores the directory, because it reads only the `.md`
   files directly in `traits/`.
 - TypeScript, linters, and formatters must also skip the directory. Traits
@@ -154,7 +154,7 @@ traits eval [--trait <name>]... [--environment <name>] [--runs 3]
 - **Cache:** results are cached by trait digest, case digest, models, runs, and
   traits version. CI only re-evaluates traits or cases that changed.
 - **`--decision-model`:** evaluates the same cases with another model, such as a
-  cheaper one, without editing `traits/config.json`.
+  cheaper one, without editing `traits/_config.json`.
 - **`--generate`:** writes generated cases for traits that have too few. Enough
   means at least one `fail`, one `pass`, and one near miss, which is compliant
   code that resembles a violation. It writes files, so it only runs when asked.

@@ -2,7 +2,7 @@
 export const directory = "traits"
 
 /** The workspace configuration file, beside the trait files. */
-export const config = `${directory}/config.json`
+export const config = `${directory}/_config.json`
 
 /** Named environment configurations; the underscore sorts them before trait files. */
 export const environments = `${directory}/_environments`

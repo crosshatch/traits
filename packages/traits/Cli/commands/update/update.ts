@@ -10,9 +10,9 @@ export type { UpdateContext } from "../../../local/WorkspaceUpdate.ts"
 
 const sourceLabel = {
   flag: "--from",
-  workspace: "traits/config.json",
-  installed: "installed version; traits/config.json has no readable version",
-  internal: "installed version; traits/config.json is internal to the traits repository"
+  workspace: "traits/_config.json",
+  installed: "installed version; traits/_config.json has no readable version",
+  internal: "installed version; traits/_config.json is internal to the traits repository"
 } as const
 
 /** Renders migration context as Markdown for an agent to act on; the agent, not this command, performs the migration. */
@@ -42,8 +42,8 @@ export const render = (context: UpdateContext): string => {
       ...(Version.isNewer(latest, installed)
         ? [`1. Upgrade traits to ${latest}.`]
         : [`1. Keep traits at ${latest} or later.`]),
-      `2. Read each release below, oldest first, and apply every change it describes to traits/config.json and the workspace's trait files, validating them against the upgraded package's schemas.`,
-      `3. Set "version" in traits/config.json to ${latest}.`,
+      `2. Read each release below, oldest first, and apply every change it describes to traits/_config.json and the workspace's trait files, validating them against the upgraded package's schemas.`,
+      `3. Set "version" in traits/_config.json to ${latest}.`,
       "",
       `## Releases after ${from.version}`,
       ...Array.flatMap(releases, (release) => [
@@ -64,7 +64,7 @@ export const update = Command.make(
   {
     from: Flag.String("from").pipe(
       Flag.withSchema(Version.Version),
-      Flag.withDescription("Version to migrate from instead of the one in traits/config.json"),
+      Flag.withDescription("Version to migrate from instead of the one in traits/_config.json"),
       Flag.optional
     )
   },

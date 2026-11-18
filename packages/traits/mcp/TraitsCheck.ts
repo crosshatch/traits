@@ -16,7 +16,7 @@ export class TraitsCheckFailure extends S.TaggedError<TraitsCheckFailure>()("Tra
   message: S.String.annotateKey({ description: "What prevented the check, and how to fix it." })
 }) {}
 
-/** Checks workspace files against the workspace's traits using the models configured in traits/config.json. */
+/** Checks workspace files against the workspace's traits using the models configured in traits/_config.json. */
 export const TraitsCheck = Tool.make("traits.check", {
   description: pipe(
     String.stripMargin(`

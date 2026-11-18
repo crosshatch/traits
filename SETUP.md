@@ -49,7 +49,7 @@ models run on OpenRouter's Decisions API, so choose them from
 
 ### 3. Configure the checkout
 
-Create `traits/config.json` at the checkout root, or update it while preserving
+Create `traits/_config.json` at the checkout root, or update it while preserving
 existing settings and asking before replacing them. Set `version` to the
 installed Traits version:
 
@@ -71,7 +71,7 @@ Optional fields:
   when every project file is checked, such as lockfiles or large generated
   assets. Git-ignored files are always skipped.
 
-Keep `traits/config.json` in version control so reviewers can see which models
+Keep `traits/_config.json` in version control so reviewers can see which models
 check the code. Traits are Markdown files in `traits/<name>.md`; environments in
 `traits/_environments/<name>.json` list subsets of traits to check, such as a
 faster set for CI.
@@ -122,14 +122,14 @@ releases to apply, oldest first. The agent performs the migration.
 ### A tool or check fails
 
 A failed check is neither a pass nor a finding. The failure message says what to
-fix, such as a missing `traits/config.json`, missing credentials, or an invalid
+fix, such as a missing `traits/_config.json`, missing credentials, or an invalid
 trait file. Fix it and retry; configuration reloads on the next call.
 
 ### Files are too large for the decision model
 
 A check reports an input as failed with `InvalidRequestError` when the provider
 rejects the request, usually because the file exceeds the model's context. Add
-the file to `exclude` in `traits/config.json`, or check smaller files.
+the file to `exclude` in `traits/_config.json`, or check smaller files.
 
 ### Results do not change after a re-check
 
@@ -141,7 +141,7 @@ removed automatically.
 
 ### Outdated workspace
 
-When `traits/config.json`'s `version` is incompatible with the installed
+When `traits/_config.json`'s `version` is incompatible with the installed
 package, checks fail and ask for a migration. Run `traits update` and apply each
-listed release to `traits/config.json` and the trait files, then set `version`
+listed release to `traits/_config.json` and the trait files, then set `version`
 to the latest release.
