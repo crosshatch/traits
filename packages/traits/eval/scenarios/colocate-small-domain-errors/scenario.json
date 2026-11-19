@@ -1,0 +1,7 @@
+{
+  "trait": "colocate-small-domain-errors",
+  "labels": {
+    "billing/InvoiceNotFound.ts": "fail",
+    "billing/PaymentDeclined.ts": "pass"
+  }
+}

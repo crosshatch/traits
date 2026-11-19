@@ -1,0 +1,36 @@
+{
+  "name": "@traits/opencode",
+  "version": "0.5.15",
+  "description": "Traits feedback-review integration for OpenCode",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crosshatch/traits.git",
+    "directory": "packages/@traits/opencode"
+  },
+  "files": [
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "index.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js"
+    },
+    "access": "public"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "catalog:opencode",
+    "effect": "catalog:opencode"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": "catalog:opencode",
+    "effect": "catalog:opencode-peers"
+  }
+}

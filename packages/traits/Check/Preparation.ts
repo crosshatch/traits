@@ -1,0 +1,150 @@
+import { Array, Effect, pipe, Result } from "effect"
+
+import { EnrichmentRegistry } from "../Enrichment/EnrichmentRegistry.ts"
+import * as Report from "../Report/Report.ts"
+import * as Segmentation from "../Segmenter/Segmentation.ts"
+import { SegmenterRegistry } from "../Segmenter/SegmenterRegistry.ts"
+import { CurrentSettings } from "../Settings.ts"
+import type { Input } from "../util/Input.ts"
+import type { WorkspacePath } from "../util/WorkspacePath.ts"
+import type { CheckInput } from "./CheckInput.ts"
+
+/** Completed setup and segmentation shared by all traits in one check. */
+export interface Preparation {
+  readonly setupDiagnostics: ReadonlyArray<Report.Diagnostic>
+  /** Executions of successfully initialized enrichments, by module. */
+  readonly enrichments: ReadonlyMap<WorkspacePath, Effect.Success<ReturnType<EnrichmentRegistry["Service"]>>>
+  /** Per-module results in change order. */
+  readonly segmentations: ReadonlyMap<
+    WorkspacePath,
+    ReadonlyArray<Result.Result<ReadonlyArray<Input>, Report.Diagnostic>>
+  >
+}
+
+/** Logs a failure the report cannot explain, since reports carry no raw errors, then fails with the diagnostic recorded in its place, so a broken extension can still be diagnosed. */
+const unexplained = (diagnostic: Report.Diagnostic) => (cause: unknown) =>
+  Effect.logError(`${diagnostic.origin._tag} of ${diagnostic.origin.module} failed`, cause).pipe(
+    Effect.andThen(Effect.fail(diagnostic))
+  )
+
+/** Collects immutable results; registry layers, not preparation, own setup caching. */
+export const make = Effect.fnUntraced(function* (
+  request: CheckInput
+): Effect.fn.Return<Preparation, never, SegmenterRegistry | EnrichmentRegistry> {
+  const segmenterRegistry = yield* SegmenterRegistry
+  const { check } = yield* CurrentSettings
+  const enrichmentRegistry = yield* EnrichmentRegistry
+  const modules = {
+    segmenters: Array.dedupe(
+      Array.flatMap(request.traits, (entry) => (entry.trait.segment === undefined ? [] : [entry.trait.segment]))
+    ),
+    enrichments: Array.dedupe(Array.flatMap(request.traits, (entry) => entry.trait.enrichments ?? []))
+  }
+  const setups = yield* Effect.all(
+    {
+      segmenterSetups: Effect.forEach(
+        modules.segmenters,
+        (module) => {
+          const origin = Report.DiagnosticOrigin.cases.SegmenterSetup.make({ module })
+          const fallback = Report.Diagnostic.make({
+            origin,
+            explanation: Report.Explanation.cases.Error.make({ error: "Segmenter initialization failed." })
+          })
+          return segmenterRegistry(module).pipe(
+            Effect.catchTags({
+              SegmenterSetupError: (error) =>
+                Effect.fail(
+                  Report.Diagnostic.make({
+                    origin,
+                    explanation: Report.Explanation.cases.Instruction.make({ instruction: error.instruction })
+                  })
+                ),
+              SchemaError: unexplained(fallback)
+            }),
+            Effect.catchDefect(unexplained(fallback)),
+            Effect.result,
+            Effect.map((result) => [module, result] as const)
+          )
+        },
+        { concurrency: "unbounded" }
+      ),
+      enrichmentSetups: Effect.forEach(
+        modules.enrichments,
+        (module) => {
+          const origin = Report.DiagnosticOrigin.cases.EnrichmentSetup.make({ module })
+          const fallback = Report.Diagnostic.make({
+            origin,
+            explanation: Report.Explanation.cases.Error.make({ error: "Enrichment initialization failed." })
+          })
+          return enrichmentRegistry(module).pipe(
+            Effect.catchTags({
+              EnrichmentSetupError: (error) =>
+                Effect.fail(
+                  Report.Diagnostic.make({
+                    origin,
+                    explanation: Report.Explanation.cases.Instruction.make({ instruction: error.instruction })
+                  })
+                ),
+              SchemaError: unexplained(fallback)
+            }),
+            Effect.catchDefect(unexplained(fallback)),
+            Effect.result,
+            Effect.map((result) => [module, result] as const)
+          )
+        },
+        { concurrency: "unbounded" }
+      )
+    },
+    { concurrency: "unbounded" }
+  )
+  const segmentations = yield* Effect.forEach(
+    Array.flatMap(setups.segmenterSetups, (entry) =>
+      Result.isSuccess(entry[1]) ? [[entry[0], entry[1].success] as const] : []
+    ),
+    (entry) => {
+      const [module, execute] = entry
+      return Effect.forEach(
+        request.changes,
+        (change, index) => {
+          const origin = Report.DiagnosticOrigin.cases.SegmenterExecution.make({ module, change: index })
+          const fallback = Report.Diagnostic.make({
+            origin,
+            explanation: Report.Explanation.cases.Error.make({
+              error: "Segmentation failed or returned invalid inputs."
+            })
+          })
+          return Segmentation.execute(execute, change).pipe(
+            Effect.catchTags({
+              SegmenterError: (error) =>
+                Effect.fail(
+                  Report.Diagnostic.make({
+                    origin,
+                    explanation: Report.Explanation.cases.Instruction.make({ instruction: error.instruction })
+                  })
+                ),
+              SchemaError: unexplained(fallback)
+            }),
+            Effect.catchDefect(unexplained(fallback)),
+            Effect.result
+          )
+        },
+        // Segmenters are extension code that may spawn processes or call models, which nothing else limits.
+        { concurrency: check.segmentationConcurrency }
+      ).pipe(Effect.map((results) => [module, results] as const))
+    },
+    // Distinct segmenter modules are few; the per-change executions inside are bounded.
+    { concurrency: "unbounded" }
+  )
+  return {
+    enrichments: pipe(
+      setups.enrichmentSetups,
+      Array.flatMap((entry) => (Result.isSuccess(entry[1]) ? [[entry[0], entry[1].success] as const] : [])),
+      (entries) => new Map(entries)
+    ),
+    setupDiagnostics: [
+      ...Array.getFailures(Array.map(setups.segmenterSetups, (entry) => entry[1])),
+      ...Array.getFailures(Array.map(setups.enrichmentSetups, (entry) => entry[1]))
+    ],
+    segmentations: new Map(segmentations)
+  }
+})

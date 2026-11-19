@@ -2,28 +2,30 @@ import { useAtomSet } from "@effect/atom-react"
 import { Array, Effect, Schema as S } from "effect"
 import { Atom } from "effect/reactivity"
 
+/** The browser refused to store the chosen theme, such as in a private window; the toggle still applies for this page. */
 class ThemeStorageError extends S.TaggedError<ThemeStorageError>()("ThemeStorageError", { cause: S.Defect() }) {}
 
-const toggleTheme = Effect.gen(function* () {
-  const theme = yield* Effect.sync(() => {
-    const root = document.documentElement
-    const dark =
-      root.dataset.theme === undefined
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        : root.dataset.theme === "dark"
-    const next = dark ? "light" : "dark"
-    root.dataset.theme = next
-    Array.forEach(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'), (meta) => {
-      meta.content = dark ? "#faf4e3" : "#241d28"
+const toggleAtom = Atom.fn(() =>
+  Effect.gen(function* () {
+    const theme = yield* Effect.sync(() => {
+      const root = document.documentElement
+      const dark =
+        root.dataset.theme === undefined
+          ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          : root.dataset.theme === "dark"
+      const next = dark ? "light" : "dark"
+      root.dataset.theme = next
+      Array.forEach(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'), (meta) => {
+        meta.content = dark ? "#faf4e3" : "#241d28"
+      })
+      return next
     })
-    return next
-  })
-  yield* Effect.try({
-    try: () => localStorage.setItem("traits-theme", theme),
-    catch: (cause) => ThemeStorageError.make({ cause })
-  })
-}).pipe(Effect.withSpan("ThemeToggle.toggle"))
-const toggleAtom = Atom.fn((_event: unknown) => toggleTheme)
+    yield* Effect.try({
+      try: () => localStorage.setItem("traits-theme", theme),
+      catch: (cause) => ThemeStorageError.make({ cause })
+    })
+  }).pipe(Effect.withSpan("ThemeToggle.toggle"))
+)
 
 export const ThemeToggle = () => {
   const toggle = useAtomSet(toggleAtom)
@@ -32,7 +34,7 @@ export const ThemeToggle = () => {
     <button
       className="theme-toggle"
       type="button"
-      onClick={toggle}
+      onClick={() => toggle()}
       aria-label="Switch between light and dark mode"
       title="Switch between light and dark mode"
     >

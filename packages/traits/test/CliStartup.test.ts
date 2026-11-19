@@ -1,0 +1,377 @@
+import { NodeServices } from "@effect/platform-node"
+import { expect, it } from "@effect/vitest"
+import { Array, Console, Effect, FileSystem, Path, pipe, Runtime, Schema as S, Stream, String } from "effect"
+import { Command } from "effect/cli"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
+
+import { check, VerdictExit } from "../Cli/commands/check/check.ts"
+import { ModelSelection } from "../local/user/Profile/ModelSelection.ts"
+import { Profile } from "../local/user/Profile/Profile.ts"
+import { WorkspaceCheck } from "../local/WorkspaceCheck.ts"
+import PackageJson from "../package.json" with { type: "json" }
+import * as Report from "../Report/Report.ts"
+
+const runCli = Effect.fn("test.runCli")(function* (
+  args: ReadonlyArray<string>,
+  env: Record<string, string>,
+  blockNativeLock: boolean = false,
+  cwd?: string
+) {
+  const path = yield* Path.Path
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+  const handle = yield* spawner.spawn(
+    ChildProcess.make(
+      process.execPath,
+      [
+        ...(blockNativeLock ? ["--import", nativeLockFailureHook] : []),
+        path.resolve(import.meta.dirname, "..", "main.ts"),
+        ...args
+      ],
+      { env, extendEnv: true, stdin: "ignore", cwd: cwd ?? path.resolve() }
+    )
+  )
+  return yield* Effect.all(
+    {
+      code: handle.exitCode,
+      stdout: handle.stdout.pipe(Stream.decodeText(), Stream.mkString),
+      stderr: handle.stderr.pipe(Stream.decodeText(), Stream.mkString)
+    },
+    { concurrency: "unbounded" }
+  )
+})
+
+it.live(
+  "renders help and version without user directories or the native lock addon",
+  Effect.fnUntraced(function* () {
+    const env = {
+      HOME: "",
+      USERPROFILE: "",
+      APPDATA: "",
+      LOCALAPPDATA: "",
+      XDG_CONFIG_HOME: "",
+      XDG_DATA_HOME: ""
+    }
+    for (const args of [
+      ["--help"],
+      ["--version"],
+      ["auth", "--help"],
+      ["auth", "login", "openai", "--help"],
+      ["profile", "create", "--help"],
+      ["check", "--help"],
+      ["mcp", "--help"],
+      ["update", "--help"]
+    ]) {
+      const result = yield* runCli(args, env, true)
+      expect(result.code).toBe(0)
+      expect(String.trim(result.stdout).length).toBeGreaterThan(0)
+      expect(result.stderr).not.toContain("TEST_NATIVE_LOCK_UNAVAILABLE")
+    }
+  }, Effect.provide(NodeServices.layer)),
+  60000
+)
+
+it.live(
+  "only loads the native lock addon when a command acquires the lock",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-cli-startup-" })
+    const env = {
+      HOME: root,
+      USERPROFILE: root,
+      APPDATA: path.join(root, "config"),
+      LOCALAPPDATA: path.join(root, "data"),
+      XDG_CONFIG_HOME: path.join(root, "config"),
+      XDG_DATA_HOME: path.join(root, "data"),
+      TRAITS_TEST_KEY: "fake-startup-key"
+    }
+    for (const args of [
+      ["auth", "list"],
+      ["auth", "status"],
+      ["profile", "list"]
+    ]) {
+      const result = yield* runCli(args, env, true)
+      expect(result.code).toBe(0)
+    }
+    const write = yield* runCli(["auth", "login", "openai", "--key-env", "TRAITS_TEST_KEY"], env, true)
+    expect(write.code).not.toBe(0)
+    expect(write.stdout + write.stderr).toContain("TEST_NATIVE_LOCK_UNAVAILABLE")
+    expect(write.stdout + write.stderr).not.toContain(env.TRAITS_TEST_KEY)
+  }, Effect.provide(NodeServices.layer)),
+  60000
+)
+
+it.live(
+  "renders storage and key-environment failures without stacks or credential contents",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-cli-errors-" })
+    const env = {
+      XDG_CONFIG_HOME: path.join(root, "config"),
+      XDG_DATA_HOME: path.join(root, "data"),
+      TRAITS_TEST_MISSING_KEY: "",
+      TRAITS_TEST_BLANK_KEY: "   "
+    }
+    const configDirectory = path.join(env.XDG_CONFIG_HOME, "traits")
+    const dataDirectory = path.join(env.XDG_DATA_HOME, "traits")
+    yield* fs.makeDirectory(configDirectory, { recursive: true })
+    yield* fs.makeDirectory(dataDirectory, { recursive: true })
+    yield* fs.writeFileString(path.join(configDirectory, "profiles.json"), "{broken")
+    yield* fs.writeFileString(path.join(dataDirectory, "credentials.json"), '{"apiKey":"DO_NOT_PRINT_TEST_SECRET"}')
+    for (const args of [
+      ["profile", "list"],
+      ["auth", "list"],
+      ["auth", "login", "openai", "--key-env", "TRAITS_TEST_MISSING_KEY"],
+      ["auth", "login", "openai", "--key-env", "TRAITS_TEST_BLANK_KEY"]
+    ]) {
+      const result = yield* runCli(args, env)
+      const output = result.stdout + result.stderr
+      expect(result.code).not.toBe(0)
+      expect(output).not.toContain("\n    at ")
+      expect(output).not.toContain("SchemaError")
+      expect(output).not.toContain("DO_NOT_PRINT_TEST_SECRET")
+      if (args[0] === "profile") {
+        expect(output).toContain("Could not read profiles")
+        expect(output).toContain("profiles.json")
+      } else if (args[1] === "list") {
+        expect(output).toContain("Could not read provider accounts")
+        expect(output).toContain("credentials.json")
+      } else if (args[4] === "TRAITS_TEST_MISSING_KEY") {
+        expect(output).toContain("TRAITS_TEST_MISSING_KEY")
+      } else {
+        expect(output).toContain("An API key is required")
+      }
+    }
+  }, Effect.provide(NodeServices.layer)),
+  60000
+)
+
+it.live(
+  "stores custom layer paths without reading credentials or executing the modules",
+  Effect.fnUntraced(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const root = yield* fs.makeTempDirectoryScoped({ prefix: "traits-custom-profile-" })
+    const env = { XDG_CONFIG_HOME: path.join(root, "config"), XDG_DATA_HOME: path.join(root, "data") }
+    const module = path.join(root, "custom layer.ts")
+    yield* fs.writeFileString(
+      module,
+      'throw new Error("PROFILE_MANAGEMENT_MUST_NOT_IMPORT_THIS"); export default undefined;'
+    )
+    const data = path.join(env.XDG_DATA_HOME, "traits")
+    yield* fs.makeDirectory(data, { recursive: true })
+    yield* fs.writeFileString(path.join(data, "credentials.json"), "not valid JSON")
+    const created = yield* runCli(["profile", "create", "custom", "--language", module, "--decision", module], env)
+    expect(created.code).toBe(0)
+    const shown = yield* runCli(["profile", "show", "custom"], env)
+    expect(shown.code).toBe(0)
+    const saved = yield* pipe(shown.stdout, S.decodeEffect(S.fromJsonString(S.Struct({ profile: Profile }))))
+    for (const selection of [saved.profile.language, saved.profile.decision]) {
+      expect(selection).toEqual(ModelSelection.cases.Custom.make({ path: module }))
+    }
+    const removed = yield* runCli(["profile", "remove", "custom"], env)
+    expect(removed.code).toBe(0)
+  }, Effect.provide(NodeServices.layer)),
+  60000
+)
+
+const nativeLockFailureScript = String.stripMargin(`
+|import { registerHooks } from "node:module";
+|registerHooks({
+|  resolve: (specifier, context, next) => {
+|    if (specifier === "fs-native-extensions") {
+|      throw new Error("TEST_NATIVE_LOCK_UNAVAILABLE");
+|    }
+|    return next(specifier, context);
+|  }
+|});
+`)
+const nativeLockFailureHook = `data:text/javascript,${encodeURIComponent(nativeLockFailureScript)}`
+
+it.live(
+  "reports check failures on stderr with the Incomplete exit code and maps verdicts to exit codes",
+  Effect.fnUntraced(
+    function* () {
+      const fs = yield* FileSystem.FileSystem
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-check-exit-" })
+      const path = yield* Path.Path
+      const missing = yield* runCli(["check", "src/a.ts"], {}, false, cwd)
+      expect(missing).toMatchObject({ code: 2, stdout: "" })
+      expect(missing.stderr).toContain(path.join("traits", "_config.json"))
+      expect(missing.stderr).not.toContain("    at ")
+      const partialPolicy = yield* runCli(["check", "--fail", "0.5", "src/a.ts"], {}, false, cwd)
+      expect(partialPolicy).toMatchObject({ code: 2, stdout: "" })
+      expect(partialPolicy.stderr).toContain("--fail and --pass")
+      expect(
+        pipe(
+          ["Pass", "Fail", "Incomplete", "Inconclusive"] as const,
+          Array.map((verdict) => Runtime.getErrorExitCode(VerdictExit.make({ verdict })))
+        )
+      ).toEqual([0, 1, 2, 3])
+    },
+    Effect.scoped,
+    Effect.provide(NodeServices.layer)
+  )
+)
+
+it.effect("applies check.policy from traits/_config.json unless --fail and --pass override it", () =>
+  Effect.gen(function* () {
+    const digest = `sha256:${pipe("0", String.repeat(64))}`
+    // One assessment that is likelier a violation than not.
+    const report = yield* pipe(
+      {
+        version: "0.6.0",
+        run: { models: [], usage: {}, ruleOut: 0.6 },
+        changes: [{ after: { path: "file.ts", digest } }],
+        diagnostics: [],
+        traits: [
+          {
+            trait: { name: "example", purpose: "Protect correctness.", assertion: "The code is correct." },
+            origin: { _tag: "File", path: "traits/example.md" },
+            changes: [
+              {
+                _tag: "Evaluated",
+                inputs: [
+                  {
+                    _tag: "Completed",
+                    segment: { _tag: "After", range: { start: 0, end: 1 } },
+                    digest,
+                    enrichments: [],
+                    assessment: { pass: 0.3, fail: 0.6, na: 0.05, uncertain: 0.05 }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      S.decodeEffect(Report.Report)
+    )
+    const console = yield* Console.Console
+    const output: Array<string> = []
+    const run = (args: ReadonlyArray<string>, policy: Report.DecisionPolicy | undefined) =>
+      Command.runWith(check, { version: "0" })(args).pipe(
+        Effect.provideService(Console.Console, {
+          ...console,
+          log: (...args) => {
+            output.push(Array.join(args, " "))
+          }
+        }),
+        Effect.provideService(WorkspaceCheck, { check: () => Effect.succeed({ report, policy }) })
+      )
+    const configured = yield* run([], { fail: 0.5, pass: 0.5 }).pipe(Effect.flip)
+    expect(configured).toMatchObject({ _tag: "VerdictExit", verdict: "Fail" })
+    // The flags' higher fail threshold accepts the same report, and without any policy there is no verdict to exit with.
+    yield* run(["--fail", "0.9", "--pass", "0.1"], { fail: 0.5, pass: 0.5 })
+    yield* run([], undefined)
+    expect(output.at(-1)).toContain("Traits check: Fail")
+    yield* run(["--json"], undefined)
+    const encoded = yield* pipe(report, S.encodeEffect(Report.Report))
+    expect(JSON.parse(output.at(-1)!)).toEqual(encoded)
+  }).pipe(Effect.provide(NodeServices.layer))
+)
+
+it.live(
+  "connects over MCP even when the workspace is unusable, and returns what to fix from the failing call",
+  Effect.fnUntraced(
+    function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+      // A workspace without traits/_config.json.
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-mcp-failure-" })
+      const messages = [
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "test", version: "0" } }
+        },
+        { jsonrpc: "2.0", method: "notifications/initialized" },
+        {
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "traits.check", arguments: { paths: ["a.ts"] } }
+        }
+      ]
+      const handle = yield* spawner.spawn(
+        ChildProcess.make(process.execPath, [path.resolve(import.meta.dirname, "..", "main.ts"), "mcp"], {
+          cwd,
+          // Stdin stays open, since the server stops when the client disconnects.
+          stdin: {
+            stream: Stream.concat(
+              Stream.make(
+                ...Array.map(messages, (message) => new TextEncoder().encode(`${JSON.stringify(message)}\n`))
+              ),
+              Stream.never
+            ),
+            endOnDone: false
+          }
+        })
+      )
+      const response = yield* handle.stdout.pipe(
+        Stream.decodeText(),
+        Stream.splitLines,
+        Stream.mapEffect((line) =>
+          pipe(
+            line,
+            S.decodeEffect(
+              S.fromJsonString(
+                S.Struct({
+                  id: S.Finite.pipe(S.optionalKey),
+                  result: S.Struct({
+                    isError: S.Boolean.pipe(S.optionalKey),
+                    content: S.Array(S.Struct({ text: S.String })).pipe(S.optionalKey)
+                  }).pipe(S.optionalKey)
+                })
+              )
+            )
+          )
+        ),
+        Stream.filter((message) => message.id === 2),
+        Stream.runHead,
+        Effect.flatMap(Effect.fromOption),
+        Effect.timeout("30 seconds")
+      )
+      expect(response.result?.isError).toBe(true)
+      const text = pipe(
+        response.result?.content ?? [],
+        Array.map((part) => part.text),
+        Array.join("\n")
+      )
+      const failure = yield* pipe(text, S.decodeEffect(S.fromJsonString(S.Struct({ message: S.String }))))
+      expect(failure.message).toContain(path.join("traits", "_config.json"))
+      expect(failure.message).toContain("no restart is needed")
+    },
+    Effect.scoped,
+    Effect.provide(NodeServices.layer)
+  )
+)
+it.live("add persists a valid local trait without agent configuration or interactive flags", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-cli-ingest-" })
+    yield* fs.makeDirectory(`${directory}/traits`)
+    yield* fs.writeFileString(
+      `${directory}/traits/_config.json`,
+      JSON.stringify({
+        version: PackageJson.version,
+        models: {
+          language: { provider: "openai-compatible", model: "unused", url: "http://127.0.0.1:9" },
+          decision: { provider: "cloudflare", model: "unused" }
+        }
+      })
+    )
+    const text = "---\nname: readable\npurpose: Keep code readable.\n---\n"
+    yield* fs.writeFileString(`${directory}/rules.md`, text)
+    const result = yield* runCli(["add", "rules.md"], {}, false, directory)
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain("Imported 1 traits (1 changed)")
+    const saved = yield* fs.readFileString(`${directory}/traits/readable.md`)
+    const output = yield* fs.exists(`${directory}/traits/stdout`)
+    expect(saved).toBe(text)
+    expect(output).toBe(false)
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+)

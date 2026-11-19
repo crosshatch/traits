@@ -2,9 +2,10 @@ import { presets, recommended } from "@effect/tsgo/oxlint-presets"
 import { Record } from "effect"
 import { defineConfig } from "vite-plus"
 
-import custom from "./oxlints/index.ts"
+import custom from "./oxlints/oxlints.ts"
 
-const toolingIgnores = ["**/.worktrees/**", ".agents/**", "repos/**"]
+// Evaluation scenarios are small standalone projects that deliberately break conventions.
+const toolingIgnores = ["**/.worktrees/**", ".agents/**", "packages/traits/eval/scenarios/**", "repos/**", "traits/**"]
 
 export default defineConfig({
   fmt: {
@@ -27,7 +28,7 @@ export default defineConfig({
     ignorePatterns: toolingIgnores,
     jsPlugins: [
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
-      { name: "custom", specifier: "./oxlints/index.ts" }
+      { name: "custom", specifier: "./oxlints/oxlints.ts" }
     ],
     options: { typeAware: true, typeCheck: false },
     rules: {
@@ -57,6 +58,6 @@ export default defineConfig({
     }
   },
   test: {
-    projects: ["oxlints/vite.config.ts", "traits/vite.config.ts"]
+    projects: ["oxlints/vite.config.ts", "packages/@traits/*/vite.config.ts", "packages/traits/vite.config.ts"]
   }
 })
