@@ -1,1 +1,1 @@
-packages/traits/README.md
+packages/traits/docs/README.md

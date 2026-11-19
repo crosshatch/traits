@@ -5,7 +5,7 @@ import * as OpenAiCompatible from "@effect/ai-openai-compat"
 import { OpenRouterClient, OpenRouterDecisionModel, OpenRouterLanguageModel } from "@effect/ai-openrouter"
 import { Array, Config, type Context, Layer, Schema as S } from "effect"
 
-import { DecisionModelSelection, LanguageModelSelection, ModelConfiguration } from "./ModelConfiguration.ts"
+import * as ModelConfiguration from "./ModelConfiguration.ts"
 export { ModelId } from "../ModelId.ts"
 export { DecisionModelSelection, LanguageModelSelection, ModelConfiguration as Models } from "./ModelConfiguration.ts"
 
@@ -44,7 +44,7 @@ const cloudflareClient = CloudflareClient.layerConfig().pipe(
   requiring(CloudflareClient.CloudflareClient, "Cloudflare", ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"])
 )
 const openAiCompatibleClient = (
-  selection: Extract<LanguageModelSelection, { readonly provider: "openai-compatible" }>
+  selection: Extract<ModelConfiguration.LanguageModelSelection, { readonly provider: "openai-compatible" }>
 ) =>
   OpenAiCompatible.OpenAiClient.layerConfig({
     apiUrl: Config.succeed(selection.url),
@@ -55,25 +55,30 @@ const openAiCompatibleClient = (
     ])
   )
 
+/** Builds only the language model, for operations such as trait extraction. */
+export const layerLanguage = (selection: ModelConfiguration.LanguageModelSelection) =>
+  ModelConfiguration.LanguageModelSelection.match(selection, {
+    openai: (selection) => OpenAiLanguageModel.layer({ model: selection.model }).pipe(Layer.provide(openAiClient)),
+    anthropic: (selection) =>
+      AnthropicLanguageModel.layer({ model: selection.model }).pipe(Layer.provide(anthropicClient)),
+    openrouter: (selection) =>
+      OpenRouterLanguageModel.layer({ model: selection.model }).pipe(Layer.provide(openRouterClient)),
+    "openai-compatible": (selection) =>
+      OpenAiCompatible.OpenAiLanguageModel.layer({ model: selection.model }).pipe(
+        Layer.provide(openAiCompatibleClient(selection))
+      )
+  })
+
+/** Builds only the decision model, for classification without text generation. */
+export const layerDecision = (selection: ModelConfiguration.DecisionModelSelection) =>
+  ModelConfiguration.DecisionModelSelection.match(selection, {
+    openai: (selection) => OpenAiDecisionModel.layer({ model: selection.model }).pipe(Layer.provide(openAiClient)),
+    openrouter: (selection) =>
+      OpenRouterDecisionModel.layer({ model: selection.model }).pipe(Layer.provide(openRouterClient)),
+    cloudflare: (selection) =>
+      CloudflareDecisionModel.layer({ model: selection.model }).pipe(Layer.provide(cloudflareClient))
+  })
+
 /** Language and decision model services for the selected providers; credentials are read from the active ConfigProvider. */
-export const layer = (models: ModelConfiguration) =>
-  Layer.mergeAll(
-    LanguageModelSelection.match(models.language, {
-      openai: (selection) => OpenAiLanguageModel.layer({ model: selection.model }).pipe(Layer.provide(openAiClient)),
-      anthropic: (selection) =>
-        AnthropicLanguageModel.layer({ model: selection.model }).pipe(Layer.provide(anthropicClient)),
-      openrouter: (selection) =>
-        OpenRouterLanguageModel.layer({ model: selection.model }).pipe(Layer.provide(openRouterClient)),
-      "openai-compatible": (selection) =>
-        OpenAiCompatible.OpenAiLanguageModel.layer({ model: selection.model }).pipe(
-          Layer.provide(openAiCompatibleClient(selection))
-        )
-    }),
-    DecisionModelSelection.match(models.decision, {
-      openai: (selection) => OpenAiDecisionModel.layer({ model: selection.model }).pipe(Layer.provide(openAiClient)),
-      openrouter: (selection) =>
-        OpenRouterDecisionModel.layer({ model: selection.model }).pipe(Layer.provide(openRouterClient)),
-      cloudflare: (selection) =>
-        CloudflareDecisionModel.layer({ model: selection.model }).pipe(Layer.provide(cloudflareClient))
-    })
-  )
+export const layer = (models: ModelConfiguration.ModelConfiguration) =>
+  Layer.mergeAll(layerLanguage(models.language), layerDecision(models.decision))

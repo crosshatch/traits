@@ -1,11 +1,14 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Layer, Path, Record, Stream } from "effect"
+import { Array, Deferred, Effect, Fiber, FileSystem, Layer, Path, Record, Stream } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
+import { FetchHttpClient } from "effect/http"
+import { TestClock } from "effect/testing"
 
 import * as WorkspaceDerive from "../local/WorkspaceDerive.ts"
 import { WorkspaceRoot } from "../local/WorkspaceRoot.ts"
 import * as WorkspaceTraits from "../local/WorkspaceTraits.ts"
+import * as Settings from "../Settings.ts"
 import { TraitAssertion } from "../TraitAssertion.ts"
 import { TraitBody } from "../TraitBody.ts"
 import * as TraitDerivation from "../TraitDerivation.ts"
@@ -253,5 +256,69 @@ it.live("rejects invalid proposals before asking, and files changed while waitin
     expect(changed._tag).toBe("TraitChangedError")
     const kept = yield* read("existing")
     expect(kept).toBe(edited)
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+)
+it.effect("bounds comparison and approval waits separately and never saves a timed-out proposal", () =>
+  Effect.gen(function* () {
+    const { exists, services } = yield* workspace("distinct")
+    const settings = Settings.Settings.make({
+      derive: Settings.DeriveSettings.make({ comparisonTimeoutMillis: 100, approvalTimeoutMillis: 100 })
+    })
+    for (const phase of ["Comparing", "AwaitingApproval"] as const) {
+      const entered = yield* Deferred.make<void>()
+      const operation = WorkspaceDerive.derive(
+        proposal,
+        () => Effect.never,
+        (progress) =>
+          progress.phase === phase ? Deferred.succeed(entered, undefined).pipe(Effect.asVoid) : Effect.void
+      ).pipe(
+        Effect.provide(
+          phase === "Comparing"
+            ? Layer.merge(
+                services,
+                Layer.effect(DecisionModel.DecisionModel, DecisionModel.make({ decide: () => Effect.never }))
+              )
+            : services
+        ),
+        Effect.provideService(Settings.CurrentSettings, settings),
+        Effect.flip
+      )
+      const running = yield* operation.pipe(Effect.forkChild)
+      yield* Deferred.await(entered)
+      yield* TestClock.adjust(101)
+      const failure = yield* Fiber.join(running)
+      expect(failure).toMatchObject({ _tag: "DerivationTimedOut", phase })
+      const saved = yield* exists("proposed")
+      expect(saved).toBe(false)
+    }
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
+)
+it.effect("rejects concurrent derivations immediately and releases admission on cancellation", () =>
+  Effect.gen(function* () {
+    const { directory, services } = yield* workspace("distinct")
+    const fs = yield* FileSystem.FileSystem
+    const entered = yield* Deferred.make<void>()
+    let hold = true
+    const store = yield* WorkspaceDerive.WorkspaceDerive.make.pipe(
+      Effect.provide(services),
+      Effect.provideService(FileSystem.FileSystem, {
+        ...fs,
+        readFileString: (path, options) =>
+          path === `${directory}/traits/_config.json`
+            ? hold
+              ? Deferred.succeed(entered, undefined).pipe(Effect.andThen(Effect.never))
+              : Effect.succeed("{}")
+            : fs.readFileString(path, options)
+      }),
+      Effect.provide(FetchHttpClient.layer)
+    )
+    const running = yield* store.derive([], () => Effect.never).pipe(Effect.forkChild)
+    yield* Deferred.await(entered)
+    const busy = yield* store.derive([], () => Effect.never).pipe(Effect.flip)
+    expect(busy._tag).toBe("DerivationBusy")
+    yield* Fiber.interrupt(running)
+    hold = false
+    const released = yield* store.derive([], () => Effect.never).pipe(Effect.flip)
+    expect(released._tag).toBe("TraitsConfigDecodeError")
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )

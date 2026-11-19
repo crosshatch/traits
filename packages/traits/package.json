@@ -23,6 +23,7 @@
     "dist/**/*.js",
     "dist/**/*.js.map",
     "dist/package.json",
+    "docs/**/*.md",
     "local/**/*.ts",
     "mcp/**/*.ts",
     "unstable/**/*.ts",
@@ -49,6 +50,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@distilled.cloud/github": "1.0.0-rc.20",
     "@effect/ai-anthropic": "catalog:",
     "@effect/ai-cloudflare": "catalog:",
     "@effect/ai-openai": "catalog:",

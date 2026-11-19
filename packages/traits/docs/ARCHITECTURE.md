@@ -52,6 +52,22 @@ storage stays in `UserConfig`; selection precedence belongs to
 environments; `WorkspaceTraits.select` combines them with available and
 explicitly requested traits.
 
+`WritableTraitStore` owns ingestion, trait files, environment registration, and
+remote-source metadata. It returns the current source selection and the changes
+it made; it does not invoke a coding agent or request terminal input. Local edit
+conflicts return `LocalTraitEdits` for the caller to resolve explicitly.
+`WorkspaceApply.prepare` builds one report and prompt for an installed
+selection; `WorkspaceApply.run` optionally executes a configured agent. CLI
+`add` and `pull` compose this only with `--apply`, and `apply` independently
+retries application. No pending-application state connects the stages.
+
+`CodingAgent` runs a bounded headless command session. `InputRequired` returns
+the latest output and session to the caller instead of asking another model to
+answer for the user. Session formatting is configured rather than hard-coded for
+one client. `Models` and `WorkspaceModels` expose language-only and
+decision-only layers, so ingestion does not construct an unused decision model
+and headless execution does not construct an unused language model.
+
 ## Runtime API
 
 `check({ traits, changes })` evaluates caller-ordered traits and changes and
@@ -439,12 +455,46 @@ target file that changed while waiting for approval fails with
 destination and renamed over it, so a reader never sees a partly written trait.
 
 The `WorkspaceDerive` service runs derivations one at a time with the configured
-models. The `traits.derive` MCP tool supplies `approve` as one form elicitation
-per proposal, offering Save or Skip beside an optional feedback field, and
-returns every outcome in the same call. Any feedback returns `RevisionRequested`
-without saving, whichever decision is selected; declining or dismissing the form
-skips the proposal. Clients that cannot show forms get a failure carrying the
-proposals, since saving requires the user's approval.
+models. A concurrent request fails immediately with `DerivationBusy` instead of
+queuing indefinitely. Admission is released on success, failure, timeout, or
+cancellation. Comparison, including explanations and provider retries, is
+bounded per proposal by `derive.comparisonTimeoutMillis` (120000 by default). A
+programmatic host's approval callback is bounded separately by
+`derive.approvalTimeoutMillis` (300000 by default); timing out never authorizes
+a write. A callback can return `Defer` to finish the call with
+`ApprovalRequired`.
+
+The `traits.derive` MCP tool uses client-led approval. Its first call returns
+`ApprovalRequired` with the complete review message, final document, exact
+proposed Markdown, and existing-file snapshot (`null` for a new file). The
+response includes an instruction telling the agent to show that message and ask
+the user through the client's own question tool or conversation. It never
+initiates MCP elicitation or waits for a form. `Covered`, `Unresolved`, and
+`NameTaken` instead need explanation to the user.
+
+After the user responds, the agent calls `traits.derive` with the returned
+document and an `approvals` entry containing `name`, `text`, `current`, and
+`decision` (`Save`, `Skip`, or `Revise` with feedback). The server compares the
+proposal again. Save is accepted only if the newly prepared text and existing
+snapshot exactly match what the user reviewed; otherwise it returns a fresh
+`ApprovalRequired`. The normal pre-write snapshot check still protects against
+edits during the call. A revision returns feedback without saving and requires
+fresh approval for the revised proposal.
+
+There are no approval IDs, pending-proposal files, background approval jobs, or
+server-side pending state. The client returns the reviewed snapshot with its
+decision, so a server restart between review and confirmation is harmless. This
+contract relies on the agent faithfully relaying the user's decision; the
+snapshot binds the content, not proof of a human interaction. Progress
+notifications and logs describe work during a call only.
+
+The `@traits/opencode` package, loaded from `packages/@traits/opencode` by this
+checkout's `opencode.json`, injects a feedback-review reminder before every
+primary model request, including after compaction. It neither edits the user's
+message nor runs derivation on synthetic messages or auxiliary model requests.
+It asks the agent to identify a reusable principle, propose it for approval, and
+explain a skipped or blocked derivation. This makes the reminder deterministic;
+it does not force a semantic decision or a tool call.
 
 `traits check` writes only the report to stdout; verdicts and errors go to
 stderr. Without a policy it exits 0 whenever the check runs, because the report

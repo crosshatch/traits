@@ -40,8 +40,20 @@ catalog:
   vitest: ^5.1.0
   yaml: ^2.9.1
 
+catalogs:
+  opencode:
+    # The SDK pins Effect and its types are version-sensitive; update this pair together.
+    "@opencode/plugin": 2.3.2
+    effect: 4.1.0
+
 minimumReleaseAgeExclude:
   - "@cloudflare/workers-types@5.20260930.2"
+  - "@opencode/ai@2.3.2"
+  - "@opencode/client@2.3.2"
+  - "@opencode/plugin@2.3.2"
+  - "@opencode/protocol@2.3.2"
+  - "@opencode/schema@2.3.2"
+  - "@opencode/util@2.3.2"
 
 overrides:
   "@effect/sql-d1": ^4.1.4

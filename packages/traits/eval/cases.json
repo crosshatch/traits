@@ -24,7 +24,7 @@
     },
     {
       "id": "architecture",
-      "path": "packages/traits/ARCHITECTURE.md"
+      "path": "packages/traits/docs/ARCHITECTURE.md"
     },
     {
       "id": "check-command",

@@ -3,6 +3,7 @@ import { Array, Effect, FileSystem, Path, pipe, Schema as S, String } from "effe
 import PackageJson from "../package.json" with { type: "json" }
 import { Settings } from "../Settings.ts"
 import * as Version from "../Version.ts"
+import { AgentConfiguration } from "./AgentConfiguration.ts"
 import { ModelConfiguration } from "./ModelConfiguration.ts"
 import * as WorkspaceLayout from "./WorkspaceLayout.ts"
 import { WorkspaceRoot } from "./WorkspaceRoot.ts"
@@ -20,6 +21,7 @@ export const TraitsConfig = S.Struct({
       'The traits version this workspace\'s configuration and trait files were last migrated to, or "internal" in the traits repository itself, which always matches its own source.'
   }),
   models: ModelConfiguration,
+  agent: AgentConfiguration.pipe(S.optionalKey),
   /** Git glob patterns, relative to the workspace root, for files to skip when checking every project file, such as lockfiles or large generated assets; none when omitted. Explicitly requested paths are always checked. */
   exclude: S.Array(S.NonEmptyString)
     .annotateKey({

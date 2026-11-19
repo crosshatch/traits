@@ -1,5 +1,6 @@
 import { Array, Data, Effect, Option, pipe, Schema as S, Struct } from "effect"
 
+import { TraitApprovalRequest } from "./TraitApproval.ts"
 import * as TraitComparison from "./TraitComparison.ts"
 import { BlockedDerivation, TraitDerivationPlan } from "./TraitDerivationPlan.ts"
 import * as TraitFile from "./TraitFile.ts"
@@ -15,6 +16,8 @@ export const TraitDerivation = S.TaggedUnion({
   Covered: Struct.omit(BlockedDerivation.cases.Covered.fields, ["_tag"]),
   Unresolved: Struct.omit(BlockedDerivation.cases.Unresolved.fields, ["_tag"]),
   NameTaken: Struct.omit(BlockedDerivation.cases.NameTaken.fields, ["_tag"]),
+  /** No write occurred; the client must present this proposal and obtain the user's decision. */
+  ApprovalRequired: { name: TraitName, request: TraitApprovalRequest },
   /** The host approved a new trait, saved at path. */
   Created: {
     name: TraitName,
@@ -136,10 +139,11 @@ export const prepare = Effect.fn("TraitDerivation.prepare")(function* (
     return Array.map(entries, (entry) => ({ ...entry, reason: reasons[entry.name]! }))
   })
   if (Resolution.$is("Unresolved")(resolution)) {
+    const traits = yield* explained(resolution.traits)
     return TraitDerivationPlan.Blocked({
       reason: BlockedDerivation.cases.Unresolved.make({
         name: document.name,
-        traits: yield* explained(resolution.traits)
+        traits
       })
     })
   }

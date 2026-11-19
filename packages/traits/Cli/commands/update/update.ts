@@ -1,9 +1,11 @@
 import { Array, Console, Effect, Option, pipe, String } from "effect"
 import { Command, Flag } from "effect/cli"
 
+import * as WorkspaceMigration from "../../../local/WorkspaceMigration.ts"
 import * as WorkspaceUpdate from "../../../local/WorkspaceUpdate.ts"
 import type { UpdateContext } from "../../../local/WorkspaceUpdate.ts"
 import * as Version from "../../../Version.ts"
+import * as AgentResult from "../../AgentResult.ts"
 
 /** Everything an agent needs to migrate a workspace from one traits version to the latest release. */
 export type { UpdateContext } from "../../../local/WorkspaceUpdate.ts"
@@ -71,5 +73,11 @@ export const update = Command.make(
   Effect.fn("update")(function* (params) {
     const context = yield* WorkspaceUpdate.load({ from: Option.getOrUndefined(params.from) })
     yield* Console.log(render(context))
+    if (Version.isNewer(context.latest, context.from.version)) {
+      const execution = yield* WorkspaceMigration.run(render(context))
+      if (execution !== undefined) {
+        yield* AgentResult.report(execution)
+      }
+    }
   })
 ).pipe(Command.withDescription("Print the changes since this workspace's traits version so an agent can migrate it"))

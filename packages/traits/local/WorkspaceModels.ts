@@ -7,10 +7,17 @@ import * as Models from "./Models.ts"
 import type { TraitsConfig } from "./TraitsConfig.ts"
 import * as WorkspaceConfigProvider from "./WorkspaceConfigProvider.ts"
 
-/** The configured language and decision models, with concurrent decisions about one input batched and decision requests limited and retried as the configuration's settings direct, and credentials read from the environment or the workspace's .env files. Also provides those settings, so everything run with these models follows the same configuration. */
-export const layer = (config: TraitsConfig) =>
+/** The configured decision model with request batching, limits, retries, workspace credentials, and the corresponding settings. */
+export const layerDecision = (config: TraitsConfig) =>
   DecisionBatching.layer.pipe(
     Layer.provideMerge(DecisionLimit.layer),
-    Layer.provideMerge(Models.layer(config.models).pipe(Layer.provide(WorkspaceConfigProvider.layer))),
+    Layer.provideMerge(Models.layerDecision(config.models.decision).pipe(Layer.provide(WorkspaceConfigProvider.layer))),
     Layer.provideMerge(Layer.succeed(CurrentSettings, config))
   )
+
+/** The configured language model with workspace credentials, without constructing an unused decision model. */
+export const layerLanguage = (config: TraitsConfig) =>
+  Models.layerLanguage(config.models.language).pipe(Layer.provide(WorkspaceConfigProvider.layer))
+
+/** Both workspace models and their settings, for checks and derivation. */
+export const layer = (config: TraitsConfig) => Layer.mergeAll(layerDecision(config), layerLanguage(config))

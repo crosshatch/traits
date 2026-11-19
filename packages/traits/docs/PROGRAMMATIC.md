@@ -1,54 +1,11 @@
-# Traits
-
-**Reusable preferences for your AI agent.**
-
-[![npm](https://img.shields.io/npm/v/traits?style=flat-square&color=6D5BD0&label=traits)](https://www.npmjs.com/package/traits)
-[![license](https://img.shields.io/badge/license-Apache%202.0-6D5BD0?style=flat-square)](https://github.com/crosshatch/traits/blob/main/LICENSE)
-[![discord](https://img.shields.io/badge/discord-join-6D5BD0?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/CSXCRUKjh9)
-
-Traits turns feedback into preferences your agent can use across tasks and
-sessions. Each trait is a Markdown file in `traits/<name>.md`:
-
-```markdown
----
-name: direct-callbacks
-subject: Callbacks passed to functions.
-assertion: >
-  Pass compatible functions directly instead of wrapping them in forwarding
-  arrows.
-purpose: Expose callback behavior without redundant wrappers.
----
-```
-
-Your agent proposes traits, asks you to approve each one, and checks its work
-against them through MCP. The files live in your project, so you can edit,
-review, and share them with your team.
-
-## Get started
-
-Paste this into your agent inside your project:
-
-```text
-Set up Traits using https://github.com/crosshatch/traits/blob/main/SETUP.md.
-Follow this project's conventions, ask me to choose providers and models, and
-preserve existing configuration.
-```
-
-## Check in CI
-
-`traits check` checks files against the project's traits from the command line
-and prints the report as JSON. Given a decision policy, it exits nonzero when a
-trait is violated, so CI can gate on it. See the
-[command line guide](https://github.com/crosshatch/traits/blob/main/SETUP.md#command-line).
-
-## Programmatic use
+# Programmatic use
 
 `traits` is the portable Effect API; importing it does not start a process, load
 workspace files, or install model providers into your runtime. `traits/local`
 adds filesystem, Git, workspace configuration, and provider integration. Neither
 entry point requires a terminal or MCP client.
 
-### Check supplied traits and text
+## Check supplied traits and text
 
 ```ts
 import { Effect } from "effect"
@@ -107,7 +64,7 @@ their error channels and service requirements without widening inferred types.
 Enrichments using additional host services can declare them as
 `Enrichment.Enrichment<WorkspaceRoot>` for local workspace access.
 
-### Check a local workspace
+## Check a local workspace
 
 ```ts
 import { NodeServices } from "@effect/platform-node"
@@ -141,7 +98,7 @@ This returns `{ report, policy }`, reloading workspace configuration and traits
 on each call. Install `@effect/platform-node` for Node integration; it is an
 optional peer for portable consumers.
 
-### Derive without a filesystem or interactive approval
+## Derive without a filesystem or interactive approval
 
 `TraitDerivation.prepare(document, existing)` accepts a
 `TraitFile.TraitDocument` and existing `{ name, text }` snapshots. Provide
@@ -156,7 +113,22 @@ anything. The host must validate extension references for its own execution
 environment. `WorkspaceDerive` remains the local approval-and-save convenience
 API.
 
-### Other local operations
+Approval callbacks may return `Defer` to return an `ApprovalRequired` result
+without saving or keeping a call open. Its request includes the document, exact
+proposed text, and current-file snapshot for client-managed review.
+
+## Other local operations
+
+- `WritableTraitStore` persists imports and tracked-source refreshes without
+  running an agent or prompting in the terminal. Its results identify the
+  installed, changed, and removed traits, plus newly created environments.
+- `WorkspaceApply.prepare(selection)` generates one application report and
+  returns a prompt for the calling agent. `WorkspaceApply.run(selection)` also
+  runs a configured headless agent when present. Application can be retried
+  independently of ingestion.
+- `CodingAgent.run(config, prompt, session?)` returns `Done` or `InputRequired`.
+  A caller can obtain a user's answer and pass it with the returned session ID
+  to resume; no language model answers on the user's behalf.
 
 - `WorkspaceUpdate.load({ from? })` returns structured migration context without
   changing files or upgrading packages.
@@ -173,7 +145,3 @@ User operations require platform services, `User.UserPaths`,
 these services once for the host; mutations own their locks and must not be
 wrapped in another user lock. Profile selections do not yet configure
 `WorkspaceModels`.
-
-## License
-
-[Apache-2.0](https://github.com/crosshatch/traits/blob/main/LICENSE)

@@ -8,6 +8,16 @@ import * as ToolFailure from "./ToolFailure.ts"
 import * as TraitsCheck from "./TraitsCheck.ts"
 import * as TraitsDerive from "./TraitsDerive.ts"
 
+const instructions = String.stripMargin(`
+|Traits are this workspace's durable rules, one per traits/<name>.md file.
+|After user corrections, preferences, and approval or rejection of an approach, actively identify the reusable lesson and call traits.derive when it may apply beyond this task. A specific file or command is not by itself a reason to skip derivation. Tell the user what you propose before calling. Follow ApprovalRequired instructions: show the proposal and ask the user through the client's native prompting mechanism, then return their decision with the reviewed snapshot. Only traits.derive saves traits, after explicit approval.
+|Do not treat silence as successful learning or permission to save. Explain Covered or blocked results and report errors. ApprovalRequired returns control to you; there is no pending server-side approval to poll, no MCP form to trigger, and no approval CLI to run.
+|Before finishing a task, call traits.check once, in a single call, on every file the task created, edited, or deleted, against every trait; do not check after each edit. After fixing findings, recheck only the affected files and traits. When a trait is created or changed, call traits.check with that trait and no paths once its wording is final.
+|Read the trait and the code before acting on a finding. Fix confirmed violations with minimal edits that keep behavior, and check again. Never weaken a trait or skip a check to silence a finding; if a trait seems wrong, ask the user and propose a clarification through traits.derive.
+|A failed tool call is neither a pass nor a finding: resolve it or report it, and never claim compliance the checks did not show.
+|If a trait file cannot be read or parsed, ask the user before editing it; \`traits update\` prints migration steps for outdated workspaces.
+`)
+
 /** The traits tools. */
 const toolkit = Toolkit.merge(TraitsDerive.toolkit, TraitsCheck.toolkit)
 
@@ -44,16 +54,6 @@ export const layer = <E, R>(services: WorkspaceServices<E, R>) =>
     name: "traits",
     version: PackageJson.version,
     protocols: [McpProtocol.v2025_11_25],
-    instructions: pipe(
-      String.stripMargin(`
-    |Traits are this workspace's durable rules, one per traits/<name>.md file.
-    |Whenever user feedback may contain an insight worth applying beyond the current task, call traits.derive; only it saves traits, after the user approves.
-    |Before finishing a task, call traits.check once, in a single call, on every file the task created, edited, or deleted, against every trait; do not check after each edit. After fixing findings, recheck only the affected files and traits. When a trait is created or changed, call traits.check with that trait and no paths once its wording is final.
-    |Read the trait and the code before acting on a finding. Fix confirmed violations with minimal edits that keep behavior, and check again. Never weaken a trait or skip a check to silence a finding; if a trait seems wrong, ask the user and propose a clarification through traits.derive.
-    |A failed tool call is neither a pass nor a finding: resolve it or report it, and never claim compliance the checks did not show.
-    |If a trait file cannot be read or parsed, ask the user before editing it; \`traits update\` prints migration steps for outdated workspaces.
-    `),
-      String.trim
-    ),
+    instructions: pipe(instructions, String.trim),
     registrations: McpServer.toolkit(toolkit).pipe(Layer.provide(handlers(services)))
   })

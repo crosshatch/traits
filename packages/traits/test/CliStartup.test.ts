@@ -8,6 +8,7 @@ import { check, VerdictExit } from "../Cli/commands/check/check.ts"
 import { ModelSelection } from "../local/user/Profile/ModelSelection.ts"
 import { Profile } from "../local/user/Profile/Profile.ts"
 import { WorkspaceCheck } from "../local/WorkspaceCheck.ts"
+import PackageJson from "../package.json" with { type: "json" }
 import * as Report from "../Report/Report.ts"
 
 const runCli = Effect.fn("test.runCli")(function* (
@@ -334,4 +335,30 @@ it.live(
     Effect.scoped,
     Effect.provide(NodeServices.layer)
   )
+)
+it.live("add persists a valid local trait without agent configuration or interactive flags", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-cli-ingest-" })
+    yield* fs.makeDirectory(`${directory}/traits`)
+    yield* fs.writeFileString(
+      `${directory}/traits/_config.json`,
+      JSON.stringify({
+        version: PackageJson.version,
+        models: {
+          language: { provider: "openai-compatible", model: "unused", url: "http://127.0.0.1:9" },
+          decision: { provider: "cloudflare", model: "unused" }
+        }
+      })
+    )
+    const text = "---\nname: readable\npurpose: Keep code readable.\n---\n"
+    yield* fs.writeFileString(`${directory}/rules.md`, text)
+    const result = yield* runCli(["add", "rules.md"], {}, false, directory)
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain("Imported 1 traits (1 changed)")
+    const saved = yield* fs.readFileString(`${directory}/traits/readable.md`)
+    const output = yield* fs.exists(`${directory}/traits/stdout`)
+    expect(saved).toBe(text)
+    expect(output).toBe(false)
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer))
 )

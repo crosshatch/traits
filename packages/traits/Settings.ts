@@ -108,7 +108,16 @@ export const DeriveSettings = S.Struct({
   /** The most existing traits compared with a proposal in one request; 32 when omitted. */
   batchSize: Count.annotateKey({
     description: "The most existing traits compared with a proposal in one request; 32 when omitted."
-  }).pipe(S.withConstructorDefault(Effect.succeed(32)), S.withDecodingDefaultKey(Effect.succeed(32)))
+  }).pipe(S.withConstructorDefault(Effect.succeed(32)), S.withDecodingDefaultKey(Effect.succeed(32))),
+  /** Maximum comparison and explanation time per proposal, including retries; 120000 milliseconds by default. */
+  comparisonTimeoutMillis: Count.annotateKey({
+    description:
+      "Maximum comparison and explanation time per proposal, including retries; 120000 milliseconds by default."
+  }).pipe(S.withConstructorDefault(Effect.succeed(120000)), S.withDecodingDefaultKey(Effect.succeed(120000))),
+  /** Maximum wait for approval before returning an actionable failure; 300000 milliseconds by default. */
+  approvalTimeoutMillis: Count.annotateKey({
+    description: "Maximum wait for approval before returning an actionable failure; 300000 milliseconds by default."
+  }).pipe(S.withConstructorDefault(Effect.succeed(300000)), S.withDecodingDefaultKey(Effect.succeed(300000)))
 }).annotate({ description: "How proposals are compared with existing traits." })
 
 /** Tunable thresholds and limits for checks, decision requests, and derivation; each takes its default when omitted, and Settings.make({}) holds every default. */
