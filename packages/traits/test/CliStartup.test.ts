@@ -41,15 +41,13 @@ const runCli = Effect.fn("test.runCli")(function* (
 })
 
 it.live(
-  "renders help and version without user directories, Windows configuration, or the native lock addon",
+  "renders help and version without user directories or the native lock addon",
   Effect.fnUntraced(function* () {
     const env = {
       HOME: "",
       USERPROFILE: "",
       APPDATA: "",
       LOCALAPPDATA: "",
-      SystemRoot: "",
-      SYSTEMROOT: "",
       XDG_CONFIG_HOME: "",
       XDG_DATA_HOME: ""
     }

@@ -1,4 +1,4 @@
-import { Config, Context, Effect, Equal, FileSystem, Layer, Option, Path, Schema as S, String } from "effect"
+import { Config, Context, Effect, FileSystem, Layer, Option, Path, Schema as S, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 /** Kind of filesystem entry expected at an owner-only storage path. */
@@ -24,12 +24,14 @@ export class UserFileSecurityError extends S.TaggedError<UserFileSecurityError>(
   check: S.Literals(["Entry", "WindowsAcl"]).annotateKey({
     description:
       "Failed check: Entry when the path is the wrong type, has a foreign owner, or is a hard-linked file; WindowsAcl when ownership, reparse-point absence, or an owner-only ACL could not be verified."
-  })
+  }),
+  /** ACL-operation diagnostic; the PowerShell check inspects permissions, never file contents. */
+  detail: S.String.annotateKey({ description: "ACL-operation diagnostic without file contents." }).pipe(S.optionalKey)
 }) {
   override get message() {
     return this.check === "Entry"
       ? `Refusing unsafe ${this.type} storage at ${this.path}.`
-      : `Could not verify ownership, reject reparse points, and enforce an owner-only Windows ACL at ${this.path}.`
+      : `Could not verify ownership, reject reparse points, and enforce an owner-only Windows ACL at ${this.path}.${this.detail === undefined || this.detail === "" ? "" : ` ${this.detail}`}`
   }
 }
 
@@ -61,21 +63,30 @@ export class UserFileSecurity extends Context.Service<UserFileSecurity>()("trait
       if (powershell === undefined) {
         return yield* fs.chmod(filename, type === "Directory" ? 0o700 : 0o600)
       }
-      yield* ChildProcess.make(
-        powershell,
-        ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", windowsSecurityScript],
-        {
-          env: { TRAITS_SECURE_PATH: path.resolve(filename), TRAITS_SECURE_TYPE: type },
-          extendEnv: true,
-          stdout: "ignore",
-          stderr: "ignore"
-        }
-      ).pipe(
-        spawner.exitCode,
-        Effect.filterOrFail(Equal.equals(0), () =>
-          UserFileSecurityError.make({ path: filename, type, check: "WindowsAcl" })
+      const { code, detail } = yield* Effect.gen(function* () {
+        const handle = yield* spawner.spawn(
+          ChildProcess.make(
+            powershell,
+            ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", windowsSecurityScript],
+            {
+              env: { TRAITS_SECURE_PATH: path.resolve(filename), TRAITS_SECURE_TYPE: type },
+              extendEnv: true,
+              stdin: "ignore",
+              stdout: "ignore"
+            }
+          )
         )
-      )
+        return yield* Effect.all(
+          {
+            code: handle.exitCode,
+            detail: handle.stderr.pipe(Stream.decodeText(), Stream.mkString, Effect.map(String.trim))
+          },
+          { concurrency: "unbounded" }
+        )
+      }).pipe(Effect.scoped)
+      if (code !== 0) {
+        return yield* UserFileSecurityError.make({ path: filename, type, check: "WindowsAcl", detail })
+      }
     })
   })
 }) {
@@ -120,5 +131,5 @@ const windowsSecurityScript = String.stripMargin(`
 |      $rules[0].FileSystemRights -ne [System.Security.AccessControl.FileSystemRights]::FullControl) { throw 'Unsafe ACL' }
 |  if (([System.IO.File]::GetAttributes($path) -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Reparse point' }
 |  exit 0
-|} catch { exit 1 }
+|} catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
 `)
