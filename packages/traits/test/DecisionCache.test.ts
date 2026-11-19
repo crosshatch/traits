@@ -17,6 +17,7 @@ import { TraitAssertion } from "../TraitAssertion.ts"
 import { TraitName } from "../TraitName.ts"
 import { TraitPurpose } from "../TraitPurpose.ts"
 import { TraitSubject } from "../TraitSubject.ts"
+import { Segment } from "../util/Segment.ts"
 import { digestText } from "../util/TextDigest.ts"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
 
@@ -132,6 +133,35 @@ it.effect("digests an input's text once for every trait checked against it", () 
     expect(model.calls.count).toBe(10)
     // The target, its decision state, and the change's identity; the ten decisions key on the state's digest.
     expect(Array.filter(digested, (length) => length >= text.length)).toHaveLength(3)
+  })
+)
+
+it.effect("reuses segment decisions across unrelated file edits but rechecks changed targets", () =>
+  Effect.gen(function* () {
+    const model = countingModel(passing)
+    const cache = memoryCache()
+    const run = (target: string, surrounding: string) =>
+      check({
+        traits: [
+          {
+            ...request.traits[0]!,
+            trait: { ...request.traits[0]!.trait, segment: WorkspacePath.make("segment.mjs") }
+          }
+        ],
+        changes: [{ after: { path: WorkspacePath.make("a.ts"), text: `${target}\n${surrounding}` } }]
+      }).pipe(
+        Effect.provideService(SegmenterRegistry, () =>
+          Effect.succeed(() => Effect.succeed([Segment.cases.After.make({ range: { start: 0, end: target.length } })]))
+        ),
+        Effect.provide([host, model.layer, cache])
+      )
+    yield* run("const a = 1", "unrelated first version")
+    expect(model.calls.count).toBe(2)
+    const reused = yield* run("const a = 1", "unrelated second version")
+    expect(model.calls.count).toBe(2)
+    expect(reused.run.usage.inputTokens).toBe(0)
+    yield* run("const a = 2", "unrelated second version")
+    expect(model.calls.count).toBe(4)
   })
 )
 

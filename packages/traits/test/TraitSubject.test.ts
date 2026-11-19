@@ -30,7 +30,7 @@ it.effect("batches independent subjects over shared source context in one provid
           decide: (options) =>
             Effect.sync(() => {
               calls++
-              expect(options.state).toEqual({ path: "new.ts", version: "after", target: "new", source: "😀new" })
+              expect(options.state).toEqual({ path: "new.ts", version: "after", target: "new" })
               expect(Record.keys(options.decisions)).toEqual(["functions", "exports"])
               expect(options.decisions).toMatchObject({
                 functions: { instructions: { subject: subjects.functions } },

@@ -1,11 +1,9 @@
-import { Schema as S } from "effect"
+import { Array, pipe, Schema as S, String } from "effect"
 
 import { type Input, primarySource, targetText } from "./util/Input.ts"
-import { InputRange } from "./util/InputRange.ts"
-import { InputSource } from "./util/InputSource.ts"
 import { WorkspacePath } from "./util/WorkspacePath.ts"
 
-/** The compact evidence a decision model sees for one input: the target once, the rest of its file only when the target is part of it, and earlier text only when the segmenter mapped the target to it. */
+/** Segment-scoped evidence: the target once and only explicitly mapped historical excerpts. */
 export type DecisionState = typeof DecisionState.Type
 export const DecisionState = S.Struct({
   /** The workspace path of the file the target was selected from. */
@@ -17,40 +15,41 @@ export const DecisionState = S.Struct({
   }),
   /** The selected text to assess. */
   target: S.String.annotateKey({ description: "The selected text to assess." }),
-  /** The complete text of that file version, present only when target is part of it. */
-  source: S.String.annotateKey({
-    description: "The complete text of that file version, present only when target is part of it."
-  }).pipe(S.optionalKey),
-  /** The earlier version of the file and the ranges in it that correspond to target; present only when that correspondence is known. */
+  /** Earlier excerpts corresponding to target; absent when the correspondence is unknown. */
   history: S.Struct({
-    ...InputSource.fields,
-    /** Ranges in text corresponding to target; empty when target has no earlier counterpart. */
-    ranges: S.Array(InputRange).annotateKey({
-      description: "Ranges in text corresponding to target; empty when target has no earlier counterpart."
+    path: WorkspacePath.annotateKey({ description: "The path of the earlier source version." }),
+    /** Only mapped text, never the enclosing historical file; empty for a known-new target. */
+    excerpts: S.Array(S.String).annotateKey({
+      description: "Earlier text excerpts corresponding to target; empty when target has no earlier counterpart."
     })
   })
     .annotateKey({
       description:
-        "The earlier version of the file and the ranges in it that correspond to target; present only when that correspondence is known."
+        "Only the mapped earlier excerpts corresponding to target; present when that correspondence is known."
     })
     .pipe(S.optionalKey)
 }).annotate({
-  description:
-    "The compact evidence a decision model sees for one input: the target once, the rest of its file only when the target is part of it, and earlier text only when the segmenter mapped the target to it."
+  description: "Segment-scoped evidence: the target once and only explicitly mapped historical excerpts."
 })
 
 /** Builds the decision state for an input without repeating text or sending earlier text whose correspondence is unknown. */
 export const fromInput = (input: Input): DecisionState => {
   const source = primarySource(input)
   const target = targetText(input)
+  const before = input.change.before
   return {
     path: source.path,
     version: input._tag === "After" ? "after" : "before",
     target,
-    // A target as long as its source is the whole file, so the file is not sent twice.
-    ...(target.length === source.text.length ? {} : { source: source.text }),
-    ...(input._tag === "After" && input.change.before !== undefined && input.segment.before !== undefined
-      ? { history: { ...input.change.before, ranges: input.segment.before } }
+    ...(input._tag === "After" && before !== undefined && input.segment.before !== undefined
+      ? {
+          history: {
+            path: before.path,
+            excerpts: Array.map(input.segment.before, (range) =>
+              pipe(before.text, String.slice(range.start, range.end))
+            )
+          }
+        }
       : {})
   }
 }

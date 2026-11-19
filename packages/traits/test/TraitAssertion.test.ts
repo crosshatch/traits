@@ -11,8 +11,11 @@ import { WorkspacePath } from "../util/WorkspacePath.ts"
 
 const probabilities = { pass: 0.1, fail: 0.8, na: 0.05, uncertain: 0.05 }
 const input = Input.cases.After.make({
-  change: { after: { path: WorkspacePath.make("file.ts"), text: "source" } },
-  segment: Segment.cases.After.make({ range: { start: 0, end: 6 } })
+  change: {
+    before: { path: WorkspacePath.make("old.ts"), text: "unrelated before\nold\nunrelated after" },
+    after: { path: WorkspacePath.make("file.ts"), text: "unrelated before\nsource\nunrelated after" }
+  },
+  segment: Segment.cases.After.make({ range: { start: 17, end: 23 }, before: [{ start: 17, end: 20 }] })
 })
 const request = (text: string) =>
   TraitAssertion.TraitAssertionInput.make({
@@ -34,7 +37,13 @@ it.effect("batches assertions with isolated context/enrichments and preserves as
           decide: (options) =>
             Effect.sync(() => {
               calls++
-              expect(options.state).toEqual({ path: "file.ts", version: "after", target: "source", assertions })
+              expect(options.state).toEqual({
+                path: "file.ts",
+                version: "after",
+                target: "source",
+                history: { path: "old.ts", excerpts: ["old"] },
+                assertions
+              })
               expect(options.decisions).toMatchObject({
                 first: { instructions: { assertionKey: "first" } },
                 second: { instructions: { assertionKey: "second" } }

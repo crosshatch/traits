@@ -112,10 +112,11 @@ make no provider request. `Trait.ts` defines the static trait schema, not the
 evaluation operation.
 
 Decision requests carry a compact `DecisionState` rather than the raw input: the
-target text once, the complete file version only when the target is part of it,
-and the earlier version with its mapped ranges only when the segmenter supplied
-that correspondence. Unmapped earlier text is omitted rather than sent with an
-instruction to ignore it.
+selected target text once, without the enclosing file. Historical context
+contains only the excerpts mapped by the segmenter, never the whole earlier
+file. An empty excerpt list means a known-new target; absent history means
+correspondence is unknown. Decision cache keys use this same segment-scoped
+evidence.
 
 `DecisionBatching.layer` wraps the `DecisionModel` in context so that concurrent
 `decideSettled` calls asking the same-named decisions about the same encoded
