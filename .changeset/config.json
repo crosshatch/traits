@@ -11,6 +11,7 @@
   ],
   "commit": false,
   "format": false,
+  "fixed": [["traits", "@traits/*"]],
   "linked": [],
   "updateInternalDependencies": "patch"
 }

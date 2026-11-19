@@ -1,6 +1,6 @@
 {
   "name": "@traits/typescript",
-  "version": "0.0.0",
+  "version": "0.5.15",
   "license": "Apache-2.0",
   "files": [
     "dist/**/*.d.ts",

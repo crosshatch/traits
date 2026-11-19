@@ -43,4 +43,4 @@ jobs:
           node-version: 24
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm exec pkg-pr-new publish --pnpm --comment=update './packages/traits'
+      - run: pnpm exec pkg-pr-new publish --pnpm --comment=update './packages/traits' './packages/@traits/*'
