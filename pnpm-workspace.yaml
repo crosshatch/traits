@@ -45,6 +45,8 @@ catalogs:
     # The SDK pins Effect and its types are version-sensitive; update this pair together.
     "@opencode/plugin": 2.3.2
     effect: 4.1.0
+  opencode-peers:
+    effect: ^4.1.0
 
 minimumReleaseAgeExclude:
   - "@cloudflare/workers-types@5.20260930.2"

@@ -31,6 +31,6 @@
   },
   "peerDependencies": {
     "@opencode/plugin": "catalog:opencode",
-    "effect": "catalog:opencode"
+    "effect": "catalog:opencode-peers"
   }
 }

@@ -16,10 +16,6 @@ Configure the Traits MCP server separately using the
 plugin adds a reminder before primary model requests; it does not force tool
 calls or save traits itself.
 
-This repository loads `./packages/@traits/opencode` from its OpenCode config for
-local development. Workspace exports use the TypeScript source; published
-exports use the compiled `dist/index.js` entry point. OpenCode supplies the
-plugin runtime dependencies. The named `opencode` catalog pins the SDK and its
-matching Effect version together: mixing versions can break Effect's runtime
-identity and TypeScript types. These pins are independent of the core Traits
-package's Effect version.
+OpenCode supplies the plugin's runtime dependencies. When installing alongside
+Traits, keep the project's compatible Effect version: the plugin's Effect peer
+range accepts `^4.1.0`, including versions satisfying Traits' `^4.1.4` requirement.
