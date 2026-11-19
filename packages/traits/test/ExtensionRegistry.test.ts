@@ -15,6 +15,7 @@ import {
   Layer,
   Option,
   Path,
+  pipe,
   Result,
   Scope,
   Schema as S,
@@ -79,7 +80,8 @@ const moduleAt = Effect.fnUntraced(function* (filename: string) {
   const path = yield* Path.Path
   const { directory } = yield* WorkspaceRoot
   const canonical = yield* fs.realPath(filename)
-  return WorkspacePath.make(path.relative(directory, canonical))
+  const relative = pipe(path.relative(directory, canonical), String.split(path.sep), Array.join("/"))
+  return WorkspacePath.make(relative)
 })
 
 it.live("resolves relative and consumer-only import-condition packages before using real registries", () =>

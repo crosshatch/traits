@@ -57,7 +57,7 @@ it.live(
           expect(directoryInfo.mode & 0o777).toBe(0o700)
           expect(fileInfo.mode & 0o777).toBe(0o600)
         } else {
-          const systemRoot = yield* Config.String("SystemRoot")
+          const systemRoot = yield* Config.String("SystemRoot").pipe(Config.orElse(() => Config.String("SYSTEMROOT")))
           const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
           const exit = yield* spawner.exitCode(
             ChildProcess.make(

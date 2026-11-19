@@ -52,6 +52,8 @@ interface Referencing {
 export default Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
+  // TypeScript reports slash-separated paths even when the host uses backslashes.
+  const key = flow(path.normalize, String.toLowerCase)
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
   const { directory } = yield* WorkspaceRoot
   /** Workspace files with the given name that Git tracks or would track, relative to the workspace root. */
@@ -111,7 +113,7 @@ export default Effect.gen(function* () {
     }
     collect([parsed.exports, parsed.main])
     for (const target of targets) {
-      entries.set(String.toLowerCase(path.resolve(directory, path.dirname(manifest), target)), parsed.name)
+      entries.set(pipe(path.resolve(directory, path.dirname(manifest), target), key), parsed.name)
     }
   }
   const api = yield* Effect.sync(() => new API({ cwd: directory })).pipe((acquire) =>
@@ -136,7 +138,7 @@ export default Effect.gen(function* () {
           ) {
             continue
           }
-          const target = String.toLowerCase(path.resolve(path.dirname(name), statement.moduleSpecifier.text))
+          const target = pipe(path.resolve(path.dirname(name), statement.moduleSpecifier.text), key)
           reexporters.set(target, (reexporters.get(target) ?? new Set<string>()).add(name))
           if (statement.exportClause === undefined || statement.exportClause.kind === SyntaxKind.NamespaceExport) {
             wildcards.set(target, (wildcards.get(target) ?? new Set<string>()).add(name))
@@ -151,16 +153,16 @@ export default Effect.gen(function* () {
     const seen = new Set<string>()
     const queue = [...from]
     for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
-      const key = String.toLowerCase(next)
-      if (seen.has(key)) {
+      const normalized = key(next)
+      if (seen.has(normalized)) {
         continue
       }
-      seen.add(key)
-      const name = entries.get(key)
+      seen.add(normalized)
+      const name = entries.get(normalized)
       if (name !== undefined) {
         return { name, file: next }
       }
-      queue.push(...(reexporters.get(key) ?? []))
+      queue.push(...(reexporters.get(normalized) ?? []))
     }
     return undefined
   }
@@ -203,7 +205,7 @@ export default Effect.gen(function* () {
       for (const project of projects) {
         // Reference paths are canonical, which lower-cases them on case-insensitive file systems.
         const names = Record.fromEntries(
-          Array.map(project.program.getSourceFileNames(), (name) => [String.toLowerCase(name), name] as const)
+          Array.map(project.program.getSourceFileNames(), (name) => [key(name), name] as const)
         )
         for (const statement of project.program.getSourceFile(absolute)!.statements) {
           const declaration = exportedDeclaration(statement)
@@ -222,8 +224,8 @@ export default Effect.gen(function* () {
             declaration.name.end - 1
           )) {
             for (const reference of referenced.references) {
-              const referencing = names[String.toLowerCase(reference.path)] ?? reference.path
-              if (String.toLowerCase(referencing) === String.toLowerCase(absolute)) {
+              const referencing = names[key(reference.path)] ?? reference.path
+              if (key(referencing) === key(absolute)) {
                 continue
               }
               const parent = reference.resolve(project)?.parent.kind
@@ -243,7 +245,7 @@ export default Effect.gen(function* () {
         }
       }
       for (const entry of merged.values()) {
-        for (const barrel of wildcards.get(String.toLowerCase(absolute)) ?? []) {
+        for (const barrel of wildcards.get(key(absolute)) ?? []) {
           entry.referencing.reexports.add(barrel)
         }
       }
@@ -255,7 +257,8 @@ export default Effect.gen(function* () {
     if (declarations.size === 0) {
       return `${file} exports no declarations.`
     }
-    const relative = (absolutePath: string) => path.relative(directory, absolutePath)
+    const relative = (absolutePath: string) =>
+      pipe(path.relative(directory, absolutePath), String.split(path.sep), Array.join("/"))
     const lines = Array.map([...declarations], ([name, entry]) => {
       const uses = pipe(
         [...entry.referencing.uses],

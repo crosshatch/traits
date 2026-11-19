@@ -49,6 +49,7 @@ it.live(
       APPDATA: "",
       LOCALAPPDATA: "",
       SystemRoot: "",
+      SYSTEMROOT: "",
       XDG_CONFIG_HOME: "",
       XDG_DATA_HOME: ""
     }
@@ -196,9 +197,10 @@ it.live(
     function* () {
       const fs = yield* FileSystem.FileSystem
       const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "traits-check-exit-" })
+      const path = yield* Path.Path
       const missing = yield* runCli(["check", "src/a.ts"], {}, false, cwd)
       expect(missing).toMatchObject({ code: 2, stdout: "" })
-      expect(missing.stderr).toContain("traits/_config.json")
+      expect(missing.stderr).toContain(path.join("traits", "_config.json"))
       expect(missing.stderr).not.toContain("    at ")
       const partialPolicy = yield* runCli(["check", "--fail", "0.5", "src/a.ts"], {}, false, cwd)
       expect(partialPolicy).toMatchObject({ code: 2, stdout: "" })
@@ -329,8 +331,9 @@ it.live(
         Array.map((part) => part.text),
         Array.join("\n")
       )
-      expect(text).toContain("traits/_config.json")
-      expect(text).toContain("no restart is needed")
+      const failure = yield* pipe(text, S.decodeEffect(S.fromJsonString(S.Struct({ message: S.String }))))
+      expect(failure.message).toContain(path.join("traits", "_config.json"))
+      expect(failure.message).toContain("no restart is needed")
     },
     Effect.scoped,
     Effect.provide(NodeServices.layer)

@@ -43,6 +43,8 @@ export class UserFileSecurity extends Context.Service<UserFileSecurity>()("trait
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const powershell = windows
       ? yield* Config.String("SystemRoot").pipe(
+          // Environment snapshots in Windows worker threads can expose upper-case keys.
+          Config.orElse(() => Config.String("SYSTEMROOT")),
           Effect.map((root) => path.join(root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"))
         )
       : undefined

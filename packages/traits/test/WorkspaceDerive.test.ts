@@ -43,7 +43,8 @@ const workspace = (label: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "traits-derivation-" })
+    const temporary = yield* fs.makeTempDirectoryScoped({ prefix: "traits-derivation-" })
+    const directory = yield* fs.realPath(temporary)
     yield* fs.makeDirectory(path.join(directory, "traits"), { recursive: true })
     yield* fs.writeFileString(path.join(directory, "traits", "existing.md"), existing)
     const model = DecisionModel.make({
@@ -297,18 +298,20 @@ it.effect("rejects concurrent derivations immediately and releases admission on 
   Effect.gen(function* () {
     const { directory, services } = yield* workspace("distinct")
     const fs = yield* FileSystem.FileSystem
+    const path = yield* Path.Path
+    const configFile = path.join(directory, "traits", "_config.json")
     const entered = yield* Deferred.make<void>()
     let hold = true
     const store = yield* WorkspaceDerive.WorkspaceDerive.make.pipe(
       Effect.provide(services),
       Effect.provideService(FileSystem.FileSystem, {
         ...fs,
-        readFileString: (path, options) =>
-          path === `${directory}/traits/_config.json`
+        readFileString: (filename, options) =>
+          filename === configFile
             ? hold
               ? Deferred.succeed(entered, undefined).pipe(Effect.andThen(Effect.never))
               : Effect.succeed("{}")
-            : fs.readFileString(path, options)
+            : fs.readFileString(filename, options)
       }),
       Effect.provide(FetchHttpClient.layer)
     )

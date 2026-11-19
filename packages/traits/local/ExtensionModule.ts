@@ -1,4 +1,4 @@
-import { Array, Effect, Path, pipe, Predicate, Schema as S, String } from "effect"
+import { Array, Effect, FileSystem, Path, pipe, Predicate, Schema as S, String } from "effect"
 import { resolve as resolveImport } from "import-meta-resolve"
 
 import type { ExtensionServices } from "../ExtensionServices.ts"
@@ -44,13 +44,16 @@ export const resolve = Effect.fn("ExtensionModule.resolve")(
   function* (input: ExtensionResolutionInput) {
     const { directory } = yield* WorkspaceRoot
     const path = yield* Path.Path
+    const fs = yield* FileSystem.FileSystem
     const url = yield* Effect.try({
       try: () => new URL(resolveImport(input.reference, input.baseUrl.href)),
       catch: (cause) => ModuleResolutionError.make({ input, cause })
     })
-    const file = yield* path
-      .fromFileUrl(url)
-      .pipe(Effect.mapError((cause) => ModuleResolutionError.make({ input, cause })))
+    const file = yield* path.fromFileUrl(url).pipe(
+      // Match WorkspaceRoot's native canonicalization, including Windows short-name aliases.
+      Effect.flatMap((file) => fs.realPath(file)),
+      Effect.mapError((cause) => ModuleResolutionError.make({ input, cause }))
+    )
     return yield* pipe(
       path.relative(directory, file),
       String.split(path.sep),

@@ -105,6 +105,7 @@ const workspace = (contents: string | undefined) =>
 
 it.effect("loads traits/_config.json and explains read, schema, and version failures", () =>
   Effect.gen(function* () {
+    const path = yield* Path.Path
     const configured = yield* workspace(JSON.stringify(config))
     const loaded = yield* TraitsConfig.load.pipe(Effect.provide(configured))
     expect(loaded.models.decision).toEqual(models.decision)
@@ -137,10 +138,9 @@ it.effect("loads traits/_config.json and explains read, schema, and version fail
       const root = yield* workspace(contents)
       const error = yield* TraitsConfig.load.pipe(Effect.provide(root), Effect.flip)
       expect(error._tag).toBe(tag)
-      expect(error.message).toContain("traits/_config.json")
+      expect(error.message).toContain(path.join("traits", "_config.json"))
     }
     // This repository's own traits/_config.json is "internal": its traits source is inside the workspace.
-    const path = yield* Path.Path
     const own = yield* TraitsConfig.load.pipe(
       Effect.provide(WorkspaceRoot.layer(path.resolve(import.meta.dirname, "..", "..", "..")))
     )
