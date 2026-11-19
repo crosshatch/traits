@@ -69,7 +69,12 @@ export class UserFileSecurity extends Context.Service<UserFileSecurity>()("trait
             powershell,
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", windowsSecurityScript],
             {
-              env: { TRAITS_SECURE_PATH: path.resolve(filename), TRAITS_SECURE_TYPE: type },
+              env: {
+                // A PowerShell 7 parent can supply modules incompatible with Windows PowerShell.
+                PSMODULEPATH: path.join(path.dirname(powershell), "Modules"),
+                TRAITS_SECURE_PATH: path.resolve(filename),
+                TRAITS_SECURE_TYPE: type
+              },
               extendEnv: true,
               stdin: "ignore",
               stdout: "ignore"

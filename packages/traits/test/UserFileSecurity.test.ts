@@ -63,7 +63,14 @@ it.live(
             ChildProcess.make(
               path.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
               ["-NoProfile", "-NonInteractive", "-Command", windowsAclCheck],
-              { env: { TRAITS_DIRECTORY: root, TRAITS_FILE: file }, extendEnv: true }
+              {
+                env: {
+                  PSMODULEPATH: path.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "Modules"),
+                  TRAITS_DIRECTORY: root,
+                  TRAITS_FILE: file
+                },
+                extendEnv: true
+              }
             )
           )
           expect(exit).toBe(0)
