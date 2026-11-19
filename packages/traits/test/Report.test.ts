@@ -1,7 +1,7 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, pipe, Schema as S, String } from "effect"
 
-import { format } from "../Cli/commands/check/format.ts"
+import { format } from "../Cli/commands/check/_format.ts"
 import * as Report from "../Report/Report.ts"
 import { Segment } from "../util/Segment.ts"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
