@@ -1,6 +1,7 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, pipe, Schema as S, String } from "effect"
 
+import { format } from "../Cli/commands/check/format.ts"
 import * as Report from "../Report/Report.ts"
 import { Segment } from "../util/Segment.ts"
 import { WorkspacePath } from "../util/WorkspacePath.ts"
@@ -34,6 +35,30 @@ const failedEnrichment = {
   module,
   explanation: { _tag: "Error", error: "Enrichment failed." }
 }
+
+it.effect("formats verdicts and specific unsuccessful targets without hiding incomplete work", () =>
+  Effect.gen(function* () {
+    const failing = yield* decode(
+      reportWith(evaluated({ ...completed, assessment: { pass: 0.1, fail: 0.8, na: 0, uncertain: 0.1 } }))
+    )
+    expect(format(failing, policy)).toContain("Fail file.ts (after, offsets 0-1)")
+    expect(format(failing, policy)).toContain("Assertion: The code is correct.")
+    expect(format(failing, policy)).toContain("0 passed, 1 failed")
+    const passing = yield* decode(reportWith())
+    expect(format(passing)).toContain("display only; no exit policy configured")
+    expect(format(passing)).toContain("1 passed, 0 failed")
+    expect(format(passing, { fail: 1, pass: 1 })).toContain("Inconclusive file.ts")
+    const failed = yield* decode(
+      reportWith(
+        evaluated({ ...fields, _tag: "Failed", explanation: { _tag: "Error", error: "Provider unavailable" } })
+      )
+    )
+    expect(format(failed)).toContain("Incomplete file.ts")
+    expect(format(failed)).toContain("Provider unavailable")
+    const empty = yield* decode({ ...reportWith(), traits: [] })
+    expect(format(empty)).toContain("No traits selected")
+  })
+)
 
 it.effect("separates completed execution from policy-dependent verdicts", () =>
   Effect.gen(function* () {

@@ -8,6 +8,7 @@ import { Report, verdicts } from "../../../Report/Report.ts"
 import { Verdict } from "../../../Report/Verdict.ts"
 import { TraitName } from "../../../TraitName.ts"
 import { Probability } from "../../../util/Probability.ts"
+import { format } from "./format.ts"
 
 /** Exit codes for each verdict, so CI can block on violations and retry incomplete checks. */
 const exitCodes = { Pass: 0, Fail: 1, Incomplete: 2, Inconclusive: 3 } as const
@@ -30,10 +31,14 @@ export class VerdictExit extends S.TaggedError<VerdictExit>()("VerdictExit", { v
 const threshold = (name: string, description: string) =>
   Flag.Finite(name).pipe(Flag.withSchema(Probability), Flag.withDescription(description), Flag.optional)
 
-/** Checks files against the current directory's workspace traits, prints the report as JSON, and exits with the verdict when given a policy. */
+/** Checks workspace traits, prints readable results or JSON, and applies configured exit policies. */
 export const check = Command.make(
   "check",
   {
+    json: Flag.Boolean("json").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Print the full report as JSON instead of a readable summary")
+    ),
     paths: Argument.String("paths").pipe(
       Argument.withDescription(
         "Files to check, relative to the workspace root; every project file Git does not ignore when omitted"
@@ -77,8 +82,12 @@ export const check = Command.make(
       ).pipe(Effect.mapError((error) => CheckError.make({ message: error.message })))
       // The flags override the policy in traits/_config.json.
       const applied = fail === undefined || pass === undefined ? policy : DecisionPolicy.make({ fail, pass })
-      const encoded = yield* pipe(report, S.encodeEffect(Report), Effect.orDie)
-      yield* Console.log(JSON.stringify(encoded, null, 2))
+      if (params.json) {
+        const encoded = yield* pipe(report, S.encodeEffect(Report), Effect.orDie)
+        yield* Console.log(JSON.stringify(encoded, null, 2))
+      } else {
+        yield* Console.log(format(report, applied))
+      }
       if (applied === undefined) {
         return
       }
@@ -92,6 +101,6 @@ export const check = Command.make(
   )
 ).pipe(
   Command.withDescription(
-    "Check files against this workspace's traits and print the report as JSON. With --fail and --pass, or check.policy in traits/_config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
+    "Check files against this workspace's traits and print readable results; --json prints the full report. Without a policy, display thresholds are 0.5 and do not affect exit status. With --fail and --pass, or check.policy in traits/_config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
   )
 )

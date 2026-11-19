@@ -37,8 +37,9 @@ preserve existing configuration.
 ## Check in CI
 
 `traits check` checks files against the project's traits from the command line
-and prints the report as JSON. Given a decision policy, it exits nonzero when a
-trait is violated, so CI can gate on it. See the
+and prints readable results, including failed and inconclusive targets. Use
+`traits check --json` for the full report JSON. Given a decision policy, it
+exits nonzero when a trait is violated, so CI can gate on it. See the
 [command line guide](https://github.com/crosshatch/traits/blob/main/SETUP.md#command-line).
 
 ## Programmatic use

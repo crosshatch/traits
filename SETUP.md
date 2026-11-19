@@ -108,10 +108,13 @@ a trait merely to test installation.
 
 ## Command line
 
-`traits check [paths...]` prints the report as JSON. Without paths it checks
-every project file. `--trait <name>` and `--environment <name>` narrow the
-traits. With a decision policy, `--fail <p> --pass <p>`, it exits 0 for Pass, 1
-for Fail, 2 for Incomplete or a check that could not run, and 3 for
+`traits check [paths...]` prints a readable summary with per-trait verdicts and
+details for failed, inconclusive, and incomplete targets. Use `--json` for the
+full report JSON on stdout. Without a policy, display thresholds are 0.5 for
+fail and pass-plus-not-applicable; these do not affect exit status. Without
+paths it checks every project file. `--trait <name>` and `--environment <name>`
+narrow the traits. With a decision policy, `--fail <p> --pass <p>`, it exits 0
+for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for
 Inconclusive, so CI can gate on it.
 
 `traits update` prints what changed since the workspace's `version`: the

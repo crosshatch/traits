@@ -18,4 +18,5 @@ calls or save traits itself.
 
 OpenCode supplies the plugin's runtime dependencies. When installing alongside
 Traits, keep the project's compatible Effect version: the plugin's Effect peer
-range accepts `^4.1.0`, including versions satisfying Traits' `^4.1.4` requirement.
+range accepts `^4.1.0`, including versions satisfying Traits' `^4.1.4`
+requirement.

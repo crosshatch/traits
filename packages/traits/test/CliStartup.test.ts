@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, FileSystem, Path, pipe, Runtime, Schema as S, Stream, String } from "effect"
+import { Array, Console, Effect, FileSystem, Path, pipe, Runtime, Schema as S, Stream, String } from "effect"
 import { Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
@@ -248,8 +248,16 @@ it.effect("applies check.policy from traits/_config.json unless --fail and --pas
       },
       S.decodeEffect(Report.Report)
     )
+    const console = yield* Console.Console
+    const output: Array<string> = []
     const run = (args: ReadonlyArray<string>, policy: Report.DecisionPolicy | undefined) =>
       Command.runWith(check, { version: "0" })(args).pipe(
+        Effect.provideService(Console.Console, {
+          ...console,
+          log: (...args) => {
+            output.push(Array.join(args, " "))
+          }
+        }),
         Effect.provideService(WorkspaceCheck, { check: () => Effect.succeed({ report, policy }) })
       )
     const configured = yield* run([], { fail: 0.5, pass: 0.5 }).pipe(Effect.flip)
@@ -257,6 +265,10 @@ it.effect("applies check.policy from traits/_config.json unless --fail and --pas
     // The flags' higher fail threshold accepts the same report, and without any policy there is no verdict to exit with.
     yield* run(["--fail", "0.9", "--pass", "0.1"], { fail: 0.5, pass: 0.5 })
     yield* run([], undefined)
+    expect(output.at(-1)).toContain("Traits check: Fail")
+    yield* run(["--json"], undefined)
+    const encoded = yield* pipe(report, S.encodeEffect(Report.Report))
+    expect(JSON.parse(output.at(-1)!)).toEqual(encoded)
   }).pipe(Effect.provide(NodeServices.layer))
 )
 
