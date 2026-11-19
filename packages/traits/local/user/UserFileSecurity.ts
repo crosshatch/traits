@@ -112,9 +112,12 @@ const windowsSecurityScript = String.stripMargin(`
 |    if ($parent -eq $cursor) { break }
 |    $cursor = $parent
 |  }
-|  $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+|  $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+|  $sid = $identity.User
 |  $acl = Get-Acl -LiteralPath $path
-|  if ($acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value) { throw 'Foreign owner' }
+|  $owner = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
+|  # Windows may give new objects the creating token's default owner, such as Administrators.
+|  if ($owner -ne $sid.Value -and $owner -ne $identity.Owner.Value) { throw 'Foreign owner' }
 |  if ($directory) {
 |    $private = New-Object System.Security.AccessControl.DirectorySecurity
 |    $inheritance = [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'

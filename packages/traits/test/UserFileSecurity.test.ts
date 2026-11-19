@@ -276,6 +276,7 @@ const windowsAclCheck = String.stripMargin(`
 |  $acl = Get-Acl -LiteralPath $path
 |  $rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
 |  if (-not $acl.AreAccessRulesProtected -or $rules.Count -ne 1 -or
+|      $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value -or
 |      $rules[0].IdentityReference.Value -ne $sid.Value) { exit 1 }
 |}
 |exit 0
