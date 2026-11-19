@@ -1,5 +1,5 @@
 ---
-"traits": minor
+"traits": patch
 ---
 
 Print readable check results by default, including per-trait verdicts, counts,
