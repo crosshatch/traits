@@ -13,11 +13,7 @@
   "files": [
     "*.ts",
     "CHANGELOG.md",
-    "Check/**/*.ts",
     "Cli/**/*.ts",
-    "Enrichment/**/*.ts",
-    "Report/**/*.ts",
-    "Segmenter/**/*.ts",
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
     "dist/**/*.js",
@@ -25,9 +21,6 @@
     "dist/package.json",
     "docs/**/*.md",
     "local/**/*.ts",
-    "mcp/**/*.ts",
-    "unstable/**/*.ts",
-    "util/**/*.ts",
     "!dist/eval/**",
     "!dist/test/**",
     "!dist/vite.config.*",
@@ -35,17 +28,11 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./index.ts",
-    "./local": "./local/index.ts",
-    "./mcp": "./mcp/index.ts",
-    "./unstable": "./unstable/index.ts"
+    ".": "./index.ts"
   },
   "publishConfig": {
     "exports": {
-      ".": "./dist/index.js",
-      "./local": "./dist/local/index.js",
-      "./mcp": "./dist/mcp/index.js",
-      "./unstable": "./dist/unstable/index.js"
+      ".": "./dist/index.js"
     },
     "access": "public"
   },
@@ -72,8 +59,5 @@
     "@effect/platform-node": {
       "optional": true
     }
-  },
-  "optionalDependencies": {
-    "fs-native-extensions": "catalog:"
   }
 }
