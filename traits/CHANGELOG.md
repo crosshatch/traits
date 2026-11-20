@@ -1,5 +1,15 @@
 # traits
 
+## 0.5.16
+
+### Patch Changes
+
+- [#109](https://github.com/crosshatch/traits/pull/109)
+  [`0d32864`](https://github.com/crosshatch/traits/commit/0d32864b95b8633e44752bea58d078f4827b6668) -
+  Apply `TraitsConfig.excludes` and the built-in Git metadata and nested
+  worktree exclusions to `check_traits` by resolving them against the
+  `traits.ts` directory, matching the absolute include patterns they filter.
+
 ## 0.5.15
 
 ### Patch Changes
