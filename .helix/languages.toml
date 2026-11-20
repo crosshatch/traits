@@ -1,0 +1,25 @@
+[language-server.oxfmt]
+command = "vp"
+args = ["fmt", "--lsp"]
+
+[language-server.oxfmt.config.settings]
+"fmt.configPath" = "./vite.config.ts"
+
+[language-server.oxfmt.config.oxc_language_server]
+"fmt.configPath" = "./vite.config.ts"
+
+[[language]]
+name = "typescript"
+auto-format = true
+
+[[language]]
+name = "tsx"
+auto-format = true
+
+[[language]]
+name = "javascript"
+auto-format = true
+
+[[language]]
+name = "jsx"
+auto-format = true
