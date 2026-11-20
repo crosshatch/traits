@@ -1,1 +1,1 @@
-export * as ModelId from "./ModelId.ts"
+export { ModelId } from "./local/TraitsConfig/TraitsConfig.ts"

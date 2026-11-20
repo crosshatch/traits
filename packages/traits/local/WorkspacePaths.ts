@@ -27,9 +27,6 @@ export class WorkspaceRootError extends S.TaggedError<WorkspaceRootError>()("Wor
   }
 }
 
-/** The guide that creates a workspace's traits directory and configuration; errors for a workspace that is not set up point here. */
-export const setupGuide = "https://github.com/crosshatch/traits/blob/main/SETUP.md"
-
 /** The workspace's traits directory is missing or unreadable. */
 export class WorkspaceDirectoryError extends S.TaggedError<WorkspaceDirectoryError>()("WorkspaceDirectoryError", {
   /** The traits directory that could not be resolved. */
@@ -38,7 +35,7 @@ export class WorkspaceDirectoryError extends S.TaggedError<WorkspaceDirectoryErr
   cause: S.Defect().annotateKey({ description: "The underlying file system failure." })
 }) {
   override get message() {
-    return `Could not find the traits directory at ${this.path}. To set up traits in this repository, see ${setupGuide}.`
+    return `Could not find the traits directory at ${this.path}.`
   }
 }
 
