@@ -1,16 +1,19 @@
 import { Array, Console, Effect, FileSystem, Path } from "effect"
-import { CliError, Command } from "effect/cli"
+import { CliError, Command, Flag } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-/** Directory entries inspected at once while finding repositories. */
-const entryConcurrency = 16
-
-/** Repositories synced at once; each runs Git processes with network connections. */
-const fetchConcurrency = 4
-
-export const syncRepos = Command.make("sync-repos").pipe(
+export const syncRepos = Command.make("sync-repos", {
+  entryConcurrency: Flag.Int("entry-concurrency").pipe(
+    Flag.withDefault(16),
+    Flag.withDescription("Directory entries inspected at once while finding repositories.")
+  ),
+  fetchConcurrency: Flag.Int("fetch-concurrency").pipe(
+    Flag.withDefault(4),
+    Flag.withDescription("Repositories synced at once; each runs Git processes with network connections.")
+  )
+}).pipe(
   Command.withHandler(
-    Effect.fn("tasks.syncRepos")(function* () {
+    Effect.fn("tasks.syncRepos")(function* (params) {
       const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
@@ -31,7 +34,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             Effect.filter(
               entries,
               (entry) => fs.stat(path.join(reposDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
-              { concurrency: entryConcurrency }
+              { concurrency: params.entryConcurrency }
             )
           )
         )
@@ -45,7 +48,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
           const repoNames = yield* Effect.filter(
             entries,
             (entry) => fs.stat(path.join(orgDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
-            { concurrency: entryConcurrency }
+            { concurrency: params.entryConcurrency }
           )
 
           return Array.map(repoNames, (repo) => ({
@@ -53,7 +56,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             repoDir: path.join(orgDir, repo)
           }))
         }),
-        { concurrency: entryConcurrency }
+        { concurrency: params.entryConcurrency }
       ).pipe(Effect.map(Array.flatten))
 
       yield* Effect.forEach(
@@ -78,7 +81,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
           )
           yield* Console.log(`Synced "${repo.entry}" (main)`)
         }),
-        { concurrency: fetchConcurrency }
+        { concurrency: params.fetchConcurrency }
       )
     })
   )

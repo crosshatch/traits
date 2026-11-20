@@ -4,11 +4,14 @@ import { Command, Flag } from "effect/cli"
 /** Never descend into nested worktrees or Git metadata. */
 const alwaysIgnore = ["**/.git", "**/.worktrees"]
 
-/** Packages cleaned at once; the glob can match thousands of package.json files, and each removal walks a directory tree. */
-const packageConcurrency = 8
-
 export const clean = Command.make("clean", {
-  ignore: Flag.String("ignore").pipe(Flag.atLeast(0))
+  ignore: Flag.String("ignore").pipe(Flag.atLeast(0)),
+  concurrency: Flag.Int("concurrency").pipe(
+    Flag.withDefault(8),
+    Flag.withDescription(
+      "Packages cleaned at once; the glob can match thousands of package.json files, and each removal walks a directory tree."
+    )
+  )
 }).pipe(
   Command.withHandler(
     Effect.fn("tasks.clean")(function* (params) {
@@ -31,7 +34,7 @@ export const clean = Command.make("clean", {
             { concurrency: "unbounded" }
           )
         }),
-        { concurrency: packageConcurrency }
+        { concurrency: params.concurrency }
       )
     })
   )
