@@ -57,11 +57,13 @@ export const layer = Effect.gen(function* () {
     Layer.effect(
       TraitsContext,
       Effect.gen(function* () {
-        const excludes = Array.appendAll(
-          Array.flatMap([".git", ".worktrees"], (directory) => [`**/${directory}`, `**/${directory}/**`]),
-          Array.map(config.excludes, (pattern) =>
-            path.isAbsolute(pattern) ? path.relative(configRoot, pattern) : pattern
-          )
+        // check_traits globs absolute include patterns, and Effect matches excludes in the same coordinates.
+        const excludes = Array.map(
+          Array.appendAll(
+            Array.flatMap([".git", ".worktrees"], (directory) => [`**/${directory}`, `**/${directory}/**`]),
+            config.excludes
+          ),
+          (pattern) => (path.isAbsolute(pattern) ? pattern : `${configRoot}${path.sep}${pattern}`)
         )
         const asDecision =
           config.decisionConcurrency === "unbounded"
