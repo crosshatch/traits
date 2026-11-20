@@ -20,7 +20,7 @@ catalog:
   "@effect/ai-openrouter": 4.1.4
   "@effect/atom-react": ^4.1.4
   "@effect/platform-node": ^4.1.4
-  "@effect/tsgo": 0.69.0
+  "@effect/tsgo": 0.73.2
   "@effect/vitest": ^4.1.4
   "@fontsource/libre-baskerville": ^5.3.0
   "@types/node": ^26.6.6
@@ -56,6 +56,9 @@ minimumReleaseAgeExclude:
   - "@opencode/protocol@2.3.2"
   - "@opencode/schema@2.3.2"
   - "@opencode/util@2.3.2"
+  - "@effect/tsgo-linux-arm64@0.73.2"
+  - "@effect/tsgo-linux-x64@0.73.2"
+  - "@effect/tsgo@0.73.2"
 
 overrides:
   "@effect/sql-d1": ^4.1.4

@@ -8,21 +8,29 @@ args = ["fmt", "--lsp"]
 [language-server.oxfmt.config.oxc_language_server]
 "fmt.configPath" = "./vite.config.ts"
 
+[language-server.effect-tsgo]
+command = "./node_modules/.bin/effect-tsgo"
+args = ["tsc", "--lsp", "--stdio"]
+
 [[language]]
 name = "typescript"
 auto-format = true
+language-servers = [{ name = "effect-tsgo", except-features = ["format"] }, "oxfmt"]
 
 [[language]]
 name = "tsx"
 auto-format = true
+language-servers = [{ name = "effect-tsgo", except-features = ["format"] }, "oxfmt"]
 
 [[language]]
 name = "javascript"
 auto-format = true
+language-servers = [{ name = "effect-tsgo", except-features = ["format"] }, "oxfmt"]
 
 [[language]]
 name = "jsx"
 auto-format = true
+language-servers = [{ name = "effect-tsgo", except-features = ["format"] }, "oxfmt"]
 
 [[language]]
 name = "json"
