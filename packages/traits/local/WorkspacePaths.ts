@@ -1,0 +1,70 @@
+import { Context, Effect, FileSystem, Layer, Path, Schema as S } from "effect"
+
+/** Absolute paths within the workspace's traits directory. */
+export class WorkspacePaths extends Context.Service<
+  WorkspacePaths,
+  {
+    /** The workspace directory holding trait files, the configuration, and the lists. */
+    readonly directory: string
+    /** The workspace configuration file, beside the trait files. */
+    readonly config: string
+    /** Sources from which traits are loaded. */
+    readonly sources: string
+    /** The file containing the named groupings of traits. */
+    readonly lists: string
+    /** Local state, such as remembered decisions; it ignores itself in Git. */
+    readonly cache: string
+  }
+>()("traits/local/WorkspacePaths") {}
+
+/** The starting directory is not inside a Git repository or worktree, so there is no workspace root to find. */
+export class WorkspaceRootError extends S.TaggedError<WorkspaceRootError>()("WorkspaceRootError", {
+  /** The directory the search for a Git root started from. */
+  start: S.String.annotateKey({ description: "The directory the search for a Git root started from." })
+}) {
+  override get message() {
+    return `${this.start} is not inside a Git repository, so the traits workspace root cannot be found.`
+  }
+}
+
+/** The guide that creates a workspace's traits directory and configuration; errors for a workspace that is not set up point here. */
+export const setupGuide = "https://github.com/crosshatch/traits/blob/main/SETUP.md"
+
+/** The workspace's traits directory is missing or unreadable. */
+export class WorkspaceDirectoryError extends S.TaggedError<WorkspaceDirectoryError>()("WorkspaceDirectoryError", {
+  /** The traits directory that could not be resolved. */
+  path: S.String.annotateKey({ description: "The traits directory that could not be resolved." }),
+  /** The underlying file system failure. */
+  cause: S.Defect().annotateKey({ description: "The underlying file system failure." })
+}) {
+  override get message() {
+    return `Could not find the traits directory at ${this.path}. To set up traits in this repository, see ${setupGuide}.`
+  }
+}
+
+/** Resolves the existing traits directory at the root of the Git repository or worktree containing the current working directory, so it works from any subdirectory. It never creates the directory. */
+export const layer = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
+  const path = yield* Path.Path
+  // .git is a directory in a repository and a file in a linked worktree or submodule; either marks the root.
+  const start = path.resolve()
+  let root = yield* fs.realPath(start).pipe(Effect.mapError(() => WorkspaceRootError.make({ start })))
+  while (!(yield* fs.exists(path.join(root, ".git")).pipe(Effect.orElseSucceed(() => false)))) {
+    const parent = path.dirname(root)
+    if (parent === root) {
+      return yield* WorkspaceRootError.make({ start })
+    }
+    root = parent
+  }
+  const traits = path.join(root, "traits")
+  const directory = yield* fs
+    .realPath(traits)
+    .pipe(Effect.mapError((cause) => WorkspaceDirectoryError.make({ path: traits, cause })))
+  return {
+    directory,
+    config: path.join(directory, "config.json"),
+    sources: path.join(directory, "sources"),
+    lists: path.join(directory, "lists.json"),
+    cache: path.join(directory, ".cache")
+  }
+}).pipe(Layer.effect(WorkspacePaths))

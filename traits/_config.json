@@ -1,5 +1,5 @@
 {
-  "version": "internal",
+  "version": "0.5.15",
   "models": {
     "decision": {
       "provider": "openrouter",
