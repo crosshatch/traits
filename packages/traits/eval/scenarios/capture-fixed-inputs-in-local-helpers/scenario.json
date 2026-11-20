@@ -1,7 +1,0 @@
-{
-  "trait": "capture-fixed-inputs-in-local-helpers",
-  "labels": {
-    "site/assets.ts": "fail",
-    "site/templates.ts": "pass"
-  }
-}

@@ -1,7 +1,0 @@
-{
-  "trait": "inline-small-single-use-helpers",
-  "labels": {
-    "posts/tags.ts": "fail",
-    "posts/slug.ts": "pass"
-  }
-}

@@ -1,7 +1,0 @@
-{
-  "trait": "inline-effect-service-shapes",
-  "labels": {
-    "services/Mailer.ts": "fail",
-    "services/Cache.ts": "pass"
-  }
-}

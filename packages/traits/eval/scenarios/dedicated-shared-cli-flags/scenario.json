@@ -1,7 +1,0 @@
-{
-  "trait": "dedicated-shared-cli-flags",
-  "labels": {
-    "cli/deploy.ts": "fail",
-    "cli/build.ts": "pass"
-  }
-}
