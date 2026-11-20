@@ -23,3 +23,18 @@ auto-format = true
 [[language]]
 name = "jsx"
 auto-format = true
+
+[[language]]
+name = "json"
+auto-format = true
+language-servers = [{ name = "vscode-json-language-server", except-features = ["format"] }, "oxfmt"]
+
+[[language]]
+name = "jsonc"
+auto-format = true
+language-servers = [{ name = "vscode-json-language-server", except-features = ["format"] }, "oxfmt"]
+
+[[language]]
+name = "toml"
+auto-format = true
+language-servers = [{ name = "tombi", except-features = ["format"] }, "oxfmt"]

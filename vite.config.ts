@@ -4,11 +4,11 @@ import { defineConfig } from "vite-plus"
 
 import custom from "./oxlints/oxlints.ts"
 
-const toolingIgnores = ["**/.worktrees/**", ".agents/**", "repos/**", "traits/**"]
+const ignorePatterns = ["**/.worktrees/**", ".agents/**", "repos/**", "traits/**"]
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: toolingIgnores,
+    ignorePatterns,
     overrides: [
       {
         files: ["**/*.md"],
@@ -24,7 +24,7 @@ export default defineConfig({
   },
   lint: {
     extends: [recommended],
-    ignorePatterns: toolingIgnores,
+    ignorePatterns,
     jsPlugins: [
       { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
       { name: "custom", specifier: "./oxlints/oxlints.ts" }
