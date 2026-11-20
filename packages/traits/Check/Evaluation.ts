@@ -1,0 +1,304 @@
+import { Array, Data, Deferred, Effect, Result, Struct } from "effect"
+import type { AiError, Decision } from "effect/ai"
+
+import type { DecisionProvenance } from "../DecisionProvenance.ts"
+import * as Enrichment from "../Enrichment/Enrichment.ts"
+import * as Report from "../Report/Report.ts"
+import * as Segmentation from "../Segmenter/Segmentation.ts"
+import { CurrentSettings } from "../Settings.ts"
+import { type Input, primarySource, targetText } from "../util/Input.ts"
+import { rejectsAccount } from "../util/rejectsAccount.ts"
+import { digestText, type TextDigest } from "../util/TextDigest.ts"
+import type { CheckInput } from "./CheckInput.ts"
+import * as InputDecisions from "./InputDecisions.ts"
+import type { Preparation } from "./Preparation.ts"
+
+/** How one input's subject decision ended: decided, failed for the reason in failure when known, or cancelled because its trait stopped. */
+type SubjectGate = Data.TaggedEnum<{
+  readonly Decided: {
+    readonly responses: ReadonlyArray<DecisionProvenance>
+    readonly probabilities: Report.SubjectMatch
+  }
+  readonly Failed: { readonly responses: ReadonlyArray<DecisionProvenance>; readonly failure: string | undefined }
+  readonly Cancelled: {}
+}>
+const SubjectGate = Data.taggedEnum<SubjectGate>()
+
+/** Why a decision failed, from its error or unanswered reason only, so provider text and source never reach the report; undefined for defects. */
+const failureReason = (failure: AiError.AiError | Decision.Unanswered | undefined): string | undefined => {
+  if (failure === undefined) {
+    return undefined
+  }
+  if (failure._tag === "Unanswered") {
+    return `unanswered (${failure.reason})`
+  }
+  const kind = "kind" in failure.reason ? ` (${globalThis.String(failure.reason.kind)})` : ""
+  // Provider descriptions stay out of reports, so name the likeliest cause and its remedy instead.
+  const remedy =
+    failure.reason._tag === "InvalidRequestError"
+      ? "; the provider rejected the request, often because the file exceeds the model's context. Exclude the file from checks, or check a smaller file"
+      : ""
+  return `${failure.reason._tag}${kind}${failure.isRetryable ? " after retries" : ""}${remedy}`
+}
+
+/** Logs a defect the report cannot explain, since reports carry no raw errors, so a bug in traits or an extension can still be diagnosed. */
+const logDefect = (what: string) => (defect: unknown) => Effect.logError(`${what} failed unexpectedly`, defect)
+
+/** A decision failure explanation naming the reason when known. */
+const decisionFailed = (decision: string, reason: string | undefined) =>
+  Report.Explanation.cases.Error.make({
+    error:
+      reason === undefined ? `${decision} failed or returned invalid probabilities.` : `${decision} failed: ${reason}.`
+  })
+
+/** One change's report and the subject and assertion decision responses received while producing it. */
+interface ChangeEvaluation {
+  readonly report: Report.ChangeReport
+  readonly responses: ReadonlyArray<DecisionProvenance>
+}
+
+/** One input with what every trait assessing it shares, so neither is worked out again for each trait. */
+interface SharedInput {
+  readonly input: Input
+  /** The digest of the input's target text. */
+  readonly digest: TextDigest
+  /** The decisions about the input, which digest its decision state once. */
+  readonly decisions: Effect.Success<ReturnType<typeof InputDecisions.forInput>>
+}
+
+/** Builds each trait's per-change results and collects the decision responses received for them, from which the run's provenance derives; Deferreds only coordinate recovery. */
+export const evaluate = Effect.fnUntraced(function* (request: CheckInput, preparation: Preparation) {
+  const { check } = yield* CurrentSettings
+  // A trait's stop signal covers its inputs in every change.
+  const traits = yield* Effect.forEach(
+    request.traits,
+    (entry) => Effect.map(Deferred.make<void>(), (traitStopped) => ({ ...entry, traitStopped })),
+    { concurrency: 1 }
+  )
+  // Whole changes, and each segmenter's selections, are shared by the traits that use them.
+  const selectors = Array.dedupe(Array.map(traits, (entry) => entry.trait.segment))
+  // Every trait and input of a change is evaluated together, so their subject decisions share requests; the number of
+  // changes in progress is bounded, so a check holds the work of a few changes however many it is given.
+  const changes = yield* Effect.forEach(
+    request.changes,
+    Effect.fnUntraced(function* (change, index) {
+      const selections = yield* Effect.forEach(
+        selectors,
+        Effect.fnUntraced(function* (selector) {
+          const inputs =
+            selector === undefined
+              ? Result.succeed([Segmentation.whole(change)])
+              : // Missing results mean the segmenter's setup failed, so it never ran for any change.
+                (preparation.segmentations.get(selector)?.[index] ?? Result.fail(undefined))
+          if (Result.isFailure(inputs)) {
+            return [selector, undefined] as const
+          }
+          const shared = yield* Effect.forEach(
+            inputs.success,
+            (input) =>
+              Effect.all(
+                { digest: digestText(targetText(input)), decisions: InputDecisions.forInput(input) },
+                // Two fixed effects.
+                { concurrency: "unbounded" }
+              ).pipe(Effect.map((shared): SharedInput => ({ input, ...shared }))),
+            // Each digest holds an encoded copy of its target text.
+            { concurrency: check.digestConcurrency }
+          )
+          return [selector, shared] as const
+        }),
+        // Distinct segmenter modules are few; the digests inside are bounded.
+        { concurrency: "unbounded" }
+      ).pipe(Effect.map((entries) => new Map(entries)))
+      return yield* Effect.forEach(
+        traits,
+        (entry) => {
+          const { trait, traitStopped } = entry
+          const evaluateInput = Effect.fnUntraced(function* (shared: SharedInput) {
+            const { input, digest, decisions } = shared
+            const inputStopped = yield* Deferred.make<void>()
+            // Gate on the subject first, so enrichments and the assertion run only for targets the subject may cover.
+            const gate =
+              trait.subject === undefined
+                ? undefined
+                : yield* decisions.decideSubject(trait.subject).pipe(
+                    Effect.tapDefect(logDefect(`Subject decision for ${trait.name} on ${primarySource(input).path}`)),
+                    Effect.catchDefect(() => Effect.fail(undefined)),
+                    Effect.matchEffect({
+                      // A rejected account fails every request, so it ends the check instead of failing each input.
+                      onFailure: (error) =>
+                        error !== undefined && rejectsAccount(error)
+                          ? Effect.fail(error)
+                          : Effect.succeed(SubjectGate.Failed({ responses: [], failure: failureReason(error) })),
+                      onSuccess: (response) =>
+                        Effect.succeed(
+                          Result.isSuccess(response.outcomes.subject)
+                            ? SubjectGate.Decided({
+                                responses: [response],
+                                probabilities: response.outcomes.subject.success.probabilities
+                              })
+                            : SubjectGate.Failed({
+                                responses: [response],
+                                failure: failureReason(response.outcomes.subject.failure)
+                              })
+                        )
+                    }),
+                    Effect.raceFirst(Deferred.await(traitStopped).pipe(Effect.as(SubjectGate.Cancelled())))
+                  )
+            const decided = gate !== undefined && SubjectGate.$is("Decided")(gate) ? gate : undefined
+            if (decided !== undefined && decided.probabilities.no >= check.ruleOut) {
+              return {
+                report: Report.InputReport.cases.Unmatched.make({
+                  segment: input.segment,
+                  digest,
+                  subject: decided.probabilities
+                }),
+                responses: decided.responses
+              }
+            }
+            const subjectFailure = gate !== undefined && SubjectGate.$is("Failed")(gate) ? gate : undefined
+            if (subjectFailure !== undefined) {
+              yield* Deferred.succeed(inputStopped, undefined)
+            }
+            const enrichments = yield* Effect.forEach(
+              trait.enrichments ?? [],
+              Effect.fnUntraced(function* (module) {
+                const cancelled = Report.EnrichmentOutcome.cases.Cancelled.make({ module })
+                const failed = (explanation: Report.Explanation) =>
+                  Report.EnrichmentOutcome.cases.Failed.make({ module, explanation })
+                const execute = preparation.enrichments.get(module)
+                if (execute === undefined) {
+                  return Report.EnrichmentOutcome.cases.SetupFailed.make({ module })
+                }
+                if ((yield* Deferred.isDone(inputStopped)) || (yield* Deferred.isDone(traitStopped))) {
+                  return cancelled
+                }
+                const fallback = failed(Report.Explanation.cases.Error.make({ error: "Enrichment execution failed." }))
+                return yield* execute.pipe(
+                  Effect.provideService(Enrichment.EnrichmentContext, { trait, input }),
+                  Effect.map((text): Report.EnrichmentOutcome =>
+                    Report.EnrichmentOutcome.cases.Succeeded.make({ module, text })
+                  ),
+                  (operation) =>
+                    Effect.raceAllFirst([
+                      operation,
+                      Deferred.await(inputStopped).pipe(Effect.as(cancelled)),
+                      Deferred.await(traitStopped).pipe(Effect.as(cancelled))
+                    ]),
+                  // Handle recovery after the operation race, so its own stop signal cannot erase its explanation.
+                  Effect.catchTags({
+                    EnrichmentError: Effect.fnUntraced(function* (error) {
+                      if (!Enrichment.EnrichmentErrorReason.guards.Enrichment(error.reason)) {
+                        if (Enrichment.EnrichmentErrorReason.guards.Trait(error.reason)) {
+                          yield* Deferred.succeed(traitStopped, undefined)
+                        }
+                        yield* Deferred.succeed(inputStopped, undefined)
+                      }
+                      return failed(Report.Explanation.cases.Instruction.make({ instruction: error.instruction }))
+                    }),
+                    SchemaError: (error) =>
+                      Effect.as(Effect.logError(`Enrichment ${module} returned an invalid result`, error), fallback)
+                  }),
+                  Effect.tapDefect(logDefect(`Enrichment ${module} for ${trait.name} on ${primarySource(input).path}`)),
+                  Effect.catchDefect(() => Effect.succeed(fallback))
+                )
+              }),
+              { concurrency: "unbounded" }
+            )
+            const fields = {
+              segment: input.segment,
+              digest,
+              ...(decided === undefined ? {} : { subject: decided.probabilities }),
+              enrichments
+            }
+            const responses = (decided ?? subjectFailure)?.responses ?? []
+            if (subjectFailure !== undefined) {
+              return {
+                report: Report.InputReport.cases.Failed.make({
+                  ...fields,
+                  explanation: decisionFailed("Subject decision", subjectFailure.failure)
+                }),
+                responses
+              }
+            }
+            if (yield* Deferred.isDone(inputStopped)) {
+              return { report: Report.InputReport.cases.Failed.make(fields), responses }
+            }
+            if (yield* Deferred.isDone(traitStopped)) {
+              return { report: Report.InputReport.cases.Cancelled.make(fields), responses }
+            }
+            if (trait.assertion === undefined) {
+              return { report: Report.InputReport.cases.Completed.make(fields), responses }
+            }
+            const assessmentFailed = (reason: string | undefined) =>
+              Report.InputReport.cases.Failed.make({
+                ...fields,
+                explanation: decisionFailed("Assertion assessment", reason)
+              })
+            return yield* decisions
+              .evaluateAssertion({
+                assertion: trait.assertion,
+                context: Struct.pick(trait, ["subject", "purpose", "body"]),
+                enrichments: Array.filter(enrichments, Report.EnrichmentOutcome.guards.Succeeded)
+              })
+              .pipe(
+                Effect.tapDefect(logDefect(`Assertion assessment for ${trait.name} on ${primarySource(input).path}`)),
+                Effect.catchDefect(() => Effect.fail(undefined)),
+                Effect.matchEffect({
+                  onSuccess: (response) => {
+                    const outcome = response.outcomes.assertion
+                    return Effect.succeed({
+                      report: Result.isSuccess(outcome)
+                        ? Report.InputReport.cases.Completed.make({
+                            ...fields,
+                            assessment: outcome.success.probabilities
+                          })
+                        : assessmentFailed(failureReason(outcome.failure)),
+                      responses: [...responses, response]
+                    })
+                  },
+                  onFailure: (error) =>
+                    error !== undefined && rejectsAccount(error)
+                      ? Effect.fail(error)
+                      : Effect.succeed({ report: assessmentFailed(failureReason(error)), responses })
+                }),
+                Effect.raceFirst(
+                  Deferred.await(traitStopped).pipe(
+                    Effect.as({ report: Report.InputReport.cases.Cancelled.make(fields), responses })
+                  )
+                )
+              )
+          })
+          const inputs = selections.get(trait.segment)
+          return inputs === undefined
+            ? Effect.succeed<ChangeEvaluation>({
+                report: Report.ChangeReport.cases.NotSegmented.make({}),
+                responses: []
+              })
+            : Effect.forEach(inputs, evaluateInput, { concurrency: "unbounded" }).pipe(
+                Effect.map((results): ChangeEvaluation => ({
+                  report: Report.ChangeReport.cases.Evaluated.make({
+                    inputs: Array.map(results, (result) => result.report)
+                  }),
+                  responses: Array.flatMap(results, (result) => result.responses)
+                }))
+              )
+        },
+        { concurrency: "unbounded" }
+      )
+    }),
+    { concurrency: check.evaluationConcurrency }
+  )
+  return {
+    traits: Array.map(traits, (entry, trait) =>
+      Report.TraitReport.make({
+        trait: entry.trait,
+        origin: entry.origin,
+        changes: Array.map(changes, (results) => results[trait]!.report)
+      })
+    ),
+    responses: Array.flatMap(
+      changes,
+      Array.flatMap((result) => result.responses)
+    )
+  }
+})

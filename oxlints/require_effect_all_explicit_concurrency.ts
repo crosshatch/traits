@@ -14,7 +14,9 @@ export const requireEffectAllExplicitConcurrency = defineRule({
   },
   create: (context) => ({
     ObjectExpression: (node) => {
-      if (node.properties.length !== 1) return
+      if (node.properties.length !== 1) {
+        return
+      }
       const property = node.properties[0]
       if (
         property?.type !== "Property" ||
@@ -28,9 +30,12 @@ export const requireEffectAllExplicitConcurrency = defineRule({
             : undefined) !== "concurrency" ||
         property.value.type !== "Literal" ||
         property.value.value !== "unbounded"
-      )
+      ) {
         return
-      if (!/[\r\n]/.test(context.sourceCode.getText(node))) return
+      }
+      if (!/[\r\n]/.test(context.sourceCode.getText(node))) {
+        return
+      }
       context.report({ node, messageId: "multilineUnboundedConcurrency" })
     },
     CallExpression: (node) => {
@@ -45,7 +50,9 @@ export const requireEffectAllExplicitConcurrency = defineRule({
         return
       }
 
-      if (node.arguments.length >= 2) return
+      if (node.arguments.length >= 2) {
+        return
+      }
 
       context.report({ node, messageId: "missingExplicitConcurrency" })
     }

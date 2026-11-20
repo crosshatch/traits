@@ -1,0 +1,7 @@
+{
+  "trait": "preserve-cli-domain-errors-for-recovery",
+  "labels": {
+    "cli/push.ts": "fail",
+    "cli/pull.ts": "pass"
+  }
+}

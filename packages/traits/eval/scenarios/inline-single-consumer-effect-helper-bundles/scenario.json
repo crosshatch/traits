@@ -1,0 +1,7 @@
+{
+  "trait": "inline-single-consumer-effect-helper-bundles",
+  "labels": {
+    "storage/cacheHelpers.ts": "fail",
+    "storage/jsonHelpers.ts": "pass"
+  }
+}

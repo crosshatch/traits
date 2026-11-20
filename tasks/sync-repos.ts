@@ -1,28 +1,12 @@
-import { Array, Console, Effect, FileSystem, Path, Schema as S } from "effect"
-import { Command } from "effect/cli"
+import { Array, Console, Effect, FileSystem, Path } from "effect"
+import { CliError, Command } from "effect/cli"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-class RepoInitializationError extends S.TaggedError<RepoInitializationError>()("RepoInitializationError", {}) {
-  override get message() {
-    return "Failed to initialize reference repositories"
-  }
-}
+/** Directory entries inspected at once while finding repositories. */
+const entryConcurrency = 16
 
-class RepoFetchError extends S.TaggedError<RepoFetchError>()("RepoFetchError", {
-  repository: S.String
-}) {
-  override get message() {
-    return `Failed to fetch "${this.repository}"`
-  }
-}
-
-class RepoSwitchError extends S.TaggedError<RepoSwitchError>()("RepoSwitchError", {
-  repository: S.String
-}) {
-  override get message() {
-    return `Failed to switch "${this.repository}" to main`
-  }
-}
+/** Repositories synced at once; each runs Git processes with network connections. */
+const fetchConcurrency = 4
 
 export const syncRepos = Command.make("sync-repos").pipe(
   Command.withHandler(
@@ -36,7 +20,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
         (command) => spawner.exitCode(command),
         Effect.filterOrFail(
           (exitCode) => exitCode === 0,
-          () => RepoInitializationError.make({})
+          () => CliError.UserError.make({ cause: "Failed to initialize reference repositories" })
         )
       )
 
@@ -47,7 +31,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             Effect.filter(
               entries,
               (entry) => fs.stat(path.join(reposDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
-              { concurrency: "unbounded" }
+              { concurrency: entryConcurrency }
             )
           )
         )
@@ -61,7 +45,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
           const repoNames = yield* Effect.filter(
             entries,
             (entry) => fs.stat(path.join(orgDir, entry)).pipe(Effect.map((info) => info.type === "Directory")),
-            { concurrency: "unbounded" }
+            { concurrency: entryConcurrency }
           )
 
           return Array.map(repoNames, (repo) => ({
@@ -69,7 +53,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             repoDir: path.join(orgDir, repo)
           }))
         }),
-        { concurrency: "unbounded" }
+        { concurrency: entryConcurrency }
       ).pipe(Effect.map(Array.flatten))
 
       yield* Effect.forEach(
@@ -81,7 +65,7 @@ export const syncRepos = Command.make("sync-repos").pipe(
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => RepoFetchError.make({ repository: repo.entry })
+              () => CliError.UserError.make({ cause: `Failed to fetch "${repo.entry}"` })
             )
           )
           yield* ChildProcess.make`git switch -C main origin/main`.pipe(
@@ -89,12 +73,12 @@ export const syncRepos = Command.make("sync-repos").pipe(
             (command) => spawner.exitCode(command),
             Effect.filterOrFail(
               (exitCode) => exitCode === 0,
-              () => RepoSwitchError.make({ repository: repo.entry })
+              () => CliError.UserError.make({ cause: `Failed to switch "${repo.entry}" to main` })
             )
           )
           yield* Console.log(`Synced "${repo.entry}" (main)`)
         }),
-        { concurrency: "unbounded" }
+        { concurrency: fetchConcurrency }
       )
     })
   )

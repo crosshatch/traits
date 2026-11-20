@@ -1,0 +1,14 @@
+[
+  {
+    "trait": "table-namespace-and-relations-barrel",
+    "path": "packages/database/src/tables/T.ts",
+    "violating": {
+      "outcome": "missed",
+      "verdict": "Inconclusive"
+    },
+    "compliant": {
+      "outcome": "clean",
+      "verdict": "Pass"
+    }
+  }
+]

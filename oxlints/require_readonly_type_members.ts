@@ -2,7 +2,9 @@ import { Option, pipe, String } from "effect"
 import { type Context, defineRule, type ESTree } from "vite-plus/lint/plugins"
 
 const reportMissingReadonly = (context: Context, node: ESTree.TSIndexSignature | ESTree.TSPropertySignature) => {
-  if (node.readonly) return
+  if (node.readonly) {
+    return
+  }
   context.report({
     node,
     messageId: "missingReadonly",
@@ -11,7 +13,9 @@ const reportMissingReadonly = (context: Context, node: ESTree.TSIndexSignature |
 }
 
 const reportMissingMappedReadonly = (context: Context, node: ESTree.TSMappedType) => {
-  if (node.readonly === true || node.readonly === "+") return
+  if (node.readonly === true || node.readonly === "+") {
+    return
+  }
   context.report({
     node,
     messageId: "missingReadonly",

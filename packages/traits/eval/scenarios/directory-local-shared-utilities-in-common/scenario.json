@@ -1,0 +1,7 @@
+{
+  "trait": "directory-local-shared-utilities-in-common",
+  "labels": {
+    "billing/_common.ts": "fail",
+    "reports/_common.ts": "pass"
+  }
+}

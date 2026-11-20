@@ -43,11 +43,13 @@ export default defineConfig({
           server: { middlewareMode: true, ws: false, watch: null }
         })
         const server = await renderer
-        const { render } = (await server.ssrLoadModule("/src/prerender.tsx")) as typeof import("./src/prerender.tsx")
+        const { prerender } = (await server.ssrLoadModule("/src/prerender.tsx")) as typeof import("./src/prerender.tsx")
         const placeholder = '<div id="root"></div>'
-        if (!pipe(html, String.includes(placeholder))) return html
+        if (!pipe(html, String.includes(placeholder))) {
+          return html
+        }
         // Escape replacement-string tokens so rendered dollar sequences stay literal.
-        const replacement = pipe(`<div id="root">${render()}</div>`, String.replaceAll("$", "$$$$"))
+        const replacement = pipe(`<div id="root">${prerender()}</div>`, String.replaceAll("$", "$$$$"))
         return pipe(html, String.replace(placeholder, replacement))
       },
       async closeBundle() {

@@ -4,7 +4,9 @@ All paths below are relative to the repository root.
 
 ## Workspace
 
-- `traits/`: Effect-based MCP server and trait SDK.
+- `packages/traits/`: Effect-based MCP server and trait SDK.
+- `packages/@traits/`: Trait extension packages.
+- `traits/`: workspace trait definitions, `_config.json`, environments, and local decision cache.
 - `traits.sh/`: static Vite + React site; deployment is defined by root `alchemy.run.ts`.
 - Use pnpm and Node-compatible tooling; do not introduce Bun APIs.
 - Use `pnpm --filter traits.sh dev` for the local Vite server and `pnpm --filter traits.sh build` to build static assets.
@@ -13,7 +15,7 @@ All paths below are relative to the repository root.
 ## Verification
 
 - Run checks from the root: `pnpm exec vp check` for formatting/lint/types; `pnpm build` after TypeScript changes (`--force` after config changes).
-- Run all default test projects with `pnpm test`; use `pnpm exec vp test run --project <name>` for a focused suite. Model-backed integrations use `pnpm test:traits:integration`. Test commands run tests only. Do not call an empty suite a behavior-test pass. The static site has no test project. `pnpm check` runs checks, builds, and tests; docs-only edits need no build/tests.
+- Run all default test projects with `pnpm test`; use `pnpm exec vp test run --project <name>` for a focused suite. Measure trait accuracy against real models with `node packages/traits/eval/run.ts`. Test commands run tests only. Do not call an empty suite a behavior-test pass. The static site has no test project. `pnpm check` runs checks, builds, and tests; docs-only edits need no build/tests.
 - After dependency changes, run `pnpm install`; after traits exports/publishing changes, run `pnpm --filter traits pack` and verify the tarball's imports/types in a consumer.
 - After frontend changes, run `pnpm --filter traits.sh build`. No deployment is required for this verification.
 - Report failures, blocked checks, and empty/skipped suites accurately.
