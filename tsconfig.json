@@ -1,7 +1,6 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/@traits/opencode" },
     { "path": "./packages/@traits/typescript" },
     { "path": "./packages/traits" },
     { "path": "./traits.sh" },
