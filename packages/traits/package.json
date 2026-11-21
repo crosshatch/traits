@@ -21,6 +21,8 @@
     "dist/package.json",
     "docs/**/*.md",
     "local/**/*.ts",
+    "!dist/bundle/**",
+    "!dist/executable/**",
     "!dist/test/**",
     "!dist/vite.config.*",
     "!vite.config.ts"

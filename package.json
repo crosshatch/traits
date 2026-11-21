@@ -9,6 +9,7 @@
     "format": "vp fmt .",
     "prepare": "effect-tsgo patch --oxlint",
     "build": "effect-tsgo tsrs@7.1.0-beta.tsrs3 -b tsconfig.json",
+    "build:cli": "vp -C packages/traits pack",
     "check": "vp check && pnpm build && pnpm test",
     "test": "vp test run"
   },
