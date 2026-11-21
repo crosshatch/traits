@@ -72,28 +72,17 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      VERSION: ${{ needs.changesets.outputs.traits-version }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          # The executable embeds this Node.js; it must match executableNodeVersion in packages/traits/vite.config.ts.
+          # The executable embeds the Node.js that builds it, so this pins the runtime every release ships with.
           node-version: 26.13.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Also fails unless the executable starts without Node.js and reports the package version.
       - run: pnpm build:cli
-      - name: Check the executable runs without Node.js
-        working-directory: packages/traits/dist/executable
-        run: |
-          if [ "$RUNNER_OS" = Windows ]; then
-            actual=$(./traits.exe --version)
-          else
-            actual=$(env -i PATH=/usr/bin:/bin ./traits --version)
-          fi
-          echo "$actual"
-          [ "$actual" = "traits v$VERSION" ]
       - name: Package
         working-directory: packages/traits/dist/executable
         run: |

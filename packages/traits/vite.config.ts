@@ -1,15 +1,12 @@
-import { execFileSync } from "node:child_process"
-import path from "node:path"
-
+import { NodeServices } from "@effect/platform-node"
+import { Effect, Path, String } from "effect"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { defineConfig } from "vite-plus"
 
 import PackageJson from "./package.json" with { type: "json" }
 
-// The standalone executable embeds the Node.js that runs `vp pack`, so it is built only on this exact release.
-const executableNodeVersion = "26.13.1"
-
-// Packing appends .exe to the file name on Windows.
-const executable = { fileName: "traits", outDir: "dist/executable" }
+const fileName = "traits"
+const outDir = "dist/executable"
 
 export default defineConfig({
   root: import.meta.dirname,
@@ -17,29 +14,32 @@ export default defineConfig({
     entry: "main.ts",
     format: "esm",
     platform: "node",
-    // Not dist itself: packing cleans its output directory, and dist holds the npm build.
     outDir: "dist/bundle",
-    // A single executable application can load only built-in modules, so every dependency is bundled.
     deps: { alwaysBundle: [/./], onlyBundle: false },
-    exe: executable,
+    exe: { outDir, fileName },
     hooks: {
-      "build:prepare": () => {
-        if (process.versions.node !== executableNodeVersion) {
-          throw new Error(
-            `The traits executable must be built with Node.js ${executableNodeVersion}, not ${process.versions.node}.`
-          )
-        }
-      },
-      "build:done": () => {
-        // Packing signs the executable but only warns when that fails, and macOS kills an unsigned one on launch.
-        if (process.platform === "darwin") {
-          execFileSync(
-            "codesign",
-            ["--verify", "--strict", path.join(import.meta.dirname, executable.outDir, executable.fileName)],
-            { stdio: "inherit" }
-          )
-        }
-      }
+      "build:done": Effect.fn(
+        function* () {
+          // Fails the build unless the executable starts on its own. This also catches a failed macOS signature,
+          // which packing only warns about: macOS kills an unsigned executable on launch.
+          const path = yield* Path.Path
+          const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+          // Packing appends .exe on Windows.
+          const file = path.join(import.meta.dirname, outDir, fileName + (process.platform === "win32" ? ".exe" : ""))
+          const expected = `traits v${PackageJson.version}`
+          // An empty PATH proves the executable does not rely on an installed Node.js.
+          const output = yield* spawner
+            .string(ChildProcess.make({ env: { PATH: "" }, extendEnv: true })`${file} --version`, {
+              includeStderr: true
+            })
+            .pipe(Effect.map(String.trim))
+          if (output !== expected) {
+            return yield* Effect.die(`${file} --version printed "${output}", not "${expected}".`)
+          }
+        },
+        Effect.provide(NodeServices.layer),
+        Effect.runPromise
+      )
     }
   },
   test: {
