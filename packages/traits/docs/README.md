@@ -24,40 +24,6 @@ Your agent proposes traits, asks you to approve each one, and checks its work
 against them through MCP. The files live in your project, so you can edit,
 review, and share them with your team.
 
-## Get started
-
-Paste this into your agent inside your project:
-
-```text
-Set up Traits using https://github.com/crosshatch/traits/blob/main/SETUP.md.
-Follow this project's conventions, ask me to choose providers and models, and
-preserve existing configuration.
-```
-
-## Check in CI
-
-`traits check` checks files against the project's traits from the command line
-and prints readable results, including failed and inconclusive targets. Use
-`traits check --json` for the full report JSON. Given a decision policy, it
-exits nonzero when a trait is violated, so CI can gate on it. See the
-[command line guide](https://github.com/crosshatch/traits/blob/main/SETUP.md#command-line).
-
-## Programmatic use
-
-Use the portable `traits` Effect API or `traits/local` for workspace
-integration. See the [programmatic guide](./PROGRAMMATIC.md) for checking,
-derivation, and extension examples.
-
-## Trait ingestion
-
-Use `traits add <source>` to ingest traits, `traits pull` to refresh tracked
-sources, and `traits apply` to apply installed traits. See
-[ingestion and agent configuration](./INGESTION.md).
-
-Your agent presents derived proposals through its own prompting interface and
-returns your decision to Traits. Saving requires explicit approval of the
-reviewed text.
-
 ## License
 
 [Apache-2.0](https://github.com/crosshatch/traits/blob/main/LICENSE)
