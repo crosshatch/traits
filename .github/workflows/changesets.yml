@@ -11,6 +11,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      # The traits version published by this run; empty when nothing was published.
+      traits-version: ${{ steps.published.outputs.traits-version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,7 +30,8 @@ jobs:
       - run: npm install --global npm@11
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - uses: changesets/action@d0ee272882939fa35f22d979828acb7e61e0bd47 # v2.0.0-next.4
+      - id: changesets
+        uses: changesets/action@d0ee272882939fa35f22d979828acb7e61e0bd47 # v2.0.0-next.4
         with:
           github-token: ${{ secrets.MADHATCHER_PAT }}
           push-with-git-cli: true
@@ -36,3 +40,96 @@ jobs:
           commit-message: version packages
           pr-title: version packages
           pr-draft: create
+          # The release job creates the GitHub release once the executables exist, so the latest release always has
+          # an installer. The action still pushes the traits@<version> tag.
+          create-github-releases: false
+      - id: published
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.published-packages }}
+        run: |
+          version=$(jq -r '.[] | select(.name == "traits") | .version' <<< "$PUBLISHED_PACKAGES")
+          echo "traits-version=$version" >> "$GITHUB_OUTPUT"
+
+  executables:
+    needs: changesets
+    if: needs.changesets.outputs.traits-version != ''
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            target: darwin-arm64
+          - runner: ubuntu-latest
+            target: linux-x64
+          - runner: ubuntu-24.04-arm
+            target: linux-arm64
+          - runner: windows-latest
+            target: windows-x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.changesets.outputs.traits-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          # The executable embeds this Node.js; it must match executableNodeVersion in packages/traits/vite.config.ts.
+          node-version: 26.13.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:cli
+      - name: Check the executable runs without Node.js
+        working-directory: packages/traits/dist/executable
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            actual=$(./traits.exe --version)
+          else
+            actual=$(env -i PATH=/usr/bin:/bin ./traits --version)
+          fi
+          echo "$actual"
+          [ "$actual" = "traits v$VERSION" ]
+      - name: Package
+        working-directory: packages/traits/dist/executable
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            7z a "$GITHUB_WORKSPACE/traits-${{ matrix.target }}.zip" traits.exe
+          else
+            tar -czf "$GITHUB_WORKSPACE/traits-${{ matrix.target }}.tar.gz" traits
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: executable-${{ matrix.target }}
+          path: traits-${{ matrix.target }}.*
+          if-no-files-found: error
+
+  release:
+    needs: [changesets, executables]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.changesets.outputs.traits-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: executable-*
+          merge-multiple: true
+          path: release
+      - name: Add checksums and the installer
+        run: |
+          (cd release && sha256sum traits-* > checksums.txt)
+          sed "s/__TRAITS_VERSION__/$VERSION/" packages/traits/install.sh > release/install.sh
+          awk -v heading="## $VERSION" '$0 == heading { found = 1; next } found && /^## / { exit } found' \
+            packages/traits/CHANGELOG.md > notes.md
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.MADHATCHER_PAT }}
+        run: gh release create "traits@$VERSION" --verify-tag --title "traits@$VERSION" --notes-file notes.md release/*
