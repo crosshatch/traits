@@ -10,11 +10,5 @@
       "model": "openai/gpt-6.1-sol"
     }
   },
-  "exclude": [
-    "**/*.svg",
-    "pnpm-lock.yaml",
-    "packages/traits/eval/fixtures/**",
-    "packages/traits/eval/generated/**",
-    "packages/traits/eval/scenarios/**"
-  ]
+  "exclude": ["**/*.svg", "pnpm-lock.yaml"]
 }
