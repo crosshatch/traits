@@ -4,7 +4,7 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "exclude": ["dist", "eval/scenarios", "node_modules"],
+  "exclude": ["dist", "node_modules"],
   "extends": "../../tsconfig.base.json",
   "include": ["**/*.ts", "package.json"]
 }

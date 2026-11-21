@@ -21,7 +21,6 @@
     "dist/package.json",
     "docs/**/*.md",
     "local/**/*.ts",
-    "!dist/eval/**",
     "!dist/test/**",
     "!dist/vite.config.*",
     "!vite.config.ts"
@@ -37,14 +36,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@distilled.cloud/github": "1.0.0-rc.20",
     "@effect/ai-anthropic": "catalog:",
     "@effect/ai-cloudflare": "catalog:",
     "@effect/ai-openai": "catalog:",
     "@effect/ai-openai-compat": "catalog:",
-    "@effect/ai-openrouter": "catalog:",
-    "import-meta-resolve": "catalog:",
-    "yaml": "catalog:"
+    "@effect/ai-openrouter": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

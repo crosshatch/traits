@@ -4,7 +4,7 @@ import { defineConfig } from "vite-plus"
 
 import custom from "./oxlints/oxlints.ts"
 
-const ignorePatterns = ["**/.worktrees/**", ".agents/**", "repos/**", "traits/**"]
+const ignorePatterns = ["**/.worktrees/**", "repos/**", "traits/**"]
 
 export default defineConfig({
   fmt: {
