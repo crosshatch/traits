@@ -17,13 +17,13 @@ export const run = Command.make(
     ),
     traits: Flag.String("trait").pipe(
       Flag.withSchema(TraitName),
-      Flag.withDescription("Check only this trait, within the environment when one is given; repeat to select several"),
+      Flag.withDescription("Check only this trait, within the list when one is given; repeat to select several"),
       Flag.atLeast(0)
     ),
-    lists: Flag.String("environment").pipe(
-      Flag.withSchema(EnvironmentName),
-      Flag.withAlias("e"),
-      Flag.withDescription("Check only the traits in traits/_environments/<name>.json; every trait when omitted"),
+    lists: Flag.String("list").pipe(
+      Flag.withSchema(ListName),
+      Flag.withAlias("l"),
+      Flag.withDescription("Check only the traits in this list from traits/lists.json; every trait when omitted"),
       Flag.optional
     ),
     threshold: Flag.Finite(name).pipe(Flag.withSchema(Probability), Flag.withDescription(description), Flag.optional)
@@ -33,6 +33,6 @@ export const run = Command.make(
   })
 ).pipe(
   Command.withDescription(
-    "Check files against this workspace's traits and print readable results; --json prints the full report. Without a policy, display thresholds are 0.5 and do not affect exit status. With --fail and --pass, or check.policy in traits/_config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
+    "Check files against this workspace's traits and print readable results; --json prints the full report. Without a policy, display thresholds are 0.5 and do not affect exit status. With --fail and --pass, or check.policy in traits/config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
   )
 )
