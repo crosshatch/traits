@@ -29,11 +29,13 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./local": "./local/index.ts"
   },
   "publishConfig": {
     "exports": {
-      ".": "./dist/index.js"
+      ".": "./dist/index.js",
+      "./local": "./dist/local/index.js"
     },
     "access": "public"
   },
