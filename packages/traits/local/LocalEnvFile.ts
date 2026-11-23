@@ -1,4 +1,4 @@
-import { Array, ConfigProvider, Effect, FileSystem, Option, Path, Schema as S } from "effect"
+import { Array, ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema as S } from "effect"
 
 import { LocalPaths, mainRoot } from "./LocalPaths.ts"
 
@@ -36,6 +36,19 @@ export const find = Effect.fn("LocalEnvFile.find")(function* (file: string) {
   return found.value
 })
 
-/** Reads configuration, such as the model's credentials, from the .env file that find finds by this path, as well as from the environment. A variable the environment already sets takes precedence over the file. */
-export const layer = (file: string) =>
-  ConfigProvider.layerAdd(find(file).pipe(Effect.flatMap((path) => ConfigProvider.fromDotEnv({ path }))))
+/** Reads configuration, such as the model's credentials, from a .env file, found as find finds it, as well as from the environment. A variable the environment already sets takes precedence over the file. When no file is named, it is .env, and when there is none, only the environment is read; a file that is named must be found. */
+export const layer = (options: { readonly file?: string | undefined }) =>
+  Layer.unwrap(
+    Effect.gen(function* () {
+      const read = (path: string) => ConfigProvider.layerAdd(ConfigProvider.fromDotEnv({ path }))
+      if (options.file !== undefined) {
+        const path = yield* find(options.file)
+        return read(path)
+      }
+      const found = yield* find(".env").pipe(
+        Effect.asSome,
+        Effect.catchTag("EnvFileNotFoundError", () => Effect.succeedNone)
+      )
+      return Option.match(found, { onNone: () => Layer.empty, onSome: read })
+    })
+  )

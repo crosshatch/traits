@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, layer } from "@effect/vitest"
-import { Effect, FileSystem, Path } from "effect"
+import { Config, ConfigProvider, Effect, FileSystem, Layer, Path } from "effect"
 
 import * as LocalEnvFile from "../local/LocalEnvFile.ts"
 import { git, localPaths } from "./_localWorkspace.ts"
@@ -44,6 +44,24 @@ layer(NodeServices.layer)((it) => {
       // An absolute path is only looked for where it says.
       const absolute = yield* Effect.flip(find(path.join(linked, "missing.env")))
       expect(absolute.searched).toEqual([path.join(linked, "missing.env")])
+
+      // The file fills in what the environment leaves unset, and a file that is named must be found.
+      const read = (file: string, env: Record<string, string>) =>
+        Effect.all([Config.String("KEY"), Config.String("OTHER")], { concurrency: 1 }).pipe(
+          Effect.provide(
+            LocalEnvFile.layer({ file }).pipe(
+              Layer.provide([
+                localPaths(path.join(linked, "traits")),
+                ConfigProvider.layer(ConfigProvider.fromEnv({ env }))
+              ])
+            )
+          )
+        )
+      yield* fs.writeFileString(path.join(linked, name), "KEY=linked\nOTHER=from-file\n")
+      const fromFile = yield* read(name, { KEY: "from-environment" })
+      expect(fromFile).toEqual(["from-environment", "from-file"])
+      const unfound = yield* Effect.flip(read("missing.env", {}))
+      expect(unfound._tag).toBe("EnvFileNotFoundError")
     })
   )
 })

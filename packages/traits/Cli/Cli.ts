@@ -25,7 +25,7 @@ export const Cli = Command.make("traits").pipe(
           ? (error.reason ?? "")
           : error._tag === "ConfigError"
             ? // The provider's key is read from the environment, and its own error only names the variable in passing.
-              `Could not read the credentials for the models in traits/config.json from the environment: ${pipe(error.message, String.replaceAll(/\s+/gu, " "))}. Set the variable it names, or name a .env file that sets it with --dotenv, then run again.`
+              `Could not read the credentials for the models in traits/config.json from the environment: ${pipe(error.message, String.replaceAll(/\s+/gu, " "))}. Set the variable it names, in the environment or in .env, or name another .env file that sets it with --dotenv, then run again.`
             : error.message
       ).pipe(Effect.andThen(CommandExit.make({ code: error._tag === "CommandExit" ? error.code : 2 })))
   )

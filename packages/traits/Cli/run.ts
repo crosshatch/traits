@@ -59,7 +59,7 @@ export const run = Command.make(
     dotenv: Flag.String("dotenv").pipe(
       Flag.withMetavar("file"),
       Flag.withDescription(
-        "A .env file to read the model's credentials from, such as .env, looked for from the current directory, then the workspace root, and then the root of the repository's main worktree. A variable already set in the environment takes precedence over the file"
+        "The .env file to read the model's credentials from, looked for from the current directory, then the workspace root, and then the root of the repository's main worktree; .env when omitted, which is passed over when there is none. A variable already set in the environment takes precedence over the file"
       ),
       Flag.optional
     )
@@ -90,7 +90,7 @@ export const run = Command.make(
         // Answers are remembered for the model that gave them, so a change of model asks again.
         Effect.provide([
           ModelConfiguration.layerDecision(config.models.decision).pipe(
-            Layer.provide(Option.match(dotenv, { onNone: () => Layer.empty, onSome: LocalEnvFile.layer }))
+            Layer.provide(LocalEnvFile.layer({ file: Option.getOrUndefined(dotenv) }))
           ),
           LocalDecisionCache.layer(config.models.decision)
         ])
@@ -115,6 +115,6 @@ export const run = Command.make(
   )
 ).pipe(
   Command.withDescription(
-    "Run the traits in the given selections, or in the selection with the ID default when none is given, against every project file, and print what needs attention; --json prints the full report. --dry prints what the run would cost instead of running it, and --max-tokens or --max-cost keeps a run within a budget. The model's credentials are read from the environment, and from the file --dotenv names. Exits with 1 when an assertion is violated, and 2 when something could not be assessed."
+    "Run the traits in the given selections, or in the selection with the ID default when none is given, against every project file, and print what needs attention; --json prints the full report. --dry prints what the run would cost instead of running it, and --max-tokens or --max-cost keeps a run within a budget. The model's credentials are read from the environment, and from .env or the file --dotenv names. Exits with 1 when an assertion is violated, and 2 when something could not be assessed."
   )
 )
