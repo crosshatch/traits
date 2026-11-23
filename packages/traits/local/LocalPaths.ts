@@ -1,4 +1,6 @@
-import { Context, Effect, FileSystem, Layer, Path, Schema as S } from "effect"
+import { Context, Effect, FileSystem, Layer, Option, Path, pipe, Schema as S, String } from "effect"
+
+import { runProcess } from "../util/process/runProcess.ts"
 
 /** The workspace's absolute paths: the root of its repository, and its traits directory with what that holds. */
 export class LocalPaths extends Context.Service<
@@ -65,3 +67,22 @@ export const layer = Effect.gen(function* () {
     cache: path.join(directory, ".cache")
   }
 }).pipe(Layer.effect(LocalPaths))
+
+/** The root of the repository's main working tree, or none when it has none, as with a bare repository. It is the workspace root itself unless the workspace is a linked worktree, where it is the checkout the worktree was added from, and where files that Git ignores, such as .env, usually live. Git is asked each time it is used, rather than when the workspace's other paths are found. */
+export const mainRoot = Effect.gen(function* () {
+  const paths = yield* LocalPaths
+  const listed = yield* runProcess({ command: "git", args: ["worktree", "list", "--porcelain"], cwd: paths.root }).pipe(
+    Effect.option
+  )
+  // Git lists the main working tree first, and marks it bare when there is none.
+  return pipe(
+    listed,
+    Option.filter(({ exitCode }) => exitCode === 0),
+    Option.flatMap(({ stdout }) => {
+      const [first, second] = pipe(stdout, String.split("\n"))
+      return first === undefined || second === "bare" || !pipe(first, String.startsWith("worktree "))
+        ? Option.none()
+        : Option.some(pipe(first, String.slice("worktree ".length)))
+    })
+  )
+}).pipe(Effect.withSpan("LocalPaths.mainRoot"))

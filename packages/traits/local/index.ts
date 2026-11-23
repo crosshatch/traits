@@ -1,5 +1,6 @@
 export * as LocalDecisionCache from "./LocalDecisionCache.ts"
 export * as LocalDefaultTraitCollection from "./LocalDefaultTraitCollection.ts"
+export * as LocalEnvFile from "./LocalEnvFile.ts"
 export * as LocalPaths from "./LocalPaths.ts"
 export * as LocalProjectFiles from "./LocalProjectFiles.ts"
 export * as LocalTraitCollection from "./LocalTraitCollection.ts"

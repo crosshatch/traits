@@ -1,8 +1,9 @@
-import { Array, Console, Effect, Option, pipe, Schema as S } from "effect"
+import { Array, Console, Effect, Layer, Option, pipe, Schema as S } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
 
 import * as Estimate from "../Estimate/Estimate.ts"
 import * as LocalDecisionCache from "../local/LocalDecisionCache.ts"
+import * as LocalEnvFile from "../local/LocalEnvFile.ts"
 import * as LocalProjectFiles from "../local/LocalProjectFiles.ts"
 import * as Segmentation from "../local/Segmentation/Segmentation.ts"
 import * as ModelConfiguration from "../local/TraitsConfig/ModelConfiguration.ts"
@@ -55,10 +56,18 @@ export const run = Command.make(
     json: Flag.Boolean("json").pipe(
       Flag.withDefault(false),
       Flag.withDescription("Print the full report, or the estimate with --dry, as JSON instead of a readable summary")
+    ),
+    // Not --env-file, which Node reads among a program's own arguments and stops at when the file is not in the current directory.
+    dotenv: Flag.String("dotenv").pipe(
+      Flag.withMetavar("file"),
+      Flag.withDescription(
+        "A .env file to read the model's credentials from, such as .env, looked for from the current directory, then the workspace root, and then the root of the repository's main worktree. A variable already set in the environment takes precedence over the file"
+      ),
+      Flag.optional
     )
   },
   Effect.fn("run")(
-    function* ({ dry, json, maxCost, maxTokens, selections, threshold }) {
+    function* ({ dotenv, dry, json, maxCost, maxTokens, selections, threshold }) {
       // The configuration is read when a run starts, and what the run is handed goes by it, so an edit made since the last run takes effect.
       const config = yield* TraitsConfig.load
       const files = yield* LocalProjectFiles.make(config.exclude)
@@ -84,7 +93,9 @@ export const run = Command.make(
       const report = yield* TraitRun.run({ files, segmentation, selections, threshold, budget }).pipe(
         // Answers are remembered for the model that gave them, so a change of model asks again.
         Effect.provide([
-          ModelConfiguration.layerDecision(config.models.decision),
+          ModelConfiguration.layerDecision(config.models.decision).pipe(
+            Layer.provide(Option.match(dotenv, { onNone: () => Layer.empty, onSome: LocalEnvFile.layer }))
+          ),
           LocalDecisionCache.layer(config.models.decision)
         ])
       )
@@ -108,6 +119,6 @@ export const run = Command.make(
   )
 ).pipe(
   Command.withDescription(
-    "Run the traits in the given selections, or in the selection with the ID default when none is given, against every project file, and print what needs attention; --json prints the full report. --dry prints what the run would cost instead of running it, and --max-tokens or --max-cost keeps a run within a budget. Exits with 1 when an assertion is violated, and 2 when something could not be assessed."
+    "Run the traits in the given selections, or in the selection with the ID default when none is given, against every project file, and print what needs attention; --json prints the full report. --dry prints what the run would cost instead of running it, and --max-tokens or --max-cost keeps a run within a budget. The model's credentials are read from the environment, and from the file --dotenv names. Exits with 1 when an assertion is violated, and 2 when something could not be assessed."
   )
 )
