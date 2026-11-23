@@ -7,7 +7,7 @@
     }
   },
   "selections": {
-    "default": ["always-brace-if-bodies", "inline-text-encoders-and-decoders"]
+    "default": ["always-brace-if-bodies", "inline-text-encoders-and-decoders", "yield-services-inside-effect-helpers"]
   },
   "exclude": ["**/*.svg", "pnpm-lock.yaml"]
 }
