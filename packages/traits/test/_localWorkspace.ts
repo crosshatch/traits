@@ -1,7 +1,5 @@
-import { devNull } from "node:os"
-
 import { expect } from "@effect/vitest"
-import { Array, Effect, Layer, Path, Stream, String } from "effect"
+import { Array, Effect, FileSystem, Layer, Path, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
 import { LocalPaths } from "../local/LocalPaths.ts"
@@ -39,12 +37,15 @@ export const configText = (fields: {
 
 /** Runs Git in a directory, without the machine's own Git configuration, and returns what it printed. */
 export const git = Effect.fn("git")(function* (cwd: string, ...args: ReadonlyArray<string>) {
+  const fs = yield* FileSystem.FileSystem
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+  // An empty file stands in for the user's configuration. Git cannot open the null device on Windows, so it is not used.
+  const config = yield* fs.makeTempFileScoped()
   const handle = yield* spawner.spawn(
     ChildProcess.make("git", args, {
       cwd,
       env: {
-        GIT_CONFIG_GLOBAL: devNull,
+        GIT_CONFIG_GLOBAL: config,
         GIT_CONFIG_NOSYSTEM: "1",
         GIT_AUTHOR_NAME: "Test",
         GIT_AUTHOR_EMAIL: "test@example.com",
