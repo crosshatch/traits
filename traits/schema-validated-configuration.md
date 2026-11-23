@@ -1,8 +1,8 @@
 ---
 name: schema-validated-configuration
 subject: Configuration and numeric domain validation with Effect Schema. Applies
-  when loading and validating configuration with Effect Config. In TypeScript or
-  TSX files.
+  when loading and validating configuration with Effect Config.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Validate configuration through Config.schema with appropriate
   schemas and checks, not Config.Number followed by manual conditions. For
   numeric schema fields in configuration and domain records, express both

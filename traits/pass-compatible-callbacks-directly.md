@@ -2,7 +2,8 @@
 name: pass-compatible-callbacks-directly
 subject: Functions passed as callbacks (such as to map, flatMap, forEach,
   filter, or pipe stages) and function or service-method definitions that
-  delegate to another function. In TypeScript, TSX, JavaScript, or JSX files.
+  delegate to another function.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: "Prefer passing a function directly as a callback when its signature
   and behavior are compatible with the caller: Effect.map(String.trim), not
   Effect.map((text) => String.trim(text)). Effect combinators such as

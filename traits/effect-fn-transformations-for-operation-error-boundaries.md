@@ -5,6 +5,7 @@ subject: Whole-operation error translation in reusable Effect functions. Applies
   into one operation-specific error for recovery or a meaningful external
   boundary. Raising domain rejections from successful values (e.g.
   Effect.filterOrFail) is not translation.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use Effect.fn transformation arguments to apply a uniform error
   translation around the whole reusable function rather than repeating it per
   stage or applying it only to some stages. Stage-local translation is

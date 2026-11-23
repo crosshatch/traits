@@ -2,7 +2,8 @@
 name: defects-for-internal-invariants
 subject: Classification of internal invariant violations and recoverable
   failures in Effect error channels, including library validation and encoding
-  of internally constructed data. In TypeScript and TSX files.
+  of internally constructed data.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Treat genuine internal invariant violations as defects, including
   validation or encoding failures of internally constructed, already-typed data
   when consumers cannot meaningfully recover. Preserve typed errors for

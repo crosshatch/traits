@@ -1,6 +1,7 @@
 ---
 name: tagged-enum-runtime-factories
-subject: Effect Data.TaggedEnum type aliases. In TypeScript or TSX files.
+subject: Effect Data.TaggedEnum type aliases.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Every Effect Data.TaggedEnum type alias must be paired with a
   same-named runtime Data.taggedEnum factory, exposing both the type and value
   under one name: export type Outcome = Data.TaggedEnum<{ Pass: {}; Fail: {

@@ -1,7 +1,7 @@
 ---
 name: domain-types-for-complete-record-storage
-subject: Storage operations creating or replacing complete domain records. In
-  TypeScript or TSX files.
+subject: Storage operations creating or replacing complete domain records.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: For storage operations that create or replace complete domain
   records, accept the existing domain type instead of separate per-field
   parameters or a manually duplicated object type. Persist the complete record

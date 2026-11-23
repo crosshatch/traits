@@ -1,6 +1,7 @@
 ---
 name: context-service-use-over-flatmap
 subject: Effectful callbacks applied directly to an Effect Context service lookup.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use the Context service's .use(callback) accessor instead of
   Service.pipe(Effect.flatMap(callback)), pipe(Service,
   Effect.flatMap(callback)), or Effect.flatMap(Service, callback) when the

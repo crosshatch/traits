@@ -1,11 +1,11 @@
 ---
 name: namespace-imports-for-local-modules
-subject: Named imports from local project modules (relative paths) in
-  TypeScript, TSX, JavaScript, and JSX files. Excludes, judged from the import
-  path itself, imports from any module under a util/ directory (the project's
-  schema utilities, e.g. ./Change.ts inside util/, or ../util/Input.ts), from
-  barrel/re-export modules, and from directory-specific _common utility modules;
-  these use named imports.
+subject: Named imports from local project modules (relative paths). Excludes,
+  judged from the import path itself, imports from any module under a util/
+  directory (the project's schema utilities, e.g. ./Change.ts inside util/, or
+  ../util/Input.ts), from barrel/re-export modules, and from directory-specific
+  _common utility modules; these use named imports.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Use a namespace import with qualified member access when a single
   import statement from one local module names three or more exports, or names
   two or more exports that would otherwise need aliases prefixed with the module

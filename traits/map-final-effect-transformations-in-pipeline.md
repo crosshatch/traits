@@ -1,6 +1,7 @@
 ---
 name: map-final-effect-transformations-in-pipeline
 subject: Final pure transformations of Effect results.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: When an Effect result is bound only to apply a final pure
   transformation and immediately return it, keep that transformation in the
   Effect pipeline with Effect.map and return the composed Effect directly (or

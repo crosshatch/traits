@@ -1,7 +1,8 @@
 ---
 name: keep-decoded-configuration-on-context
 subject: Decoded configuration and derived runtime values exposed through an
-  Effect context. In TypeScript or TSX files.
+  Effect context.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: When an Effect context exposes decoded configuration, keep the
   configuration object on the context and read unchanged settings through it
   rather than copying individual settings into separate context fields. Keep

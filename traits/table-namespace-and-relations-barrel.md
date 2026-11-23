@@ -1,6 +1,7 @@
 ---
 name: table-namespace-and-relations-barrel
 subject: Database table definitions and their shared relations exports.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Place database table definitions in a tables directory, one table per
   file. Re-export every table with export * from its file in tables/T.ts. Define
   shared relations in tables/relations.ts. In tables/index.ts, export * as T

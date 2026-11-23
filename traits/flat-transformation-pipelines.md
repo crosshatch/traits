@@ -1,7 +1,7 @@
 ---
 name: flat-transformation-pipelines
-subject: Successive transformations and Effect.fn transformation arguments. In
-  TypeScript or TSX files.
+subject: Successive transformations and Effect.fn transformation arguments.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Use `.pipe(...)` for pipeable values and `pipe(value, ...)` for
   other values to keep successive transformations flat and readable in execution
   order, rather than nesting transformation calls around an expression. For

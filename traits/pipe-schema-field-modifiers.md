@@ -1,7 +1,7 @@
 ---
 name: pipe-schema-field-modifiers
-subject: Optional, nullable, and similar modifiers on Effect Schema fields. In
-  TypeScript or TSX files.
+subject: Optional, nullable, and similar modifiers on Effect Schema fields.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "For optional or nullable Effect Schema fields, apply the field
   modifier using the schema’s own .pipe method, even for a single modifier:
   location: SourceLocation.pipe(S.optionalKey), not location:

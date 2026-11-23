@@ -2,6 +2,7 @@
 name: separate-native-errors-from-wire-schemas
 subject: Native error-channel types and simplified wire-response schemas for
   explicit Effect service contracts.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Keep native error-channel types distinct from simplified
   wire-response schemas. Type service operations with their actual domain or
   platform errors, retaining structured information needed for recovery.

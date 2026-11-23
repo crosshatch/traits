@@ -1,6 +1,7 @@
 ---
 name: schema-decoding-defaults-for-configuration
-subject: Schema-backed configuration with optional defaults. In TypeScript or TSX files.
+subject: Schema-backed configuration with optional defaults.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: For schema-decoded configuration, express optional-field defaults
   with Effect Schema decoding defaults rather than fallback expressions at
   consumption sites. Decode configuration of unknown type, such as a

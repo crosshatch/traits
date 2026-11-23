@@ -1,7 +1,7 @@
 ---
 name: align-operation-module-and-export-names
-subject: Operation-focused modules and their primary exports. In TypeScript,
-  TSX, JavaScript, or JSX files.
+subject: Operation-focused modules and their primary exports.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: For operation-focused modules, keep the filename and primary export
   aligned with the operation's canonical name. When improving that name, rename
   the file and export together and update consumers to import it directly,

@@ -2,6 +2,7 @@
 name: development-dependencies-in-tooling-workspace-roots
 subject: Dependencies of private monorepo root packages used only for repository
   tooling and development.
+match: "**/package.json"
 assertion: Declare root-only tooling and development dependencies in
   devDependencies rather than dependencies. Keep runtime dependencies in the
   workspace packages that actually require them.

@@ -1,7 +1,8 @@
 ---
 name: filter-or-fail-for-effect-validation
 subject: Validation of Effect results solely to fail on a predicate and
-  otherwise continue. In TypeScript or TSX files.
+  otherwise continue.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: When validating an Effect result only to fail on a predicate and
   otherwise continue, prefer Effect.filterOrFail in the effect’s pipe over
   yielding into a temporary variable and branching to raise an error. Preserve

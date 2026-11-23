@@ -3,6 +3,7 @@ name: separate-heterogeneous-contracts-for-type-safety
 subject: Services, registries, caches, and other abstractions combining variants
   with different input, result, error, or dependency types. In TypeScript APIs
   and implementations, including Effect services and caches.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Prefer separate precisely typed instances or services when combining
   heterogeneous contracts requires conditional or indexed types whose variance
   or lost correlations lead to type assertions, widened error/dependency unions,

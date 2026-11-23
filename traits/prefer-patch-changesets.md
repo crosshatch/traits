@@ -1,6 +1,7 @@
 ---
 name: prefer-patch-changesets
-subject: Changesets and release increment selection. In Markdown files.
+subject: Changesets and release increment selection.
+match: "**/*.{md,mdx}"
 assertion: Prefer patch changesets by default. Use a minor changeset only when
   there is a compelling reason for a minor release, such as a breaking change
   while the major version is 0, which caret (^) ranges treat as incompatible and

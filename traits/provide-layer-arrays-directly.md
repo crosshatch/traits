@@ -1,8 +1,8 @@
 ---
 name: provide-layer-arrays-directly
-subject: Calls to Effect.provide or Layer.provide, in TypeScript or TSX files.
-  Layers passed to other APIs, such as a framework's providers option, are out
-  of scope.
+subject: Calls to Effect.provide or Layer.provide. Layers passed to other APIs,
+  such as a framework's providers option, are out of scope.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use Effect.provide([layerA, layerB, ...]) or Layer.provide([layerA,
   layerB, ...]) instead of Effect.provide(Layer.mergeAll(layerA, layerB, ...))
   or Layer.provide(Layer.mergeAll(...)), or the same with Layer.merge(a, b),

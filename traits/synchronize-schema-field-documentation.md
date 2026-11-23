@@ -1,6 +1,7 @@
 ---
 name: synchronize-schema-field-documentation
 subject: TSDoc comments and runtime description annotations on schema fields.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Keep each schema field’s TSDoc comment and runtime description
   annotation synchronized. Use matching wording for the same field semantics,
   including constraints, optionality, reference targets, and interactions;

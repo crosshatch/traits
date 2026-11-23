@@ -1,7 +1,7 @@
 ---
 name: native-inline-checks-and-direct-effect-predicates
-subject: Inline runtime checks and predicate stages in existing pipelines. In
-  TypeScript or TSX files.
+subject: Inline runtime checks and predicate stages in existing pipelines.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Prefer native syntax for inline comparisons and simple runtime
   checks, such as `bounds.top <= readingLine` and `value === 0`. Prefer suitable
   Effect predicate helpers when passed directly as callbacks or curried stages

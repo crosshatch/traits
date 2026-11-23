@@ -5,6 +5,7 @@ subject: Import specifiers that reach into another package's internal modules
   importing file's package or a deep path like pkg/dist/x.js or pkg/src/x.ts.
   Bare package names and the subpaths a package exports, and relative imports
   within the importing file's own package, are out of scope.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Prefer importing through the appropriate public package or subpackage
   barrel instead of a deeper module path when that barrel exports the needed
   API. Use namespace-qualified types when the barrel exports a module namespace

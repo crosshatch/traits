@@ -1,6 +1,7 @@
 ---
 name: type-alias-before-schema
-subject: Static type aliases extracted from Effect schemas. In TypeScript or TSX files.
+subject: Static type aliases extracted from Effect schemas.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "When extracting a schema’s static type, place the type alias
   immediately above the schema definition: `export type User = typeof User.Type`
   directly before `export const User = S.Struct({ id: S.String })`, not after

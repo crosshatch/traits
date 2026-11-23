@@ -1,6 +1,7 @@
 ---
 name: source-redaction-over-heuristic-scrubbing
 subject: Secret handling and error diagnostic formatting.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Wrap known secret values in Redacted at their source and prefer
   standard library error formatting over bespoke recursive formatters and
   speculative secret-pattern scrubbing. Add custom sanitization only for a

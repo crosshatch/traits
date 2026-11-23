@@ -1,9 +1,9 @@
 ---
 name: css-first-scroll-layout
-subject: "Scroll-dependent UI layout, positioning, and visibility. In CSS, HTML,
-  TSX, JSX, TypeScript, or JavaScript files. Exception: When every scripted
-  scroll-dependent behavior under assessment implements a requirement that DOM
-  placement, layout, and CSS cannot reliably express."
+subject: "Scroll-dependent UI layout, positioning, and visibility. Exception:
+  When every scripted scroll-dependent behavior under assessment implements a
+  requirement that DOM placement, layout, and CSS cannot reliably express."
+match: "**/*.{css,html,ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Prefer DOM placement, appropriate containing blocks, and CSS
   positioning for scroll-dependent UI layout such as sticky bars. Do not add
   JavaScript scroll listeners, visibility atoms, or reveal/hide logic when CSS

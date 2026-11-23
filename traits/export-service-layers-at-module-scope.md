@@ -2,6 +2,7 @@
 name: export-service-layers-at-module-scope
 subject: Namespace-oriented Effect modules that colocate a service declaration
   with its implementation layers.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Expose implementation layers as module-level exported constants below
   the service declaration, rather than static members on the service class, so
   consumers use Module.layer instead of Module.Service.layer. Follow the

@@ -1,6 +1,10 @@
 ---
 name: concise-reader-focused-readmes
 subject: Project and package README documents.
+match:
+  - "**/README*"
+  - "**/Readme*"
+  - "**/readme*"
 assertion: Keep READMEs concise and focused on what the project does and how to
   get started. Prefer links to dedicated guides over lengthy implementation
   details, internal architecture, or exhaustive operational descriptions.

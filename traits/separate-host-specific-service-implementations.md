@@ -7,6 +7,7 @@ subject: Effect modules that declare a Context.Service, and their concrete
   service module (see service-colocated-effect-layer-naming). Modules declaring
   no service or layer, such as barrels, are out of scope. Not a blanket rule to
   separate every service from its layers.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Keep concrete layer implementations in separate host-owned modules,
   in the host directory, when the service-shape module must remain decoupled
   from that host. Do not import or re-export the concrete layer, or its

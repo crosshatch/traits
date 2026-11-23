@@ -2,6 +2,7 @@
 name: service-colocated-effect-layer-naming
 subject: Effect layer exports and the placement of environment-specific service
   implementations.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Keep potentially environment-specific layer implementations in their
   owning service module, even when no alternative implementation exists yet; use
   layerFrom<InputSource>, such as layerFromFs. As an exception, when the package

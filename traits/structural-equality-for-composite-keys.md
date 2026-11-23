@@ -1,7 +1,8 @@
 ---
 name: structural-equality-for-composite-keys
 subject: Composite keys in Effect collections, caches, and Atom.family that need
-  content-based equality. In TypeScript or TSX files.
+  content-based equality.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: When a composite value is used as a key in an Effect collection,
   cache, or Atom.family and should match by its contents across independently
   created instances, use Effect-compatible structural equality and hashing, such

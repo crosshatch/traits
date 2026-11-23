@@ -5,6 +5,7 @@ subject: User-facing domain-specific failures in Effect CLI command handlers.
   handler, catches the domain error by tag or type; where no code matches the
   error with catchTag or catchTags (for example an unexported error class),
   there is no recovery identity and the trait does not apply.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Preserve the domain-specific error and expose its display text
   through CliError.userMessage rather than wrapping it solely for rendering.
 purpose: Preserve meaningful domain error identities while using the CLI

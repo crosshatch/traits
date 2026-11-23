@@ -1,6 +1,7 @@
 ---
 name: same-named-drizzle-table-types
 subject: Exported Drizzle table definitions and their inferred model types.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Export a same-named alias for each table’s complete type immediately
   above its value declaration, such as export type traits = typeof traits before
   export const traits. Access inferred models through that type’s properties,

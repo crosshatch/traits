@@ -1,7 +1,7 @@
 ---
 name: describe-model-visible-tool-parameters
-subject: Model-visible parameter schemas for effect/ai tools. In TypeScript or
-  TSX files.
+subject: Model-visible parameter schemas for effect/ai tools.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: 'For tools defined with `effect/ai`, every model-visible tool
   parameter field must have a concise schema description explaining its purpose
   and any non-obvious constraints or interactions: `approved:

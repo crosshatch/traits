@@ -2,6 +2,7 @@
 name: unicode-patterns-for-json-schema-export
 subject: Effect Schema isPattern regular expressions used in schemas exported to
   JSON Schema.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use Unicode-mode regular expressions with the u flag for
   Schema.isPattern constraints that must survive JSON Schema export. Verify that
   generated JSON Schema retains the intended pattern constraints. When adding u

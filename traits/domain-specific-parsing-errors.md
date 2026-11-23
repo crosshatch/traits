@@ -2,8 +2,9 @@
 name: domain-specific-parsing-errors
 subject: Non-test modules that parse external text, files, or documents and
   handle the failures, such as Effect.try around JSON.parse or a YAML or TOML
-  parser, custom parse error definitions, or mapping of decode errors. In
-  TypeScript or TSX files. Test files are out of scope.
+  parser, custom parse error definitions, or mapping of decode errors. Test
+  files are out of scope.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: At parsing boundaries with recoverable domain-specific failures, use
   schema-backed tagged errors rather than Effect.try's generic UnknownError.
   Give distinct custom domain failure situations separate tags instead of a

@@ -1,6 +1,7 @@
 ---
 name: atom-first-react-state-identity
-subject: Ownership and identity of Effect reactivity atoms in React. In TSX files.
+subject: Ownership and identity of Effect reactivity atoms in React.
+match: "**/*.tsx"
 assertion: In React code using Effect reactivity atoms, prefer atom-first
   ownership and identity rather than React useMemo to keep atom state stable.
   Have Atom.family factories return atoms directly instead of ephemeral wrapper

@@ -1,9 +1,9 @@
 ---
 name: inline-guaranteed-react-root-lookup
-subject: "React client mounting into application-owned HTML root elements. In
-  TSX, JSX, or HTML files. Exception: When the DOM elements under assessment are
-  not guaranteed to exist by application-owned HTML and therefore require null
-  handling."
+subject: "React client mounting into application-owned HTML root elements.
+  Exception: When the DOM elements under assessment are not guaranteed to exist
+  by application-owned HTML and therefore require null handling."
+match: "**/*.{tsx,jsx,html}"
 assertion: 'In a React client entry point, when the application-owned HTML
   guarantees the root element exists, inline its lookup into createRoot and use
   a non-null assertion:

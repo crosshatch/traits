@@ -1,7 +1,7 @@
 ---
 name: flow-for-forwarding-pipeline-callbacks
-subject: Callbacks and functions that only forward input through
-  transformations. In TypeScript or TSX files.
+subject: Callbacks and functions that only forward input through transformations.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use flow to compose callbacks and function definitions that only
   forward their input through successive transformations, whether expressed as a
   pipe or as an intermediate variable followed by a return. For example, use

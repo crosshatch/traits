@@ -1,9 +1,9 @@
 ---
 name: type-alias-above-same-named-value
 subject: A type alias that shares its name with an exported value and is derived
-  from it, such as a type extracted from a const array or object. In TypeScript
-  or TSX files. Types extracted from Effect schemas are covered by
-  type-alias-before-schema.
+  from it, such as a type extracted from a const array or object. Types
+  extracted from Effect schemas are covered by type-alias-before-schema.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Place the type alias directly above its same-named value, with no
   other declarations between them, and give the pair one shared TSDoc comment
   above the type alias rather than separate comments.

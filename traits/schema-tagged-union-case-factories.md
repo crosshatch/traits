@@ -1,12 +1,12 @@
 ---
 name: schema-tagged-union-case-factories
-subject: Construction of decoded (Type-side) values of Effect Schema tagged-union
-  members, including expected decoded values in test assertions. Excludes
-  encoded representations (e.g. values typed as Union.Encoded or returned from
-  schema transformation decode functions) and inputs passed to
+subject: Construction of decoded (Type-side) values of Effect Schema
+  tagged-union members, including expected decoded values in test assertions.
+  Excludes encoded representations (e.g. values typed as Union.Encoded or
+  returned from schema transformation decode functions) and inputs passed to
   S.decode*/S.is/S.validate*, including deliberately invalid fixtures and
-  objects whose tag is chosen at runtime for decoding. In TypeScript or TSX
-  files.
+  objects whose tag is chosen at runtime for decoding.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: 'Construct decoded instances of Effect Schema tagged unions with their
   case-specific factories, not manually tagged object literals:
   Union.cases.Fail.make({ reason }), not { _tag: "Fail", reason }. This applies

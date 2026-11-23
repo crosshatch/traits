@@ -1,6 +1,7 @@
 ---
 name: schema-parsers-for-structured-documents
 subject: Parsing of structured domain documents.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Prefer Effect Schema parsers for structured domain documents when
   their string segments can be modeled declaratively. Decode typed segments with
   S.decode* (the Effect variant, or the Option/Result variants when a failed

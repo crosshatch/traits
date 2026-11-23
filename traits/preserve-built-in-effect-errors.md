@@ -1,11 +1,12 @@
 ---
 name: preserve-built-in-effect-errors
-subject: "Wrapping and mapping built-in Effect errors in TypeScript or TSX files.
-  Excludes a try/tryPromise catch giving a raw exception from a non-Effect API
-  (such as localStorage) its first typed error. Exception: when every custom
-  error or error mapping under assessment is needed for recovery or a meaningful
-  external boundary (as defined in the assertion), or is required by
+subject: "Wrapping and mapping built-in Effect errors. Excludes a try/tryPromise
+  catch giving a raw exception from a non-Effect API (such as localStorage) its
+  first typed error. Exception: when every custom error or error mapping under
+  assessment is needed for recovery or a meaningful external boundary (as
+  defined in the assertion), or is required by
   whole-operation-operational-error-boundaries."
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Preserve Effect’s built-in error types and let errors propagate
   naturally: prefer `fs.readFileString(file)` over
   `fs.readFileString(file).pipe(Effect.mapError(wrapError))`. Avoid custom error

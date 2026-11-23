@@ -1,8 +1,8 @@
 ---
 name: shared-layers-at-program-boundaries
 subject: Effect layer provisioning, including Effect.provide and Layer.provide
-  calls and service classes whose layer provides other layers. In TypeScript or
-  TSX files.
+  calls and service classes whose layer provides other layers.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Provide shared, program-wide services at the outermost program
   boundary, such as the CLI entry point, once. This includes infrastructure such
   as HTTP clients, crypto, key-value storage, clocks and time zones, and platform

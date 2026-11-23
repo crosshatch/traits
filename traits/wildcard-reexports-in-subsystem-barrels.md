@@ -2,6 +2,7 @@
 name: wildcard-reexports-in-subsystem-barrels
 subject: TypeScript subsystem barrel modules intended to expose their
   constituent modules' complete public APIs.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use wildcard re-exports for constituent modules (export * from, or
   export * as Name from when the barrel exposes module namespaces) rather than
   enumerating individual symbols. Preserve intentionally selective exports when

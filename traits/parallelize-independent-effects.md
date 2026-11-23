@@ -1,6 +1,7 @@
 ---
 name: parallelize-independent-effects
 subject: Independent Effect operations within a workflow.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Prefer explicit parallel composition for Effect operations that do
   not depend on one another's results and can safely overlap, rather than
   sequential yield statements. Use Effect.all with an explicit concurrency

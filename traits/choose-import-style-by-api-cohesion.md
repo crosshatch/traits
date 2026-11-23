@@ -1,9 +1,9 @@
 ---
 name: choose-import-style-by-api-cohesion
 subject: Imports from external dependencies (npm/jsr packages and their
-  subpaths, not relative project paths) in TypeScript, TSX, JavaScript, or JSX
-  files. Imports from local project modules are governed by
-  namespace-imports-for-local-modules and are out of scope.
+  subpaths, not relative project paths). Imports from local project modules are
+  governed by namespace-imports-for-local-modules and are out of scope.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Prefer namespace imports when multiple members of an external
   package form a cohesive module API and qualification clarifies their origin
   or replaces module-name aliases—for example, Yaml.parse, Yaml.stringify, and

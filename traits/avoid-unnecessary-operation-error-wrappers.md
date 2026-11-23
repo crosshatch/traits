@@ -6,6 +6,7 @@ subject: Custom errors constructed from an existing Effect failure via mapError,
   exception from a non-Effect API (such as localStorage) its first typed error,
   and error channels of abstract service/plugin contracts (see
   operation-specific-service-error-channels).
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Do not introduce a custom wrapper where the existing error suffices.
   A wrapper is justified only when it is needed for recovery (callers
   distinguish it from other failures) or for a meaningful external boundary.

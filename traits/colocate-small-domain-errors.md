@@ -8,8 +8,8 @@ assertion: Define small domain-specific error types alongside the domain
   unless separate ownership or dependency constraints justify a separate module.
 purpose: Keep small error definitions close to their meaning and avoid
   unnecessary module fragmentation.
-enrichments:
-  - "@traits/typescript/references"
+prelude:
+  - For each error type this file declares, list the other files that use it.
 ---
 ```diff
 -// Parse.ts

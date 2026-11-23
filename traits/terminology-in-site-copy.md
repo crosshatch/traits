@@ -1,9 +1,8 @@
 ---
 name: terminology-in-site-copy
 subject: User-facing copy and accessibility descriptions in files under
-  traits.sh/, the project website. In TypeScript, TSX, HTML, or Markdown files
-  under traits.sh/. Files outside traits.sh/, such as package source, CLI and
-  MCP messages, and repository documentation, are out of scope.
+  traits.sh/, the project website.
+match: "traits.sh/**/*.{ts,tsx,mts,cts,html,md,mdx}"
 assertion: In traits.sh user-facing copy, including accessibility descriptions,
   call a saved or proposed reusable preference a “trait,” not a “rule.” Use
   “insight” for the lesson drawn from feedback before it is formulated as a

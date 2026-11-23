@@ -1,7 +1,7 @@
 ---
 name: static-imports-first
-subject: Static module import declarations. In TypeScript, TSX, JavaScript, or
-  JSX files.
+subject: Static module import declarations.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: 'Place all static import declarations at the top of a module, before
   executable statements and other declarations: import { Layer } from "effect"
   before export default ..., never after it. Dynamic import() expressions may

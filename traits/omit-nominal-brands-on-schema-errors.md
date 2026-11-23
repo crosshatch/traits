@@ -2,6 +2,7 @@
 name: omit-nominal-brands-on-schema-errors
 subject: Type arguments of Effect Schema error class signatures such as
   `S.TaggedError<Self, Brand>()` and `S.ErrorClass<Self, Brand>()`.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Omit the optional second `Brand` type argument on Schema error
   classes rather than passing it solely to satisfy schema-class-missing-brand
   linting. The first `Self` type argument (the class itself, e.g.

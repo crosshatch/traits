@@ -1,6 +1,7 @@
 ---
 name: avoid-omitting-overwritten-spread-fields
 subject: Object construction using record spreads and authoritative field assignments.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: When building an object by spreading an existing record and
   explicitly assigning authoritative fields afterward, do not first omit fields
   that those later assignments already overwrite. Keep omission or filtering

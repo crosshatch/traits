@@ -1,11 +1,12 @@
 ---
 name: effect-platform-services
-subject: "Filesystem, path, working-directory, and child-process access in
-  TypeScript, TSX, JavaScript, or JSX files. Excludes build-tool configuration
-  files such as vite.config.ts, whose plugin hooks follow the tool's Promise
-  contract (see native-promises-in-build-hooks). Exception: when all native Node
-  API usage under assessment is confined to synchronous tooling boundaries and
-  is needed to preserve the framework's synchronous execution contract."
+subject: "Filesystem, path, working-directory, and child-process access.
+  Excludes build-tool configuration files such as vite.config.ts, whose plugin
+  hooks follow the tool's Promise contract (see native-promises-in-build-hooks).
+  Exception: when all native Node API usage under assessment is confined to
+  synchronous tooling boundaries and is needed to preserve the framework's
+  synchronous execution contract."
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: "Use the Effect alternative for Node APIs in ordinary application
   code: node:fs and node:fs/promises use the FileSystem service; node:path uses
   the Path service; process.cwd() uses path.resolve() on the injected Path

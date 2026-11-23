@@ -2,7 +2,8 @@
 name: host-specific-code-in-host-directories
 subject: Modules that depend on one host environment (such as the local
   filesystem, Git, processes, or a CLI), and imports between a package's
-  portable core, its host directories, and its front ends. In TypeScript files.
+  portable core, its host directories, and its front ends.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Put host-specific functionality shared by more than one front end in
   a dedicated host directory, such as local/, rather than the package's top
   level, and have front ends such as Cli/ and mcp/ import it from there;

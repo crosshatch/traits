@@ -1,6 +1,7 @@
 ---
 name: name-repeated-types-for-shared-abstractions
 subject: Repeated TypeScript type expressions representing the same abstraction.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Extract a descriptive named type and reuse it when multiple
   declarations repeat the same type expression for the same abstraction.
   Preserve generic parameters and their relationships. Two repetitions of a

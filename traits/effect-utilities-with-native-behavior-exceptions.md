@@ -1,10 +1,11 @@
 ---
 name: effect-utilities-with-native-behavior-exceptions
 subject: "Collection, string, numeric, and other utility choices beyond inline
-  comparisons and simple runtime checks. In TypeScript or TSX files. Exception:
-  When all native utility choices under assessment are required to preserve
-  behavior or lack a suitable Effect equivalent, including local mutations
-  without an Effect mutation equivalent."
+  comparisons and simple runtime checks. Exception: When all native utility
+  choices under assessment are required to preserve behavior or lack a suitable
+  Effect equivalent, including local mutations without an Effect mutation
+  equivalent."
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Except for inline comparisons and simple runtime checks, prefer
   equivalent Effect utilities over JavaScript built-in methods and functions,
   including utilities from Array, Record, BigInt, Boolean, Number, RegExp,

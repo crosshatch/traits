@@ -1,6 +1,7 @@
 ---
 name: optional-keys-for-json-schema-fields
 subject: Optional fields in Effect schemas.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use S.optionalKey for every optional schema field by default, so the
   key may be omitted but explicit undefined is not admitted. Use S.optional only
   where explicit undefined must be admitted, with a comment at the field saying

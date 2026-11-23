@@ -3,6 +3,7 @@ name: inline-trivial-error-construction
 subject: Error-construction callbacks and helpers used at catch, mapError,
   fail, and similar failure-handling sites. Applies even when naming a
   constructor-forwarding helper would improve readability.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Construct one-expression errors directly at the callback or failure
   site instead of extracting a helper whose only behavior is forwarding a cause
   or other arguments, possibly with captured fixed fields, into an error

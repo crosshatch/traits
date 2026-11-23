@@ -1,7 +1,7 @@
 ---
 name: predefined-constant-effects
-subject: Successful constant Effects with predefined equivalents. In TypeScript
-  or TSX files.
+subject: Successful constant Effects with predefined equivalents.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Use Effect’s predefined constant effects rather than constructing
   equivalent successful effects: Effect.undefined, not
   Effect.succeed(undefined); Effect.void, not Effect.succeed(void 0). Apply this

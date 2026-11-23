@@ -5,6 +5,7 @@ subject: Description annotations on reusable project-defined Effect schemas that
   primitives and checks without a domain description (S.String,
   S.NonEmptyString, S.Natural, S.Finite) are not reusable domain schemas, so
   describing them at a field is allowed.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Describe a reusable value’s intrinsic meaning once with .annotate({
   description }) on its schema. Reuse that schema directly when field semantics
   are unchanged, rather than repeating or replacing its description. Use

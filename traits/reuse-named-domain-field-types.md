@@ -1,7 +1,7 @@
 ---
 name: reuse-named-domain-field-types
-subject: Model field types and schemas with existing dedicated domain types. In
-  TypeScript or TSX files.
+subject: Model field types and schemas with existing dedicated domain types.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: 'When an existing named domain type represents a model field,
   reference that type directly rather than extracting it with indexed access:
   TraitName instead of Trait["name"]. Reuse its schema value for decoding as

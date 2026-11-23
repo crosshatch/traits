@@ -1,6 +1,7 @@
 ---
 name: layer-boundary-initialization-recovery
 subject: Recoverable Effect application initialization failures.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: For recoverable Effect application initialization failures, prefer
   recovery at the existing Layer boundary with a minimal degraded service over
   adding deferred runtimes or per-operation initialization wrappers when fixing

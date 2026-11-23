@@ -1,7 +1,8 @@
 ---
 name: remove-effect-free-generators
 subject: Effect.gen and Effect.fn generator bodies, and Layer construction that
-  uses them. In TypeScript or TSX files.
+  uses them.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Remove unnecessary Effect.gen and Effect.fn generator wrappers:
   return an existing value, Effect, or Layer directly when the generator merely
   returns it or only yields a single existing Effect pipeline. A lone yield or

@@ -1,6 +1,7 @@
 ---
 name: destructure-needed-yielded-properties
 subject: Local bindings of object results yielded from Effects or context services.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Destructure the needed properties directly from the yielded result
   instead of introducing an intermediate object binding that is only accessed or
   immediately destructured. Retain the object when needed as a whole, and

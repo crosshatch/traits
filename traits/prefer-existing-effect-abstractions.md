@@ -4,6 +4,7 @@ subject: Custom utilities and infrastructure potentially provided by Effect or
   its platform packages. For user-facing failures in Effect CLI command
   handlers, apply the dedicated CLI user-error and domain-error rendering
   requirements instead.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Check the installed Effect APIs and source for suitable existing
   abstractions before implementing custom equivalents. Reuse a built-in when its
   semantics meet the requirements; retain custom code where a concrete

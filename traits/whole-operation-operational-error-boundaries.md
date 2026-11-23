@@ -5,6 +5,7 @@ subject: Effect operations whose error is documented or evidently intended to
   one requested input). Does not apply to errors that only represent a
   validation rejection, and does not require introducing a wrapper where
   existing errors suffice.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Translate every recoverable failure belonging to the operation (or
   unit), including encoding and filesystem failures, into the error intended to
   represent it, preserving actionable context and the original cause where

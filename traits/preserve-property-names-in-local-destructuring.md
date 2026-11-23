@@ -1,7 +1,7 @@
 ---
 name: preserve-property-names-in-local-destructuring
-subject: Object properties extracted into local bindings for repeated use. In
-  TypeScript, TSX, JavaScript, and JSX.
+subject: Object properties extracted into local bindings for repeated use.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: "For ordinary data properties, use local object destructuring with
   the existing property name instead of a differently named alias: const {
   proposedTrait } = params, not const proposed = params.proposedTrait. Reference

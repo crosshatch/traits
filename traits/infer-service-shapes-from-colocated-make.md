@@ -6,6 +6,7 @@ subject: "Effect services with a colocated construction Effect and a class-owned
   layer exports: modules representing a type or using a namespace-oriented API
   may retain export const layer so consumers can use Module.layer rather than
   Module.Service.layer."
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Prefer Context.Service<Self>()(id, { make }) to infer the service
   shape from its construction Effect, and expose the class-owned default layer
   as static readonly layer = this.make.pipe(Layer.effect(this)). Avoid

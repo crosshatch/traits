@@ -1,7 +1,7 @@
 ---
 name: direct-effect-promise-adapters
-subject: Adapters from Promise-returning operations to Effect. In TypeScript or
-  TSX files.
+subject: Adapters from Promise-returning operations to Effect.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Use `Effect.promise` directly at Promise boundaries instead of
   introducing generic wrapper helpers: `Effect.promise(() => client.run())`, not
   `fromPromise(() => client.run())` where `fromPromise` merely wraps

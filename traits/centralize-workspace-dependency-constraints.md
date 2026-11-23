@@ -1,6 +1,9 @@
 ---
 name: centralize-workspace-dependency-constraints
 subject: Dependency version declarations in pnpm workspaces that use catalogs.
+match:
+  - "**/package.json"
+  - "**/pnpm-workspace.yaml"
 assertion: "Define shared dependency version constraints in the workspace
   catalog and reference them with catalog: in package manifests rather than
   duplicating literal version specifications. Preserve intentionally different

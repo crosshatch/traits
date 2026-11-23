@@ -1,11 +1,11 @@
 ---
 name: tagged-union-case-guards
 subject: Case checks and filtering, including manual tag comparisons such as
-  x._tag === "Fail", on values whose static type comes from an
-  Effect Schema tagged union (S.TaggedUnion or S.toTaggedUnion) exposing
-  .guards. Excludes plain-interface or library unions without guards (e.g.
-  effect/ai Decision.Any) and reading or asserting the tag as data. In
-  TypeScript or TSX files.
+  x._tag === "Fail", on values whose static type comes from an Effect Schema
+  tagged union (S.TaggedUnion or S.toTaggedUnion) exposing .guards. Excludes
+  plain-interface or library unions without guards (e.g. effect/ai Decision.Any)
+  and reading or asserting the tag as data.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: 'Use tagged unions’ built-in case guards when testing or filtering
   cases rather than manually comparing the tag:
   Array.filter(TraitExpression.guards.Fail), not Array.filter((value) =>

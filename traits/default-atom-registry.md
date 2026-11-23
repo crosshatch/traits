@@ -1,9 +1,10 @@
 ---
 name: default-atom-registry
-subject: "Registry boundaries for Effect reactivity atoms in React. In TSX
-  files. Exception: When every RegistryProvider under assessment defines a
-  genuinely required distinct boundary for subtree-wide isolation, hydration, or
-  custom registry configuration."
+subject: "Registry boundaries for Effect reactivity atoms in React. Exception:
+  When every RegistryProvider under assessment defines a genuinely required
+  distinct boundary for subtree-wide isolation, hydration, or custom registry
+  configuration."
+match: "**/*.tsx"
 assertion: When using Effect atom hooks in React, prefer the default registry
   rather than adding RegistryProvider wrappers. Isolate component-local state
   with per-instance atoms instead of a separate registry per component. Use

@@ -5,6 +5,7 @@ subject: Effect service and layer implementations (such as Layer.effect,
   as module imports, key, client, or configuration construction, or
   synchronization primitives, whether that setup runs in the initialization
   effect or inside each method.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Perform setup that is invariant for a service instance, such as
   loading modules or creating shared synchronization primitives, in the service
   or layer initialization effect and capture the results in its returned

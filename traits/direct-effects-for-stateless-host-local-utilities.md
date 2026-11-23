@@ -2,6 +2,7 @@
 name: direct-effects-for-stateless-host-local-utilities
 subject: Stateless host-local Effect utilities whose underlying dependencies are
   already injectable.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Prefer directly exported Effect values and Effect.fn functions over a
   Context service and Layer introduced merely to group stateless host-local
   operations. Continue obtaining platform dependencies through Effect services.

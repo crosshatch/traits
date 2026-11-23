@@ -2,6 +2,7 @@
 name: module-named-files-over-internal-index
 subject: Filenames of internal modules, directory entry modules, and barrels.
   Judged on the checked file's own name, not on the modules it imports.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Use the module's name instead of index.ts for internal modules,
   including barrels and the core module of a directory representing that module.
   Keep a directory's core module inside that directory, such as Cli/Cli.ts or
@@ -9,12 +10,12 @@ assertion: Use the module's name instead of index.ts for internal modules,
   for the tables/index.ts barrel of database table definitions (see
   separate-table-definitions-with-barrel); being a barrel alone does not
   otherwise justify index.ts. Whether a file is a package entry point is stated
-  by the package-exports enrichment, derived from its nearest package.json; an
+  by the prelude's report, derived from its nearest package.json; an
   index.ts it reports as an entry point complies. Update imports when renaming.
 purpose: Make module identity and ownership visible in filenames and import
   paths while preserving package export entrypoints.
-enrichments:
-  - "@traits/typescript/package-exports"
+prelude:
+  - Find whether this file is an entry point in its nearest package.json.
 ---
 
 ```diff

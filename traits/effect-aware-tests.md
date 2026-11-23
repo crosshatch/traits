@@ -1,7 +1,7 @@
 ---
 name: effect-aware-tests
-subject: Tests executing Effects or acquiring scoped resources. In TypeScript,
-  TSX, JavaScript, or JSX files.
+subject: Tests executing Effects or acquiring scoped resources.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Use @effect/vitest wherever tests execute Effects, yielding Effects
   directly through its Effect-aware test APIs instead of manually calling
   Effect.runSync or Effect.runPromise in ordinary test callbacks. Use the

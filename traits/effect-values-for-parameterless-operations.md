@@ -1,6 +1,7 @@
 ---
 name: effect-values-for-parameterless-operations
-subject: Exported parameterless Effect operations. In TypeScript or TSX files.
+subject: Exported parameterless Effect operations.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: For parameterless Effect operations, export an Effect value instead
   of a zero-argument Effect.fn or Effect.fnUntraced function. Use Effect.gen
   when sequencing effectful work, or reuse an existing Effect directly when no

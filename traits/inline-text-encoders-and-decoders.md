@@ -1,6 +1,7 @@
 ---
 name: inline-text-encoders-and-decoders
 subject: TextEncoder and TextDecoder construction.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Construct TextEncoder and TextDecoder inline where they are used
   rather than assigning instances to variables, caching them, or reusing them
   across operations.

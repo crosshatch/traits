@@ -1,7 +1,7 @@
 ---
 name: pipe-immediate-curried-applications
-subject: Immediate application of functions returned by curried calls. In
-  TypeScript, TSX, JavaScript, or JSX files.
+subject: Immediate application of functions returned by curried calls.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: "When a function call returns a function that is immediately applied
   to a value, use `pipe(value, fn(args))`, never `fn(args)(value)`. Inspect
   nested call expressions even across line breaks and inside `yield*`: use

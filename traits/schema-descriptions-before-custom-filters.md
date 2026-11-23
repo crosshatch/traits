@@ -5,6 +5,7 @@ subject: Description annotations on Effect schemas whose last check is a custom
   are schemas whose last check is a built-in one such as S.isPattern or
   S.isMaxLength, and transformation schemas such as S.URLFromString or
   S.SemVerFromString.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Call .annotate({ description }) before .check(...) when the check
   ends in a custom S.makeFilter filter. An annotation added after a check
   attaches to that check instead of the schema, and a custom filter has no JSON

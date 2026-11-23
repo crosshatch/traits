@@ -1,7 +1,7 @@
 ---
 name: construct-values-inside-pipelines
-subject: Final value construction in transformation pipelines. In TypeScript or
-  TSX files.
+subject: Final value construction in transformation pipelines.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Keep final value construction inside a transformation pipeline
   rather than wrapping the pipeline in a constructor call: use pipe(values,
   transform, (items) => new Set(items)), not new Set(pipe(values, transform)).

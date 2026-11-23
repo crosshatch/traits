@@ -1,6 +1,7 @@
 ---
 name: native-promises-in-build-hooks
 subject: Build-tool plugin hooks and framework callbacks.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: "In build-tool configuration files such as vite.config.ts, write
   plugin hooks and other framework callbacks with plain async/await and
   Promises. Do not wrap them in Effect.gen or Effect.fn, or add Effect.withSpan,

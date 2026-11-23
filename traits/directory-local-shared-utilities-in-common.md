@@ -1,6 +1,7 @@
 ---
 name: directory-local-shared-utilities-in-common
 subject: Utility modules shared only by sibling modules within one directory.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: Name directory-specific shared utility modules _common.ts and
   colocate them with their consumers, rather than using shared.ts, share.ts, or
   generic utilities elsewhere. Keep utilities reused outside that directory in
@@ -8,7 +9,7 @@ assertion: Name directory-specific shared utility modules _common.ts and
   directory-local helpers.
 purpose: Make directory-local sharing explicit and distinguish helpers from the
   directory's primary modules.
-enrichments:
-  - "@traits/typescript/references"
+prelude:
+  - List the directories of the files that import this module.
 ---
 For example, provider login commands share flags and credential helpers through auth/login/_common.ts.

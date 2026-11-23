@@ -1,8 +1,9 @@
 ---
 name: explicit-undefined-in-optional-properties
-subject: "Optional TypeScript property declarations. In TypeScript or TSX files.
-  Exception: When every optional property under assessment intentionally permits
-  omission but disallows explicitly passing undefined."
+subject: "Optional TypeScript property declarations. Exception: When every
+  optional property under assessment intentionally permits omission but
+  disallows explicitly passing undefined."
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "For TypeScript optional properties, explicitly include undefined in
   the property type by default: readonly copyable?: boolean | undefined, not
   readonly copyable?: boolean. Omit the undefined union only when the API

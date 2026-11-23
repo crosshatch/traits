@@ -4,6 +4,7 @@ subject: Domain models with multiple related boundary shapes. Excludes the
   members of a single union schema that encode which fields may be present
   (see unions-for-field-presence-constraints); those form one contract, not
   multiple boundary shapes.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: When a domain model needs multiple related boundary shapes, declare
   shared fields and per-variant availability or encoding policies once with
   Effect VariantSchema, or Model when its standard variants fit. Expose named

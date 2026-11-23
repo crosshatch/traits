@@ -1,7 +1,7 @@
 ---
 name: effect-foreach-for-collection-results
-subject: Effectful collection traversals that collect results. In TypeScript or
-  TSX files.
+subject: Effectful collection traversals that collect results.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: When traversing a collection to perform Effects and collect results,
   prefer Effect.forEach over a for loop that pushes into a mutable accumulator
   array. Preserve intended ordering, filtering, and concurrency semantics.

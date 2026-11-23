@@ -2,6 +2,7 @@
 name: required-services-for-explicitly-provided-dependencies
 subject: Effect dependencies always supplied by application composition or
   configuration layers.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use Context.Service rather than Context.Reference when the dependency
   must be explicitly provided. Keep configuration defaults in the configuration
   schema; use Context.Reference only when absence of a provider is intentionally

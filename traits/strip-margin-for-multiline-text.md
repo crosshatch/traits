@@ -1,8 +1,9 @@
 ---
 name: strip-margin-for-multiline-text
-subject: Large multiline text literals in TypeScript and TSX, whether or not
-  Effect String.stripMargin is already used. Includes embedded Markdown,
-  prompts, instructions, and illustrative code or diffs.
+subject: Large multiline text literals, whether or not Effect String.stripMargin
+  is already used. Includes embedded Markdown, prompts, instructions, and
+  illustrative code or diffs.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Write large text strings as multiline template literals using
   Effect’s String.stripMargin, with a leading | on each text line. This requires
   using String.stripMargin for raw multiline text literals as well: its absence

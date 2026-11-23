@@ -3,6 +3,7 @@ name: built-in-effect-cli-user-errors
 subject: Effect CLI command modules (effect/cli Command handlers) that define
   or fail with their own error class or schema whose only payload is a
   user-facing message.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Use CliError.UserError from effect/cli instead of defining a custom
   equivalent error schema for message-only user-facing failures. As an
   exception, keep a custom error when callers need its domain-specific identity

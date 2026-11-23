@@ -10,5 +10,8 @@
       "model": "openai/gpt-6.1-sol"
     }
   },
+  "selections": {
+    "default": ["always-brace-if-bodies", "inline-text-encoders-and-decoders"]
+  },
   "exclude": ["**/*.svg", "pnpm-lock.yaml"]
 }

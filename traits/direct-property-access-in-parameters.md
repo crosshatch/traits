@@ -1,7 +1,7 @@
 ---
 name: direct-property-access-in-parameters
-subject: Parameters of functions, arrow callbacks, and generators, in
-  TypeScript, TSX, JavaScript, or JSX files.
+subject: Parameters of functions, arrow callbacks, and generators.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: "Use direct property access rather than object destructuring in
   function parameters, including arrow callbacks, ordinary functions, and
   generator/Effect handlers: `(v) => v.id`, not `({ id }) => id`; `function*

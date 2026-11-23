@@ -1,9 +1,9 @@
 ---
 name: alphabetical-unordered-configuration
 subject: Configuration lists and fields whose ordering has no semantic
-  significance, in TypeScript, JavaScript, JSON, YAML, or TOML files. Members of
-  domain types and schemas (literal or union members, struct fields, enum cases)
-  are not configuration.
+  significance. Members of domain types and schemas (literal or union members,
+  struct fields, enum cases) are not configuration.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,jsonc,yaml,yml,toml}"
 assertion: 'Prefer alphabetical ordering for miscellaneous configuration lists
   and fields when their order has no semantic significance: projects:
   ["oxlints/vite.config.ts", "traits.sh/vite.config.ts",

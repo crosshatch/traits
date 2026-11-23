@@ -1,9 +1,10 @@
 ---
 name: inline-small-single-use-helpers
-subject: Small named helper functions, including exported ones and React atom logic.
-  Excludes trivial error-constructor forwarding helpers, named constant values,
-  and helpers used only within React component render or event handlers, such as
-  a JSX row callback. Applies to TypeScript, TSX, JavaScript, and JSX.
+subject: Small named helper functions, including exported ones and React atom
+  logic. Excludes trivial error-constructor forwarding helpers, named constant
+  values, and helpers used only within React component render or event handlers,
+  such as a JSX row callback.
+match: "**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
 assertion: "Prefer inlining small single-use helper logic into the operation that consumes
   it instead of introducing a separately named helper. A helper is single-use
   when exactly one call or reference site in the codebase uses it. Count each
@@ -22,8 +23,9 @@ assertion: "Prefer inlining small single-use helper logic into the operation tha
   React, inline atom logic into its atom definition or Effect operation; never
   inline into component render or event handlers."
 purpose: Keep local behavior easy to follow without unnecessary helper indirection.
-enrichments:
-  - "@traits/typescript/references"
+prelude:
+  - For each helper this file exports, find whether other files use it not at
+    all, once, or more than once, and whether a package entry point exports it.
 ---
 For example, place theme initialization directly inside its atom definition.
 

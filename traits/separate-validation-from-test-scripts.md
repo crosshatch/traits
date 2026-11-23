@@ -1,6 +1,7 @@
 ---
 name: separate-validation-from-test-scripts
 subject: Package scripts for repository validation and test execution.
+match: "**/package.json"
 assertion: Use check for the aggregate validation pipeline, including
   formatting/lint/type checks, builds and applicable tests. Keep test:* scripts
   limited to executing the named test suite or mode, without implicitly running

@@ -1,6 +1,7 @@
 ---
 name: named-collection-element-types
 subject: Types for collection elements and working batches.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Define and reference a descriptive named element type when typing
   collections and their working elements or batches, rather than extracting the
   element type from a collection variable with indexed access such as (typeof

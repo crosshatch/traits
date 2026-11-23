@@ -1,7 +1,7 @@
 ---
 name: unwrap-presence-only-options
-subject: Options used only for presence checks and contained-value access. In
-  TypeScript or TSX files.
+subject: Options used only for presence checks and contained-value access.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "When an Option is used only to check presence and access its value,
   unwrap it with Option.getOrUndefined rather than repeatedly using
   Option.isSome and .value: yield*

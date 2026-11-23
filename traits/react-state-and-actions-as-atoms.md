@@ -1,6 +1,7 @@
 ---
 name: react-state-and-actions-as-atoms
-subject: React component state, event handlers, and asynchronous actions. In TSX files.
+subject: React component state, event handlers, and asynchronous actions.
+match: "**/*.tsx"
 assertion: In React code, use Effect reactivity atoms instead of useState and
   component-local state/action functions. Define state and action atoms outside
   component render functions, read state with useAtomValue, and obtain event

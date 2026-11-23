@@ -1,7 +1,7 @@
 ---
 name: yield-before-call-arguments
 subject: Effect generator results passed to transformations or function calls.
-  In TypeScript or TSX files.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Avoid yield* expressions inside function-call arguments in Effect
   generators. Apply the enclosing transformation to the effect and yield the
   result: provider = yield* load.pipe(Effect.map((value) =>

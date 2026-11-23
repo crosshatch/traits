@@ -1,6 +1,7 @@
 ---
 name: accurate-service-operation-error-unions
 subject: Errors exposed by each operation in an explicit Effect service contract.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Expose only errors the operation can actually produce, rather than a
   shared catch-all error union.
 purpose: Allow callers to reason about and handle only failures that are

@@ -1,6 +1,7 @@
 ---
 name: meaningful-schema-comments-and-descriptions
 subject: Domain schemas, their variants, and their fields.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Prefer meaningful TSDoc comments and runtime description annotations
   when defining or modifying schemas. Explain domain meaning, non-obvious
   constraints, units, optionality, reference targets, interactions, and security

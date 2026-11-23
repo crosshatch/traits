@@ -5,6 +5,7 @@ subject: "Effect Schema definitions whose valid shapes depend on which fields
   express: relationships between field values (range ordering, index bounds into
   a sibling array, length checks) or validation against external data. This rule
   covers presence constraints only."
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: When a schema's validity depends only on which fields are present (at
   least one of several, exactly one, or a field allowed or required only
   alongside another), model each valid combination as a member of an S.Union of

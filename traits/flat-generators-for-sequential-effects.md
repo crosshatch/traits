@@ -1,6 +1,7 @@
 ---
 name: flat-generators-for-sequential-effects
 subject: Sequential Effect operations that retrieve services and perform dependent work.
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: Prefer a single Effect.gen that yields required services directly
   over wrapping an inner generator in flatMap solely to access those services.
   Apply operation-wide transformations outside the generator, using pipe for

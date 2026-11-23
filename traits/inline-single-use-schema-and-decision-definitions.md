@@ -1,10 +1,11 @@
 ---
 name: inline-single-use-schema-and-decision-definitions
-subject: Named schemas, schema transcoders, and effect/ai Decision.make definitions,
-  including exported ones. In TypeScript or TSX files. Excludes schema error
-  classes, Tool.make tool definitions, other make constructors such as
-  DecisionPolicy.make, and named schemas for collection element types (see
+subject: Named schemas, schema transcoders, and effect/ai Decision.make
+  definitions, including exported ones. Excludes schema error classes, Tool.make
+  tool definitions, other make constructors such as DecisionPolicy.make, and
+  named schemas for collection element types (see
   named-collection-element-types).
+match: "**/*.{ts,tsx,mts,cts}"
 assertion: "Prefer inlining single-use schemas, schema transcoder definitions, and
   lightweight Decision.make definitions at their call sites instead of adding
   separate constants and names: DecisionModel.decide(Decision.make({ input:
@@ -23,8 +24,10 @@ assertion: "Prefer inlining single-use schemas, schema transcoder definitions, a
   definition per item, or when profiling shows meaningful construction overhead."
 purpose: Keep lightweight definitions near their use and avoid names that add
   navigation without a meaningful boundary.
-enrichments:
-  - "@traits/typescript/references"
+prelude:
+  - For each schema, schema transcoder, or Decision.make definition this file
+    exports, find whether other files use it not at all, once, or more than
+    once, and whether a package entry point exports it.
 ---
 ```diff
 -const inputSchema = S.Struct({ text: S.String }) // Used once, no meaningful boundary.
