@@ -1,38 +1,113 @@
-import { Effect } from "effect"
+import { Array, Console, Effect, Option, pipe, Schema as S } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
 
-// lists, threshold, traits
+import * as Estimate from "../Estimate/Estimate.ts"
+import * as LocalDecisionCache from "../local/LocalDecisionCache.ts"
+import * as LocalProjectFiles from "../local/LocalProjectFiles.ts"
+import * as Segmentation from "../local/Segmentation/Segmentation.ts"
+import * as ModelConfiguration from "../local/TraitsConfig/ModelConfiguration.ts"
+import * as TraitsConfig from "../local/TraitsConfig/TraitsConfig.ts"
+import * as TraitRun from "../TraitRun/TraitRun.ts"
+import { TraitSelectionId } from "../TraitSelection/TraitSelectionId.ts"
+import { Probability } from "../util/Probability.ts"
+import { CommandExit } from "./CommandExit.ts"
+
+const noDefaultSelection =
+  "No selection was given, and traits/config.json declares no selection with the ID default. Declare one under selections, or name the selection to run."
+
 export const run = Command.make(
   "run",
   {
-    json: Flag.Boolean("json").pipe(
-      Flag.withDefault(false),
-      Flag.withDescription("Print the full report as JSON instead of a readable summary")
-    ),
-    paths: Argument.String("paths").pipe(
+    selections: Argument.String("selections").pipe(
+      Argument.withSchema(TraitSelectionId),
       Argument.withDescription(
-        "Files to check, relative to the workspace root; every project file Git does not ignore when omitted"
+        "Selections declared in traits/config.json whose traits to run; the selection with the ID default when omitted"
       ),
       Argument.atLeast(0)
     ),
-    traits: Flag.String("trait").pipe(
-      Flag.withSchema(TraitName),
-      Flag.withDescription("Check only this trait, within the list when one is given; repeat to select several"),
-      Flag.atLeast(0)
+    threshold: Flag.Finite("threshold").pipe(
+      Flag.withSchema(Probability),
+      Flag.withDefault(0.5),
+      Flag.withDescription(
+        "The probability, from 0 to 1, at or above which a trait applies to what is checked, and below which its assertion counts as violated"
+      )
     ),
-    lists: Flag.String("list").pipe(
-      Flag.withSchema(ListName),
-      Flag.withAlias("l"),
-      Flag.withDescription("Check only the traits in this list from traits/lists.json; every trait when omitted"),
+    maxTokens: Flag.Finite("max-tokens").pipe(
+      Flag.withSchema(S.Int.check(S.isGreaterThan(0))),
+      Flag.withDescription(
+        "The most tokens the run may use. What does not fit is left not assessed, and running again carries on from the answers already given"
+      ),
       Flag.optional
     ),
-    threshold: Flag.Finite(name).pipe(Flag.withSchema(Probability), Flag.withDescription(description), Flag.optional)
+    maxCost: Flag.Finite("max-cost").pipe(
+      Flag.withSchema(S.Finite.check(S.isGreaterThan(0))),
+      Flag.withDescription(
+        "The most the run may cost, in US dollars, in place of --max-tokens, for a provider that reports what its requests cost"
+      ),
+      Flag.optional
+    ),
+    dry: Flag.Boolean("dry").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "Print what the run would cost, at the least and at the most, without asking the model anything or needing its credentials"
+      )
+    ),
+    json: Flag.Boolean("json").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Print the full report, or the estimate with --dry, as JSON instead of a readable summary")
+    )
   },
-  Effect.fn("run")(function* () {
-    // ...
-  })
+  Effect.fn("run")(
+    function* ({ dry, json, maxCost, maxTokens, selections, threshold }) {
+      // The configuration is read when a run starts, and what the run is handed goes by it, so an edit made since the last run takes effect.
+      const config = yield* TraitsConfig.load
+      const files = yield* LocalProjectFiles.make(config.exclude)
+      const segmentation = Segmentation.prepare(config.segmentation)
+      if (dry) {
+        const estimate = yield* Estimate.estimate({ files, segmentation, selections, threshold }).pipe(
+          // Nothing is asked of the model, so its credentials are not read, and nothing is remembered, so no cache is made.
+          Effect.provide(LocalDecisionCache.layerExisting(config.models.decision))
+        )
+        const encoded = yield* pipe(estimate, S.encodeEffect(Estimate.Estimate), Effect.orDie)
+        return yield* Console.log(json ? JSON.stringify(encoded, null, 2) : Estimate.format(encoded))
+      }
+      if (Option.isSome(maxTokens) && Option.isSome(maxCost)) {
+        return yield* CommandExit.make({
+          code: 2,
+          reason: "Give --max-tokens or --max-cost, not both: a run keeps to one budget."
+        })
+      }
+      const budget = Option.match(maxTokens, {
+        onSome: (tokens): TraitRun.Budget | undefined => ({ tokens }),
+        onNone: () => Option.match(maxCost, { onSome: (dollars) => ({ dollars }), onNone: () => undefined })
+      })
+      const report = yield* TraitRun.run({ files, segmentation, selections, threshold, budget }).pipe(
+        // Answers are remembered for the model that gave them, so a change of model asks again.
+        Effect.provide([
+          ModelConfiguration.layerDecision(config.models.decision),
+          LocalDecisionCache.layer(config.models.decision)
+        ])
+      )
+      const encoded = yield* pipe(report, S.encodeEffect(TraitRun.Report), Effect.orDie)
+      yield* Console.log(json ? JSON.stringify(encoded, null, 2) : TraitRun.format(encoded))
+      const counts = TraitRun.tally(report)
+      if (counts.Violated > 0) {
+        return yield* CommandExit.make({ code: 1 })
+      }
+      if (counts.NotAssessed > 0) {
+        return yield* CommandExit.make({ code: 2 })
+      }
+    },
+    // A missing default selection was not one the user typed, so the reason says where it was expected and what to do.
+    (effect, { selections }) =>
+      Array.isReadonlyArrayNonEmpty(selections)
+        ? effect
+        : Effect.catchTag(effect, "TraitSelectionNotFoundError", () =>
+            CommandExit.make({ code: 2, reason: noDefaultSelection })
+          )
+  )
 ).pipe(
   Command.withDescription(
-    "Check files against this workspace's traits and print readable results; --json prints the full report. Without a policy, display thresholds are 0.5 and do not affect exit status. With --fail and --pass, or check.policy in traits/config.json, print the verdict to stderr and exit 0 for Pass, 1 for Fail, 2 for Incomplete or a check that could not run, and 3 for Inconclusive; invalid command-line usage also exits 1."
+    "Run the traits in the given selections, or in the selection with the ID default when none is given, against every project file, and print what needs attention; --json prints the full report. --dry prints what the run would cost instead of running it, and --max-tokens or --max-cost keeps a run within a budget. Exits with 1 when an assertion is violated, and 2 when something could not be assessed."
   )
 )
