@@ -69,10 +69,7 @@ export default defineConfig({
             path.join(workspace, "traits", "config.json"),
             JSON.stringify({
               version: PackageJson.version,
-              models: {
-                language: { provider: "openai", model: "none" },
-                decision: { provider: "openai", model: "none" }
-              },
+              models: { decision: { provider: "openai", model: "none" } },
               selections: { default: [] }
             })
           )

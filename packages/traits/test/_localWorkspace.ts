@@ -33,10 +33,7 @@ export const configText = (fields: {
 }) =>
   JSON.stringify({
     version: PackageJson.version,
-    models: {
-      language: { provider: "openai", model: "language" },
-      decision: { provider: "openai", model: "decision" }
-    },
+    models: { decision: { provider: "openai", model: "decision" } },
     ...fields
   })
 

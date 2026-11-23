@@ -176,16 +176,10 @@ catalogs:
     '@changesets/cli':
       specifier: ^3.0.3
       version: 3.0.3
-    '@effect/ai-anthropic':
-      specifier: 4.1.4
-      version: 4.1.4
     '@effect/ai-cloudflare':
       specifier: 4.1.4
       version: 4.1.4
     '@effect/ai-openai':
-      specifier: 4.1.4
-      version: 4.1.4
-    '@effect/ai-openai-compat':
       specifier: 4.1.4
       version: 4.1.4
     '@effect/ai-openrouter':
@@ -295,16 +289,10 @@ importers:
 
   packages/traits:
     dependencies:
-      '@effect/ai-anthropic':
-        specifier: 'catalog:'
-        version: 4.1.4(effect@4.1.4)
       '@effect/ai-cloudflare':
         specifier: 'catalog:'
         version: 4.1.4(effect@4.1.4)
       '@effect/ai-openai':
-        specifier: 'catalog:'
-        version: 4.1.4(effect@4.1.4)
-      '@effect/ai-openai-compat':
         specifier: 'catalog:'
         version: 4.1.4(effect@4.1.4)
       '@effect/ai-openrouter':
@@ -623,18 +611,8 @@ packages:
     peerDependencies:
       effect: ^4.0.5
 
-  '@effect/ai-anthropic@4.1.4':
-    resolution: {integrity: sha512-VDcsyL3k76HhF7YqH8z0gQ0bUybX4ti5RHv3JadDXZvEgNpvUT3p4YBssvKR2HAGa7NXr9yfmFedRilhQM7tdQ==}
-    peerDependencies:
-      effect: ^4.1.4
-
   '@effect/ai-cloudflare@4.1.4':
     resolution: {integrity: sha512-AO1kovaFfQ1fHqrJv5AqyamvGqOGj9WqLwgd6C/hsOFMc+wHQ+NjTjAepQDGpFjsN5UoCWFfpaiMw37lAJGdQw==}
-    peerDependencies:
-      effect: ^4.1.4
-
-  '@effect/ai-openai-compat@4.1.4':
-    resolution: {integrity: sha512-Rmb6tcV/5zv7PFHvZt08eSqSI5G8JyEGOBeIwyKKz1mBes9WAgeYv7Kplzy5rBSWH1LtUA4CIuREzS7ovXDhRw==}
     peerDependencies:
       effect: ^4.1.4
 
@@ -2840,15 +2818,7 @@ snapshots:
       '@distilled.cloud/core': 1.0.0-rc.18(effect@4.1.4)
       effect: 4.1.4
 
-  '@effect/ai-anthropic@4.1.4(effect@4.1.4)':
-    dependencies:
-      effect: 4.1.4
-
   '@effect/ai-cloudflare@4.1.4(effect@4.1.4)':
-    dependencies:
-      effect: 4.1.4
-
-  '@effect/ai-openai-compat@4.1.4(effect@4.1.4)':
     dependencies:
       effect: 4.1.4
 
