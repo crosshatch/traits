@@ -12,10 +12,6 @@ import { ModelConfiguration } from "./ModelConfiguration.ts"
 /** The workspace configuration in traits/config.json: plain JSON, so it loads without executing code or installing JavaScript dependencies. Every traits/<name>.md file is one of the workspace's own traits, each traits/<id>/ directory holds the traits of a declared source, and selections choose which of them to run. Unknown keys are rejected so outdated files are reported rather than misread. */
 export type TraitsConfig = typeof TraitsConfig.Type
 export const TraitsConfig = S.Struct({
-  /** A JSON Schema URL for editor validation and completion; ignored by traits. */
-  $schema: S.String.annotateKey({
-    description: "A JSON Schema URL for editor validation and completion; ignored by traits."
-  }).pipe(S.optionalKey),
   /** The traits version this workspace's configuration and trait files were last written for. It never stops them from loading; an agent compares it with the installed version to tell when to warn that an update is available. */
   version: S.SemVerFromString.annotateKey({
     description:
