@@ -1,21 +1,15 @@
 import { Console, Effect, Layer, pipe, String } from "effect"
 import { CliError, Command } from "effect/cli"
 
-import * as LocalDefaultTraitCollection from "../local/LocalDefaultTraitCollection.ts"
 import * as LocalPaths from "../local/LocalPaths.ts"
-import * as LocalTraitCollections from "../local/LocalTraitCollections.ts"
-import * as LocalTraitSelections from "../local/LocalTraitSelections.ts"
+import * as LocalWorkspace from "../local/LocalWorkspace.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { CommandExit } from "./CommandExit.ts"
 import { run } from "./run.ts"
 import { upgrade } from "./upgrade.ts"
 
 /** The workspace found from the current directory. Every command that works in one is given it below, so that none builds its own. */
-const workspace = Layer.mergeAll(
-  LocalDefaultTraitCollection.layer,
-  LocalTraitCollections.layer,
-  LocalTraitSelections.layer
-).pipe(Layer.provideMerge(LocalPaths.layer))
+const workspace = LocalWorkspace.layer.pipe(Layer.provideMerge(LocalPaths.layer))
 
 export const Cli = Command.make("traits").pipe(
   Command.withDescription("Commands for working with traits."),

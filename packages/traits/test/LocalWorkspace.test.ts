@@ -5,12 +5,7 @@ import { DecisionModel } from "effect/ai"
 import { Digest } from "effect/crypto"
 import { KeyValueStore, UserDirectories } from "effect/persistence"
 
-import * as LocalDefaultTraitCollection from "../local/LocalDefaultTraitCollection.ts"
-import * as LocalProjectFiles from "../local/LocalProjectFiles.ts"
-import * as LocalTraitCollections from "../local/LocalTraitCollections.ts"
-import * as LocalTraitSelections from "../local/LocalTraitSelections.ts"
-import * as Segmentation from "../local/Segmentation/Segmentation.ts"
-import * as TraitsConfig from "../local/TraitsConfig/TraitsConfig.ts"
+import * as LocalWorkspace from "../local/LocalWorkspace.ts"
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { configText, git, localPaths } from "./_localWorkspace.ts"
@@ -62,23 +57,13 @@ layer(
           }
         })
       })
-      const workspace = Layer.mergeAll(
-        LocalDefaultTraitCollection.layer,
-        LocalTraitCollections.layer,
-        LocalTraitSelections.layer
-      ).pipe(Layer.provideMerge(localPaths(traits)))
+      const workspace = LocalWorkspace.layer.pipe(Layer.provideMerge(localPaths(traits)))
 
       yield* Effect.gen(function* () {
         // The layers are built once here, as a host that stays up between runs would have them, and each run is handed what the configuration says by then.
         const run = Effect.gen(function* () {
-          const config = yield* TraitsConfig.load
-          const files = yield* LocalProjectFiles.make(config.exclude)
-          return yield* TraitRun.run({
-            files,
-            segmentation: Segmentation.prepare(config.segmentation),
-            selections: [],
-            threshold: 0.5
-          })
+          const { files, segmentation } = yield* LocalWorkspace.prepareRun
+          return yield* TraitRun.run({ files, segmentation, selections: [], threshold: 0.5 })
         })
 
         const first = yield* run

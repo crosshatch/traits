@@ -4,10 +4,8 @@ import { Argument, Command, Flag } from "effect/cli"
 import * as Estimate from "../Estimate/Estimate.ts"
 import * as LocalDecisionCache from "../local/LocalDecisionCache.ts"
 import * as LocalEnvFile from "../local/LocalEnvFile.ts"
-import * as LocalProjectFiles from "../local/LocalProjectFiles.ts"
-import * as Segmentation from "../local/Segmentation/Segmentation.ts"
+import * as LocalWorkspace from "../local/LocalWorkspace.ts"
 import * as ModelConfiguration from "../local/TraitsConfig/ModelConfiguration.ts"
-import * as TraitsConfig from "../local/TraitsConfig/TraitsConfig.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitSelectionId } from "../TraitSelection/TraitSelectionId.ts"
 import { Probability } from "../util/Probability.ts"
@@ -69,9 +67,7 @@ export const run = Command.make(
   Effect.fn("run")(
     function* ({ dotenv, dry, json, maxCost, maxTokens, selections, threshold }) {
       // The configuration is read when a run starts, and what the run is handed goes by it, so an edit made since the last run takes effect.
-      const config = yield* TraitsConfig.load
-      const files = yield* LocalProjectFiles.make(config.exclude)
-      const segmentation = Segmentation.prepare(config.segmentation)
+      const { config, files, segmentation } = yield* LocalWorkspace.prepareRun
       if (dry) {
         const estimate = yield* Estimate.estimate({ files, segmentation, selections, threshold }).pipe(
           // Nothing is asked of the model, so its credentials are not read, and nothing is remembered, so no cache is made.
