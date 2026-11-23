@@ -20,7 +20,14 @@
     "dist/**/*.js.map",
     "dist/package.json",
     "docs/**/*.md",
+    "Estimate/**/*.ts",
+    "Input/**/*.ts",
     "local/**/*.ts",
+    "Trait/**/*.ts",
+    "TraitCollection/**/*.ts",
+    "TraitRun/**/*.ts",
+    "TraitSelection/**/*.ts",
+    "util/**/*.ts",
     "!dist/bundle/**",
     "!dist/executable/**",
     "!dist/test/**",
@@ -44,7 +51,9 @@
     "@effect/ai-cloudflare": "catalog:",
     "@effect/ai-openai": "catalog:",
     "@effect/ai-openai-compat": "catalog:",
-    "@effect/ai-openrouter": "catalog:"
+    "@effect/ai-openrouter": "catalog:",
+    "oxc-parser": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",
