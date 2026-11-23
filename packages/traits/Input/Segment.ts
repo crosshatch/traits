@@ -35,7 +35,7 @@ export const Segment = S.TaggedUnion({
           })
         )
       )
-      // Segmenters are extension code, so an explicit undefined is accepted as omitted.
+      // A segment is as often built in code as it is decoded, so an explicit undefined is accepted as omitted.
       .pipe(S.optional)
   }
 }).annotate({
