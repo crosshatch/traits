@@ -1,21 +1,21 @@
 import { Context, Effect, FileSystem, Layer, Path, Schema as S } from "effect"
 
-/** Absolute paths within the workspace's traits directory. */
-export class WorkspacePaths extends Context.Service<
-  WorkspacePaths,
+/** The workspace's absolute paths: the root of its repository, and its traits directory with what that holds. */
+export class LocalPaths extends Context.Service<
+  LocalPaths,
   {
-    /** The workspace directory holding trait files, the configuration, and the lists. */
+    /** The root of the Git repository or worktree the workspace belongs to. */
+    readonly root: string
+    /** The workspace directory holding trait files and the configuration. */
     readonly directory: string
     /** The workspace configuration file, beside the trait files. */
     readonly config: string
-    /** Sources from which traits are loaded. */
-    readonly sources: string
-    /** The file containing the named groupings of traits. */
-    readonly lists: string
+    /** The file recording what each declared source's collection of traits was last updated to. */
+    readonly sourcesLock: string
     /** Local state, such as remembered decisions; it ignores itself in Git. */
     readonly cache: string
   }
->()("traits/local/WorkspacePaths") {}
+>()("traits/local/LocalPaths") {}
 
 /** The starting directory is not inside a Git repository or worktree, so there is no workspace root to find. */
 export class WorkspaceRootError extends S.TaggedError<WorkspaceRootError>()("WorkspaceRootError", {
@@ -58,10 +58,10 @@ export const layer = Effect.gen(function* () {
     .realPath(traits)
     .pipe(Effect.mapError((cause) => WorkspaceDirectoryError.make({ path: traits, cause })))
   return {
+    root,
     directory,
     config: path.join(directory, "config.json"),
-    sources: path.join(directory, "sources"),
-    lists: path.join(directory, "lists.json"),
+    sourcesLock: path.join(directory, "sources.lock.json"),
     cache: path.join(directory, ".cache")
   }
-}).pipe(Layer.effect(WorkspacePaths))
+}).pipe(Layer.effect(LocalPaths))

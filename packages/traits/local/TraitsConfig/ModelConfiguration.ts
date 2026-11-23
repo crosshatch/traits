@@ -7,6 +7,8 @@ import { Config, Layer, Schema as S } from "effect"
 
 import { ModelId } from "./ModelId.ts"
 
+export * from "./ModelId.ts"
+
 const OpenAi = S.Struct({ provider: S.Literal("openai"), model: ModelId }).annotate({
   description: "An OpenAI model; the API key is read from OPENAI_API_KEY."
 })
@@ -15,7 +17,7 @@ const OpenRouter = S.Struct({ provider: S.Literal("openrouter"), model: ModelId 
   description: "An OpenRouter model; the API key is read from OPENROUTER_API_KEY."
 })
 
-/** Workspace model selections, independent of provider SDK initialization. */
+/** The models a workspace checks traits with, kept in version control so reviewers can see which models are used. */
 export type ModelConfiguration = typeof ModelConfiguration.Type
 export const ModelConfiguration = S.Struct({
   /** A provider and model for free-form generation by extensions. */
@@ -61,30 +63,31 @@ export const ModelConfiguration = S.Struct({
 const openAiClient = OpenAiClient.layerConfig({ apiKey: Config.Redacted("OPENAI_API_KEY") })
 const openRouterClient = OpenRouterClient.layerConfig({ apiKey: Config.Redacted("OPENROUTER_API_KEY") })
 
-/** Language and decision model services for the selected providers; credentials are read from the active ConfigProvider. */
-export const layer = (modelConfiguration: ModelConfiguration) =>
-  Layer.mergeAll(
-    ModelConfiguration.fields.language.match(modelConfiguration.language, {
-      openai: ({ model }) => OpenAiLanguageModel.layer({ model }).pipe(Layer.provide(openAiClient)),
-      anthropic: ({ model }) =>
-        AnthropicLanguageModel.layer({ model }).pipe(
-          Layer.provide(AnthropicClient.layerConfig({ apiKey: Config.Redacted("ANTHROPIC_API_KEY") }))
-        ),
-      openrouter: ({ model }) => OpenRouterLanguageModel.layer({ model }).pipe(Layer.provide(openRouterClient)),
-      "openai-compatible": ({ model, url, apiKeyEnv }) =>
-        OpenAiCompatible.OpenAiLanguageModel.layer({ model }).pipe(
-          Layer.provide(
-            OpenAiCompatible.OpenAiClient.layerConfig({
-              apiUrl: Config.succeed(url.href),
-              ...(apiKeyEnv === undefined ? {} : { apiKey: Config.Redacted(apiKeyEnv) })
-            })
-          )
+/** The language model service for the selected provider; its credentials are read from the active ConfigProvider. */
+export const layerLanguage = (language: ModelConfiguration["language"]) =>
+  ModelConfiguration.fields.language.match(language, {
+    openai: ({ model }) => OpenAiLanguageModel.layer({ model }).pipe(Layer.provide(openAiClient)),
+    anthropic: ({ model }) =>
+      AnthropicLanguageModel.layer({ model }).pipe(
+        Layer.provide(AnthropicClient.layerConfig({ apiKey: Config.Redacted("ANTHROPIC_API_KEY") }))
+      ),
+    openrouter: ({ model }) => OpenRouterLanguageModel.layer({ model }).pipe(Layer.provide(openRouterClient)),
+    "openai-compatible": ({ model, url, apiKeyEnv }) =>
+      OpenAiCompatible.OpenAiLanguageModel.layer({ model }).pipe(
+        Layer.provide(
+          OpenAiCompatible.OpenAiClient.layerConfig({
+            apiUrl: Config.succeed(url.href),
+            ...(apiKeyEnv === undefined ? {} : { apiKey: Config.Redacted(apiKeyEnv) })
+          })
         )
-    }),
-    ModelConfiguration.fields.decision.match(modelConfiguration.decision, {
-      openai: ({ model }) => OpenAiDecisionModel.layer({ model }).pipe(Layer.provide(openAiClient)),
-      openrouter: ({ model }) => OpenRouterDecisionModel.layer({ model }).pipe(Layer.provide(openRouterClient)),
-      cloudflare: ({ model }) =>
-        CloudflareDecisionModel.layer({ model }).pipe(Layer.provide(CloudflareClient.layerConfig()))
-    })
-  )
+      )
+  })
+
+/** The decision model service for the selected provider; its credentials are read from the active ConfigProvider. */
+export const layerDecision = (decision: ModelConfiguration["decision"]) =>
+  ModelConfiguration.fields.decision.match(decision, {
+    openai: ({ model }) => OpenAiDecisionModel.layer({ model }).pipe(Layer.provide(openAiClient)),
+    openrouter: ({ model }) => OpenRouterDecisionModel.layer({ model }).pipe(Layer.provide(openRouterClient)),
+    cloudflare: ({ model }) =>
+      CloudflareDecisionModel.layer({ model }).pipe(Layer.provide(CloudflareClient.layerConfig()))
+  })
