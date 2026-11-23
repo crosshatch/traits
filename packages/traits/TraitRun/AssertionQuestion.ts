@@ -1,10 +1,9 @@
-import { Effect, Function, Record, Schema as S, String } from "effect"
-import { type AiError, Decision, DecisionModel } from "effect/ai"
+import { Effect, Record, Schema as S, String } from "effect"
+import { Decision, DecisionModel } from "effect/ai"
 
 import type { TraitAssertion } from "../Trait/TraitAssertion.ts"
 import type { TraitBody } from "../Trait/TraitBody.ts"
 import { Evidence } from "./Evidence.ts"
-import type { ProbabilityResponse } from "./ProbabilityResponse.ts"
 
 /** An assertion to assess, with the supporting context of the trait it belongs to, when it has any. */
 export interface TraitAssertionWithContext {
@@ -35,42 +34,22 @@ export const prompt = {
   criteria: { true: "Holds.", false: "Does not hold." }
 }
 
-/** Estimates how likely each of several assertions holds true for one shared piece of evidence, in one provider request. Each assertion is read with its trait's supporting context, when it has any. An unanswered assertion does not discard its answered siblings. */
-export const assert: {
-  (
-    evidence: Evidence
-  ): <Id extends string>(
-    assertions: Readonly<Record<Id, TraitAssertionWithContext>>
-  ) => Effect.Effect<ProbabilityResponse<Id>, AiError.AiError, DecisionModel.DecisionModel>
-  <Id extends string>(
-    assertions: Readonly<Record<Id, TraitAssertionWithContext>>,
-    evidence: Evidence
-  ): Effect.Effect<ProbabilityResponse<Id>, AiError.AiError, DecisionModel.DecisionModel>
-} = Function.dual(
-  2,
-  Effect.fn("AssertionQuestion.assert")(function* <Id extends string>(
-    assertions: Readonly<Record<Id, TraitAssertionWithContext>>,
-    evidence: Evidence
-  ) {
-    if (Record.isEmptyRecord(assertions)) {
-      return {
-        outcomes: assertions,
-        usage: DecisionModel.DecisionUsage.make({ inputTokens: 0, outputTokens: 0 }),
-        metadata: {}
-      } satisfies ProbabilityResponse<Id>
-    }
-    return yield* DecisionModel.decideSettled(
-      Decision.make({
-        // The task is the same for every assertion, so it is sent once with the evidence rather than with each question. The model is shown the evidence as content, which is the word the task uses for it.
-        input: S.Struct({ task: S.String, content: Evidence }),
-        decisions: Record.map(assertions, ({ assertion, body }) =>
-          Decision.probability({
-            instructions: { assertion, ...(body === undefined ? {} : { context: body }) },
-            criteria: prompt.criteria
-          })
-        )
-      }),
-      { input: { task: prompt.task, content: evidence } }
-    )
-  })
-)
+/** Estimates how likely each of several assertions, by ID, holds true for one shared piece of evidence, in one provider request. Each assertion is read with its trait's supporting context, when it has any. An unanswered assertion does not discard its answered siblings. */
+export const assert = Effect.fn("AssertionQuestion.assert")(function* (options: {
+  readonly assertions: Readonly<Record<string, TraitAssertionWithContext>>
+  readonly evidence: Evidence
+}) {
+  return yield* DecisionModel.decideSettled(
+    Decision.make({
+      // The task is the same for every assertion, so it is sent once with the evidence rather than with each question. The model is shown the evidence as content, which is the word the task uses for it.
+      input: S.Struct({ task: S.String, content: Evidence }),
+      decisions: Record.map(options.assertions, ({ assertion, body }) =>
+        Decision.probability({
+          instructions: { assertion, ...(body === undefined ? {} : { context: body }) },
+          criteria: prompt.criteria
+        })
+      )
+    }),
+    { input: { task: prompt.task, content: options.evidence } }
+  )
+})

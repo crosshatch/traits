@@ -1,9 +1,8 @@
-import { Effect, Function, Record, Schema as S, String } from "effect"
-import { type AiError, Decision, DecisionModel } from "effect/ai"
+import { Effect, Record, Schema as S, String } from "effect"
+import { Decision, DecisionModel } from "effect/ai"
 
 import type { TraitSubject } from "../Trait/TraitSubject.ts"
 import { Evidence } from "./Evidence.ts"
-import type { ProbabilityResponse } from "./ProbabilityResponse.ts"
 
 /** What every subject question shares: the task, and what an answer either way means. An answer is only worth remembering while these stay as they are. */
 export const prompt = {
@@ -28,42 +27,22 @@ export const prompt = {
   criteria: { true: "Is or contains one.", false: "Contains none." }
 }
 
-/** Estimates how likely each of several subjects matches one shared piece of evidence, in one provider request, independently of trait evaluation. An unanswered subject does not discard its answered siblings. */
-export const match: {
-  (
-    evidence: Evidence
-  ): <Id extends string>(
-    subjects: Readonly<Record<Id, TraitSubject>>
-  ) => Effect.Effect<ProbabilityResponse<Id>, AiError.AiError, DecisionModel.DecisionModel>
-  <Id extends string>(
-    subjects: Readonly<Record<Id, TraitSubject>>,
-    evidence: Evidence
-  ): Effect.Effect<ProbabilityResponse<Id>, AiError.AiError, DecisionModel.DecisionModel>
-} = Function.dual(
-  2,
-  Effect.fn("SubjectQuestion.match")(function* <Id extends string>(
-    subjects: Readonly<Record<Id, TraitSubject>>,
-    evidence: Evidence
-  ) {
-    if (Record.isEmptyRecord(subjects)) {
-      return {
-        outcomes: subjects,
-        usage: DecisionModel.DecisionUsage.make({ inputTokens: 0, outputTokens: 0 }),
-        metadata: {}
-      } satisfies ProbabilityResponse<Id>
-    }
-    return yield* DecisionModel.decideSettled(
-      Decision.make({
-        // The task is the same for every subject, so it is sent once with the evidence rather than with each question.
-        input: S.Struct({ task: S.String, evidence: Evidence }),
-        decisions: Record.map(subjects, (subject) =>
-          Decision.probability({
-            instructions: { subject },
-            criteria: prompt.criteria
-          })
-        )
-      }),
-      { input: { task: prompt.task, evidence } }
-    )
-  })
-)
+/** Estimates how likely each of several subjects, by ID, matches one shared piece of evidence, in one provider request, independently of trait evaluation. An unanswered subject does not discard its answered siblings. */
+export const match = Effect.fn("SubjectQuestion.match")(function* (options: {
+  readonly subjects: Readonly<Record<string, TraitSubject>>
+  readonly evidence: Evidence
+}) {
+  return yield* DecisionModel.decideSettled(
+    Decision.make({
+      // The task is the same for every subject, so it is sent once with the evidence rather than with each question.
+      input: S.Struct({ task: S.String, evidence: Evidence }),
+      decisions: Record.map(options.subjects, (subject) =>
+        Decision.probability({
+          instructions: { subject },
+          criteria: prompt.criteria
+        })
+      )
+    }),
+    { input: { task: prompt.task, evidence: options.evidence } }
+  )
+})

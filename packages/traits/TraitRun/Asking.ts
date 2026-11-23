@@ -39,9 +39,7 @@ export const ask = Effect.fnUntraced(function* <A, R>(options: {
   readonly id: (entry: A) => string
   /** Everything the questions share: how they are put to the model, and the evidence they are about. */
   readonly shared: unknown
-  readonly request: (
-    questions: Readonly<Record<string, A>>
-  ) => Effect.Effect<ProbabilityResponse<string>, AiError.AiError, R>
+  readonly request: (questions: Readonly<Record<string, A>>) => Effect.Effect<ProbabilityResponse, AiError.AiError, R>
 }) {
   const { recall, remember } = yield* DecisionCache
   const spending = yield* Budget.CurrentSpending

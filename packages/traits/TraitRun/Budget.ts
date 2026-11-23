@@ -41,7 +41,7 @@ export const CurrentSpending = Context.Reference<Spending | undefined>("traits/T
 /** Sets aside, from what is left of the budget, what a request is expected to use, and returns how much; or why the request is not to be made. */
 export const reserve = Effect.fnUntraced(function* <R>(
   spending: Spending,
-  request: Effect.Effect<ProbabilityResponse<string>, AiError.AiError, R>
+  request: Effect.Effect<ProbabilityResponse, AiError.AiError, R>
 ) {
   const model = yield* PlanningModel.make(0)
   const tokens = yield* request.pipe(

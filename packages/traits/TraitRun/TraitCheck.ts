@@ -117,10 +117,7 @@ const match = Effect.fnUntraced(function* (candidates: ReadonlyArray<Candidate>,
     id: ({ candidate }) => candidate.ids.subject,
     shared: [SubjectQuestion.prompt, evidence],
     request: (questions) =>
-      SubjectQuestion.match(
-        Record.map(questions, ({ subject }) => subject),
-        evidence
-      )
+      SubjectQuestion.match({ subjects: Record.map(questions, ({ subject }) => subject), evidence })
   })
   const matched: ReadonlyArray<Matched> = [
     ...pipe(
@@ -151,10 +148,7 @@ const assert = Effect.fnUntraced(function* (options: {
     id: (candidate) => candidate.ids.assertion,
     shared: [AssertionQuestion.prompt, evidence],
     request: (questions) =>
-      AssertionQuestion.assert(
-        Record.map(questions, ({ assertion }) => assertion),
-        evidence
-      )
+      AssertionQuestion.assert({ assertions: Record.map(questions, ({ assertion }) => assertion), evidence })
   })
   const checks = Array.zipWith(options.applicable, outcomes, (candidate, holds): Placed => ({
     position: candidate.position,
