@@ -11,7 +11,8 @@
     "build": "effect-tsgo tsrs@7.1.0-beta.tsrs3 -b tsconfig.json",
     "build:cli": "vp -C packages/traits pack",
     "check": "vp check && pnpm build && pnpm test",
-    "test": "vp test run"
+    "test": "vp test run",
+    "traits": "./packages/traits/main.ts"
   },
   "devDependencies": {
     "@alchemy.run/cloudflare": "catalog:",
