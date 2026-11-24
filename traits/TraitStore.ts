@@ -172,8 +172,9 @@ const make = Effect.gen(function* () {
   // The current on-disk state, read under the write lock for compare-and-swap checks.
   const readExpectation = (name: Trait.TraitName) =>
     fs.readFileString(traitPath(name)).pipe(
-      Effect.flatMap(hash),
-      Effect.map((version): TraitExpectation => TraitExpectation.cases.Present.make({ version })),
+      Effect.flatMap((text) =>
+        Effect.map(hash(text), (version): TraitExpectation => TraitExpectation.cases.Present.make({ version }))
+      ),
       Effect.catchTags({
         PlatformError: (error) => (error.reason._tag === "NotFound" ? Effect.succeed(absent) : error)
       })
