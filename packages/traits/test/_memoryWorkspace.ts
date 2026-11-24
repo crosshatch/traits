@@ -10,9 +10,9 @@ import { TraitMatchPattern } from "../Trait/TraitMatch.ts"
 import { TraitName } from "../Trait/TraitName.ts"
 import { TraitPurpose } from "../Trait/TraitPurpose.ts"
 import { TraitSubject } from "../Trait/TraitSubject.ts"
-import { DefaultTraitCollection } from "../TraitCollection/DefaultTraitCollection.ts"
 import { type TraitCollection, TraitNotFoundError } from "../TraitCollection/TraitCollection.ts"
 import { TraitCollectionNotFoundError, TraitCollections } from "../TraitCollection/TraitCollections.ts"
+import { WorkspaceTraitCollection } from "../TraitCollection/WorkspaceTraitCollection.ts"
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitSelectionId, TraitSelectionNotFoundError, TraitSelections } from "../TraitSelection/TraitSelections.ts"
@@ -123,7 +123,7 @@ export const workspace = Effect.fn("workspace")(function* (options: {
     Layer.succeed(DecisionModel.DecisionModel, model),
     Layer.succeed(DecisionCache.DecisionCache, cache),
     Digest.layerWebCrypto,
-    Layer.succeed(DefaultTraitCollection, {
+    Layer.succeed(WorkspaceTraitCollection, {
       ...collection(options.own),
       write: () => unused,
       update: () => unused,

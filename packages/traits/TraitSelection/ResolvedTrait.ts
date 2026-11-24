@@ -1,8 +1,8 @@
 import { Array, Effect, pipe } from "effect"
 
 import type { Trait } from "../Trait/Trait.ts"
-import { DefaultTraitCollection } from "../TraitCollection/DefaultTraitCollection.ts"
 import { TraitCollections } from "../TraitCollection/TraitCollections.ts"
+import { WorkspaceTraitCollection } from "../TraitCollection/WorkspaceTraitCollection.ts"
 import type { TraitReference } from "./TraitReference.ts"
 import { defaultTraitSelectionId, type TraitSelectionId } from "./TraitSelectionId.ts"
 import { TraitSelections } from "./TraitSelections.ts"
@@ -17,7 +17,7 @@ export interface ResolvedTrait {
 export const fromSelections = Effect.fn("ResolvedTrait.fromSelections")(function* (
   named: ReadonlyArray<TraitSelectionId>
 ) {
-  const own = yield* DefaultTraitCollection
+  const own = yield* WorkspaceTraitCollection
   const selections = yield* TraitSelections
   const collections = yield* TraitCollections
   const ids = Array.isReadonlyArrayNonEmpty(named) ? named : [defaultTraitSelectionId]

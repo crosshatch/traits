@@ -16,8 +16,8 @@ export class TraitAlreadyExistsError extends S.TaggedError<TraitAlreadyExistsErr
 }
 
 /** The workspace's own traits, which selections refer to by name alone. Unlike the collections that come from declared sources, they can be added, changed, renamed, and deleted here. Hosts supply where they are stored. */
-export class DefaultTraitCollection extends Context.Service<
-  DefaultTraitCollection,
+export class WorkspaceTraitCollection extends Context.Service<
+  WorkspaceTraitCollection,
   TraitCollection & {
     /** Adds the trait, or replaces the one that has its name. */
     readonly write: (trait: Trait) => Effect.Effect<void, StorageError>
@@ -34,4 +34,4 @@ export class DefaultTraitCollection extends Context.Service<
     /** Deletes the trait with this name. */
     readonly delete: (name: TraitName) => Effect.Effect<void, TraitNotFoundError | StorageError>
   }
->()("traits/TraitCollection/DefaultTraitCollection") {}
+>()("traits/TraitCollection/WorkspaceTraitCollection") {}

@@ -1,15 +1,15 @@
 import { Effect, Layer } from "effect"
 
-import * as LocalDefaultTraitCollection from "./LocalDefaultTraitCollection.ts"
 import * as LocalProjectFiles from "./LocalProjectFiles.ts"
 import * as LocalTraitCollections from "./LocalTraitCollections.ts"
 import * as LocalTraitSelections from "./LocalTraitSelections.ts"
+import * as LocalWorkspaceTraitCollection from "./LocalWorkspaceTraitCollection.ts"
 import * as Segmentation from "./Segmentation/Segmentation.ts"
 import * as TraitsConfig from "./TraitsConfig/TraitsConfig.ts"
 
 /** The workspace's own traits, its collections from declared sources, and its selections, kept in its traits directory. The workspace's paths are provided to it, such as by LocalPaths.layer. */
 export const layer = Layer.mergeAll(
-  LocalDefaultTraitCollection.layer,
+  LocalWorkspaceTraitCollection.layer,
   LocalTraitCollections.layer,
   LocalTraitSelections.layer
 )

@@ -2,11 +2,11 @@ import { NodeServices } from "@effect/platform-node"
 import { expect, layer } from "@effect/vitest"
 import { Array, Effect, FileSystem, Layer, Order, Path, pipe, Result, String } from "effect"
 
-import * as LocalDefaultTraitCollection from "../local/LocalDefaultTraitCollection.ts"
+import * as LocalWorkspaceTraitCollection from "../local/LocalWorkspaceTraitCollection.ts"
 import { Trait } from "../Trait/Trait.ts"
 import { TraitName } from "../Trait/TraitName.ts"
-import { DefaultTraitCollection, TraitAlreadyExistsError } from "../TraitCollection/DefaultTraitCollection.ts"
 import { TraitNotFoundError } from "../TraitCollection/TraitCollection.ts"
+import { WorkspaceTraitCollection, TraitAlreadyExistsError } from "../TraitCollection/WorkspaceTraitCollection.ts"
 import { localPaths } from "./_localWorkspace.ts"
 
 const first = TraitName.make("first-trait")
@@ -17,11 +17,11 @@ const trait = (name: string, fields: Partial<typeof Trait.Encoded> = {}) =>
 
 /** The workspace's own traits in this traits directory. Each build is its own instance, with its own in-process lock, as each process has. */
 const traitsIn = (directory: string) =>
-  Layer.fresh(LocalDefaultTraitCollection.layer).pipe(Layer.provide(localPaths(directory)))
+  Layer.fresh(LocalWorkspaceTraitCollection.layer).pipe(Layer.provide(localPaths(directory)))
 
 /** Runs the effect against the traits directory of a temporary workspace. */
 const withTraits = <A, E>(
-  effect: (traits: string) => Effect.Effect<A, E, DefaultTraitCollection | FileSystem.FileSystem | Path.Path>
+  effect: (traits: string) => Effect.Effect<A, E, WorkspaceTraitCollection | FileSystem.FileSystem | Path.Path>
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
@@ -38,7 +38,7 @@ layer(NodeServices.layer)((it) => {
       Effect.fn(function* (traits) {
         const fs = yield* FileSystem.FileSystem
         const path = yield* Path.Path
-        const collection = yield* DefaultTraitCollection
+        const collection = yield* WorkspaceTraitCollection
         yield* fs.writeFileString(path.join(traits, "config.json"), "{}")
         yield* fs.writeFileString(path.join(traits, "README.md"), "Not a trait.")
         yield* fs.makeDirectory(path.join(traits, "shared"))
@@ -59,7 +59,7 @@ layer(NodeServices.layer)((it) => {
     withTraits(
       Effect.fn(function* (traits) {
         const fs = yield* FileSystem.FileSystem
-        const collection = yield* DefaultTraitCollection
+        const collection = yield* WorkspaceTraitCollection
         yield* collection.write(trait("first-trait"))
         yield* collection.write(trait("second-trait"))
 
@@ -85,8 +85,8 @@ layer(NodeServices.layer)((it) => {
     withTraits(
       Effect.fn(function* (traits) {
         const fs = yield* FileSystem.FileSystem
-        const collection = yield* DefaultTraitCollection
-        const other = yield* Effect.service(DefaultTraitCollection).pipe(Effect.provide(traitsIn(traits)))
+        const collection = yield* WorkspaceTraitCollection
+        const other = yield* Effect.service(WorkspaceTraitCollection).pipe(Effect.provide(traitsIn(traits)))
         expect(other).not.toBe(collection)
         const third = TraitName.make("third-trait")
         yield* collection.write(trait("first-trait", { purpose: "First." }))
@@ -111,7 +111,7 @@ layer(NodeServices.layer)((it) => {
   it.effect("fails with the missing name when there is no such trait", () =>
     withTraits(
       Effect.fn(function* () {
-        const collection = yield* DefaultTraitCollection
+        const collection = yield* WorkspaceTraitCollection
         const errors = yield* Effect.all(
           [
             Effect.flip(collection.get(first)),
@@ -132,7 +132,7 @@ layer(NodeServices.layer)((it) => {
       Effect.fn(function* (traits) {
         const fs = yield* FileSystem.FileSystem
         const path = yield* Path.Path
-        const collection = yield* DefaultTraitCollection
+        const collection = yield* WorkspaceTraitCollection
         yield* fs.writeFileString(path.join(traits, "first-trait.md"), "---\nname: first-trait\n---\n")
         yield* fs.writeFileString(path.join(traits, "second-trait.md"), "---\nname: other\npurpose: Why.\n---\n")
         const invalid = yield* Effect.flip(collection.get(first))
@@ -155,7 +155,7 @@ layer(NodeServices.layer)((it) => {
   ] as const)("reads back exactly what was written for %s", ([, text]) =>
     withTraits(
       Effect.fn(function* () {
-        const collection = yield* DefaultTraitCollection
+        const collection = yield* WorkspaceTraitCollection
         const written = trait("first-trait", { subject: text, assertion: text, purpose: text, body: String.trim(text) })
         yield* collection.write(written)
         const read = yield* collection.get(first)

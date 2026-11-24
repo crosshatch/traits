@@ -4,8 +4,8 @@ import { StorageError } from "../StorageError.ts"
 import type { Trait } from "../Trait/Trait.ts"
 import * as TraitFile from "../Trait/TraitFile.ts"
 import type { TraitName } from "../Trait/TraitName.ts"
-import { DefaultTraitCollection, TraitAlreadyExistsError } from "../TraitCollection/DefaultTraitCollection.ts"
 import { TraitNotFoundError } from "../TraitCollection/TraitCollection.ts"
+import { WorkspaceTraitCollection, TraitAlreadyExistsError } from "../TraitCollection/WorkspaceTraitCollection.ts"
 import { createFile } from "../util/fs/createFile.ts"
 import { writeFile } from "../util/fs/writeFile.ts"
 import { LocalPaths } from "./LocalPaths.ts"
@@ -42,16 +42,16 @@ export const layer = Effect.gen(function* () {
       )
     )
 
-  return DefaultTraitCollection.of({
+  return WorkspaceTraitCollection.of({
     ...traits,
-    write: Effect.fn("LocalDefaultTraitCollection.write")(write, Semaphore.withPermit(changes)),
-    update: Effect.fn("LocalDefaultTraitCollection.update")(function* (name, f) {
+    write: Effect.fn("LocalWorkspaceTraitCollection.write")(write, Semaphore.withPermit(changes)),
+    update: Effect.fn("LocalWorkspaceTraitCollection.update")(function* (name, f) {
       const trait = yield* traits.get(name)
       const updated = { ...f(trait), name }
       yield* write(updated)
       return updated
     }, Semaphore.withPermit(changes)),
-    rename: Effect.fn("LocalDefaultTraitCollection.rename")(function* (from, to) {
+    rename: Effect.fn("LocalWorkspaceTraitCollection.rename")(function* (from, to) {
       const trait = yield* traits.get(from)
       const renamed = { ...trait, name: to }
       // Creating the file is also the check that the name is free, so another process cannot take it in between.
@@ -65,6 +65,6 @@ export const layer = Effect.gen(function* () {
       yield* remove(from)
       return renamed
     }, Semaphore.withPermit(changes)),
-    delete: Effect.fn("LocalDefaultTraitCollection.delete")(remove, Semaphore.withPermit(changes))
+    delete: Effect.fn("LocalWorkspaceTraitCollection.delete")(remove, Semaphore.withPermit(changes))
   })
-}).pipe(Layer.effect(DefaultTraitCollection))
+}).pipe(Layer.effect(WorkspaceTraitCollection))
