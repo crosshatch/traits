@@ -1,5 +1,18 @@
 # traits
 
+## 0.5.17
+
+### Patch Changes
+
+- [#112](https://github.com/crosshatch/traits/pull/112)
+  [`4640f43`](https://github.com/crosshatch/traits/commit/4640f4300cd57412da39bc6f8396c9348de63b53) -
+  Allow multiple Traits MCP servers in one worktree, so concurrent agents no
+  longer fail with "A Traits MCP server already owns". Each server keeps a
+  private in-memory trait index, and trait writes are compare-and-swap commits
+  serialized by SQLite's write lock on the shared worktree database: a write
+  based on a trait another agent has since changed is rejected, and
+  `derive_trait` asks for fresh approval instead of overwriting it.
+
 ## 0.5.16
 
 ### Patch Changes
