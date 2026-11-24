@@ -29,7 +29,6 @@ const server = McpServer.layerStdio({
   protocols: [McpProtocol.v2025_11_25],
   registrations: toolkit.pipe(
     Layer.provide(TraitStore.layer),
-    // The index is private to this process; trait writes lock the shared worktree database.
     Layer.provide([TraitIndex.layer, TraitWriteLock.layer]),
     Layer.provide(TraitsConfig.layer),
     Layer.provide(TraitsConfigProvider.layer),
