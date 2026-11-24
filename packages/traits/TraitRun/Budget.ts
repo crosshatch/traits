@@ -1,10 +1,6 @@
-import { Context, Effect, Ref, Result } from "effect"
-import type { AiError } from "effect/ai"
+import { Context, Effect, Function, Ref, Schema as S } from "effect"
 
-import type { ProbabilityResponse } from "./ProbabilityResponse.ts"
-import { fromResponse } from "./Usage.ts"
-
-/** The cost, in US dollars, after which a run asks nothing more, which takes a provider that reports what its requests cost. Requests already under way when it is reached are finished, so a run may cost somewhat more. */
+/** The cost, in US dollars, after which a run asks nothing more, which takes a provider, and an agent for preludes, that report what they cost. Requests already under way when it is reached are finished, so a run may cost somewhat more. */
 export interface Budget {
   readonly dollars: number
 }
@@ -12,7 +8,7 @@ export interface Budget {
 /** What a run has cost so far, as its providers' responses report it. */
 interface Spent {
   readonly cost: number
-  /** Whether the provider answered a request without reporting its cost, after which the budget cannot be kept. */
+  /** Whether the provider answered a request, or the agent carried out a task, without reporting its cost, after which the budget cannot be kept. */
   readonly unpriced: boolean
 }
 
@@ -36,28 +32,46 @@ export const CurrentSpending = Context.Reference<Spending | undefined>("traits/T
 /** Why nothing more is to be asked, when that is so. */
 const stopped = ({ max }: Spending, { cost, unpriced }: Spent) =>
   unpriced
-    ? `It was not asked: the provider reports no cost for the $${max} to stop after to go by.`
+    ? `It was not asked: what the run had done reported no cost for the $${max} to stop after to go by.`
     : cost >= max
       ? `It was not asked: the run had cost $${cost} by then, which reached the $${max} it was to stop after.`
       : undefined
 
-/** Makes a request unless the run has reached its budget, and returns its response, or why it was not made. A run with no budget makes every request. What the provider says the request cost is then added to what the run has cost. */
-export const within = <R>(
-  request: Effect.Effect<ProbabilityResponse, AiError.AiError, R>
-): Effect.Effect<Result.Result<ProbabilityResponse, string>, AiError.AiError, R> =>
+/** Something was not done because the run had reached its budget. */
+export class OverBudget extends S.TaggedError<OverBudget>()("OverBudget", {
+  /** Why nothing more is done. */
+  reason: S.String.annotateKey({ description: "Why nothing more is done." })
+}) {
+  override get message() {
+    return this.reason
+  }
+}
+
+/** Does something that costs, such as a request of the model or a task of the agent that carries out preludes, unless the run has reached its budget, in which case it fails with why. A run with no budget does everything. What it is said to have cost is then added to what the run has cost, and something said to cost nothing that can be told leaves the budget unable to be kept. */
+export const within: {
+  <A>(
+    costOf: (done: A) => number | undefined
+  ): <E, R>(costly: Effect.Effect<A, E, R>) => Effect.Effect<A, E | OverBudget, R>
+  <A, E, R>(
+    costly: Effect.Effect<A, E, R>,
+    costOf: (done: A) => number | undefined
+  ): Effect.Effect<A, E | OverBudget, R>
+} = Function.dual(2, <A, E, R>(costly: Effect.Effect<A, E, R>, costOf: (done: A) => number | undefined) =>
   Effect.gen(function* () {
     const spending = yield* CurrentSpending
     if (spending === undefined) {
-      return yield* Effect.map(request, (response) => Result.succeed(response))
+      return yield* costly
     }
-    const reason = stopped(spending, yield* Ref.get(spending.spent))
+    const spent = yield* Ref.get(spending.spent)
+    const reason = stopped(spending, spent)
     if (reason !== undefined) {
-      return Result.fail(reason)
+      return yield* OverBudget.make({ reason })
     }
-    const response = yield* request
-    const { cost } = fromResponse(response)
+    const done = yield* costly
+    const cost = costOf(done)
     yield* Ref.update(spending.spent, (spent) =>
       cost === undefined ? { ...spent, unpriced: true } : { ...spent, cost: spent.cost + cost }
     )
-    return Result.succeed(response)
+    return done
   })
+)

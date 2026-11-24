@@ -17,7 +17,9 @@ const recordingAgent = Effect.gen(function* () {
   const agent: Prelude.PreludeAgentService = {
     carryOut: (task) =>
       Ref.update(tasks, Array.append(task)).pipe(
-        Effect.as(`did ${Array.join(task.steps, "; ")} after ${Array.join(Record.keys(task.found), ",") || "nothing"}`)
+        Effect.as({
+          found: `did ${Array.join(task.steps, "; ")} after ${Array.join(Record.keys(task.found), ",") || "nothing"}`
+        })
       )
   }
   return { agent, tasks: Ref.get(tasks) }
@@ -72,13 +74,15 @@ it.effect(
         { start: 0, end: 19 }
       )
 
-      const unprepared = yield* TraitRun.checkInput({ traits, input, root, threshold: half }).pipe(Effect.provide(layer))
+      const unprepared = yield* TraitRun.checkInput({ traits, input, root, threshold: half }).pipe(
+        Effect.provide(layer)
+      )
       expect(unprepared.checks).toMatchObject([
         { verdict: "NotAssessed", holds: { _tag: "Unanswered", reason: "Failed" } }
       ])
 
       const agent: Prelude.PreludeAgentService = {
-        carryOut: (task) => Effect.succeed(`${task.file}: a has no callers`)
+        carryOut: (task) => Effect.succeed({ found: `${task.file}: a has no callers` })
       }
       const prepared = yield* TraitRun.checkInput({ traits, input, root, threshold: half }).pipe(
         Effect.provide(layer),
@@ -100,7 +104,8 @@ it.effect("leaves a trait not assessed when the agent says what it found cannot 
   Effect.gen(function* () {
     const prelude = yield* preludeOf(["count the rows the migration would change on staging"])
     const agent: Prelude.PreludeAgentService = {
-      carryOut: () => Effect.succeed(`${Prelude.cannotCheck} staging has no rows for the migration to change.`)
+      carryOut: () =>
+        Effect.succeed({ found: `${Prelude.cannotCheck} staging has no rows for the migration to change.` })
     }
     const error = yield* Effect.flip(
       Prelude.carryOut({ trait: unused, prelude, file: "migrations/a.py" }).pipe(
@@ -133,5 +138,70 @@ it.effect("checks a trait with a prelude against the whole file once, however th
     expect(given.length).toBe(1)
     expect(report.files[0]?.checks).toMatchObject([{ verdict: "Holds" }])
     expect(report.files[0]?.checks[0]?.lines).toBeUndefined()
+  })
+)
+
+it.effect("carries out a prelude again only when what it is checked against or the trait has changed", () =>
+  Effect.gen(function* () {
+    const prelude = yield* preludeOf(["search the rest of the project for callers of each export"])
+    const { layer } = yield* workspace({ files: {}, own: [], answer: () => 0.9 })
+    const { agent, tasks } = yield* recordingAgent
+    const checkOnce = Effect.fnUntraced(function* (text: string, checked = trait({ ...unused, prelude })) {
+      const input = yield* Input.select(
+        "after",
+        { uri: new URL("src/a.ts", root), text },
+        { start: 0, end: text.length }
+      )
+      return yield* TraitRun.checkInput({
+        traits: [{ reference: name("unused-exports"), trait: checked }],
+        input,
+        root,
+        threshold: half
+      }).pipe(Effect.provide(layer), Effect.provideService(Prelude.PreludeAgent, agent))
+    })
+    const first = yield* checkOnce("export const a = 1\n")
+    expect(first.usage).toMatchObject({ preludeTasks: 1, remembered: 0 })
+    // What the prelude finds would differ from one time to the next, so the answer is remembered by the text alone.
+    const again = yield* checkOnce("export const a = 1\n")
+    expect(again.usage).toMatchObject({ requests: 0, preludeTasks: 0, remembered: 2 })
+    expect(again.checks).toMatchObject([{ verdict: "Holds" }])
+    const changedText = yield* checkOnce("export const a = 2\n")
+    expect(changedText.usage).toMatchObject({ preludeTasks: 1, remembered: 0 })
+    const otherPrelude = yield* preludeOf(["search the tests for callers of each export"])
+    const changedPrelude = yield* checkOnce("export const a = 2\n", trait({ ...unused, prelude: otherPrelude }))
+    expect(changedPrelude.usage).toMatchObject({ preludeTasks: 1, remembered: 1 })
+    expect((yield* tasks).length).toBe(3)
+  })
+)
+
+it.effect("counts what the agent reports a task cost, and gives it nothing once the run's budget is reached", () =>
+  Effect.gen(function* () {
+    const prelude = yield* preludeOf(["search the rest of the project for callers of each export"])
+    const { layer, project } = yield* workspace({
+      files: { "src/a.ts": "export const a = 1\n" },
+      own: [
+        trait({ ...unused, prelude }),
+        trait({ ...unused, name: "documented-exports", assertion: "Every export is documented.", prelude })
+      ],
+      answer: () => 0.9,
+      cost: 0.25
+    })
+    const { agent: recording, tasks } = yield* recordingAgent
+    const agent: Prelude.PreludeAgentService = {
+      carryOut: (task) => Effect.map(recording.carryOut(task), (reply) => ({ ...reply, cost: 2 }))
+    }
+    const report = yield* TraitRun.run({
+      files: project,
+      selections: [],
+      threshold: half,
+      stopAfter: { dollars: 1 }
+    }).pipe(Effect.provide(layer), Effect.provideService(Prelude.PreludeAgent, agent))
+    expect((yield* tasks).length).toBe(1)
+    // The subjects' request and the first assertion's request, and the one task the agent was given.
+    expect(report.usage).toMatchObject({ requests: 2, preludeTasks: 1, cost: 2.5 })
+    expect(report.files[0]?.checks).toMatchObject([
+      { verdict: "Holds" },
+      { verdict: "NotAssessed", holds: { _tag: "Unanswered", reason: "OverBudget" } }
+    ])
   })
 )

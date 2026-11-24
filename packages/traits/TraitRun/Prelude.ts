@@ -1,4 +1,4 @@
-import { Array, Context, Effect, pipe, Predicate, Record, Schema as S, String } from "effect"
+import { Array, Context, Effect, pipe, Predicate, Record, Ref, Schema as S, String } from "effect"
 
 import type { Trait } from "../Trait/Trait.ts"
 import {
@@ -9,6 +9,8 @@ import {
   type TraitPreludeSteps,
   type TraitPreludeSubagents
 } from "../Trait/TraitPrelude.ts"
+import * as Budget from "./Budget.ts"
+import { addUsage, noUsage, type Usage } from "./Usage.ts"
 
 /** What a trait's prelude found before the trait was checked, handed to the check as evidence. */
 export type PreludeFindings = typeof PreludeFindings.Type
@@ -52,9 +54,16 @@ export interface PreludeTask {
   readonly found: Readonly<Record<string, string>>
 }
 
-/** What carries out a prelude's steps: it returns what they found, as text for the check to weigh. */
+/** What an agent found by carrying out a task, as text for the check to weigh, and what the task cost. */
+export interface PreludeReply {
+  readonly found: string
+  /** What the task cost, in US dollars; none when the agent does not say, which leaves a run with a budget unable to keep it. */
+  readonly cost?: number | undefined
+}
+
+/** What carries out a prelude's steps: it returns what they found, and what that cost. */
 export interface PreludeAgentService {
-  readonly carryOut: (task: PreludeTask) => Effect.Effect<string, PreludeError>
+  readonly carryOut: (task: PreludeTask) => Effect.Effect<PreludeReply, PreludeError>
 }
 
 /** An agent for hosts that have none, which turns every prelude away, so traits that need one are left not assessed rather than checked without what it finds. */
@@ -145,17 +154,28 @@ const runsOf = (steps: TraitPreludeSteps): ReadonlyArray<Run> =>
       : [...runs, { _tag: "Steps", steps: Array.of(step) }]
   })
 
-/** Carries out a prelude for a check of a trait against a file: steps one after another, each run of instructions in a row by the agent as one task, and each group of subagents at the same time, each subagent's steps on their own, before the steps that follow. Each task is shown what was found before it. */
+/** Carries out a prelude for a check of a trait against a file: steps one after another, each run of instructions in a row by the agent as one task, and each group of subagents at the same time, each subagent's steps on their own, before the steps that follow. Each task is shown what was found before it, is given only while the run is within its budget, and once the agent replies is added, with what it cost, to the usage given. */
 export const carryOut = Effect.fn("Prelude.carryOut")(function* (options: {
   readonly trait: Trait
   readonly prelude: TraitPrelude
   readonly file: string
+  /** What the tasks carried out so far have used, which each is added to as the agent replies, so that those carried out before one fails are counted too; not kept when omitted. */
+  readonly usage?: Ref.Ref<Usage> | undefined
 }) {
   const given = yield* PreludeAgent
-  // A reply that says the check cannot be settled leaves the trait not assessed, rather than letting the check weigh too little.
-  const agent: PreludeAgentService = {
-    carryOut: (task) =>
-      given.carryOut(task).pipe(
+  const agent = {
+    carryOut: (task: PreludeTask) =>
+      Budget.within(given.carryOut(task), (reply) => reply.cost).pipe(
+        Effect.tap((reply) =>
+          options.usage === undefined
+            ? Effect.void
+            : Ref.update(
+                options.usage,
+                addUsage({ ...noUsage, preludeTasks: 1, ...(reply.cost === undefined ? {} : { cost: reply.cost }) })
+              )
+        ),
+        Effect.map(({ found }) => found),
+        // A reply that says the check cannot be settled leaves the trait not assessed, rather than letting the check weigh too little.
         Effect.filterOrFail(
           (found) => !pipe(found, String.trimStart, String.startsWith(cannotCheck)),
           (found) =>
@@ -167,7 +187,9 @@ export const carryOut = Effect.fn("Prelude.carryOut")(function* (options: {
       )
   }
 
-  const group = (subagents: TraitPreludeSubagents, before: Carried): Effect.Effect<Carried, PreludeError> =>
+  type Failure = PreludeError | Budget.OverBudget
+
+  const group = (subagents: TraitPreludeSubagents, before: Carried): Effect.Effect<Carried, Failure> =>
     pipe(
       Effect.forEach(
         Record.toEntries(subagents),
@@ -185,7 +207,7 @@ export const carryOut = Effect.fn("Prelude.carryOut")(function* (options: {
       Effect.map(Array.reduce(nothing, combine))
     )
 
-  const inOrder = (steps: TraitPreludeSteps, before: Carried): Effect.Effect<Carried, PreludeError> =>
+  const inOrder = (steps: TraitPreludeSteps, before: Carried): Effect.Effect<Carried, Failure> =>
     Effect.reduce(
       runsOf(steps),
       () => nothing,

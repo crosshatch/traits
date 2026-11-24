@@ -95,7 +95,7 @@ export const format = (report: typeof Report.Encoded): string => {
       ...(unasked > 0
         ? [`Checks not asked, the run having reached its budget: ${unasked}. Run again to carry on from here.`]
         : []),
-      `Requests: ${report.usage.requests}. Tokens: ${report.usage.inputTokens} in, ${report.usage.outputTokens} out.${report.usage.cost === undefined ? "" : ` Cost: ${dollars(report.usage.cost)}.`} Answers remembered from earlier runs: ${report.usage.remembered}.`
+      `Requests: ${report.usage.requests}. Tokens: ${report.usage.inputTokens} in, ${report.usage.outputTokens} out.${report.usage.preludeTasks === 0 ? "" : ` Prelude tasks: ${report.usage.preludeTasks}.`}${report.usage.cost === undefined ? "" : ` Cost: ${dollars(report.usage.cost)}.`} Answers remembered from earlier runs: ${report.usage.remembered}.`
     ],
     "\n"
   )

@@ -1,6 +1,6 @@
 import { Effect, Schema as S } from "effect"
 
-/** The agent that carries out traits' preludes: a command run from the workspace root, given the task's instructions as its last argument, whose output is what the prelude found. */
+/** The agent that carries out traits' preludes: a command run from the workspace root, given the task's instructions as its last argument, whose output is what the prelude found. A command that prints what it found with what it cost, as claude -p --output-format json does, has the cost counted against a run's budget; one that does not leaves a run with a budget unable to keep it. */
 export type PreludeAgentConfiguration = typeof PreludeAgentConfiguration.Type
 export const PreludeAgentConfiguration = S.Struct({
   /** The program to run, such as claude or a script of the workspace's own. */
@@ -22,5 +22,5 @@ export const PreludeAgentConfiguration = S.Struct({
     .pipe(S.withDecodingDefaultKey(Effect.succeed(600)))
 }).annotate({
   description:
-    "The agent that carries out traits' preludes: a command run from the workspace root, given the task's instructions as its last argument, whose output is what the prelude found. What the agent can reach, such as which tools and systems, is up to the command."
+    "The agent that carries out traits' preludes: a command run from the workspace root, given the task's instructions as its last argument, whose output is what the prelude found. A command that prints what it found with what it cost, as claude -p --output-format json does, has the cost counted against a run's budget; one that does not leaves a run with a budget unable to keep it. What the agent can reach, such as which tools and systems, is up to the command."
 })

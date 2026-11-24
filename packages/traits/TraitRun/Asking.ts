@@ -30,12 +30,18 @@ const toOutcome = (outcome: Decision.Outcome<Decision.Probability> | undefined):
 /** Says what the decision cache could not do, and why, where asking carries on without it. */
 const warn = (message: string) => (error: StorageError) => Effect.logWarning(message, Cause.fail(error))
 
-/** Asks the model the questions, by the ID that sets each apart from the others asked about the same evidence, and returns each one's outcome with what asking cost. Answers the model gave before to the same question about the same evidence are taken from the decision cache rather than asked for again, and new answers are added to it. Remembering is only a saving, so when the cache cannot be read or added to, a warning says so and the questions are asked all the same. The rest are asked a limited number per request, and a request that fails leaves its questions unanswered rather than failing the rest, as does one that the run's budget, once reached, leaves unasked. */
-export const ask = Effect.fnUntraced(function* <Q, R>(options: {
+/** Asks the model the questions, by the ID that sets each apart from the others asked about the same evidence, and returns each one's outcome with what asking cost. Answers the model gave before to the same question about the same evidence are taken from the decision cache rather than asked for again, and new answers are added to it. Remembering is only a saving, so when the cache cannot be read or added to, a warning says so and the questions are asked all the same. The rest are asked a limited number per request, and a request that fails, or that could not be made, such as for want of what a prelude finds, leaves its questions unanswered rather than failing the rest, as does one that the run's budget, once reached, leaves unasked. */
+export const ask = Effect.fnUntraced(function* <
+  Q,
+  E extends { readonly _tag: string; readonly message: string },
+  R
+>(options: {
   readonly questions: Readonly<Record<QuestionId, Q>>
   /** What the answers are remembered under: everything the questions share, which is how they are put to the model and the evidence they are about. It is only worked out when there is a question to ask. */
   readonly key: Effect.Effect<DecisionKey, never, Digest.Digest>
-  readonly request: (questions: Readonly<Record<string, Q>>) => Effect.Effect<ProbabilityResponse, AiError.AiError, R>
+  readonly request: (
+    questions: Readonly<Record<string, Q>>
+  ) => Effect.Effect<ProbabilityResponse, AiError.AiError | E, R>
 }) {
   // No trait may apply to what is checked, which leaves nothing to ask and so nothing to look up.
   if (Record.isEmptyRecord(options.questions)) {
@@ -54,24 +60,22 @@ export const ask = Effect.fnUntraced(function* <Q, R>(options: {
       // Keys are positions, since a provider may not accept every character an ID can hold.
       const position = (index: number) => `t${index}`
       const sent = yield* Budget.within(
-        options.request(Record.fromEntries(Array.map(chunk, ([, question], index) => [position(index), question])))
+        options.request(Record.fromEntries(Array.map(chunk, ([, question], index) => [position(index), question]))),
+        (response) => fromResponse(response).cost
       ).pipe(
-        Effect.map(
-          Result.match({
-            onFailure: (reason) => ({
-              outcome: (): Outcome => ({ _tag: "Unanswered", reason: "OverBudget", description: reason }),
-              usage: noUsage
-            }),
-            onSuccess: (response) => ({
-              outcome: (index: number) => toOutcome(response.outcomes[position(index)]),
-              usage: fromResponse(response)
-            })
-          })
-        ),
-        Effect.catchTag("AiError", (error) =>
+        Effect.map((response) => ({
+          outcome: (index: number) => toOutcome(response.outcomes[position(index)]),
+          usage: fromResponse(response)
+        })),
+        Effect.catch((error) =>
           Effect.succeed({
-            outcome: (): Outcome => ({ _tag: "Unanswered", reason: "Failed", description: error.message }),
-            usage: { ...noUsage, requests: 1 }
+            outcome: (): Outcome => ({
+              _tag: "Unanswered",
+              reason: error._tag === "OverBudget" ? "OverBudget" : "Failed",
+              description: error.message
+            }),
+            // Only a request that reached the provider was made of it.
+            usage: error._tag === "AiError" ? { ...noUsage, requests: 1 } : noUsage
           })
         )
       )
