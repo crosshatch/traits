@@ -28,7 +28,7 @@ export const readOnly = (cache: DecisionCache["Service"]) =>
   DecisionCache.of({ recall: cache.recall, remember: () => Effect.void })
 
 /** A cache that keeps what is remembered in a key-value store, as JSON under each key. */
-export const makeKeyValueStore = Effect.gen(function* () {
+export const make = Effect.gen(function* () {
   const keyValueStore = yield* KeyValueStore.KeyValueStore
   const store = KeyValueStore.toSchemaStore(keyValueStore, Answers)
   const recall = (key: DecisionKey) =>
@@ -53,4 +53,4 @@ export const makeKeyValueStore = Effect.gen(function* () {
 })
 
 /** Keeps what is remembered in the host's key-value store, as JSON under each key. */
-export const layerKeyValueStore = Layer.effect(DecisionCache, makeKeyValueStore)
+export const layerKeyValueStore = Layer.effect(DecisionCache, make)

@@ -9,4 +9,4 @@ export const prepare = Effect.gen(function* () {
   const config = yield* TraitsConfig.load
   const files = yield* LocalProjectFiles.make(config.exclude)
   return { config, files, segmentation: Segmentation.prepare(config.segmentation) }
-}).pipe(Effect.withSpan("LocalWorkspace.prepareRun"))
+}).pipe(Effect.withSpan("LocalRun.prepare"))

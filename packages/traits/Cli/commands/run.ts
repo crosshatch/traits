@@ -39,10 +39,7 @@ export const run = Command.make(
         const encoded = yield* pipe(estimate, S.encodeEffect(Estimate.Estimate), Effect.orDie)
         return yield* Console.log(json ? JSON.stringify(encoded, null, 2) : Estimate.format(encoded))
       }
-      const stopAfter = Option.match(stopAfterCost, {
-        onSome: (dollars): TraitRun.Budget | undefined => ({ dollars }),
-        onNone: () => undefined
-      })
+      const stopAfter = Option.getOrUndefined(Option.map(stopAfterCost, (dollars): TraitRun.Budget => ({ dollars })))
       const report = yield* TraitRun.run({ files, segmentation, selections, threshold, stopAfter }).pipe(
         // Answers are remembered for the model that gave them, so a change of model asks again.
         Effect.provide([
@@ -64,9 +61,9 @@ export const run = Command.make(
         return yield* exitWith(2)
       }
     },
-    (effect, { selections }) => {
-      // Whatever kept the run from its work is reported with its own message, and the run ends as one that could not do it.
-      return effect.pipe(
+    // Whatever kept the run from its work is reported with its own message, and the run ends as one that could not do it.
+    (effect, { selections }) =>
+      effect.pipe(
         Effect.catchIf(
           (error) => !(error instanceof CommandFailed),
           (error) => {
@@ -87,7 +84,6 @@ export const run = Command.make(
           }
         )
       )
-    }
   )
 ).pipe(
   Command.withDescription(

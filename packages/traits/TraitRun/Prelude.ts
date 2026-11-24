@@ -66,17 +66,14 @@ export interface PreludeAgentService {
   readonly carryOut: (task: PreludeTask) => Effect.Effect<PreludeReply, PreludeError>
 }
 
-/** An agent for hosts that have none, which turns every prelude away, so traits that need one are left not assessed rather than checked without what it finds. */
-export const noAgent: PreludeAgentService = {
-  carryOut: (task) =>
-    Effect.fail(
-      PreludeError.make({ traitName: task.trait.name, reason: "No agent is available to carry out preludes." })
-    )
-}
-
-/** Carries out preludes' steps. Hosts supply the agent, and what it may use, such as which tools, files, and systems it can reach; without one, every prelude is turned away. */
+/** Carries out preludes' steps. Hosts supply the agent, and what it may use, such as which tools, files, and systems it can reach; without one, every prelude is turned away, so traits that need one are left not assessed rather than checked without what it finds. */
 export const PreludeAgent = Context.Reference<PreludeAgentService>("traits/TraitRun/PreludeAgent", {
-  defaultValue: () => noAgent
+  defaultValue: () => ({
+    carryOut: (task) =>
+      Effect.fail(
+        PreludeError.make({ traitName: task.trait.name, reason: "No agent is available to carry out preludes." })
+      )
+  })
 })
 
 /** How an agent's reply starts when what it found cannot settle the check, such as when a step could not be done or there was no data to look at. */
@@ -163,29 +160,27 @@ export const carryOut = Effect.fn("Prelude.carryOut")(function* (options: {
   readonly usage?: Ref.Ref<Usage> | undefined
 }) {
   const given = yield* PreludeAgent
-  const agent = {
-    carryOut: (task: PreludeTask) =>
-      Budget.within(given.carryOut(task), (reply) => reply.cost).pipe(
-        Effect.tap((reply) =>
-          options.usage === undefined
-            ? Effect.void
-            : Ref.update(
-                options.usage,
-                addUsage({ ...noUsage, preludeTasks: 1, ...(reply.cost === undefined ? {} : { cost: reply.cost }) })
-              )
-        ),
-        Effect.map(({ found }) => found),
-        // A reply that says the check cannot be settled leaves the trait not assessed, rather than letting the check weigh too little.
-        Effect.filterOrFail(
-          (found) => !pipe(found, String.trimStart, String.startsWith(cannotCheck)),
-          (found) =>
-            PreludeError.make({
-              traitName: task.trait.name,
-              reason: pipe(found, String.trimStart, String.slice(cannotCheck.length), String.trim)
-            })
-        )
+  const carryTask = (task: PreludeTask) =>
+    Budget.within(given.carryOut(task), (reply) => reply.cost).pipe(
+      Effect.tap((reply) =>
+        options.usage === undefined
+          ? Effect.void
+          : Ref.update(
+              options.usage,
+              addUsage({ ...noUsage, preludeTasks: 1, ...(reply.cost === undefined ? {} : { cost: reply.cost }) })
+            )
+      ),
+      Effect.map(({ found }) => found),
+      // A reply that says the check cannot be settled leaves the trait not assessed, rather than letting the check weigh too little.
+      Effect.filterOrFail(
+        (found) => !pipe(found, String.trimStart, String.startsWith(cannotCheck)),
+        (found) =>
+          PreludeError.make({
+            traitName: task.trait.name,
+            reason: pipe(found, String.trimStart, String.slice(cannotCheck.length), String.trim)
+          })
       )
-  }
+    )
 
   type Failure = PreludeError | Budget.OverBudget
 
@@ -214,7 +209,7 @@ export const carryOut = Effect.fn("Prelude.carryOut")(function* (options: {
       (carried, run) =>
         run._tag === "Steps"
           ? Effect.map(
-              agent.carryOut({
+              carryTask({
                 trait: options.trait,
                 file: options.file,
                 steps: run.steps,
@@ -228,5 +223,5 @@ export const carryOut = Effect.fn("Prelude.carryOut")(function* (options: {
   const carried = isSteps(options.prelude)
     ? yield* inOrder(options.prelude, nothing)
     : yield* group(options.prelude, nothing)
-  return PreludeFindings.make({ found: carried.found, subagents: carried.subagents })
+  return PreludeFindings.make(carried)
 })

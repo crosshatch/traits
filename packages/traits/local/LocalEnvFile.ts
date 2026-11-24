@@ -19,13 +19,12 @@ export const find = Effect.fn("LocalEnvFile.find")(function* (file: string) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
   const paths = yield* LocalPaths
-  const main = path.isAbsolute(file) ? Option.none() : yield* mainRoot
   const candidates = path.isAbsolute(file)
     ? [file]
     : Array.dedupe([
         path.resolve(file),
         path.join(paths.root, file),
-        ...Option.toArray(Option.map(main, (root) => path.join(root, file)))
+        ...Option.toArray(Option.map(yield* mainRoot, (root) => path.join(root, file)))
       ])
   const found = yield* Effect.findFirst(candidates, (candidate) =>
     fs.exists(candidate).pipe(Effect.orElseSucceed(() => false))

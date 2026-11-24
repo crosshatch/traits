@@ -77,13 +77,12 @@ export const format = (report: typeof Report.Encoded): string => {
     })
     return Array.isReadonlyArrayNonEmpty(lines) ? [Array.join([file, ...lines], "\n")] : []
   })
-  const unasked = pipe(
-    report.files,
-    Array.flatMap(({ checks }) => checks),
-    Array.filter(({ applies, holds }) => {
+  const unasked = Array.filter(
+    Array.flatMap(report.files, ({ checks }) => checks),
+    ({ applies, holds }) => {
       const last = holds ?? applies
       return last?._tag === "Unanswered" && last.reason === "OverBudget"
-    })
+    }
   ).length
   const totals = Array.join(
     [

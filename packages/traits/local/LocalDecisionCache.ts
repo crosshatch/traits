@@ -10,18 +10,18 @@ interface Model {
 }
 
 /** Where a model's answers are kept under a traits/.cache: in a directory of its own, since one model's answer says nothing about another's. */
-const directoryOf = Effect.fnUntraced(function* (cache: string, model: Model) {
-  const path = yield* Path.Path
+const directoryOf = (path: Path.Path, cache: string, model: Model) =>
   // A model's ID may hold slashes, which a directory's name cannot.
-  return path.join(cache, "decisions", encodeURIComponent(`${model.provider}/${model.model}`))
-})
+  path.join(cache, "decisions", encodeURIComponent(`${model.provider}/${model.model}`))
 
 /** A cache that keeps answers as the files of a directory, which is made if it is not there. */
-const filesIn = (directory: string) =>
-  DecisionCache.makeKeyValueStore.pipe(Effect.provide(KeyValueStore.layerFileSystem(directory)))
+const filesIn = (directory: string) => DecisionCache.make.pipe(Effect.provide(KeyValueStore.layerFileSystem(directory)))
 
 /** A cache with nothing remembered, which keeps nothing. */
-const nothing = DecisionCache.DecisionCache.of({ recall: () => Effect.succeed({}), remember: () => Effect.void })
+const nothing = DecisionCache.DecisionCache.of({
+  recall: () => Effect.succeed({}),
+  remember: () => Effect.void
+})
 
 /** What the files of a directory remember, read and never added to. Where there is no such directory, none is made, and there is simply nothing remembered. */
 const reading = Effect.fnUntraced(
@@ -39,18 +39,23 @@ const reading = Effect.fnUntraced(
   Effect.orElseSucceed(() => nothing)
 )
 
+/** Has the cache ignore itself in Git. */
+const ensureIgnored = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
+  const path = yield* Path.Path
+  const paths = yield* LocalPaths
+  const ignore = path.join(paths.cache, ".gitignore")
+  if (!(yield* fs.exists(ignore))) {
+    yield* fs.writeFileString(ignore, "*\n")
+  }
+})
+
 /** What the files of a directory in the workspace's traits/.cache remember, added to with what the model answers. The directory is made if it is not there, and the cache ignores itself in Git, so what it holds is neither committed nor checked. When the directory cannot be made or written to, a warning says so once, and what it already holds is read without anything being added. */
 const keeping = Effect.fnUntraced(
   function* (directory: string) {
     const fs = yield* FileSystem.FileSystem
-    const path = yield* Path.Path
-    const paths = yield* LocalPaths
     yield* fs.makeDirectory(directory, { recursive: true })
-    const ignore = path.join(paths.cache, ".gitignore")
-    const ignored = yield* fs.exists(ignore)
-    if (!ignored) {
-      yield* fs.writeFileString(ignore, "*\n")
-    }
+    yield* ensureIgnored
     // Found out once here, rather than by every answer of a run that then cannot be kept.
     yield* fs.access(directory, { writable: true })
     return yield* filesIn(directory)
@@ -58,7 +63,7 @@ const keeping = Effect.fnUntraced(
   Effect.tapError((error) =>
     Effect.logWarning(`What the model answers cannot be kept, so it is asked again next time: ${error.message}`)
   ),
-  (effect, directory) => effect.pipe(Effect.catchTags({ PlatformError: () => reading(directory) }))
+  (effect, directory) => Effect.catch(effect, () => reading(directory))
 )
 
 /** A workspace's cache of a model's answers: those under its own traits/.cache, read or kept as the given use of their directory has it, and in a worktree those of the checkout it was added from as well, which are only read. A worktree so starts from what was answered there, as it reads that checkout's .env. What it is told itself it keeps itself, and its own answer to a question takes the place of that checkout's. */
@@ -68,7 +73,7 @@ const make = Effect.fnUntraced(function* <E, R>(
 ) {
   const path = yield* Path.Path
   const paths = yield* LocalPaths
-  const own = yield* directoryOf(paths.cache, model).pipe(Effect.flatMap(use))
+  const own = yield* use(directoryOf(path, paths.cache, model))
   const main = yield* mainRoot
   // The same place under that checkout's root as the workspace's own cache has under its root.
   const shared = Option.map(main, (root) => path.join(root, path.relative(paths.root, paths.cache)))
@@ -76,7 +81,7 @@ const make = Effect.fnUntraced(function* <E, R>(
   if (Option.isNone(shared) || shared.value === paths.cache) {
     return own
   }
-  const checkout = yield* directoryOf(shared.value, model).pipe(Effect.flatMap(reading))
+  const checkout = yield* reading(directoryOf(path, shared.value, model))
   return DecisionCache.DecisionCache.of({
     recall: (key) =>
       Effect.zipWith(

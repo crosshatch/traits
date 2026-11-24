@@ -1,7 +1,7 @@
 import { Effect, FileSystem, Path, String } from "effect"
 
 import { TraitCollectionUpdateError } from "../TraitCollection/TraitCollections.ts"
-import type { TraitSource } from "../TraitCollection/TraitSource.ts"
+import type { GitTraitSource } from "../TraitCollection/TraitSource.ts"
 import type { TraitSourceId } from "../TraitCollection/TraitSourceId.ts"
 import { runProcess } from "../util/process/runProcess.ts"
 import { LocalPaths } from "./LocalPaths.ts"
@@ -31,10 +31,7 @@ const git = (id: TraitSourceId, args: ReadonlyArray<string>) =>
   )
 
 /** Checks out a Git source's commit in a temporary directory, and returns its directory of traits and the commit. The temporary directory is removed when the scope closes. */
-export const checkout = Effect.fnUntraced(function* (
-  id: TraitSourceId,
-  source: Extract<TraitSource, { readonly git: string }>
-) {
+export const checkout = Effect.fnUntraced(function* (id: TraitSourceId, source: GitTraitSource) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
   const repository = yield* fs.makeTempDirectoryScoped().pipe(

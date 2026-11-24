@@ -43,6 +43,15 @@ export const layer = Effect.gen(function* () {
     Effect.provide(services)
   )
 
+  const declaration = Effect.fnUntraced(function* (id: TraitSourceId) {
+    const declared = yield* sources
+    const source = declared[id]
+    if (source === undefined) {
+      return yield* TraitCollections.TraitCollectionNotFoundError.make({ traitSourceId: id })
+    }
+    return source
+  })
+
   const lock = LocalJsonFile.read(paths.sourcesLock, LockFile).pipe(
     // Nothing has been updated yet until the first update writes the file.
     Effect.catchReason("StorageError", "Missing", () => Effect.succeed<typeof LockFile.Type>({}))
@@ -141,11 +150,7 @@ export const layer = Effect.gen(function* () {
   return TraitCollections.TraitCollections.of({
     sources: sources.pipe(Effect.withSpan("LocalTraitCollections.sources")),
     get: Effect.fn("LocalTraitCollections.get")(function* (id) {
-      const declared = yield* sources
-      const source = declared[id]
-      if (source === undefined) {
-        return yield* TraitCollections.TraitCollectionNotFoundError.make({ traitSourceId: id })
-      }
+      const source = yield* declaration(id)
       const directory = path.join(paths.directory, id)
       const locked = yield* lock
       const entry = locked[id]
@@ -166,14 +171,7 @@ export const layer = Effect.gen(function* () {
       }
       return yield* LocalTraitCollection.get(directory)
     }, Effect.provide(services)),
-    update: Effect.fnUntraced(function* (id) {
-      const declared = yield* sources
-      const source = declared[id]
-      if (source === undefined) {
-        return yield* TraitCollections.TraitCollectionNotFoundError.make({ traitSourceId: id })
-      }
-      return yield* update(id, source)
-    }),
+    update: (id) => Effect.flatMap(declaration(id), (source) => update(id, source)),
     updateAll: Effect.gen(function* () {
       const declared = yield* sources
       const changes = yield* Effect.forEach(

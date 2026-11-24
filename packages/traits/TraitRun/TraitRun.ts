@@ -46,8 +46,7 @@ export const run = Effect.fn("TraitRun.run")(function* <R = never>(options: {
   /** What the run may cost before it asks nothing more; no limit when omitted. Once what the responses report has reached it, what is left is unanswered, and a later run picks up from the answers this one was given. */
   readonly stopAfter?: Budget.Budget | undefined
 }) {
-  const { files } = options
-  const { threshold } = options
+  const { files, threshold } = options
   const segment = options.segmentation === undefined ? whole : yield* options.segmentation
   const spending = options.stopAfter === undefined ? undefined : yield* Budget.spendingOf(options.stopAfter)
   const traits = yield* ResolvedTrait.fromSelections(options.selections)

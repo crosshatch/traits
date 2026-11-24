@@ -40,7 +40,7 @@ const removeStale = Effect.fnUntraced(
 )
 
 /** Moves a file to another path on the same file system in one step, replacing a file that is there. */
-export const move = Effect.fnUntraced(function* (from: string, to: string) {
+const move = Effect.fnUntraced(function* (from: string, to: string) {
   const fs = yield* FileSystem.FileSystem
   yield* fs.rename(from, to).pipe(
     // Windows refuses to replace a file while another process has it open, which a reader does only briefly.
@@ -53,7 +53,7 @@ export const move = Effect.fnUntraced(function* (from: string, to: string) {
 })
 
 /** Writes the contents to a file of the same name in a new staging directory beside the file, and returns its path. It requires a `Scope`: the staging directory is removed when the scope closes, so the staged file must be moved or linked into place before then. Staging directories that an earlier write left behind are cleared away first. */
-export const stage = Effect.fnUntraced(function* (file: string, contents: string) {
+const stage = Effect.fnUntraced(function* (file: string, contents: string) {
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
   const directory = path.dirname(file)

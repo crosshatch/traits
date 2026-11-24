@@ -16,6 +16,8 @@ export const ExpectedUsage = TraitRun.Usage.mapFields(Struct.omit(["outputTokens
   description: "What a run would ask of the model, as far as can be told without asking it."
 })
 
+const expected = (usage: TraitRun.Usage) => Struct.omit(usage, ["outputTokens", "cost"])
+
 /** What a run is expected to cost, worked out without asking the model anything: the least it can come to and the most. Tokens are approximated from the size of each request. */
 export type Estimate = typeof Estimate.Type
 export const Estimate = S.Struct({
@@ -79,8 +81,8 @@ export const estimate = Effect.fn("Estimate.estimate")(function* <R = never>(opt
     traits: least.traits,
     files: least.files.length,
     skipped: least.skipped.length,
-    atLeast: Struct.omit(least.usage, ["outputTokens", "cost"]),
-    atMost: Struct.omit(most.usage, ["outputTokens", "cost"])
+    atLeast: expected(least.usage),
+    atMost: expected(most.usage)
   })
 })
 
