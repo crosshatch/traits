@@ -124,9 +124,10 @@ const output = await Effect.runPromise(
             store.commit(
               pipe(
                 snapshot.traits,
-                Array.filter(({ trait }) => names.includes(trait.name)),
-                Array.map(({ trait, version }) =>
-                  Store.TraitChange.cases.Remove.make({ traitName: trait.name, version })
+                Array.filterMap(({ trait, version }) =>
+                  names.includes(trait.name)
+                    ? Result.succeed(Store.TraitChange.cases.Remove.make({ traitName: trait.name, version }))
+                    : Result.failVoid
                 )
               )
             )

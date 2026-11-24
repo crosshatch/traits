@@ -112,9 +112,10 @@ const writer = (store: TraitStore.TraitStore["Service"]) => ({
       store.commit(
         pipe(
           snapshot.traits,
-          Array.filter(({ trait }) => names.includes(trait.name)),
-          Array.map(({ trait, version }) =>
-            TraitStore.TraitChange.cases.Remove.make({ traitName: trait.name, version })
+          Array.filterMap(({ trait, version }) =>
+            names.includes(trait.name)
+              ? Result.succeed(TraitStore.TraitChange.cases.Remove.make({ traitName: trait.name, version }))
+              : Result.failVoid
           )
         )
       )

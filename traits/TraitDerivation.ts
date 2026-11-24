@@ -1,4 +1,4 @@
-import { Array, Effect, pipe, Schema as S, Semaphore, String } from "effect"
+import { Array, Effect, pipe, Result, Schema as S, Semaphore, String } from "effect"
 import { LanguageModel } from "effect/ai"
 
 import * as Approval from "./_util/Approval.ts"
@@ -293,8 +293,11 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
     ),
     ...pipe(
       options.snapshot.traits,
-      Array.filter(({ trait }) => selectedNames.has(trait.name) && !replacementNames.has(trait.name)),
-      Array.map(({ trait, version }) => TraitStore.TraitChange.cases.Remove.make({ traitName: trait.name, version }))
+      Array.filterMap(({ trait, version }) =>
+        selectedNames.has(trait.name) && !replacementNames.has(trait.name)
+          ? Result.succeed(TraitStore.TraitChange.cases.Remove.make({ traitName: trait.name, version }))
+          : Result.failVoid
+      )
     )
   ])
   return TraitDerivation.cases.Resolved.make({ traits: replacements, instructions: reviewInstructions(replacements) })
