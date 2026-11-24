@@ -9,6 +9,7 @@ import {
   FileSystem,
   flow,
   Layer,
+  Option,
   Path,
   pipe,
   PlatformError,
@@ -19,12 +20,16 @@ import {
   Stream,
   String
 } from "effect"
+import { Digest } from "effect/crypto"
+import { dual } from "effect/Function"
 
+import * as AtomicFile from "./_util/AtomicFile.ts"
 import { ProjectPaths } from "./ProjectPaths.ts"
-import { T } from "./tables/index.ts"
+import { T } from "./tables/traitIndex/index.ts"
 import * as Trait from "./Trait.ts"
-import * as TraitDatabase from "./TraitDatabase.ts"
+import { TraitIndex } from "./TraitIndex.ts"
 import { TraitsContext } from "./TraitsContext.ts"
+import { TraitWriteLock } from "./TraitWriteLock.ts"
 
 export class TraitParseError extends S.TaggedError<TraitParseError>()("TraitParseError", {
   path: S.String,
@@ -85,42 +90,99 @@ export const TraitStoreError = S.Union([
   S.TaggedStruct("EffectDrizzleQueryError", { message: S.String })
 ])
 
+/** SHA-256 of a trait file's exact Markdown text; identifies the version a change was based on. */
+export type ContentHash = typeof ContentHash.Type
+export const ContentHash = S.String.pipe(S.brand("traits/ContentHash"))
+
+export interface StoredTrait {
+  readonly trait: Trait.Trait
+  readonly version: ContentHash
+}
+
+/** Every stored trait, plus a version that changes whenever any trait file does. */
+export interface TraitSnapshot {
+  readonly traits: ReadonlyArray<StoredTrait>
+  readonly version: ContentHash
+}
+
+/** The on-disk state a trait file must still have for a change to apply. */
+export type TraitExpectation = typeof TraitExpectation.Type
+export const TraitExpectation = S.Union([
+  S.TaggedStruct("Absent", {}),
+  S.TaggedStruct("Present", { version: ContentHash })
+]).pipe(S.toTaggedUnion("_tag"))
+
+/** The state `name` had in `snapshot`, for changes based on that snapshot. */
+export const expectation: {
+  (name: Trait.TraitName): (snapshot: TraitSnapshot) => TraitExpectation
+  (snapshot: TraitSnapshot, name: Trait.TraitName): TraitExpectation
+} = dual(2, (snapshot: TraitSnapshot, name: Trait.TraitName): TraitExpectation =>
+  pipe(
+    snapshot.traits,
+    Array.findFirst((stored) => stored.trait.name === name),
+    Option.match({
+      onNone: () => TraitExpectation.cases.Absent.make({}),
+      onSome: ({ version }) => TraitExpectation.cases.Present.make({ version })
+    })
+  )
+)
+
+export type TraitChange = typeof TraitChange.Type
+export const TraitChange = S.Union([
+  S.TaggedStruct("Put", { trait: Trait.Trait, expected: TraitExpectation }),
+  S.TaggedStruct("Remove", { traitName: Trait.TraitName, version: ContentHash })
+]).pipe(S.toTaggedUnion("_tag"))
+
+export class TraitChangedError extends S.TaggedError<TraitChangedError>()("TraitChangedError", {
+  traitNames: S.Array(Trait.TraitName)
+}) {
+  override get message() {
+    return `Traits changed after they were read: ${Array.join(this.traitNames, ", ")}`
+  }
+}
+
 const watchProbePrefix = ".traits-watch-"
 
 /** Markdown is authoritative; watch notifications reconcile only affected files. */
 const make = Effect.gen(function* () {
-  const db = yield* TraitDatabase.TraitDatabase
+  const db = yield* TraitIndex
+  const lock = yield* TraitWriteLock
+  const digest = yield* Digest.Digest
   const fs = yield* FileSystem.FileSystem
   const path = yield* Path.Path
   const { traitsDirectory } = yield* ProjectPaths
   const { asFileRead } = yield* TraitsContext
   yield* fs.makeDirectory(traitsDirectory, { recursive: true })
   const traitPath = (name: Trait.TraitName) => path.join(traitsDirectory, `${name}.md`)
+  const hash = (text: string) =>
+    digest.digestHex(Digest.sha256, new TextEncoder().encode(text)).pipe(Effect.map((hex) => ContentHash.make(hex)))
   const readFile = Effect.fn("TraitStore.readFile")(function* (file: string) {
     const text = yield* fs.readFileString(file)
-    return yield* Trait.parse(text, file).pipe(
+    const trait = yield* Trait.parse(text, file).pipe(
       Effect.mapError((cause) => TraitParseError.make({ path: file, cause })),
       Effect.filterOrFail(
         (trait) => `${trait.name}.md` === path.basename(file),
         (trait) => TraitFilenameMismatchError.make({ path: file, expectedFilename: `${trait.name}.md` })
       )
     )
+    const version = yield* hash(text)
+    return { trait, version } satisfies StoredTrait
   })
-  const readMarkdown = Effect.fn("TraitStore.readMarkdown")((name: Trait.TraitName) =>
-    pipe(
-      name,
-      traitPath,
-      readFile,
+  const absent = TraitExpectation.cases.Absent.make({})
+  // The current on-disk state, read under the write lock for compare-and-swap checks.
+  const readExpectation = (name: Trait.TraitName) =>
+    fs.readFileString(traitPath(name)).pipe(
+      Effect.flatMap((text) =>
+        Effect.map(hash(text), (version): TraitExpectation => TraitExpectation.cases.Present.make({ version }))
+      ),
       Effect.catchTags({
-        PlatformError: (error) =>
-          error.reason._tag === "NotFound" ? TraitNotFoundError.make({ traitName: name }) : error
+        PlatformError: (error) => (error.reason._tag === "NotFound" ? Effect.succeed(absent) : error)
       })
     )
-  )
+  const sameExpectation = S.toEquivalence(TraitExpectation)
   const semaphore = yield* Semaphore.make(1)
   const serialize = semaphore.withPermits(1)
   const table = T.traits
-  const equivalent = S.toEquivalence(Trait.Trait)
   // Generations ensure events arriving during a scan or SQL transaction are not acknowledged early.
   let revision = 0
   let fullRevision = 0
@@ -130,20 +192,23 @@ const make = Effect.gen(function* () {
   const invalidate = Effect.sync(() => {
     fullRevision = ++revision
   })
-  const values = (trait: Trait.Trait) => ({
+  const values = ({ trait, version }: StoredTrait) => ({
     ...trait,
     applicability: trait.applicability ?? null,
-    context: trait.context ?? null
+    context: trait.context ?? null,
+    version
   })
-  const fromRow = (row: T.traits["$inferSelect"]) =>
-    Trait.Trait.make({
+  const fromRow = (row: T.traits["$inferSelect"]): StoredTrait => ({
+    trait: Trait.Trait.make({
       name: Trait.TraitName.make(row.name),
       subject: row.subject,
       requirement: row.requirement,
       ...(row.applicability === null ? {} : { applicability: row.applicability }),
       purpose: row.purpose,
       ...(row.context === null ? {} : { context: row.context })
-    })
+    }),
+    version: ContentHash.make(row.version)
+  })
   const acknowledge = (snapshot: ReadonlyMap<string, number>) => {
     for (const [file, generation] of snapshot) if (dirty.get(file) === generation) dirty.delete(file)
   }
@@ -209,7 +274,8 @@ const make = Effect.gen(function* () {
             if (row !== undefined) removed.push(entry.name)
           } else if (row === undefined) {
             yield* db.insert(table).values(values(entry.document))
-          } else if (!equivalent(fromRow(row), entry.document)) {
+          } else if (row.version !== entry.document.version) {
+            // Unchanged content, including this process's own write-through, needs no SQL.
             yield* db.update(table).set(values(entry.document)).where(eq(table.name, entry.name))
           }
         }),
@@ -241,106 +307,125 @@ const make = Effect.gen(function* () {
     serialize,
     Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.logWarning(cause)))
   )
-  const get = Effect.fn("TraitStore.getIndexed")(function* (name: Trait.TraitName) {
-    yield* ready
-    const rows = yield* db.select().from(table).where(eq(table.name, name))
-    const row = rows[0]
-    return row === undefined ? yield* TraitNotFoundError.make({ traitName: name }) : fromRow(row)
-  })
+  const readIndexed = ready.pipe(
+    Effect.andThen(db.select().from(table).orderBy(table.name)),
+    Effect.map(Array.map(fromRow))
+  )
   const store = {
     refresh,
-    get: flow(get, serialize),
-    ls: Effect.gen(function* () {
+    get: Effect.fn("TraitStore.getIndexed")(function* (name: Trait.TraitName) {
       yield* ready
-      return yield* db
-        .select()
-        .from(table)
-        .orderBy(table.name)
-        .pipe(Effect.map(Array.map(fromRow)))
-    }).pipe(serialize, Effect.withSpan("TraitStore.lsIndexed")),
-    add: Effect.fn("TraitStore.addIndexed")(
-      function* (trait: Trait.Trait) {
+      const rows = yield* db.select().from(table).where(eq(table.name, name))
+      const row = rows[0]
+      return row === undefined ? yield* TraitNotFoundError.make({ traitName: name }) : fromRow(row).trait
+    }, serialize),
+    ls: readIndexed.pipe(
+      Effect.map(Array.map((stored) => stored.trait)),
+      serialize,
+      Effect.withSpan("TraitStore.lsIndexed")
+    ),
+    snapshot: Effect.gen(function* () {
+      const traits = yield* readIndexed
+      const version = yield* hash(JSON.stringify(Array.map(traits, (stored) => [stored.trait.name, stored.version])))
+      return { traits, version } satisfies TraitSnapshot
+    }).pipe(serialize, Effect.withSpan("TraitStore.snapshot")),
+    /**
+     * Applies every change only if each target file is still in its expected state. Files are
+     * staged before taking the worktree write lock, so the lock covers only the checks and the
+     * atomic installs; any mismatch fails with TraitChangedError before anything is written.
+     */
+    commit: Effect.fn("TraitStore.commit")(
+      function* (changes: ReadonlyArray<TraitChange>) {
         yield* ready
-        yield* db
-          .select({ name: table.name })
-          .from(table)
-          .where(eq(table.name, trait.name))
-          .pipe(
-            Effect.filterOrFail(
-              (existing) => existing.length === 0,
-              () => TraitAlreadyExistsError.make({ traitName: trait.name })
-            )
-          )
+        const puts = Array.filter(changes, TraitChange.guards.Put)
+        const removes = Array.filter(changes, TraitChange.guards.Remove)
         yield* Effect.gen(function* () {
-          const directory = yield* fs.makeTempDirectoryScoped({
-            directory: traitsDirectory,
-            prefix: ".traits-write-"
-          })
-          const temporary = path.join(directory, `${trait.name}.md`)
-          yield* fs.writeFileString(temporary, Trait.serialize(trait))
-          yield* fs.link(temporary, traitPath(trait.name)).pipe(
-            Effect.catchTags({
-              PlatformError: (error) =>
-                error.reason._tag === "AlreadyExists" ? TraitAlreadyExistsError.make({ traitName: trait.name }) : error
+          const staged = yield* Effect.forEach(
+            puts,
+            Effect.fnUntraced(function* ({ trait, expected }) {
+              const destination = traitPath(trait.name)
+              const mode = yield* fs.stat(destination).pipe(
+                Effect.map((info) => info.mode),
+                Effect.catchTags({
+                  PlatformError: (error) => (error.reason._tag === "NotFound" ? Effect.undefined : error)
+                })
+              )
+              const contents = Trait.serialize(trait)
+              const temporary = yield* AtomicFile.stage({
+                directory: traitsDirectory,
+                filename: `${trait.name}.md`,
+                contents,
+                mode
+              })
+              const version = yield* hash(contents)
+              return { stored: { trait, version }, expected, destination, temporary }
             })
           )
+          yield* lock.withLock(
+            Effect.gen(function* () {
+              const targets = Array.map(
+                changes,
+                TraitChange.match({
+                  Put: ({ trait, expected }) => ({ traitName: trait.name, expected }),
+                  Remove: ({ traitName, version }) => ({
+                    traitName,
+                    expected: TraitExpectation.cases.Present.make({ version })
+                  })
+                })
+              )
+              const conflicts = yield* Effect.forEach(
+                targets,
+                Effect.fnUntraced(function* ({ traitName, expected }) {
+                  const actual = yield* readExpectation(traitName)
+                  return sameExpectation(expected, actual) ? undefined : traitName
+                })
+              ).pipe(Effect.map(Array.filter(Predicate.isNotUndefined)))
+              if (conflicts.length > 0) return yield* TraitChangedError.make({ traitNames: conflicts })
+              yield* Effect.forEach(
+                staged,
+                ({ stored, expected, destination, temporary }) =>
+                  AtomicFile.install(
+                    temporary,
+                    destination,
+                    TraitExpectation.guards.Absent(expected) ? "create" : "replace"
+                  ).pipe(
+                    Effect.catchTags({
+                      PlatformError: (error) =>
+                        error.reason._tag === "AlreadyExists"
+                          ? TraitChangedError.make({ traitNames: [stored.trait.name] })
+                          : error
+                    })
+                  ),
+                { discard: true }
+              )
+              yield* Effect.forEach(removes, ({ traitName }) => fs.remove(traitPath(traitName)), { discard: true })
+            })
+          )
+          yield* Effect.gen(function* () {
+            yield* Effect.forEach(
+              staged,
+              ({ stored }) =>
+                db
+                  .insert(table)
+                  .values(values(stored))
+                  .onConflictDoUpdate({ target: table.name, set: values(stored) }),
+              { discard: true }
+            )
+            yield* Effect.forEach(
+              Array.chunksOf(
+                Array.map(removes, (change) => change.traitName),
+                100
+              ),
+              (names) => db.delete(table).where(inArray(table.name, names)),
+              { discard: true }
+            )
+          }).pipe(db.$client.withTransaction)
         }).pipe(
           Effect.scoped,
-          Effect.withSpan("TraitStore.addMarkdown"),
+          Effect.provideService(FileSystem.FileSystem, fs),
+          Effect.provideService(Path.Path, path),
           Effect.tapCause(() => invalidate)
         )
-        yield* db
-          .insert(table)
-          .values(values(trait))
-          .pipe(Effect.tapCause(() => invalidate))
-        return trait
-      },
-      Effect.uninterruptible,
-      serialize
-    ),
-    update: Effect.fn("TraitStore.updateIndexed")(
-      function* (trait: Trait.Trait) {
-        yield* get(trait.name)
-        yield* Effect.gen(function* () {
-          yield* readMarkdown(trait.name)
-          const info = yield* fs.stat(traitPath(trait.name))
-          const directory = yield* fs.makeTempDirectoryScoped({
-            directory: traitsDirectory,
-            prefix: ".traits-write-"
-          })
-          const temporary = path.join(directory, `${trait.name}.md`)
-          yield* fs.writeFileString(temporary, Trait.serialize(trait), { mode: info.mode })
-          yield* fs.rename(temporary, traitPath(trait.name))
-        }).pipe(
-          Effect.scoped,
-          Effect.withSpan("TraitStore.updateMarkdown"),
-          Effect.tapCause(() => invalidate)
-        )
-        yield* db
-          .update(table)
-          .set(values(trait))
-          .where(eq(table.name, trait.name))
-          .pipe(Effect.tapCause(() => invalidate))
-      },
-      Effect.uninterruptible,
-      serialize
-    ),
-    rm: Effect.fn("TraitStore.rmIndexed")(
-      function* (names: ReadonlyArray<Trait.TraitName>) {
-        yield* ready
-        yield* Effect.forEach(names, get, { discard: true })
-        yield* Effect.forEach(
-          names,
-          flow(
-            readMarkdown,
-            Effect.flatMap((trait) => fs.remove(traitPath(trait.name)))
-          ),
-          { discard: true }
-        ).pipe(Effect.tapCause(() => invalidate))
-        yield* db
-          .delete(table)
-          .where(inArray(table.name, names))
-          .pipe(Effect.tapCause(() => invalidate))
       },
       Effect.uninterruptible,
       serialize

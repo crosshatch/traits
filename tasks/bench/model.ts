@@ -64,7 +64,6 @@ export const Measurement = S.Struct({
 export type WorkerResult = typeof WorkerResult.Type
 export const WorkerResult = S.Struct({
   count: S.Int.check(S.isGreaterThan(0)),
-  databaseBytes: S.Int.check(S.isGreaterThanOrEqualTo(0)),
   fixtureBytes: S.Int.check(S.isGreaterThan(0)),
   matches: S.Int.check(S.isGreaterThanOrEqualTo(0)),
   memory: S.Struct({ heapUsedDelta: S.Finite, rssDelta: S.Finite }),

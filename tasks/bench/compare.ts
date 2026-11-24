@@ -241,7 +241,7 @@ export const compare = Effect.fn("benchmarks.compare")(function* (options: Model
             }
           )
           yield* Console.log(
-            `${fixture.label} ${variant}: median SQLite bytes ${Stats.median(Array.map(head, (run) => run.databaseBytes))}, RSS delta ${Stats.median(Array.map(head, (run) => run.memory.rssDelta))}`
+            `${fixture.label} ${variant}: median RSS delta ${Stats.median(Array.map(head, (run) => run.memory.rssDelta))}`
           )
           return rows
         })

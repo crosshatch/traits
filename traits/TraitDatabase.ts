@@ -15,21 +15,20 @@ export class TraitDatabase extends Context.Service<
 
 export class SchemaPushError extends S.TaggedError<SchemaPushError>()("SchemaPushError", { cause: S.Defect() }) {}
 
-const make = Effect.fnUntraced(function* (url: string) {
+/** Opens a libSQL client and pushes the complete schema, dropping tables the schema no longer defines. */
+export const makeClient = Effect.fnUntraced(function* (url: string, schema: Record<string, unknown>) {
   const client = yield* LibsqlClient.make({ url })
+  // Contended writers wait for the lock rather than failing; TraitWriteLock relies on this.
   yield* client.unsafe("PRAGMA busy_timeout = 10000")
   yield* client.unsafe("PRAGMA journal_mode = WAL")
   yield* client.unsafe("PRAGMA foreign_keys = ON")
-  const db = yield* LibsqlDrizzle.makeWithDefaults({ relations }).pipe(
-    Effect.provideService(LibsqlClient.LibsqlClient, client)
-  )
   // Serialize complete-schema initialization across collector, MCP, and query processes.
   yield* Effect.gen(function* () {
     const services = yield* Effect.context<never>()
     const runPromise = Effect.runPromiseWith(services)
     yield* Effect.tryPromise({
       try: (signal) =>
-        pushSchema(T, {
+        pushSchema(schema, {
           query: <T>(query: string, params?: Array<unknown>) =>
             client.unsafe(query, params).pipe(
               Effect.map((rows) => Array.fromIterable(rows) as Array<T>),
@@ -44,7 +43,14 @@ const make = Effect.fnUntraced(function* (url: string) {
       catch: (cause) => SchemaPushError.make({ cause })
     })
   }).pipe(client.withTransaction)
-  return db
+  return client
+})
+
+const make = Effect.fnUntraced(function* (url: string) {
+  const client = yield* makeClient(url, T)
+  return yield* LibsqlDrizzle.makeWithDefaults({ relations }).pipe(
+    Effect.provideService(LibsqlClient.LibsqlClient, client)
+  )
 })
 
 /** Isolated storage for tests and benchmarks; CLI processes use layerLocal. */

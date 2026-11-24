@@ -7,5 +7,7 @@ export const traits = sqliteTable("traits", {
   requirement: text().notNull(),
   applicability: text(),
   purpose: text().notNull(),
-  context: text()
+  context: text(),
+  // Content hash of the Markdown file the row was indexed from.
+  version: text().notNull()
 })
