@@ -1,5 +1,5 @@
 ---
-"traits": minor
+"traits": patch
 ---
 
 Carry out trait preludes. A trait's `prelude` is now handed to an agent named
