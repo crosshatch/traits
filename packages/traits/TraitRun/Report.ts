@@ -93,7 +93,7 @@ export const format = (report: typeof Report.Encoded): string => {
         ? [`Files skipped for holding no text: ${report.skipped.length}.`]
         : []),
       ...(unasked > 0
-        ? [`Checks not asked, to stay within the budget: ${unasked}. Run again to carry on from here.`]
+        ? [`Checks not asked, the run having reached its budget: ${unasked}. Run again to carry on from here.`]
         : []),
       `Requests: ${report.usage.requests}. Tokens: ${report.usage.inputTokens} in, ${report.usage.outputTokens} out.${report.usage.cost === undefined ? "" : ` Cost: ${dollars(report.usage.cost)}.`} Answers remembered from earlier runs: ${report.usage.remembered}.`
     ],

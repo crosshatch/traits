@@ -16,6 +16,7 @@ import { WorkspaceTraitCollection } from "../TraitCollection/WorkspaceTraitColle
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitSelectionId, TraitSelectionNotFoundError, TraitSelections } from "../TraitSelection/TraitSelections.ts"
+import { Probability } from "../util/Probability.ts"
 
 const matchOf = (match: string | Array.NonEmptyReadonlyArray<string>) =>
   typeof match === "string"
@@ -197,5 +198,7 @@ export const answer = ({ assertion, subject, target }: Question) =>
     : assertion !== undefined && pipe(target, String.includes("BAD"))
       ? 0.2
       : 0.8
+
+export const half = Probability.make(0.5)
 
 export const name = (text: string) => ({ name: TraitName.make(text) })

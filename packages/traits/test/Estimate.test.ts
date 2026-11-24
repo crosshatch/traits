@@ -3,14 +3,14 @@ import { Effect, Schema as S } from "effect"
 
 import * as Estimate from "../Estimate/Estimate.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
-import { answer, braces, name, workspace } from "./_memoryWorkspace.ts"
+import { answer, braces, half, name, workspace } from "./_memoryWorkspace.ts"
 
 const files = { "a.ts": "if (x) { y() }", "b.ts": "if (x) y() // BAD", "README.md": "# Title" }
 
 it.effect("gives the least and the most a run can ask, without asking the model or remembering anything", () =>
   Effect.gen(function* () {
     const { layer, project, requests } = yield* workspace({ files, own: [braces], answer })
-    const options = { files: project, selections: [], threshold: 0.5 }
+    const options = { files: project, selections: [], threshold: half }
     const before = yield* Estimate.estimate(options).pipe(Effect.provide(layer))
     const asked = yield* requests
     expect(asked).toEqual([])

@@ -7,6 +7,7 @@ import * as PlanningModel from "../TraitRun/PlanningModel.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitReference } from "../TraitSelection/TraitReference.ts"
 import type { TraitSelectionId } from "../TraitSelection/TraitSelectionId.ts"
+import type { Probability } from "../util/Probability.ts"
 
 /** What a run would ask of the model, as far as can be told without asking it. */
 export type ExpectedUsage = typeof ExpectedUsage.Type
@@ -45,7 +46,7 @@ export const estimate = Effect.fn("Estimate.estimate")(function* <R = never>(opt
   readonly segmentation?: Effect.Effect<TraitRun.Segmentation, StorageError, R> | undefined
   readonly selections: ReadonlyArray<TraitSelectionId>
   /** The probability, from 0 to 1, at or above which a trait applies to what is checked, which decides what the remembered answers lead to. */
-  readonly threshold: number
+  readonly threshold: Probability
 }) {
   const { files, selections, threshold } = options
   // Got ready once, so that both walks through the run divide the files the same way.

@@ -1,11 +1,11 @@
-import { Array, Effect, Option, pipe, Result, Schema as S, String } from "effect"
+import { Array, Effect, Option, pipe, Result, String } from "effect"
 
 import type { InputRange } from "../Input/InputRange.ts"
 import type { InputSource } from "../Input/InputSource.ts"
 import type { StorageError } from "../StorageError.ts"
 import * as ResolvedTrait from "../TraitSelection/ResolvedTrait.ts"
 import type { TraitSelectionId } from "../TraitSelection/TraitSelectionId.ts"
-import { Probability } from "../util/Probability.ts"
+import type { Probability } from "../util/Probability.ts"
 import * as Budget from "./Budget.ts"
 import { FileReport, Report } from "./Report.ts"
 import { candidatesOf, checkFile } from "./TraitCheck.ts"
@@ -42,15 +42,14 @@ export const run = Effect.fn("TraitRun.run")(function* <R = never>(options: {
   readonly segmentation?: Effect.Effect<Segmentation, StorageError, R> | undefined
   readonly selections: ReadonlyArray<TraitSelectionId>
   /** The probability, from 0 to 1, at or above which a trait applies to what is checked, and below which its assertion counts as violated. */
-  readonly threshold: number
-  /** The most the run may use; no limit when omitted. A request is only made while what it is expected to use still fits, so what does not fit is left unanswered, and a later run picks up from the answers this one was given. */
-  readonly budget?: Budget.Budget | undefined
+  readonly threshold: Probability
+  /** What the run may cost before it asks nothing more; no limit when omitted. Once what the responses report has reached it, what is left is unanswered, and a later run picks up from the answers this one was given. */
+  readonly stopAfter?: Budget.Budget | undefined
 }) {
   const { files } = options
-  // Turned away before anything is asked, where it would otherwise only be found out when the report is made.
-  const threshold = yield* S.decodeEffect(Probability)(options.threshold)
+  const { threshold } = options
   const segment = options.segmentation === undefined ? whole : yield* options.segmentation
-  const spending = options.budget === undefined ? undefined : yield* Budget.spendingOf(options.budget)
+  const spending = options.stopAfter === undefined ? undefined : yield* Budget.spendingOf(options.stopAfter)
   const traits = yield* ResolvedTrait.fromSelections(options.selections)
   // Worked out once for the run, since every file is checked against the same traits.
   const candidates = yield* candidatesOf(traits)

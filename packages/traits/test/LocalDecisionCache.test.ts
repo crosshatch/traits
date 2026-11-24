@@ -7,10 +7,11 @@ import * as LocalDecisionCache from "../local/LocalDecisionCache.ts"
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import { DecisionKey } from "../TraitRun/DecisionKey.ts"
 import { QuestionId } from "../TraitRun/QuestionId.ts"
+import { Probability } from "../util/Probability.ts"
 import { git, localPaths } from "./_localWorkspace.ts"
 
 const key = DecisionKey.make("key")
-const answers = { [QuestionId.make("question")]: 0.9 }
+const answers = { [QuestionId.make("question")]: Probability.make(0.9) }
 const decision = { provider: "openai", model: "org/decision" }
 
 /** Remembers answers through a cache of the workspace with this traits directory, built anew, as each run builds it. */
@@ -62,7 +63,7 @@ layer(NodeServices.layer)((it) => {
       expect(created).toBe(false)
 
       yield* remember(traits, answers)
-      yield* remember(traits, { [QuestionId.make("another")]: 0.1 }, existing)
+      yield* remember(traits, { [QuestionId.make("another")]: Probability.make(0.1) }, existing)
       const kept = yield* recall(traits, existing)
       expect(kept).toEqual(answers)
     })
@@ -89,7 +90,10 @@ layer(NodeServices.layer)((it) => {
       expect(read).toEqual(answers)
 
       // Its own answer to a question takes the place of that checkout's, which is left as it was.
-      const told = { [QuestionId.make("question")]: 0.2, [QuestionId.make("another")]: 0.1 }
+      const told = {
+        [QuestionId.make("question")]: Probability.make(0.2),
+        [QuestionId.make("another")]: Probability.make(0.1)
+      }
       yield* remember(linked, told)
       const kept = yield* recall(linked)
       expect(kept).toEqual(told)

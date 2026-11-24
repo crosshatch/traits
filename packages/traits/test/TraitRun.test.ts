@@ -10,7 +10,7 @@ import * as DecisionKey from "../TraitRun/DecisionKey.ts"
 import * as QuestionId from "../TraitRun/QuestionId.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitSelectionId, TraitSelectionNotFoundError } from "../TraitSelection/TraitSelections.ts"
-import { answer, braces, name, readme, trait, workspace } from "./_memoryWorkspace.ts"
+import { answer, braces, half, name, readme, trait, workspace } from "./_memoryWorkspace.ts"
 
 describe("run", () => {
   it.effect(
@@ -22,7 +22,7 @@ describe("run", () => {
           own: [braces, readme],
           answer
         })
-        const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+        const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
           Effect.provide(layer)
         )
         expect(report).toEqual({
@@ -113,7 +113,7 @@ describe("run", () => {
           own: [everywhere, guidance],
           answer
         })
-        const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+        const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
           Effect.provide(layer)
         )
         expect(report.traits).toEqual([name("no-secrets")])
@@ -144,7 +144,7 @@ describe("run", () => {
         answer
       })
       const ids = [TraitSelectionId.make("ci"), TraitSelectionId.make("docs")]
-      const report = yield* TraitRun.run({ files: project, selections: ids, threshold: 0.5 }).pipe(
+      const report = yield* TraitRun.run({ files: project, selections: ids, threshold: half }).pipe(
         Effect.provide(layer)
       )
       expect(report.traits).toEqual([
@@ -161,7 +161,7 @@ describe("run", () => {
 
       const missing = TraitSelectionId.make("nightly")
       const error = yield* Effect.flip(
-        TraitRun.run({ files: project, selections: [missing], threshold: 0.5 }).pipe(Effect.provide(layer))
+        TraitRun.run({ files: project, selections: [missing], threshold: half }).pipe(Effect.provide(layer))
       )
       expect(error).toEqual(TraitSelectionNotFoundError.make({ traitSelectionId: missing }))
     })
@@ -176,7 +176,7 @@ describe("run", () => {
         selections: { ci: ["always-brace", "concise-readme"], default: ["concise-readme"] },
         answer
       })
-      const report = yield* TraitRun.run({ files: declared.project, selections: [], threshold: 0.5 }).pipe(
+      const report = yield* TraitRun.run({ files: declared.project, selections: [], threshold: half }).pipe(
         Effect.provide(declared.layer)
       )
       expect(report.traits).toEqual([name("concise-readme")])
@@ -188,24 +188,12 @@ describe("run", () => {
         answer
       })
       const error = yield* Effect.flip(
-        TraitRun.run({ files: undeclared.project, selections: [], threshold: 0.5 }).pipe(
+        TraitRun.run({ files: undeclared.project, selections: [], threshold: half }).pipe(
           Effect.provide(undeclared.layer)
         )
       )
       expect(error).toEqual(TraitSelectionNotFoundError.make({ traitSelectionId: TraitSelectionId.make("default") }))
       const made = yield* undeclared.requests
-      expect(made).toEqual([])
-    })
-  )
-
-  it.effect("turns away a threshold that is not a probability before asking anything", () =>
-    Effect.gen(function* () {
-      const { layer, project, requests } = yield* workspace({ files: { "a.ts": "if (x) y()" }, own: [braces], answer })
-      const error = yield* Effect.flip(
-        TraitRun.run({ files: project, selections: [], threshold: 2 }).pipe(Effect.provide(layer))
-      )
-      expect(error._tag).toBe("SchemaError")
-      const made = yield* requests
       expect(made).toEqual([])
     })
   )
@@ -220,7 +208,9 @@ describe("run", () => {
         })
       )
       const { layer, project, requests } = yield* workspace({ files: { "a.ts": "if (x) { y() }" }, own: many, answer })
-      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
+        Effect.provide(layer)
+      )
       expect(Array.map(report.files[0]?.checks ?? [], (check) => check.trait.name)).toEqual(
         Array.map(many, ({ name }) => name)
       )
@@ -248,7 +238,9 @@ describe("run", () => {
         own: shared,
         answer
       })
-      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
+        Effect.provide(layer)
+      )
       expect(TraitRun.tally(report)).toEqual({ NotApplicable: 0, Holds: 3, Violated: 0, NotAssessed: 0 })
       const made = yield* requests
       expect(Array.map(made, (questions) => questions.length)).toEqual([1, 3])
@@ -263,7 +255,9 @@ describe("run", () => {
         answer: (question) => (question.subject === "README files." ? undefined : answer(question)),
         fails: Array.some(({ assertion, target }) => assertion !== undefined && pipe(target, String.includes("DOWN")))
       })
-      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
+        Effect.provide(layer)
+      )
       const verdicts = Array.map(report.files, ({ checks, file }) => [
         file,
         Array.map(checks, ({ verdict }) => verdict)
@@ -290,7 +284,7 @@ describe("run", () => {
           own: [braces],
           answer: ({ subject }) => (subject === undefined ? probability : 0.5)
         })
-        const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+        const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
           Effect.provide(layer)
         )
         expect(report.files[0]?.checks[0]?.verdict).toBe(verdict)
@@ -310,7 +304,7 @@ describe("run", () => {
         { start: 18, end: 35 },
         { start: 36, end: 50 }
       ])
-      const report = yield* TraitRun.run({ files: project, segmentation, selections: [], threshold: 0.5 }).pipe(
+      const report = yield* TraitRun.run({ files: project, segmentation, selections: [], threshold: half }).pipe(
         Effect.provide(layer)
       )
       const applies = { _tag: "Answered", probability: 0.9 }
@@ -381,7 +375,7 @@ describe("run", () => {
         answer
       })
       const segmentation = Effect.succeed((_: string, text: string) => segment(text))
-      const report = yield* TraitRun.run({ files: project, segmentation, selections: [], threshold: 0.5 }).pipe(
+      const report = yield* TraitRun.run({ files: project, segmentation, selections: [], threshold: half }).pipe(
         Effect.provide(layer)
       )
       expect(report.files[0]?.checks).toEqual([
@@ -408,7 +402,9 @@ describe("run", () => {
         own: [scripts, readme],
         answer
       })
-      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
+        Effect.provide(layer)
+      )
       const checked = Array.map(report.files, ({ checks, file }) => [
         file,
         Array.map(checks, (check) => check.trait.name)
@@ -441,7 +437,9 @@ describe("run", () => {
         own: [scripts],
         answer
       })
-      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
+        Effect.provide(layer)
+      )
       expect(Array.map(report.files, ({ checks, file }) => [file, checks.length])).toEqual([
         ["src/a.ts", 1],
         ["a.ts", 0],
@@ -454,7 +452,7 @@ describe("run", () => {
     Effect.gen(function* () {
       const files: Record<string, string> = { "a.ts": "if (x) { y() }", "b.ts": "if (x) y() // BAD" }
       const { layer, project, requests } = yield* workspace({ files, own: [braces, readme], answer })
-      const run = TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const run = TraitRun.run({ files: project, selections: [], threshold: half }).pipe(Effect.provide(layer))
 
       const first = yield* run
       expect(first.usage).toEqual({ requests: 4, inputTokens: 40, outputTokens: 4, remembered: 0 })
@@ -487,7 +485,7 @@ describe("run", () => {
         answer,
         fails: () => down
       })
-      const run = TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const run = TraitRun.run({ files: project, selections: [], threshold: half }).pipe(Effect.provide(layer))
       const failed = yield* run
       expect(TraitRun.tally(failed)).toEqual({ NotApplicable: 0, Holds: 0, Violated: 0, NotAssessed: 1 })
       down = false
@@ -510,7 +508,7 @@ describe("run", () => {
         { start: 0, end: 17 },
         { start: 19, end: 36 }
       ])
-      const run = TraitRun.run({ files: project, segmentation, selections: [], threshold: 0.5 }).pipe(
+      const run = TraitRun.run({ files: project, segmentation, selections: [], threshold: half }).pipe(
         Effect.provide(layer)
       )
       const report = yield* run
@@ -550,7 +548,7 @@ describe("run", () => {
         })
       })
       yield* Effect.gen(function* () {
-        yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+        yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
           Effect.provideService(DecisionModel.DecisionModel, model)
         )
         const { recall } = yield* DecisionCache.DecisionCache
@@ -584,7 +582,7 @@ describe("run", () => {
   it.effect("carries on, and says so, when what is remembered cannot be read or added to", () =>
     Effect.gen(function* () {
       const { layer, project } = yield* workspace({ files: { "a.ts": "if (x) { y() }" }, own: [braces], answer })
-      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
         Effect.provideService(DecisionCache.DecisionCache, {
           recall: (key) => StorageError.make({ location: key, reason: { _tag: "Unreadable" } }),
           remember: (key) => StorageError.make({ location: key, reason: { _tag: "Unwritable" } })
@@ -605,7 +603,7 @@ describe("run", () => {
       const recalled = yield* Ref.make<ReadonlyArray<string>>([])
       yield* Effect.gen(function* () {
         const { recall, remember } = yield* DecisionCache.DecisionCache
-        yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+        yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
           Effect.provideService(DecisionCache.DecisionCache, {
             recall: (key) => Effect.andThen(Ref.update(recalled, Array.append<string>(key)), recall(key)),
             remember
@@ -625,7 +623,9 @@ describe("run", () => {
         own: [braces, readme],
         answer: (question) => (question.subject === "README files." ? undefined : answer(question))
       })
-      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: half }).pipe(
+        Effect.provide(layer)
+      )
       const encoded = yield* S.encodeEffect(TraitRun.Report)(report)
       expect(TraitRun.format(encoded)).toBe(
         pipe(
@@ -652,71 +652,53 @@ describe("run", () => {
   describe("with a budget", () => {
     const files = { "a.ts": "if (x) { y() }", "b.ts": "if (x) y() // BAD", "README.md": "# Title" }
 
-    it.effect("keeps a run within its token budget, leaving what does not fit unasked for a later run", () =>
+    it.effect("asks nothing more once the run has cost its budget, leaving the rest unasked for a later run", () =>
       Effect.gen(function* () {
-        const tokens = 1_000_000
-        const { layer, project, requests } = yield* workspace({ files, own: [braces], answer, tokens })
-        const options = { files: project, selections: [], threshold: 0.5 }
+        const { layer, project, requests } = yield* workspace({ files, own: [braces], answer, cost: 0.25 })
+        const options = { files: project, selections: [], threshold: half }
 
-        // Not even the smallest request fits.
-        const none = yield* TraitRun.run({ ...options, budget: { tokens: 1 } }).pipe(Effect.provide(layer))
-        expect(none.usage.requests).toBe(0)
-        expect(TraitRun.tally(none)).toEqual({ NotApplicable: 0, Holds: 0, Violated: 0, NotAssessed: 3 })
-        expect(none.files[0]?.checks[0]?.applies).toEqual({
+        // The cost is only added up as requests are answered, so what is asked is what it takes to reach the budget.
+        const some = yield* TraitRun.run({ ...options, stopAfter: { dollars: 0.3 } }).pipe(Effect.provide(layer))
+        expect(some.usage).toMatchObject({ requests: 2, cost: 0.5 })
+        expect(TraitRun.tally(some).NotAssessed).toBeGreaterThan(0)
+        const unasked = pipe(
+          some.files,
+          Array.flatMap(({ checks }) => checks),
+          Array.flatMap(({ applies, holds }) => {
+            const last = holds ?? applies
+            return last?._tag === "Unanswered" ? [last] : []
+          })
+        )
+        expect(unasked[0]).toEqual({
           _tag: "Unanswered",
           reason: "OverBudget",
-          description: "It was not asked, to stay within the budget of 1 tokens."
+          description: "It was not asked: the run had cost $0.5 by then, which reached the $0.3 it was to stop after."
         })
-        const asked = yield* requests
-        expect(asked).toEqual([])
-        const encoded = yield* S.encodeEffect(TraitRun.Report)(none)
-        expect(TraitRun.format(encoded)).toBe(
-          pipe(
-            `
-            |Files checked: 3, against 1 traits at a threshold of 0.5.
-            |Checks: 0 violated, 3 not assessed, 0 held, 0 did not apply.
-            |Checks not asked, to stay within the budget: 3. Run again to carry on from here.
-            |Requests: 0. Tokens: 0 in, 0 out. Answers remembered from earlier runs: 0.
-            `,
-            String.stripMargin,
-            String.trim
-          )
-        )
+        const encoded = yield* S.encodeEffect(TraitRun.Report)(some)
+        expect(TraitRun.format(encoded)).toContain("Checks not asked, the run having reached its budget")
+        expect((yield* requests).length).toBe(2)
 
-        // What the first requests are reported to have used leaves no room for the rest, and their answers are kept.
-        const some = yield* TraitRun.run({ ...options, budget: { tokens } }).pipe(Effect.provide(layer))
-        expect(some.usage.requests).toBeGreaterThan(0)
-        expect(some.usage.requests).toBeLessThan(5)
-        expect(TraitRun.tally(some).NotAssessed).toBeGreaterThan(0)
-
-        // A run with room carries on from what was kept.
+        // A run with no budget carries on from what was kept.
         const all = yield* TraitRun.run(options).pipe(Effect.provide(layer))
         expect(TraitRun.tally(all)).toEqual({ NotApplicable: 1, Holds: 1, Violated: 1, NotAssessed: 0 })
         expect(all.usage.requests + some.usage.requests).toBe(5)
       })
     )
 
-    it.effect("adds up what the provider says its requests cost, and keeps a run within a budget in dollars", () =>
+    it.effect("adds up what the provider says its requests cost, and stops asking when it reports none", () =>
       Effect.gen(function* () {
         const priced = yield* workspace({ files, own: [braces], answer, cost: 0.25 })
-        const options = { files: priced.project, selections: [], threshold: 0.5 }
-        const report = yield* TraitRun.run(options).pipe(Effect.provide(priced.layer))
+        const options = { files: priced.project, selections: [], threshold: half }
+        const report = yield* TraitRun.run({ ...options, stopAfter: { dollars: 100 } }).pipe(
+          Effect.provide(priced.layer)
+        )
         expect(report.usage).toMatchObject({ requests: 5, cost: 1.25 })
         const encoded = yield* S.encodeEffect(TraitRun.Report)(report)
         expect(TraitRun.format(encoded)).toContain("Requests: 5. Tokens: 50 in, 5 out. Cost: $1.25. Answers remembered")
 
-        // What a token costs is only known once a request has been answered, so the first ones are let through.
-        const limited = yield* workspace({ files, own: [braces], answer, cost: 0.25 })
-        const within = yield* TraitRun.run({ ...options, files: limited.project, budget: { dollars: 0.3 } }).pipe(
-          Effect.provide(limited.layer)
-        )
-        expect(within.usage.requests).toBeGreaterThan(0)
-        expect(within.usage.requests).toBeLessThan(5)
-        expect(TraitRun.tally(within).NotAssessed).toBeGreaterThan(0)
-
-        // A provider that reports no cost gives a budget in dollars nothing to go by, so the run stops asking.
+        // A provider that reports no cost gives a budget nothing to go by, so the run stops asking.
         const unpriced = yield* workspace({ files, own: [braces], answer })
-        const blind = yield* TraitRun.run({ ...options, files: unpriced.project, budget: { dollars: 100 } }).pipe(
+        const blind = yield* TraitRun.run({ ...options, files: unpriced.project, stopAfter: { dollars: 100 } }).pipe(
           Effect.provide(unpriced.layer)
         )
         expect(blind.usage.cost).toBeUndefined()
@@ -729,9 +711,7 @@ describe("run", () => {
             return last?._tag === "Unanswered" ? [last.description] : []
           })
         )
-        expect(unasked).toContain(
-          "It was not asked: the provider reports no cost for the budget of $100 to be kept by."
-        )
+        expect(unasked).toContain("It was not asked: the provider reports no cost for the $100 to stop after to go by.")
       })
     )
   })

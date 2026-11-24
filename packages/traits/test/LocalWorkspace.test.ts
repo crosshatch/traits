@@ -10,6 +10,7 @@ import * as LocalRun from "../local/LocalRun.ts"
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { configText, git, localPaths } from "./_localWorkspace.ts"
+import { half } from "./_memoryWorkspace.ts"
 
 const traitText = (name: string, subject: string) =>
   `---\nname: ${name}\nsubject: ${subject}\nassertion: It holds.\npurpose: Why.\n---\n`
@@ -70,7 +71,7 @@ layer(
         // The layers are built once here, as a host that stays up between runs would have them, and each run is handed what the configuration says by then.
         const run = Effect.gen(function* () {
           const { files, segmentation } = yield* LocalRun.prepare
-          return yield* TraitRun.run({ files, segmentation, selections: [], threshold: 0.5 })
+          return yield* TraitRun.run({ files, segmentation, selections: [], threshold: half })
         }).pipe(Effect.provide(services))
 
         const first = yield* run

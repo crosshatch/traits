@@ -7,7 +7,7 @@ import { matchesFile } from "../Trait/TraitMatch.ts"
 import type { TraitSubject } from "../Trait/TraitSubject.ts"
 import type { ResolvedTrait } from "../TraitSelection/ResolvedTrait.ts"
 import { TraitReference } from "../TraitSelection/TraitReference.ts"
-import { Probability } from "../util/Probability.ts"
+import type { Probability } from "../util/Probability.ts"
 import { ask } from "./Asking.ts"
 import * as AssertionQuestion from "./AssertionQuestion.ts"
 import * as Evidence from "./Evidence.ts"
@@ -52,7 +52,7 @@ export const TraitCheck = S.Struct({
   verdict: Verdict
 }).annotate({ description: "The check of one trait against one file, or against one segment of it." })
 
-const isAtLeast = (outcome: Outcome, threshold: number) =>
+const isAtLeast = (outcome: Outcome, threshold: Probability) =>
   outcome._tag === "Answered" && outcome.probability >= threshold
 
 /** A question, with the ID it goes by among those remembered about the same evidence. */
@@ -139,14 +139,14 @@ const match = Effect.fnUntraced(function* (candidates: ReadonlyArray<Candidate>,
   return { matched, usage }
 })
 
-const applies = (threshold: number) => (candidate: Matched) =>
+const applies = (threshold: Probability) => (candidate: Matched) =>
   candidate.applies === undefined || isAtLeast(candidate.applies, threshold)
 
 /** Asks whether the assertions of candidates that apply to the evidence hold for it, and returns a check for each. */
 const assert = Effect.fnUntraced(function* (options: {
   readonly applicable: ReadonlyArray<Matched>
   readonly evidence: Evidence.Evidence
-  readonly threshold: number
+  readonly threshold: Probability
 }) {
   const { evidence, threshold } = options
   const { outcome, usage } = yield* ask({
@@ -174,7 +174,7 @@ const assert = Effect.fnUntraced(function* (options: {
 /** The checks of candidates that what was checked was not found to match: not applicable, or not assessed when the model did not say. */
 const unmatched = (options: {
   readonly matched: ReadonlyArray<Matched>
-  readonly threshold: number
+  readonly threshold: Probability
 }): ReadonlyArray<Positioned> =>
   Array.flatMap(options.matched, (candidate) =>
     candidate.applies === undefined || isAtLeast(candidate.applies, options.threshold)
@@ -196,7 +196,7 @@ const check = Effect.fnUntraced(function* (options: {
   readonly candidates: ReadonlyArray<Candidate>
   readonly input: Input.Input
   readonly root: URL
-  readonly threshold: number
+  readonly threshold: Probability
 }) {
   const { threshold } = options
   // Both questions are about the same evidence, and what they are answered is remembered by it.
@@ -228,11 +228,15 @@ export const checkInput = Effect.fn("TraitRun.checkInput")(function* (options: {
   /** The URL of the workspace root, which the locations shown to the model are made relative to. */
   readonly root: URL
   /** The probability, from 0 to 1, at or above which a trait applies, and below which its assertion counts as violated. */
-  readonly threshold: number
+  readonly threshold: Probability
 }) {
-  const threshold = yield* S.decodeEffect(Probability)(options.threshold)
   const candidates = yield* candidatesOf(options.traits)
-  const { checks, usage } = yield* check({ candidates, input: options.input, root: options.root, threshold })
+  const { checks, usage } = yield* check({
+    candidates,
+    input: options.input,
+    root: options.root,
+    threshold: options.threshold
+  })
   return { checks: inOrder(checks), usage }
 })
 
@@ -251,7 +255,7 @@ export const checkFile = Effect.fnUntraced(function* (options: {
   /** The URL of the workspace root, which the locations shown to the model are made relative to. */
   readonly root: URL
   /** The probability at or above which a trait applies, and below which its assertion counts as violated. */
-  readonly threshold: number
+  readonly threshold: Probability
 }) {
   const { root, source, threshold } = options
   const candidates = Array.filter(options.candidates, (candidate) => candidate.matchesFile(options.file))

@@ -3,7 +3,7 @@ import { Array, Effect } from "effect"
 
 import * as Input from "../Input/Input.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
-import { answer, braces, name, readme, workspace } from "./_memoryWorkspace.ts"
+import { answer, braces, half, name, readme, workspace } from "./_memoryWorkspace.ts"
 
 const root = new URL("file:///workspace/")
 const traits = [
@@ -19,7 +19,7 @@ it.effect("checks one input against the traits it is given, asking only about th
       { uri: new URL("src/a.ts", root), text: "const x = 1\nif (x) y() // BAD\n" },
       { start: 12, end: 29 }
     )
-    const { checks, usage } = yield* TraitRun.checkInput({ traits, input, root, threshold: 0.5 }).pipe(
+    const { checks, usage } = yield* TraitRun.checkInput({ traits, input, root, threshold: half }).pipe(
       Effect.provide(layer)
     )
     expect(checks).toEqual([
@@ -34,10 +34,5 @@ it.effect("checks one input against the traits it is given, asking only about th
     expect(usage).toMatchObject({ requests: 2, remembered: 0 })
     const asked = yield* requests
     expect(Array.dedupe(Array.map(Array.flatten(asked), ({ target }) => target))).toEqual(["if (x) y() // BAD"])
-
-    const error = yield* Effect.flip(
-      TraitRun.checkInput({ traits, input, root, threshold: -0.5 }).pipe(Effect.provide(layer))
-    )
-    expect(error._tag).toBe("SchemaError")
   })
 )

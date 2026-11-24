@@ -3,6 +3,7 @@ import type { AiError, Decision } from "effect/ai"
 import type { Digest } from "effect/crypto"
 
 import type { StorageError } from "../StorageError.ts"
+import { Probability } from "../util/Probability.ts"
 import * as Budget from "./Budget.ts"
 import { type Answers, DecisionCache } from "./DecisionCache.ts"
 import type { DecisionKey } from "./DecisionKey.ts"
@@ -20,7 +21,7 @@ const toOutcome = (outcome: Decision.Outcome<Decision.Probability> | undefined):
   outcome === undefined
     ? missing
     : Result.match(outcome, {
-        onSuccess: ({ probability }): Outcome => ({ _tag: "Answered", probability }),
+        onSuccess: ({ probability }): Outcome => ({ _tag: "Answered", probability: Probability.make(probability) }),
         // The provider's own wording for a missing answer names the question by its position in the request, which means nothing outside it.
         onFailure: ({ description, reason }): Outcome =>
           reason === "Missing" ? missing : { _tag: "Unanswered", reason, description }
@@ -29,7 +30,7 @@ const toOutcome = (outcome: Decision.Outcome<Decision.Probability> | undefined):
 /** Says what the decision cache could not do, and why, where asking carries on without it. */
 const warn = (message: string) => (error: StorageError) => Effect.logWarning(message, Cause.fail(error))
 
-/** Asks the model the questions, by the ID that sets each apart from the others asked about the same evidence, and returns each one's outcome with what asking cost. Answers the model gave before to the same question about the same evidence are taken from the decision cache rather than asked for again, and new answers are added to it. Remembering is only a saving, so when the cache cannot be read or added to, a warning says so and the questions are asked all the same. The rest are asked a limited number per request, and a request that fails leaves its questions unanswered rather than failing the rest, as does one that the run's budget has no room for. */
+/** Asks the model the questions, by the ID that sets each apart from the others asked about the same evidence, and returns each one's outcome with what asking cost. Answers the model gave before to the same question about the same evidence are taken from the decision cache rather than asked for again, and new answers are added to it. Remembering is only a saving, so when the cache cannot be read or added to, a warning says so and the questions are asked all the same. The rest are asked a limited number per request, and a request that fails leaves its questions unanswered rather than failing the rest, as does one that the run's budget, once reached, leaves unasked. */
 export const ask = Effect.fnUntraced(function* <Q, R>(options: {
   readonly questions: Readonly<Record<QuestionId, Q>>
   /** What the answers are remembered under: everything the questions share, which is how they are put to the model and the evidence they are about. It is only worked out when there is a question to ask. */
