@@ -8,6 +8,7 @@ import { TraitAssertion } from "../Trait/TraitAssertion.ts"
 import { TraitBody } from "../Trait/TraitBody.ts"
 import { TraitMatchPattern } from "../Trait/TraitMatch.ts"
 import { TraitName } from "../Trait/TraitName.ts"
+import type { TraitPrelude } from "../Trait/TraitPrelude.ts"
 import { TraitPurpose } from "../Trait/TraitPurpose.ts"
 import { TraitSubject } from "../Trait/TraitSubject.ts"
 import { type TraitCollection, TraitNotFoundError } from "../TraitCollection/TraitCollection.ts"
@@ -30,13 +31,15 @@ export const trait = (fields: {
   readonly match?: string | Array.NonEmptyReadonlyArray<string>
   readonly assertion?: string
   readonly body?: string
+  readonly prelude?: TraitPrelude
 }): Trait => ({
   name: TraitName.make(fields.name),
   purpose: TraitPurpose.make("Why it matters."),
   ...(fields.subject === undefined ? {} : { subject: TraitSubject.make(fields.subject) }),
   ...(fields.match === undefined ? {} : { match: matchOf(fields.match) }),
   ...(fields.assertion === undefined ? {} : { assertion: TraitAssertion.make(fields.assertion) }),
-  ...(fields.body === undefined ? {} : { body: TraitBody.make(fields.body) })
+  ...(fields.body === undefined ? {} : { body: TraitBody.make(fields.body) }),
+  ...(fields.prelude === undefined ? {} : { prelude: fields.prelude })
 })
 
 /** A collection holding these traits. */
@@ -58,6 +61,8 @@ export interface Question {
   readonly assertion?: string
   readonly context?: string
   readonly target: string
+  /** What the trait's prelude found, as JSON, when the evidence carries it. */
+  readonly prelude?: string
 }
 
 /** A workspace held in memory, with a decision model that answers each question by the given rule and records every request. A rule that returns nothing leaves the question unanswered. */
@@ -83,13 +88,16 @@ export const workspace = Effect.fn("workspace")(function* (options: {
       const state = Predicate.isObject(request.state) ? request.state : {}
       const shown = Predicate.isObject(state["evidence"]) ? state["evidence"] : state["content"]
       const target = Predicate.isObject(shown) ? globalThis.String(shown["target"]) : ""
+      const prelude =
+        Predicate.isObject(shown) && shown["prelude"] !== undefined ? JSON.stringify(shown["prelude"]) : undefined
       const questions = Record.map(request.decisions, ({ instructions }): Question => {
         const fields = Predicate.isObject(instructions) ? instructions : {}
         return {
           ...(Predicate.isString(fields["subject"]) ? { subject: fields["subject"] } : {}),
           ...(Predicate.isString(fields["assertion"]) ? { assertion: fields["assertion"] } : {}),
           ...(Predicate.isString(fields["context"]) ? { context: fields["context"] } : {}),
-          target
+          target,
+          ...(prelude === undefined ? {} : { prelude })
         }
       })
       yield* Ref.update(requests, Array.append(Record.values(questions)))

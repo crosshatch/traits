@@ -1,9 +1,11 @@
-import { Array, Effect, Order, pipe, Record, Schema as S, String } from "effect"
+import { Array, Effect, Order, pipe, Record, Result, Schema as S, String } from "effect"
 
 import * as Input from "../Input/Input.ts"
 import { type InputRange, whyInvalidTarget } from "../Input/InputRange.ts"
 import type { InputSource } from "../Input/InputSource.ts"
+import type { Trait } from "../Trait/Trait.ts"
 import { matchesFile } from "../Trait/TraitMatch.ts"
+import type { TraitPrelude } from "../Trait/TraitPrelude.ts"
 import type { TraitSubject } from "../Trait/TraitSubject.ts"
 import type { ResolvedTrait } from "../TraitSelection/ResolvedTrait.ts"
 import { TraitReference } from "../TraitSelection/TraitReference.ts"
@@ -12,6 +14,7 @@ import { ask } from "./Asking.ts"
 import * as AssertionQuestion from "./AssertionQuestion.ts"
 import * as Evidence from "./Evidence.ts"
 import { Outcome } from "./Outcome.ts"
+import * as Prelude from "./Prelude.ts"
 import type { QuestionId } from "./QuestionId.ts"
 import * as SubjectQuestion from "./SubjectQuestion.ts"
 import { addUsage, noUsage } from "./Usage.ts"
@@ -71,7 +74,14 @@ interface Candidate {
   readonly subject: Identified<TraitSubject> | undefined
   /** Whether the trait's assertion holds for what is checked. */
   readonly assertion: Identified<AssertionQuestion.TraitAssertionWithContext>
+  /** The trait, which an agent carrying out its prelude is told about. */
+  readonly trait: Trait
+  /** Setup for an agent to carry out before the assertion is checked, whose findings the assertion is checked with; none for a trait that needs none. */
+  readonly prelude: TraitPrelude | undefined
 }
+
+/** What a candidate's prelude found for the file being checked, or why it could not be carried out; carried out once for the file however many of its segments need it. */
+type PreludeOf = (candidate: Candidate) => Effect.Effect<Result.Result<Prelude.PreludeFindings, Prelude.PreludeError>>
 
 /** A candidate with whether what was checked matched its subject; a candidate with no subject has nothing to match and applies to everything. */
 interface Matched extends Candidate {
@@ -108,7 +118,9 @@ export const candidatesOf = Effect.fnUntraced(function* (traits: ReadonlyArray<R
         position,
         reference,
         matchesFile: trait.match === undefined ? () => true : matchesFile(trait.match),
-        ...questions
+        ...questions,
+        trait,
+        prelude: trait.prelude
       }
       return [candidate]
     }),
@@ -191,27 +203,81 @@ const unmatched = (options: {
         ]
   )
 
-/** Checks one input against candidates: which of their subjects it matches, then whether the assertions of those hold for it. The checks say nothing of where in its file the input is, which is for whoever knows that to add. */
+/** The checks of candidates whose preludes could not be carried out: not assessed, since their assertions need what the preludes find. */
+const unprepared = (candidate: Matched, error: Prelude.PreludeError): Positioned => ({
+  position: candidate.position,
+  check: TraitCheck.make({
+    trait: candidate.reference,
+    ...(candidate.applies === undefined ? {} : { applies: candidate.applies }),
+    holds: { _tag: "Unanswered", reason: "Failed", description: error.message },
+    verdict: "NotAssessed"
+  })
+})
+
+/** Asks whether the assertion of a candidate with a prelude holds, with what the prelude found added to the evidence. Each such candidate is asked about on its own, since what its prelude found is evidence for it alone. */
+const assertPrepared = Effect.fnUntraced(function* (options: {
+  readonly candidate: Matched
+  readonly evidence: Evidence.Evidence
+  readonly preludeOf: PreludeOf
+  readonly threshold: Probability
+}) {
+  const { candidate } = options
+  const prepared = yield* options.preludeOf(candidate)
+  if (Result.isFailure(prepared)) {
+    yield* Effect.logWarning(prepared.failure.message)
+    return { checks: [unprepared(candidate, prepared.failure)], usage: noUsage }
+  }
+  return yield* assert({
+    applicable: [candidate],
+    evidence: Evidence.withPrelude(options.evidence, prepared.success),
+    threshold: options.threshold
+  })
+})
+
+/** Checks one input against candidates: which of their subjects it matches, then whether the assertions of those hold for it. A candidate with a prelude has it carried out first, only once it is found to apply, and its assertion is asked about with what the prelude found. The checks say nothing of where in its file the input is, which is for whoever knows that to add. */
 const check = Effect.fnUntraced(function* (options: {
   readonly candidates: ReadonlyArray<Candidate>
   readonly input: Input.Input
   readonly root: URL
   readonly threshold: Probability
+  readonly preludeOf: PreludeOf
 }) {
   const { threshold } = options
   // Both questions are about the same evidence, and what they are answered is remembered by it.
   const evidence = Evidence.fromInput(options.input, options.root)
   const matches = yield* match(options.candidates, evidence)
-  const assessed = yield* assert({
-    applicable: Array.filter(matches.matched, applies(threshold)),
-    evidence,
-    threshold
-  })
+  const applicable = Array.filter(matches.matched, applies(threshold))
+  const plain = Array.filter(applicable, (candidate) => candidate.prelude === undefined)
+  const prepared = Array.filter(applicable, (candidate) => candidate.prelude !== undefined)
+  const assessed = yield* assert({ applicable: plain, evidence, threshold })
+  const preparedAssessed = yield* Effect.forEach(
+    prepared,
+    (candidate) => assertPrepared({ candidate, evidence, preludeOf: options.preludeOf, threshold }),
+    { concurrency: 1 }
+  )
   return {
-    checks: [...assessed.checks, ...unmatched({ matched: matches.matched, threshold })],
-    usage: addUsage(matches.usage, assessed.usage)
+    checks: [
+      ...assessed.checks,
+      ...Array.flatMap(preparedAssessed, ({ checks }) => checks),
+      ...unmatched({ matched: matches.matched, threshold })
+    ],
+    usage: Array.reduce(preparedAssessed, addUsage(matches.usage, assessed.usage), (total, { usage }) =>
+      addUsage(total, usage)
+    )
   }
 })
+
+/** Carries out a candidate's prelude for a file, reporting why it could not be rather than failing the check. */
+const carryOutPrelude = (candidate: Candidate, file: string) =>
+  candidate.prelude === undefined
+    ? Effect.succeed(Result.succeed(Prelude.PreludeFindings.make({ found: [], subagents: {} })))
+    : Prelude.carryOut({ trait: candidate.trait, prelude: candidate.prelude, file }).pipe(
+        Effect.tap(() => Effect.logDebug(`${file}: carried out the prelude of ${candidate.trait.name}.`)),
+        Effect.result
+      )
+
+/** The path of an input's file relative to the workspace root, as an agent carrying out a prelude is told it. */
+const fileOf = (input: Input.Input, root: URL) => Evidence.fromInput(input, root).location
 
 /** The checks in the order of their traits, which is the order a report lists them in. */
 const inOrder = (checks: ReadonlyArray<Positioned>): ReadonlyArray<TraitCheck> =>
@@ -231,11 +297,13 @@ export const checkInput = Effect.fn("TraitRun.checkInput")(function* (options: {
   readonly threshold: Probability
 }) {
   const candidates = yield* candidatesOf(options.traits)
+  const file = fileOf(options.input, options.root)
   const { checks, usage } = yield* check({
     candidates,
     input: options.input,
     root: options.root,
-    threshold: options.threshold
+    threshold: options.threshold,
+    preludeOf: (candidate) => carryOutPrelude(candidate, file)
   })
   return { checks: inOrder(checks), usage }
 })
@@ -266,18 +334,40 @@ export const checkFile = Effect.fnUntraced(function* (options: {
   const usable = Array.every(options.segments, (range) => whyInvalidTarget(range, source.text) === undefined)
   const divided = usable && options.segments.length > 1
   const lineOf = (offset: number) => pipe(source.text, String.slice(0, offset), String.split("\n")).length
+  // A trait with a prelude is checked against the whole file, once: its prelude looks at the file as a whole and beyond it, so a single segment would be judged against findings about the rest of the file.
+  const whole = Array.filter(candidates, (candidate) => candidate.prelude !== undefined)
+  const segmented = Array.filter(candidates, (candidate) => candidate.prelude === undefined)
+  const preludeOf: PreludeOf = (candidate) => carryOutPrelude(candidate, options.file)
+  // The whole text is always a valid selection of itself.
+  const wholeInput = yield* Effect.orDie(Input.select("after", source, { start: 0, end: source.text.length }))
+  const wholeResult = Array.isReadonlyArrayNonEmpty(whole)
+    ? yield* check({ candidates: whole, input: wholeInput, root, threshold, preludeOf })
+    : undefined
+  const wholeChecked =
+    wholeResult === undefined
+      ? []
+      : [
+          {
+            checks: Array.map(wholeResult.checks, (positioned) => ({ ...positioned, start: 0 })),
+            usage: wholeResult.usage
+          }
+        ]
   // Segments that hold the same text are the same evidence, so they are checked as one.
   const alike = pipe(
-    divided ? options.segments : [{ start: 0, end: source.text.length }],
+    Array.isReadonlyArrayNonEmpty(segmented)
+      ? divided
+        ? options.segments
+        : [{ start: 0, end: source.text.length }]
+      : [],
     Array.groupBy((range) => pipe(source.text, String.slice(range.start, range.end))),
     Record.values
   )
-  const checked = yield* Effect.forEach(
+  const segmentChecked = yield* Effect.forEach(
     alike,
     Effect.fnUntraced(function* (ranges) {
       // The whole text is always a valid selection of itself, and so is each range once it has been checked against the text.
       const input = yield* Effect.orDie(Input.select("after", source, Array.headNonEmpty(ranges)))
-      const { checks, usage } = yield* check({ candidates, input, root, threshold })
+      const { checks, usage } = yield* check({ candidates: segmented, input, root, threshold, preludeOf })
       return {
         // Every one of the segments has the checks, each naming the lines it covers itself.
         checks: Array.flatMap(ranges, (range) => {
@@ -294,6 +384,7 @@ export const checkFile = Effect.fnUntraced(function* (options: {
     }),
     { concurrency: segmentsAtOnce }
   )
+  const checked = [...wholeChecked, ...segmentChecked]
   return {
     checks: pipe(
       checked,
