@@ -3,6 +3,7 @@ import { type AiError, DecisionModel } from "effect/ai"
 
 import * as PlanningModel from "./PlanningModel.ts"
 import type { ProbabilityResponse } from "./ProbabilityResponse.ts"
+import { fromResponse } from "./Usage.ts"
 
 /** The most a run may use: a number of tokens, or an amount in US dollars, which takes a provider that reports what its requests cost. */
 export type Budget = { readonly tokens: number } | { readonly dollars: number }
@@ -39,7 +40,7 @@ export const CurrentSpending = Context.Reference<Spending | undefined>("traits/T
 })
 
 /** Sets aside, from what is left of the budget, what a request is expected to use, and returns how much; or why the request is not to be made. */
-export const reserve = Effect.fnUntraced(function* <R>(
+const reserve = Effect.fnUntraced(function* <R>(
   spending: Spending,
   request: Effect.Effect<ProbabilityResponse, AiError.AiError, R>
 ) {
@@ -64,7 +65,7 @@ export const reserve = Effect.fnUntraced(function* <R>(
 })
 
 /** Replaces what was set aside for a request with what the provider says it used. A provider that does not say leaves what was set aside as spent, as does a request that fails. */
-export const settle = (options: {
+const settle = (options: {
   readonly spending: Spending
   /** What was set aside for the request. */
   readonly reserved: number
@@ -86,3 +87,30 @@ export const settle = (options: {
         }
   })
 }
+
+/** Makes a request if what it is expected to use fits what is left of the run's budget, and returns its response, or why it was not made. A run with no budget makes every request. What the provider says the request used then takes the place of what was set aside for it. */
+export const within = <R>(
+  request: Effect.Effect<ProbabilityResponse, AiError.AiError, R>
+): Effect.Effect<Result.Result<ProbabilityResponse, string>, AiError.AiError, R> =>
+  Effect.gen(function* () {
+    const spending = yield* CurrentSpending
+    if (spending === undefined) {
+      return yield* Effect.map(request, (response) => Result.succeed(response))
+    }
+    const reserved = yield* reserve(spending, request)
+    if (Result.isFailure(reserved)) {
+      return Result.fail(reserved.failure)
+    }
+    const response = yield* request
+    const usage = fromResponse(response)
+    yield* settle({
+      spending,
+      reserved: reserved.success,
+      used: {
+        // A provider that reports no input tokens has said nothing about what the request used.
+        tokens: response.usage.inputTokens === undefined ? undefined : usage.inputTokens + usage.outputTokens,
+        cost: usage.cost
+      }
+    })
+    return Result.succeed(response)
+  })

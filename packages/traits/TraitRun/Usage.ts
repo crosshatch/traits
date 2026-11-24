@@ -1,4 +1,6 @@
-import { Function, Schema as S } from "effect"
+import { Array, Function, Predicate, Record, Schema as S } from "effect"
+
+import type { ProbabilityResponse } from "./ProbabilityResponse.ts"
 
 /** What the model was asked and what that used, and the answers that needed nothing. */
 export type Usage = typeof Usage.Type
@@ -34,3 +36,23 @@ export const addUsage: {
   ...(a.cost === undefined && b.cost === undefined ? {} : { cost: (a.cost ?? 0) + (b.cost ?? 0) }),
   remembered: a.remembered + b.remembered
 }))
+
+/** What the provider says a request cost, when it says: a provider reports a cost among the details it returns of its response. */
+const costOf = (metadata: Readonly<Record<string, unknown>>): number | undefined => {
+  const costs = Array.flatMap(Record.values(metadata), (details) =>
+    Predicate.isObject(details) && Predicate.isNumber(details["cost"]) ? [details["cost"]] : []
+  )
+  return Array.isReadonlyArrayNonEmpty(costs) ? Array.reduce(costs, 0, (total, cost) => total + cost) : undefined
+}
+
+/** What one request used, as its response reports it. */
+export const fromResponse = (response: ProbabilityResponse): Usage => {
+  const cost = costOf(response.metadata)
+  return {
+    requests: 1,
+    inputTokens: response.usage.inputTokens ?? 0,
+    outputTokens: response.usage.outputTokens ?? 0,
+    ...(cost === undefined ? {} : { cost }),
+    remembered: 0
+  }
+}

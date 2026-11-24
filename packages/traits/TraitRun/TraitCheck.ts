@@ -112,12 +112,11 @@ const match = Effect.fnUntraced(function* (candidates: ReadonlyArray<Candidate>,
   const withSubject = Array.flatMap(candidates, (candidate) =>
     candidate.subject === undefined ? [] : [{ candidate, subject: candidate.subject }]
   )
-  const { outcomes, usage } = yield* ask({
-    entries: withSubject,
-    id: ({ candidate }) => candidate.ids.subject,
+  // Traits with the same subject share its question, which is asked once.
+  const { outcome, usage } = yield* ask({
+    questions: Record.fromEntries(Array.map(withSubject, ({ candidate, subject }) => [candidate.ids.subject, subject])),
     shared: [SubjectQuestion.prompt, evidence],
-    request: (questions) =>
-      SubjectQuestion.match({ subjects: Record.map(questions, ({ subject }) => subject), evidence })
+    request: (subjects) => SubjectQuestion.match({ subjects, evidence })
   })
   const matched: ReadonlyArray<Matched> = [
     ...pipe(
@@ -125,7 +124,7 @@ const match = Effect.fnUntraced(function* (candidates: ReadonlyArray<Candidate>,
       Array.filter(({ subject }) => subject === undefined),
       Array.map((candidate) => ({ ...candidate, applies: undefined }))
     ),
-    ...Array.zipWith(withSubject, outcomes, ({ candidate }, applies) => ({ ...candidate, applies }))
+    ...Array.map(withSubject, ({ candidate }) => ({ ...candidate, applies: outcome(candidate.ids.subject) }))
   ]
   return { matched, usage }
 })
@@ -143,24 +142,27 @@ const assert = Effect.fnUntraced(function* (options: {
   readonly lines: TraitCheck["lines"]
 }) {
   const { evidence, lines, start, threshold } = options
-  const { outcomes, usage } = yield* ask({
-    entries: options.applicable,
-    id: (candidate) => candidate.ids.assertion,
+  const { outcome, usage } = yield* ask({
+    questions: Record.fromEntries(
+      Array.map(options.applicable, (candidate) => [candidate.ids.assertion, candidate.assertion])
+    ),
     shared: [AssertionQuestion.prompt, evidence],
-    request: (questions) =>
-      AssertionQuestion.assert({ assertions: Record.map(questions, ({ assertion }) => assertion), evidence })
+    request: (assertions) => AssertionQuestion.assert({ assertions, evidence })
   })
-  const checks = Array.zipWith(options.applicable, outcomes, (candidate, holds): Placed => ({
-    position: candidate.position,
-    start,
-    check: TraitCheck.make({
-      trait: candidate.reference,
-      ...(lines === undefined ? {} : { lines }),
-      ...(candidate.applies === undefined ? {} : { applies: candidate.applies }),
-      holds,
-      verdict: holds._tag === "Unanswered" ? "NotAssessed" : isAtLeast(holds, threshold) ? "Holds" : "Violated"
-    })
-  }))
+  const checks = Array.map(options.applicable, (candidate): Placed => {
+    const holds = outcome(candidate.ids.assertion)
+    return {
+      position: candidate.position,
+      start,
+      check: TraitCheck.make({
+        trait: candidate.reference,
+        ...(lines === undefined ? {} : { lines }),
+        ...(candidate.applies === undefined ? {} : { applies: candidate.applies }),
+        holds,
+        verdict: holds._tag === "Unanswered" ? "NotAssessed" : isAtLeast(holds, threshold) ? "Holds" : "Violated"
+      })
+    }
+  })
   return { checks, usage }
 })
 

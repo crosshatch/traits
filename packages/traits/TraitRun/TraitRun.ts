@@ -15,7 +15,7 @@ export type { Budget } from "./Budget.ts"
 export * from "./Outcome.ts"
 export * from "./Report.ts"
 export { checkInput, TraitCheck, Verdict } from "./TraitCheck.ts"
-export * from "./Usage.ts"
+export { addUsage, noUsage, Usage } from "./Usage.ts"
 
 /** The files a run checks. They are listed and read by each run, not handed over already loaded, so a run sees them as they are when it reaches them. Hosts supply where they come from. */
 export interface Files {

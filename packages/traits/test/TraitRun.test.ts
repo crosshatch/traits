@@ -207,7 +207,11 @@ describe("run", () => {
   it.effect("asks about at most fifty traits in one request", () =>
     Effect.gen(function* () {
       const many = Array.makeBy(120, (index) =>
-        trait({ name: `trait-${index}`, subject: "TypeScript if statements.", assertion: `Assertion ${index}.` })
+        trait({
+          name: `trait-${index}`,
+          subject: `TypeScript if statements, ${index}.`,
+          assertion: `Assertion ${index}.`
+        })
       )
       const { layer, project, requests } = yield* workspace({ files: { "a.ts": "if (x) { y() }" }, own: many, answer })
       const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
@@ -225,6 +229,23 @@ describe("run", () => {
         )
       expect(sizes("subject")).toEqual([50, 50, 20])
       expect(sizes("assertion")).toEqual([50, 50, 20])
+    })
+  )
+
+  it.effect("asks a subject that several traits share once", () =>
+    Effect.gen(function* () {
+      const shared = Array.makeBy(3, (index) =>
+        trait({ name: `trait-${index}`, subject: "TypeScript if statements.", assertion: `Assertion ${index}.` })
+      )
+      const { layer, project, requests } = yield* workspace({
+        files: { "a.ts": "if (x) { y() }" },
+        own: shared,
+        answer
+      })
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(Effect.provide(layer))
+      expect(TraitRun.tally(report)).toEqual({ NotApplicable: 0, Holds: 3, Violated: 0, NotAssessed: 0 })
+      const made = yield* requests
+      expect(Array.map(made, (questions) => questions.length)).toEqual([1, 3])
     })
   )
 
