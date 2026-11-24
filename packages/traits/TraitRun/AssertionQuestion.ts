@@ -3,6 +3,7 @@ import { Decision, DecisionModel } from "effect/ai"
 
 import type { TraitAssertion } from "../Trait/TraitAssertion.ts"
 import type { TraitBody } from "../Trait/TraitBody.ts"
+import type { TraitPrelude } from "../Trait/TraitPrelude.ts"
 import * as DecisionKey from "./DecisionKey.ts"
 import { Evidence } from "./Evidence.ts"
 import * as QuestionId from "./QuestionId.ts"
@@ -48,11 +49,12 @@ const question = (asserted: TraitAssertionWithContext) => ({
   criteria: prompt.criteria
 })
 
-/** What the answers to assertion questions about a piece of evidence are remembered under. It is made from what a request hands the model with its questions, so a change to the task or to the evidence asks again. */
+/** What the answers to assertion questions about a piece of evidence are remembered under. It is made from what a request hands the model with its questions, so a change to the task or to the evidence asks again. What a trait's prelude found is left out of the evidence it is made from: it is gathered anew each time it is asked for, and would never be found the same twice, so the prelude is part of the question's ID instead. */
 export const keyOf = flow(state, DecisionKey.fromState)
 
-/** What an assertion's question goes by among those remembered about the same evidence. It is made from the question as it is put to the model, so a change to the assertion or to its supporting context asks again, and a change to its trait's name does not. */
-export const idOf = flow(question, QuestionId.fromQuestion)
+/** What an assertion's question goes by among those remembered about the same evidence. It is made from the question as it is put to the model, and from its trait's prelude when it has one, so a change to the assertion, to its supporting context, or to the prelude asks again, and a change to its trait's name does not. */
+export const idOf = ({ prelude, ...asserted }: TraitAssertionWithContext & { readonly prelude?: TraitPrelude }) =>
+  QuestionId.fromQuestion(prelude === undefined ? question(asserted) : { ...question(asserted), prelude })
 
 /** Estimates how likely each of several assertions, by ID, holds true for one shared piece of evidence, in one provider request. Each assertion is read with its trait's supporting context, when it has any. An unanswered assertion does not discard its answered siblings. */
 export const assert = Effect.fn("AssertionQuestion.assert")(function* (options: {

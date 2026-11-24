@@ -4,6 +4,7 @@ import { Argument, Command } from "effect/cli"
 import * as Estimate from "../../Estimate/Estimate.ts"
 import * as LocalDecisionCache from "../../local/LocalDecisionCache.ts"
 import * as LocalEnvFile from "../../local/LocalEnvFile.ts"
+import * as LocalPreludeAgent from "../../local/LocalPreludeAgent.ts"
 import * as LocalRun from "../../local/LocalRun.ts"
 import * as ModelConfiguration from "../../local/TraitsConfig/ModelConfiguration.ts"
 import * as TraitRun from "../../TraitRun/TraitRun.ts"
@@ -48,7 +49,9 @@ export const run = Command.make(
           ModelConfiguration.layerDecision(config.models.decision).pipe(
             Layer.provide(LocalEnvFile.layer({ file: Option.getOrUndefined(dotenv) }))
           ),
-          LocalDecisionCache.layer(config.models.decision)
+          LocalDecisionCache.layer(config.models.decision),
+          // Traits with a prelude have it carried out by the configured agent first.
+          LocalPreludeAgent.layer(config.prelude)
         ])
       )
       const encoded = yield* pipe(report, S.encodeEffect(TraitRun.Report), Effect.orDie)

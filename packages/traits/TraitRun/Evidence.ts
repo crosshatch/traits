@@ -1,8 +1,9 @@
 import { Function, pipe, Result, Schema as S, String } from "effect"
 
 import { type Input, targetText } from "../Input/Input.ts"
+import { PreludeFindings } from "./Prelude.ts"
 
-/** Segment-scoped evidence: the target once, without its enclosing file. */
+/** Segment-scoped evidence: the target once, without its enclosing file, and what a trait's prelude found when it has one. */
 export type Evidence = typeof Evidence.Type
 export const Evidence = S.Struct({
   /** Where the file the target was selected from lives: its path relative to the workspace root, or its URL when it is outside the workspace. */
@@ -16,9 +17,15 @@ export const Evidence = S.Struct({
       "The file version the target was selected from: after for current text, before for text that was deleted."
   }),
   /** The selected text to assess. */
-  target: S.String.annotateKey({ description: "The selected text to assess." })
+  target: S.String.annotateKey({ description: "The selected text to assess." }),
+  /** What the trait's prelude found before the check; present only when the evidence is for one trait whose prelude was carried out. */
+  prelude: PreludeFindings.annotateKey({
+    description:
+      "What the trait's prelude found before the check; present only when the evidence is for one trait whose prelude was carried out."
+  }).pipe(S.optionalKey)
 }).annotate({
-  description: "Segment-scoped evidence: the target once, without its enclosing file."
+  description:
+    "Segment-scoped evidence: the target once, without its enclosing file, and what a trait's prelude found when it has one."
 })
 
 /** A source's location without machine-specific parts: its path relative to the workspace root when it is a file inside the workspace, and its URL otherwise. */
@@ -44,3 +51,9 @@ export const fromInput: {
   version: input.version,
   target: targetText(input)
 }))
+
+/** The evidence with what a trait's prelude found, for checking that trait alone. */
+export const withPrelude: {
+  (prelude: PreludeFindings): (evidence: Evidence) => Evidence
+  (evidence: Evidence, prelude: PreludeFindings): Evidence
+} = Function.dual(2, (evidence: Evidence, prelude: PreludeFindings): Evidence => ({ ...evidence, prelude }))

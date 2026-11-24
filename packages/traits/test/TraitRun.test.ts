@@ -80,7 +80,7 @@ describe("run", () => {
           ],
           skipped: [],
           // Two requests per file: one for the subjects, one for the assertions that apply.
-          usage: { requests: 6, inputTokens: 60, outputTokens: 6, remembered: 0 }
+          usage: { requests: 6, inputTokens: 60, outputTokens: 6, preludeTasks: 0, remembered: 0 }
         })
         const made = yield* requests
         const asserted = Array.filter(Array.flatten(made), ({ assertion }) => assertion !== undefined)
@@ -455,17 +455,17 @@ describe("run", () => {
       const run = TraitRun.run({ files: project, selections: [], threshold: half }).pipe(Effect.provide(layer))
 
       const first = yield* run
-      expect(first.usage).toEqual({ requests: 4, inputTokens: 40, outputTokens: 4, remembered: 0 })
+      expect(first.usage).toEqual({ requests: 4, inputTokens: 40, outputTokens: 4, preludeTasks: 0, remembered: 0 })
       const again = yield* run
       expect(again.files).toEqual(first.files)
       // Two subjects and one assertion for each of the two files.
-      expect(again.usage).toEqual({ requests: 0, inputTokens: 0, outputTokens: 0, remembered: 6 })
+      expect(again.usage).toEqual({ requests: 0, inputTokens: 0, outputTokens: 0, preludeTasks: 0, remembered: 6 })
       const afterTwo = yield* requests
       expect(afterTwo).toHaveLength(4)
 
       files["b.ts"] = "if (x) { y() } // fixed"
       const changed = yield* run
-      expect(changed.usage).toEqual({ requests: 2, inputTokens: 20, outputTokens: 2, remembered: 3 })
+      expect(changed.usage).toEqual({ requests: 2, inputTokens: 20, outputTokens: 2, preludeTasks: 0, remembered: 3 })
       expect(TraitRun.tally(changed)).toEqual({ NotApplicable: 2, Holds: 2, Violated: 0, NotAssessed: 0 })
       const afterThree = yield* requests
       expect(Array.map(Array.flatten(Array.drop(afterThree, 4)), ({ target }) => target)).toEqual([
@@ -522,7 +522,7 @@ describe("run", () => {
         }))
       )
       // The subject and the assertion are each asked about once, and neither answer is one remembered from before.
-      expect(report.usage).toEqual({ requests: 2, inputTokens: 20, outputTokens: 2, remembered: 0 })
+      expect(report.usage).toEqual({ requests: 2, inputTokens: 20, outputTokens: 2, preludeTasks: 0, remembered: 0 })
       const made = yield* requests
       expect(made).toHaveLength(2)
       const again = yield* run
@@ -711,7 +711,9 @@ describe("run", () => {
             return last?._tag === "Unanswered" ? [last.description] : []
           })
         )
-        expect(unasked).toContain("It was not asked: the provider reports no cost for the $100 to stop after to go by.")
+        expect(unasked).toContain(
+          "It was not asked: what the run had done reported no cost for the $100 to stop after to go by."
+        )
       })
     )
   })

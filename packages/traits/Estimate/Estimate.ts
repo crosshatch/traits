@@ -4,6 +4,7 @@ import { DecisionModel } from "effect/ai"
 import type { StorageError } from "../StorageError.ts"
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import * as PlanningModel from "../TraitRun/PlanningModel.ts"
+import * as Prelude from "../TraitRun/Prelude.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitReference } from "../TraitSelection/TraitReference.ts"
 import type { TraitSelectionId } from "../TraitSelection/TraitSelectionId.ts"
@@ -39,6 +40,11 @@ export const Estimate = S.Struct({
     "What a run is expected to cost, worked out without asking the model anything: the least it can come to and the most. Tokens are approximated from the size of each request."
 })
 
+/** A stand-in for the agent that carries out preludes, which is never really given anything: every task is counted, and what it would find is the same text for each. */
+const planningAgent: Prelude.PreludeAgentService = {
+  carryOut: () => Effect.succeed({ found: "What the prelude would find." })
+}
+
 /** Works out what a run would cost without asking the model anything, so it needs no model. Answers remembered from earlier runs count as they would in the run, and nothing is added to them. */
 export const estimate = Effect.fn("Estimate.estimate")(function* <R = never>(options: {
   readonly files: TraitRun.Files
@@ -63,7 +69,8 @@ export const estimate = Effect.fn("Estimate.estimate")(function* <R = never>(opt
       ...(segment === undefined ? {} : { segmentation: Effect.succeed(segment) })
     }).pipe(
       Effect.provideService(DecisionModel.DecisionModel, model),
-      Effect.provideService(DecisionCache.DecisionCache, remembered)
+      Effect.provideService(DecisionCache.DecisionCache, remembered),
+      Effect.provideService(Prelude.PreludeAgent, planningAgent)
     )
   })
   const least = yield* walk(0)
@@ -81,8 +88,8 @@ const count = (value: number) => new Intl.NumberFormat("en-US").format(value)
 
 /** What a run would cost at the least and at the most, and what those two mean. */
 export const format = (estimate: typeof Estimate.Encoded): string => {
-  const bound = ({ inputTokens, remembered, requests }: typeof ExpectedUsage.Encoded) =>
-    `${count(requests)} requests, about ${count(inputTokens)} tokens in, ${count(remembered)} answers remembered from earlier runs`
+  const bound = ({ inputTokens, preludeTasks, remembered, requests }: typeof ExpectedUsage.Encoded) =>
+    `${count(requests)} requests, about ${count(inputTokens)} tokens in, ${preludeTasks > 0 ? `${count(preludeTasks)} prelude tasks for the agent, ` : ""}${count(remembered)} answers remembered from earlier runs`
   return Array.join(
     [
       `Would check ${count(estimate.files)} files against ${estimate.traits.length} traits${estimate.skipped > 0 ? `, and skip ${count(estimate.skipped)} files for holding no text` : ""}.`,

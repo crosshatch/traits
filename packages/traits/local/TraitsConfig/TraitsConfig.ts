@@ -8,6 +8,7 @@ import * as LocalJsonFile from "../LocalJsonFile.ts"
 import { LocalPaths } from "../LocalPaths.ts"
 import { SegmentationRule } from "../Segmentation/SegmentationRule.ts"
 import { ModelConfiguration } from "./ModelConfiguration.ts"
+import { PreludeAgentConfiguration } from "./PreludeAgentConfiguration.ts"
 
 /** The workspace configuration in traits/config.json: plain JSON, so it loads without executing code or installing JavaScript dependencies. Every traits/<name>.md file is one of the workspace's own traits, each traits/<id>/ directory holds the traits of a declared source, and selections choose which of them to run. Unknown keys are rejected so outdated files are reported rather than misread. */
 export type TraitsConfig = typeof TraitsConfig.Type
@@ -18,6 +19,11 @@ export const TraitsConfig = S.Struct({
       "The traits version this workspace's configuration and trait files were last written for. It never stops them from loading; an agent compares it with the installed version to tell when to warn that an update is available."
   }),
   models: ModelConfiguration,
+  /** The agent that carries out traits' preludes before they are checked; when omitted, traits with a prelude are left not assessed. */
+  prelude: PreludeAgentConfiguration.annotateKey({
+    description:
+      "The agent that carries out traits' preludes before they are checked; when omitted, traits with a prelude are left not assessed."
+  }).pipe(S.optionalKey),
   /** The sources that collections of traits come from, by the ID that selections refer to each with; none when omitted. Each collection's traits are kept in traits/<id>/. */
   sources: S.Record(TraitSourceId, TraitSource)
     .annotateKey({

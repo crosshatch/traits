@@ -11,11 +11,15 @@ export const Usage = S.Struct({
   inputTokens: S.Finite.annotateKey({ description: "Tokens sent to the model." }),
   /** Tokens the model produced. */
   outputTokens: S.Finite.annotateKey({ description: "Tokens the model produced." }),
-  /** What the provider reported the requests to have cost, in US dollars; omitted when it reported no cost. */
+  /** What the provider reported the requests to have cost, and the agent its prelude tasks, in US dollars; omitted when neither reported a cost. */
   cost: S.Finite.annotateKey({
     description:
-      "What the provider reported the requests to have cost, in US dollars; omitted when it reported no cost."
+      "What the provider reported the requests to have cost, and the agent its prelude tasks, in US dollars; omitted when neither reported a cost."
   }).pipe(S.optionalKey),
+  /** Tasks that the agent that carries out traits' preludes carried out. */
+  preludeTasks: S.Int.annotateKey({
+    description: "Tasks that the agent that carries out traits' preludes carried out."
+  }),
   /** Answers taken from earlier runs instead of asking the model again, which used no tokens. */
   remembered: S.Int.annotateKey({
     description: "Answers taken from earlier runs instead of asking the model again, which used no tokens."
@@ -23,7 +27,7 @@ export const Usage = S.Struct({
 }).annotate({ description: "What the model was asked and what that used, and the answers that needed nothing." })
 
 /** The usage of a run that asked nothing and remembered nothing. */
-export const noUsage: Usage = { requests: 0, inputTokens: 0, outputTokens: 0, remembered: 0 }
+export const noUsage: Usage = { requests: 0, inputTokens: 0, outputTokens: 0, preludeTasks: 0, remembered: 0 }
 
 /** The usage of two parts of a run together. */
 export const addUsage: {
@@ -34,6 +38,7 @@ export const addUsage: {
   inputTokens: a.inputTokens + b.inputTokens,
   outputTokens: a.outputTokens + b.outputTokens,
   ...(a.cost === undefined && b.cost === undefined ? {} : { cost: (a.cost ?? 0) + (b.cost ?? 0) }),
+  preludeTasks: a.preludeTasks + b.preludeTasks,
   remembered: a.remembered + b.remembered
 }))
 
@@ -53,6 +58,7 @@ export const fromResponse = (response: ProbabilityResponse): Usage => {
     inputTokens: response.usage.inputTokens ?? 0,
     outputTokens: response.usage.outputTokens ?? 0,
     ...(cost === undefined ? {} : { cost }),
+    preludeTasks: 0,
     remembered: 0
   }
 }

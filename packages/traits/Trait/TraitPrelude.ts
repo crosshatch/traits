@@ -55,7 +55,7 @@ const Subagents: S.Codec<TraitPreludeSubagents, TraitPreludeSubagentsEncoded> = 
   })
 
 /** Whether a prelude is steps to carry out in order, rather than subagents to run at the same time. */
-const isSteps = (prelude: TraitPrelude): prelude is TraitPreludeSteps => Array.isArray(prelude)
+export const isSteps = (prelude: TraitPrelude): prelude is TraitPreludeSteps => Array.isArray(prelude)
 
 /** Every label in a prelude, at any depth. */
 const labels = (prelude: TraitPrelude): ReadonlyArray<TraitPreludeLabel> =>
