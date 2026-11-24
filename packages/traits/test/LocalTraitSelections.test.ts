@@ -41,7 +41,7 @@ layer(NodeServices.layer)((it) => {
     withSelections(
       Effect.fn(function* () {
         const selections = yield* TraitSelections.TraitSelections
-        const all = yield* selections.ls
+        const all = yield* selections.all
         expect(all).toEqual([
           { id: ci, traits: [own, sourced] },
           { id: docs, traits: [] }
@@ -57,7 +57,7 @@ layer(NodeServices.layer)((it) => {
     withSelections(
       Effect.fn(function* () {
         const selections = yield* TraitSelections.TraitSelections
-        const all = yield* selections.ls
+        const all = yield* selections.all
         expect(all).toEqual([])
       }),
       configText({})
@@ -70,7 +70,7 @@ layer(NodeServices.layer)((it) => {
       withSelections(
         Effect.fn(function* () {
           const selections = yield* TraitSelections.TraitSelections
-          const all = yield* selections.ls
+          const all = yield* selections.all
           expect(all).toEqual([{ id: ci, traits: [own] }])
         }),
         configText({ version, selections: { ci: ["my-trait"] } })
@@ -83,7 +83,7 @@ layer(NodeServices.layer)((it) => {
         const fs = yield* FileSystem.FileSystem
         const selections = yield* TraitSelections.TraitSelections
         yield* fs.writeFileString(file, configText({ selections: { nightly: ["my-trait"] } }))
-        const all = yield* selections.ls
+        const all = yield* selections.all
         expect(all).toEqual([{ id: TraitSelections.TraitSelectionId.make("nightly"), traits: [own] }])
       }),
       declared
@@ -112,7 +112,7 @@ layer(NodeServices.layer)((it) => {
     withSelections(
       Effect.fn(function* (file) {
         const selections = yield* TraitSelections.TraitSelections
-        const error = yield* Effect.flip(selections.ls)
+        const error = yield* Effect.flip(selections.all)
         expect(error.reason._tag).toBe("Malformed")
         expect(error.location).toBe(file)
       }),
@@ -124,7 +124,7 @@ layer(NodeServices.layer)((it) => {
     withSelections(
       Effect.fn(function* (file) {
         const selections = yield* TraitSelections.TraitSelections
-        const error = yield* Effect.flip(selections.ls)
+        const error = yield* Effect.flip(selections.all)
         expect(error).toMatchObject({ _tag: "StorageError", location: file, reason: { _tag: "Missing" } })
       })
     )

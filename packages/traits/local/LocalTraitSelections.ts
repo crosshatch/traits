@@ -14,11 +14,11 @@ export const layer = Effect.gen(function* () {
   )
 
   return TraitSelections.TraitSelections.of({
-    ls: selections.pipe(
+    all: selections.pipe(
       Effect.map((declared) =>
         Array.map(Record.toEntries(declared), ([id, traits]) => TraitSelections.TraitSelection.make({ id, traits }))
       ),
-      Effect.withSpan("LocalTraitSelections.ls")
+      Effect.withSpan("LocalTraitSelections.all")
     ),
     get: Effect.fn("LocalTraitSelections.get")(function* (id) {
       const declared = yield* selections

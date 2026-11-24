@@ -26,7 +26,7 @@ export class TraitSelections extends Context.Service<
   TraitSelections,
   {
     /** Every selection, in the order they are declared. */
-    readonly ls: Effect.Effect<ReadonlyArray<TraitSelection>, StorageError>
+    readonly all: Effect.Effect<ReadonlyArray<TraitSelection>, StorageError>
     /** The selection with this ID. */
     readonly get: (id: TraitSelectionId) => Effect.Effect<TraitSelection, TraitSelectionNotFoundError | StorageError>
   }

@@ -163,7 +163,7 @@ export const workspace = Effect.fn("workspace")(function* (options: {
           { concurrency: 1 }
         )
         return TraitSelections.of({
-          ls: Effect.succeed(declared),
+          all: Effect.succeed(declared),
           get: (id) =>
             pipe(
               Array.findFirst(declared, (selection) => selection.id === id),
