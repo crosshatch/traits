@@ -3,11 +3,6 @@
 ./local/LocalTraitFile.ts
 ./local/LocalTraitCollections.ts
 ./local/LocalGitTraitSource.ts
-./local/LocalWorkspace.ts
-./local/Segmentation/SegmentationRule.ts
-./local/Segmentation/Segmentation.ts
-./local/Segmentation/segmenters/typescript.ts
-./local/LocalPaths.ts
 ./local/LocalJsonFile.ts
 ./local/LocalEnvFile.ts
 ./local/TraitsConfig/ModelId.ts

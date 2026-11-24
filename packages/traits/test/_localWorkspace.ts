@@ -2,22 +2,16 @@ import { expect } from "@effect/vitest"
 import { Array, Effect, FileSystem, Layer, Path, Stream, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { LocalPaths } from "../local/LocalPaths.ts"
+import * as LocalPaths from "../local/LocalPaths.ts"
 import PackageJson from "../package.json" with { type: "json" }
 
 /** The paths of a workspace whose traits directory is this one, without looking for the Git repository it belongs to. */
 export const localPaths = (directory: string) =>
   Layer.effect(
-    LocalPaths,
+    LocalPaths.LocalPaths,
     Effect.gen(function* () {
       const path = yield* Path.Path
-      return {
-        root: path.dirname(directory),
-        directory,
-        config: path.join(directory, "config.json"),
-        sourcesLock: path.join(directory, "sources.lock.json"),
-        cache: path.join(directory, ".cache")
-      }
+      return yield* LocalPaths.make(path.dirname(directory), directory)
     })
   )
 

@@ -1,6 +1,7 @@
-import { Context, Effect, FileSystem, Layer, Option, Path, pipe, Schema as S, String } from "effect"
+import { Context, Effect, FileSystem, Layer, Option, Path, Schema as S } from "effect"
+import { ChildProcessSpawner } from "effect/process"
 
-import { runProcess } from "../util/process/runProcess.ts"
+import { findMainRoot } from "../util/git/findMainRoot.ts"
 
 /** The workspace's absolute paths: the root of its repository, and its traits directory with what that holds. */
 export class LocalPaths extends Context.Service<
@@ -16,6 +17,8 @@ export class LocalPaths extends Context.Service<
     readonly sourcesLock: string
     /** Local state, such as remembered decisions; it ignores itself in Git. */
     readonly cache: string
+    /** The root of the repository's main working tree, or none when it has none, as with a bare repository. It is the workspace root itself unless the workspace is a linked worktree, where it is the checkout the worktree was added from, and where files that Git ignores, such as .env, usually live. Git is asked when this is first used, and only then, rather than when the workspace's other paths are found. */
+    readonly mainRoot: Effect.Effect<Option.Option<string>>
   }
 >()("traits/local/LocalPaths") {}
 
@@ -59,30 +62,23 @@ export const layer = Effect.gen(function* () {
   const directory = yield* fs
     .realPath(traits)
     .pipe(Effect.mapError((cause) => WorkspaceDirectoryError.make({ path: traits, cause })))
-  return {
+  return yield* make(root, directory)
+}).pipe(Layer.effect(LocalPaths))
+
+/** The paths of a workspace with this root and traits directory, as they are, without looking for either. */
+export const make = Effect.fnUntraced(function* (root: string, directory: string) {
+  const path = yield* Path.Path
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+  const mainRoot = yield* findMainRoot(root).pipe(
+    Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+    Effect.cached
+  )
+  return LocalPaths.of({
     root,
     directory,
     config: path.join(directory, "config.json"),
     sourcesLock: path.join(directory, "sources.lock.json"),
-    cache: path.join(directory, ".cache")
-  }
-}).pipe(Layer.effect(LocalPaths))
-
-/** The root of the repository's main working tree, or none when it has none, as with a bare repository. It is the workspace root itself unless the workspace is a linked worktree, where it is the checkout the worktree was added from, and where files that Git ignores, such as .env, usually live. Git is asked each time it is used, rather than when the workspace's other paths are found. */
-export const mainRoot = Effect.gen(function* () {
-  const paths = yield* LocalPaths
-  const listed = yield* runProcess({ command: "git", args: ["worktree", "list", "--porcelain"], cwd: paths.root }).pipe(
-    Effect.option
-  )
-  // Git lists the main working tree first, and marks it bare when there is none.
-  return pipe(
-    listed,
-    Option.filter(({ exitCode }) => exitCode === 0),
-    Option.flatMap(({ stdout }) => {
-      const [first, second] = pipe(stdout, String.split("\n"))
-      return first === undefined || second === "bare" || !pipe(first, String.startsWith("worktree "))
-        ? Option.none()
-        : Option.some(pipe(first, String.slice("worktree ".length)))
-    })
-  )
-}).pipe(Effect.withSpan("LocalPaths.mainRoot"))
+    cache: path.join(directory, ".cache"),
+    mainRoot
+  })
+})

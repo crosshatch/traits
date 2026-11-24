@@ -1,6 +1,6 @@
 import { Array, ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema as S } from "effect"
 
-import { LocalPaths, mainRoot } from "./LocalPaths.ts"
+import { LocalPaths } from "./LocalPaths.ts"
 
 /** No .env file was found where one was named. */
 export class EnvFileNotFoundError extends S.TaggedError<EnvFileNotFoundError>()("EnvFileNotFoundError", {
@@ -24,7 +24,7 @@ export const find = Effect.fn("LocalEnvFile.find")(function* (file: string) {
     : Array.dedupe([
         path.resolve(file),
         path.join(paths.root, file),
-        ...Option.toArray(Option.map(yield* mainRoot, (root) => path.join(root, file)))
+        ...Option.toArray(Option.map(yield* paths.mainRoot, (root) => path.join(root, file)))
       ])
   const found = yield* Effect.findFirst(candidates, (candidate) =>
     fs.exists(candidate).pipe(Effect.orElseSucceed(() => false))

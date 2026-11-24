@@ -1,6 +1,7 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, layer } from "@effect/vitest"
 import { Array, Effect, FileSystem, Layer, Order, Path, pipe, Result, String } from "effect"
+import { ChildProcessSpawner } from "effect/process"
 
 import * as LocalWorkspaceTraitCollection from "../local/LocalWorkspaceTraitCollection.ts"
 import { Trait } from "../Trait/Trait.ts"
@@ -21,7 +22,13 @@ const traitsIn = (directory: string) =>
 
 /** Runs the effect against the traits directory of a temporary workspace. */
 const withTraits = <A, E>(
-  effect: (traits: string) => Effect.Effect<A, E, WorkspaceTraitCollection | FileSystem.FileSystem | Path.Path>
+  effect: (
+    traits: string
+  ) => Effect.Effect<
+    A,
+    E,
+    WorkspaceTraitCollection | FileSystem.FileSystem | Path.Path | ChildProcessSpawner.ChildProcessSpawner
+  >
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem

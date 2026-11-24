@@ -2,7 +2,7 @@ import { Effect, FileSystem, Layer, Option, Path } from "effect"
 import { KeyValueStore } from "effect/persistence"
 
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
-import { LocalPaths, mainRoot } from "./LocalPaths.ts"
+import { LocalPaths } from "./LocalPaths.ts"
 
 interface Model {
   readonly provider: string
@@ -74,7 +74,7 @@ const make = Effect.fnUntraced(function* <E, R>(
   const path = yield* Path.Path
   const paths = yield* LocalPaths
   const own = yield* use(directoryOf(path, paths.cache, model))
-  const main = yield* mainRoot
+  const main = yield* paths.mainRoot
   // The same place under that checkout's root as the workspace's own cache has under its root.
   const shared = Option.map(main, (root) => path.join(root, path.relative(paths.root, paths.cache)))
   // A workspace that is not a worktree added from another checkout is its own main working tree, with no other cache to read.
