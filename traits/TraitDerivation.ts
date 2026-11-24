@@ -286,7 +286,7 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
   const current = yield* store.snapshot
   if (current.version !== options.snapshot.version) return storeChanged
   const replacements = Array.map(response.value.traits, (draft) => Trait.Trait.make(draft))
-  // One commit checks every target under the write lock; replacements are installed before removals.
+  // Replacements are installed before removals.
   yield* store.commit([
     ...Array.map(replacements, (trait) =>
       TraitStore.TraitChange.cases.Put.make({ trait, expected: TraitStore.expectation(options.snapshot, trait.name) })

@@ -30,7 +30,6 @@ import type { TraitStore } from "traits/TraitStore"
 import * as Model from "./model.ts"
 
 type Store = TraitStore["Service"]
-// Head's single-trait writes read a snapshot, then commit against it.
 type WriteError = Effect.Error<Store["snapshot"]> | Effect.Error<ReturnType<Store["commit"]>>
 // Main exposes add/update/rm directly; head adapts them onto compare-and-swap commits.
 interface StoreApi {
@@ -104,7 +103,6 @@ const output = await Effect.runPromise(
       const Store = yield* Effect.promise(() =>
         importModule<typeof import("traits/TraitStore")>("traits/TraitStore.ts")
       )
-      // Writes are based on the store's current snapshot, as derive_trait's are.
       loadStore = Effect.map(Store.TraitStore, (store) => ({
         ls: store.ls,
         get: store.get,

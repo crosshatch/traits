@@ -95,7 +95,6 @@ const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: R
   )
 })
 
-// Single-trait writes based on the store's current snapshot, as derive_trait's are.
 const writer = (store: TraitStore.TraitStore["Service"]) => ({
   add: (trait: Trait.Trait) =>
     store.commit([

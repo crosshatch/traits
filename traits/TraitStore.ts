@@ -94,7 +94,6 @@ export const TraitStoreError = S.Union([
 export type ContentHash = typeof ContentHash.Type
 export const ContentHash = S.String.pipe(S.brand("traits/ContentHash"))
 
-/** A trait with the version of the Markdown file it was read from. */
 export interface StoredTrait {
   readonly trait: Trait.Trait
   readonly version: ContentHash
