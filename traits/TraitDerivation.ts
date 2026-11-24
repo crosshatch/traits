@@ -287,18 +287,17 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
   if (current.version !== options.snapshot.version) return storeChanged
   const replacements = Array.map(response.value.traits, (draft) => Trait.Trait.make(draft))
   // Replacements are installed before removals.
-  yield* store.commit([
-    ...Array.map(replacements, (trait) =>
-      TraitStore.TraitChange.cases.Put.make({ trait, expected: TraitStore.expectation(options.snapshot, trait.name) })
-    ),
-    ...pipe(
-      options.snapshot.traits,
-      Array.filterMap(({ trait, version }) =>
+  yield* store.commit(
+    Array.appendAll(
+      Array.map(replacements, (trait) =>
+        TraitStore.TraitChange.cases.Put.make({ trait, expected: TraitStore.expectation(options.snapshot, trait.name) })
+      ),
+      Array.filterMap(options.snapshot.traits, ({ trait, version }) =>
         selectedNames.has(trait.name) && !replacementNames.has(trait.name)
           ? Result.succeed(TraitStore.TraitChange.cases.Remove.make({ traitName: trait.name, version }))
           : Result.failVoid
       )
     )
-  ])
+  )
   return TraitDerivation.cases.Resolved.make({ traits: replacements, instructions: reviewInstructions(replacements) })
 })
