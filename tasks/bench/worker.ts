@@ -29,15 +29,17 @@ import type { TraitStore } from "traits/TraitStore"
 
 import * as Model from "./model.ts"
 
-// Main exposes add/update/rm directly; head writes through compare-and-swap commits.
-type StoreError = { readonly _tag: string }
+type Store = TraitStore["Service"]
+// Head's single-trait writes read a snapshot, then commit against it.
+type WriteError = Effect.Error<Store["snapshot"]> | Effect.Error<ReturnType<Store["commit"]>>
+// Main exposes add/update/rm directly; head adapts them onto compare-and-swap commits.
 interface StoreApi {
-  readonly ls: Effect.Effect<ReadonlyArray<TraitTypes.Trait>, StoreError>
-  readonly get: (name: TraitTypes.TraitName) => Effect.Effect<TraitTypes.Trait, StoreError>
-  readonly add: (trait: TraitTypes.Trait) => Effect.Effect<unknown, StoreError>
-  readonly update: (trait: TraitTypes.Trait) => Effect.Effect<void, StoreError>
-  readonly rm: (names: ReadonlyArray<TraitTypes.TraitName>) => Effect.Effect<void, StoreError>
-  readonly refresh?: Effect.Effect<void, StoreError> | undefined
+  readonly ls: Store["ls"]
+  readonly get: Store["get"]
+  readonly add: (trait: TraitTypes.Trait) => Effect.Effect<void, WriteError>
+  readonly update: (trait: TraitTypes.Trait) => Effect.Effect<void, WriteError>
+  readonly rm: (names: ReadonlyArray<TraitTypes.TraitName>) => Effect.Effect<void, WriteError>
+  readonly refresh?: Store["refresh"] | undefined
 }
 interface MainStoreModule {
   readonly TraitStore: Context.Key<TraitStore, StoreApi>
