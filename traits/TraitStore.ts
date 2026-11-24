@@ -363,13 +363,16 @@ const make = Effect.gen(function* () {
           )
           yield* lock.withLock(
             Effect.gen(function* () {
-              const targets = [
-                ...Array.map(puts, ({ trait, expected }) => ({ traitName: trait.name, expected })),
-                ...Array.map(removes, ({ traitName, version }) => ({
-                  traitName,
-                  expected: TraitExpectation.cases.Present.make({ version })
-                }))
-              ]
+              const targets = Array.map(
+                changes,
+                TraitChange.match({
+                  Put: ({ trait, expected }) => ({ traitName: trait.name, expected }),
+                  Remove: ({ traitName, version }) => ({
+                    traitName,
+                    expected: TraitExpectation.cases.Present.make({ version })
+                  })
+                })
+              )
               const conflicts = yield* Effect.forEach(
                 targets,
                 Effect.fnUntraced(function* ({ traitName, expected }) {
