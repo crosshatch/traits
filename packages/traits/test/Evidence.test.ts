@@ -8,25 +8,10 @@ const root = new URL("file:///Users/me/project")
 const before = { uri: new URL("file:///Users/me/project/src/old%20name.ts"), text: "old text" }
 const after = { uri: new URL("file:///Users/me/project/src/new.ts"), text: "new 😀 text" }
 
-it.effect("carries the target and its mapped earlier excerpts, never the enclosing files", () =>
+it.effect("carries the target from the version its range selects, never the enclosing files", () =>
   Effect.gen(function* () {
-    const input = yield* Input.fromSegment(
-      { before, after },
-      { _tag: "After", range: { start: 0, end: 3 }, before: [{ start: 0, end: 3 }] }
-    )
-    expect(Evidence.fromInput(input, root)).toEqual({
-      location: "src/new.ts",
-      version: "after",
-      target: "new",
-      history: { location: "src/old name.ts", excerpts: ["old"] }
-    })
-  })
-)
-
-it.effect("omits history when the correspondence to the earlier version is unknown", () =>
-  Effect.gen(function* () {
-    const current = yield* Input.fromSegment({ before, after }, { _tag: "After", range: { start: 0, end: 3 } })
-    const deleted = yield* Input.fromSegment({ before, after }, { _tag: "Before", range: { start: 4, end: 8 } })
+    const current = yield* Input.select("after", after, { start: 0, end: 3 })
+    const deleted = yield* Input.select("before", before, { start: 4, end: 8 })
     expect(Evidence.fromInput(current, root)).toEqual({ location: "src/new.ts", version: "after", target: "new" })
     expect(Evidence.fromInput(deleted, root)).toEqual({
       location: "src/old name.ts",
@@ -42,10 +27,7 @@ it.effect.each([
   ["a name with a stray percent sign", "file:///Users/me/project/100%.ts", "100%.ts"]
 ] as const)("locates %s without machine-specific parts where it can", ([, uri, location]) =>
   Effect.gen(function* () {
-    const input = yield* Input.fromSegment(
-      { after: { uri: new URL(uri), text: "abc" } },
-      { _tag: "After", range: { start: 0, end: 3 } }
-    )
+    const input = yield* Input.select("after", { uri: new URL(uri), text: "abc" }, { start: 0, end: 3 })
     expect(Evidence.fromInput(input, root).location).toBe(location)
     expect(Evidence.fromInput(input, new URL("file:///Users/me/project/")).location).toBe(location)
   })

@@ -1,13 +1,14 @@
 import { Context, type Effect, Schema as S } from "effect"
 
 import type { StorageError } from "../StorageError.ts"
-import { TraitName } from "../Trait/TraitName.ts"
 import type { TraitCollection } from "./TraitCollection.ts"
+import type { TraitCollectionChanges } from "./TraitCollectionChanges.ts"
 import type { TraitSource } from "./TraitSource.ts"
 import { TraitSourceId } from "./TraitSourceId.ts"
 
 export * from "./TraitSource.ts"
 export * from "./TraitSourceId.ts"
+export * from "./TraitCollectionChanges.ts"
 
 /** The workspace declares no trait source with the requested ID. */
 export class TraitCollectionNotFoundError extends S.TaggedError<TraitCollectionNotFoundError>()(
@@ -42,19 +43,6 @@ export class TraitCollectionUpdateError extends S.TaggedError<TraitCollectionUpd
     return `Could not update the trait collection ${this.traitSourceId}: ${this.problem}`
   }
 }
-
-/** What an update changed in a collection's traits, by name. */
-export type TraitCollectionChanges = typeof TraitCollectionChanges.Type
-export const TraitCollectionChanges = S.Struct({
-  /** The traits the source has that the collection did not. */
-  added: S.Array(TraitName).annotateKey({ description: "The traits the source has that the collection did not." }),
-  /** The traits whose files differ in the source. */
-  changed: S.Array(TraitName).annotateKey({ description: "The traits whose files differ in the source." }),
-  /** The traits the collection had that the source no longer has. */
-  removed: S.Array(TraitName).annotateKey({
-    description: "The traits the collection had that the source no longer has."
-  })
-}).annotate({ description: "What an update changed in a collection's traits, by name." })
 
 /** The workspace's trait collections, by the ID of the source each comes from. The collections are fixed: none can be added or removed here, and their traits cannot be changed, only updated from their source. Hosts supply where they are stored. */
 export class TraitCollections extends Context.Service<

@@ -14,9 +14,10 @@ const traits = [
 it.effect("checks one input against the traits it is given, asking only about the text the input selects", () =>
   Effect.gen(function* () {
     const { layer, requests } = yield* workspace({ files: {}, own: [], answer })
-    const input = yield* Input.fromSegment(
-      { after: { uri: new URL("src/a.ts", root), text: "const x = 1\nif (x) y() // BAD\n" } },
-      { _tag: "After", range: { start: 12, end: 29 } }
+    const input = yield* Input.select(
+      "after",
+      { uri: new URL("src/a.ts", root), text: "const x = 1\nif (x) y() // BAD\n" },
+      { start: 12, end: 29 }
     )
     const { checks, usage } = yield* TraitRun.checkInput({ traits, input, root, threshold: 0.5 }).pipe(
       Effect.provide(layer)

@@ -1,7 +1,7 @@
 import { Array, Effect, Order, pipe, Record, Schema as S, String } from "effect"
 
 import * as Input from "../Input/Input.ts"
-import { type InputRange, isValidForText } from "../Input/InputRange.ts"
+import { type InputRange, whyInvalidTarget } from "../Input/InputRange.ts"
 import type { InputSource } from "../Input/InputSource.ts"
 import { matchesFile } from "../Trait/TraitMatch.ts"
 import type { TraitSubject } from "../Trait/TraitSubject.ts"
@@ -259,7 +259,7 @@ export const checkFile = Effect.fnUntraced(function* (options: {
     return { checks: [], usage: noUsage }
   }
   // Ranges that do not select from this text cannot be shown to the model, so the file is then checked as one segment, as is a file with only one.
-  const usable = Array.every(options.segments, (range) => range.end > range.start && isValidForText(range, source.text))
+  const usable = Array.every(options.segments, (range) => whyInvalidTarget(range, source.text) === undefined)
   const divided = usable && options.segments.length > 1
   const lineOf = (offset: number) => pipe(source.text, String.slice(0, offset), String.split("\n")).length
   // Segments that hold the same text are the same evidence, so they are checked as one.
@@ -272,9 +272,7 @@ export const checkFile = Effect.fnUntraced(function* (options: {
     alike,
     Effect.fnUntraced(function* (ranges) {
       // The whole text is always a valid selection of itself, and so is each range once it has been checked against the text.
-      const input = yield* Effect.orDie(
-        Input.fromSegment({ after: source }, { _tag: "After", range: Array.headNonEmpty(ranges) })
-      )
+      const input = yield* Effect.orDie(Input.select("after", source, Array.headNonEmpty(ranges)))
       const { checks, usage } = yield* check({ candidates, input, root, threshold })
       return {
         // Every one of the segments has the checks, each naming the lines it covers itself.

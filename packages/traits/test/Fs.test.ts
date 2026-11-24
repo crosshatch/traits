@@ -2,8 +2,8 @@ import { NodeServices } from "@effect/platform-node"
 import { expect, layer } from "@effect/vitest"
 import { Array, Clock, Effect, FileSystem, Layer, Option, Order, Path, pipe, PlatformError, Ref, Result } from "effect"
 
-import { createFile, FileAlreadyExistsError } from "../util/fs/createFile.ts"
-import { writeFile } from "../util/fs/writeFile.ts"
+import * as Fs from "../util/Fs.ts"
+import * as Platform from "../util/platform.ts"
 
 /** Runs the effect with a file path in a temporary directory, and that directory. */
 const withFile = <A, E, R>(effect: (file: string, directory: string) => Effect.Effect<A, E, R>) =>
@@ -62,7 +62,7 @@ const fileSystems = [
   ["no links", withoutLinks]
 ] as const
 
-const posix = process.platform !== "win32"
+const posix = !Platform.isWindows
 
 // The wait between attempts to replace a busy file, and the age of a leftover staging directory, use the real clock.
 layer(NodeServices.layer, { excludeTestServices: true })((it) => {
@@ -70,8 +70,8 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
     withFile(
       Effect.fn(function* (file, directory) {
         const fs = yield* FileSystem.FileSystem
-        yield* writeFile(file, "old")
-        yield* writeFile(file, "new 😀")
+        yield* Fs.write(file, "old")
+        yield* Fs.write(file, "new 😀")
         const text = yield* fs.readFileString(file)
         const left = yield* entries(directory)
         expect(text).toBe("new 😀")
@@ -85,7 +85,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
       Effect.fn(function* (file, directory) {
         const fs = yield* FileSystem.FileSystem
         yield* fs.writeFileString(file, "old")
-        const error = yield* writeFile(file, "new").pipe(
+        const error = yield* Fs.write(file, "new").pipe(
           Effect.provide(failingMoves(Number.POSITIVE_INFINITY, "Unknown")),
           Effect.flip
         )
@@ -103,7 +103,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
       Effect.fn(function* (file) {
         const fs = yield* FileSystem.FileSystem
         yield* fs.writeFileString(file, "old")
-        yield* writeFile(file, "new").pipe(Effect.provide(failingMoves(2, "Busy")))
+        yield* Fs.write(file, "new").pipe(Effect.provide(failingMoves(2, "Busy")))
         const text = yield* fs.readFileString(file)
         expect(text).toBe("new")
       })
@@ -116,7 +116,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
         const fs = yield* FileSystem.FileSystem
         yield* fs.writeFileString(file, "old")
         yield* fs.chmod(file, 0o600)
-        yield* writeFile(file, "new")
+        yield* Fs.write(file, "new")
         const { mode } = yield* fs.stat(file)
         expect(mode & 0o777).toBe(0o600)
       })
@@ -134,7 +134,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
         yield* fs.writeFileString(real, "old")
         yield* fs.symlink(real, file)
 
-        yield* writeFile(file, "new")
+        yield* Fs.write(file, "new")
         const link = yield* fs.lstat(file)
         const text = yield* fs.readFileString(real)
         const beside = yield* entries(elsewhere)
@@ -160,7 +160,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
         yield* fs.utimes(stale, now / 1000 - 120, now / 1000 - 120)
         yield* fs.makeDirectory(path.join(directory, ".write-fresh"))
 
-        yield* writeFile(file, "new")
+        yield* Fs.write(file, "new")
         const left = yield* entries(directory)
         expect(left).toEqual([".write-fresh", "data.json"])
       })
@@ -171,11 +171,11 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
     withFile(
       Effect.fn(function* (file, directory) {
         const fs = yield* FileSystem.FileSystem
-        yield* createFile(file, "first").pipe(Effect.provide(files))
-        const taken = yield* createFile(file, "second").pipe(Effect.provide(files), Effect.flip)
+        yield* Fs.create(file, "first").pipe(Effect.provide(files))
+        const taken = yield* Fs.create(file, "second").pipe(Effect.provide(files), Effect.flip)
         const text = yield* fs.readFileString(file)
         const left = yield* entries(directory)
-        expect(taken).toEqual(FileAlreadyExistsError.make({ file }))
+        expect(taken).toEqual(Fs.AlreadyExistsError.make({ file }))
         expect(text).toBe("first")
         expect(left).toEqual(["data.json"])
       })
@@ -190,7 +190,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
           const fs = yield* FileSystem.FileSystem
           const attempts = yield* Effect.forEach(
             Array.range(0, 24),
-            (attempt) => Effect.result(createFile(file, `attempt ${attempt}`)),
+            (attempt) => Effect.result(Fs.create(file, `attempt ${attempt}`)),
             { concurrency: "unbounded" }
           ).pipe(Effect.provide(files))
           const text = yield* fs.readFileString(file)
@@ -201,7 +201,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
           )
           expect(Array.filter(attempts, Result.isSuccess)).toHaveLength(1)
           expect(Array.filter(attempts, Result.isFailure)).toEqual(
-            Array.replicate(Result.fail(FileAlreadyExistsError.make({ file })), 24)
+            Array.replicate(Result.fail(Fs.AlreadyExistsError.make({ file })), 24)
           )
           expect(won).toEqual(Option.some(text))
           expect(left).toEqual(["data.json"])
@@ -212,7 +212,7 @@ layer(NodeServices.layer, { excludeTestServices: true })((it) => {
   it.effect("gives the path back when a file cannot be created on a file system with no links", () =>
     withFile(
       Effect.fn(function* (file, directory) {
-        const error = yield* createFile(file, "new").pipe(
+        const error = yield* Fs.create(file, "new").pipe(
           Effect.provide(failingMoves(Number.POSITIVE_INFINITY, "Unknown").pipe(Layer.provide(withoutLinks))),
           Effect.flip
         )

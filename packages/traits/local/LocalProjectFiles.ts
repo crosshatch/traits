@@ -1,9 +1,8 @@
-import { Array, Effect, FileSystem, Option, Order, Path, pipe, String } from "effect"
+import { Array, Effect, FileSystem, Glob, Option, Order, Path, pipe, String } from "effect"
 import type { ChildProcessSpawner } from "effect/process"
 
 import { StorageError } from "../StorageError.ts"
 import type { Files } from "../TraitRun/TraitRun.ts"
-import { matchesGlob } from "../util/matchesGlob.ts"
 import { runProcess } from "../util/process/runProcess.ts"
 import { LocalPaths } from "./LocalPaths.ts"
 
@@ -15,7 +14,7 @@ export const make = Effect.fn("LocalProjectFiles.make")(function* (exclude: Read
   const services = yield* Effect.context<ChildProcessSpawner.ChildProcessSpawner>()
   // A root that could not be written as a URL would be a root that was never resolved.
   const root = yield* Effect.orDie(path.toFileUrl(paths.root))
-  const excluded = Array.map(exclude, matchesGlob)
+  const excluded = Array.map(exclude, (pattern) => Glob.make(pattern, { dot: true }))
 
   return {
     root,
@@ -39,7 +38,7 @@ export const make = Effect.fn("LocalProjectFiles.make")(function* (exclude: Read
         stdout,
         String.split("\u0000"),
         Array.filter(String.isNonEmpty),
-        Array.filter((file) => !Array.some(excluded, (matches) => matches(file))),
+        Array.filter((file) => !Array.some(excluded, (glob) => Glob.match(glob, file))),
         // A file with a merge conflict is listed once per version.
         Array.dedupe,
         Array.sort(Order.String)

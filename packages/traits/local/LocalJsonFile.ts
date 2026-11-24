@@ -1,7 +1,7 @@
 import { Effect, FileSystem, pipe, Schema as S } from "effect"
 
 import { StorageError } from "../StorageError.ts"
-import { writeFile } from "../util/fs/writeFile.ts"
+import * as Fs from "../util/Fs.ts"
 
 /** Reads a JSON file of the workspace as the schema describes it. */
 export const read = Effect.fnUntraced(function* <Schema extends S.Constraint>(file: string, schema: Schema) {
@@ -29,7 +29,7 @@ export const read = Effect.fnUntraced(function* <Schema extends S.Constraint>(fi
 
 /** Writes the value to a JSON file of the workspace, creating it or replacing its contents in one step. */
 export const write = Effect.fnUntraced(function* (file: string, value: unknown) {
-  yield* writeFile(file, `${JSON.stringify(value, null, 2)}\n`).pipe(
+  yield* Fs.write(file, `${JSON.stringify(value, null, 2)}\n`).pipe(
     Effect.mapError((cause) => StorageError.make({ location: file, reason: { _tag: "Unwritable" }, cause }))
   )
 })

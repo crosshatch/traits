@@ -5,6 +5,7 @@ import { UserDirectories } from "effect/persistence"
 
 import type { InputRange } from "../../../Input/InputRange.ts"
 import PackageJson from "../../../package.json" with { type: "json" }
+import * as Platform from "../../../util/platform.ts"
 
 /** The parser could not be loaded, such as on a platform it has no native library for. */
 export class ParserUnavailableError extends S.TaggedError<ParserUnavailableError>()("ParserUnavailableError", {
@@ -111,7 +112,7 @@ const loadEmbedded = Effect.gen(function* () {
   const directories = yield* UserDirectories.UserDirectories
   // The user's own cache directory, which other users of the machine cannot write to, unlike a shared temporary directory.
   const cache = yield* directories.cache("traits")
-  const file = path.join(cache, `oxc-parser-${PackageJson.version}-${process.platform}-${process.arch}.node`)
+  const file = path.join(cache, `oxc-parser-${PackageJson.version}-${Platform.target}.node`)
   const embedded = yield* Effect.try({
     try: () => new Uint8Array(getRawAsset(embeddedParser)),
     catch: (cause) => ParserUnavailableError.make({ cause })
@@ -124,7 +125,7 @@ const loadEmbedded = Effect.gen(function* () {
   )
   if (!intact) {
     yield* fs.makeDirectory(cache, { recursive: true })
-    const staged = `${file}.${process.pid}.tmp`
+    const staged = `${file}.${globalThis.crypto.randomUUID()}.tmp`
     yield* fs.writeFile(staged, embedded)
     // Moved into place whole, so another process starting at the same time never loads part of it.
     yield* fs.rename(staged, file)

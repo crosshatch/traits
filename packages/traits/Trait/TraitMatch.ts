@@ -1,7 +1,6 @@
-import { Array, Schema as S } from "effect"
+import { Array, Glob, Schema as S } from "effect"
 
 import { isNonBlankPattern } from "../util/checks/isNonBlankPattern.ts"
-import { matchesGlob } from "../util/matchesGlob.ts"
 
 /** A glob pattern, relative to the workspace root, for files a trait can apply to, such as **\/*.{ts,tsx}: * matches within one name, ** across directories, and {a,b} either alternative. */
 export type TraitMatchPattern = typeof TraitMatchPattern.Type
@@ -20,6 +19,6 @@ export const TraitMatch = S.Union([TraitMatchPattern, S.NonEmptyArray(TraitMatch
 
 /** Whether a file's path, relative to the workspace root, is one the trait can apply to. */
 export const matchesFile = (match: TraitMatch): ((path: string) => boolean) => {
-  const patterns = Array.map(Array.ensure(match), matchesGlob)
-  return (path) => Array.some(patterns, (matches) => matches(path))
+  const globs = Array.map(Array.ensure(match), (pattern) => Glob.make(pattern, { dot: true }))
+  return (path) => Array.some(globs, (glob) => Glob.match(glob, path))
 }

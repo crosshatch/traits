@@ -90,181 +90,61 @@ describe("InputSource", () => {
   )
 })
 
-describe("Change", () => {
-  it("needs at least one side", () => {
-    expect(failure(Input.Change, { before: source("x") })).toBeUndefined()
-    expect(failure(Input.Change, { after: source("y") })).toBeUndefined()
-    expect(failure(Input.Change, both)).toBeUndefined()
-    expect(failure(Input.Change, {})).toContain("Missing key")
-  })
-})
-
-describe("Segment", () => {
-  const after = (before: unknown) => ({ _tag: "After", range: { start: 0, end: 3 }, before })
-
-  it("accepts before ranges in ascending order without overlap, including adjacent ones", () => {
-    expect(
-      failure(
-        Input.Segment,
-        after([
-          { start: 0, end: 3 },
-          { start: 3, end: 5 },
-          { start: 7, end: 8 }
-        ])
-      )
-    ).toBeUndefined()
-    expect(failure(Input.Segment, after([]))).toBeUndefined()
-  })
-
-  it("treats an explicit undefined as omitted", () => {
-    expect(failure(Input.Segment, after(undefined))).toBeUndefined()
-    expect(failure(Input.Segment, { _tag: "After", range: { start: 0, end: 3 } })).toBeUndefined()
-  })
-
-  it.each([
-    [
-      "overlapping",
-      [
-        { start: 0, end: 6 },
-        { start: 4, end: 8 }
-      ]
-    ],
-    [
-      "unsorted",
-      [
-        { start: 4, end: 8 },
-        { start: 0, end: 3 }
-      ]
-    ],
-    [
-      "duplicate",
-      [
-        { start: 0, end: 6 },
-        { start: 0, end: 6 }
-      ]
-    ]
-  ])("rejects %s before ranges at the offending index", (_name, ranges) => {
-    const message = failure(Input.Segment, after(ranges))
-    expect(message).toContain("Before ranges must be in ascending order without overlap")
-    expect(message).toContain('at ["before"][1]')
-  })
-})
-
 describe("Input", () => {
-  const input = (segment: unknown, change: unknown = both) => ({
-    _tag: (segment as { readonly _tag: string })._tag,
-    change,
-    segment
-  })
+  const input = (range: unknown, text = "new 😀 text") => ({ version: "after", source: source(text), range })
 
-  it.effect("builds an input from a segment and selects its target text", () =>
+  it.effect("builds an input from a version, a source and a range, and selects its target text", () =>
     Effect.gen(function* () {
-      const made = yield* Input.fromSegment(decoded, {
-        _tag: "After",
-        range: { start: 4, end: 6 },
-        before: [{ start: 0, end: 3 }]
-      })
-      expect(made._tag).toBe("After")
+      const made = yield* Input.select("after", decoded.after, { start: 4, end: 6 })
+      expect(made.version).toBe("after")
       expect(Input.targetText(made)).toBe("😀")
-      expect(Input.primarySource(made)).toEqual(decoded.after)
     })
   )
 
-  it.effect("fails when the change lacks the side the segment selects from", () =>
+  it.effect("selects deleted text from a before source", () =>
     Effect.gen(function* () {
-      const error = yield* Input.fromSegment(
-        { after: decoded.after },
-        { _tag: "Before", range: { start: 0, end: 1 } }
-      ).pipe(Effect.flip)
-      expect(error.message).toContain('Missing key\n  at ["change"]["before"]')
+      const made = yield* Input.select("before", decoded.before, { start: 4, end: 8 })
+      expect(Input.targetText(made)).toBe("text")
     })
   )
 
   it.effect("fails for a location that is not a file: or https: URL", () =>
     Effect.gen(function* () {
-      const error = yield* Input.fromSegment(
-        { after: { uri: new URL("ftp://example.com/a.ts"), text: "abc" } },
-        { _tag: "After", range: { start: 0, end: 3 } }
+      const error = yield* Input.select(
+        "after",
+        { uri: new URL("ftp://example.com/a.ts"), text: "abc" },
+        { start: 0, end: 3 }
       ).pipe(Effect.flip)
-      expect(error.message).toContain('Expected a file: or https: URL.\n  at ["change"]["after"]["uri"]')
+      expect(error.message).toContain('Expected a file: or https: URL.\n  at ["source"]["uri"]')
     })
   )
 
   it.each([
     [
       "a target past the end of its source",
-      input({ _tag: "After", range: { start: 0, end: 99 } }),
-      'The range ends at 99, past the end of the text at 11.\n  at ["segment"]["range"]'
+      input({ start: 0, end: 99 }),
+      'The range ends at 99, past the end of the text at 11.\n  at ["range"]'
     ],
     [
       "a target that splits a surrogate pair",
-      input({ _tag: "After", range: { start: 0, end: 5 } }),
-      'The range end 5 splits a surrogate pair.\n  at ["segment"]["range"]'
+      input({ start: 0, end: 5 }),
+      'The range end 5 splits a surrogate pair.\n  at ["range"]'
     ],
     [
       "an empty target in a nonempty source",
-      input({ _tag: "After", range: { start: 2, end: 2 } }),
-      'The target range is empty, which is only allowed for an empty source.\n  at ["segment"]["range"]'
+      input({ start: 2, end: 2 }),
+      'The target range is empty, which is only allowed for an empty source.\n  at ["range"]'
     ],
-    [
-      "an empty before target in a nonempty source",
-      input({ _tag: "Before", range: { start: 0, end: 0 } }),
-      "The target range is empty, which is only allowed for an empty source."
-    ],
-    [
-      "a before range past the end of the before source",
-      input({
-        _tag: "After",
-        range: { start: 0, end: 3 },
-        before: [
-          { start: 0, end: 3 },
-          { start: 4, end: 40 }
-        ]
-      }),
-      'The range ends at 40, past the end of the text at 8.\n  at ["segment"]["before"][1]'
-    ],
-    [
-      "before ranges without a before source",
-      input({ _tag: "After", range: { start: 0, end: 3 }, before: [{ start: 0, end: 1 }] }, { after: both.after }),
-      'The change has no before source for these ranges to select from.\n  at ["segment"]["before"]'
-    ],
-    [
-      "a tag that differs from its segment's",
-      { _tag: "After", change: both, segment: { _tag: "Before", range: { start: 0, end: 1 } } },
-      'at ["segment"]["_tag"]'
-    ]
+    ["an unknown version", { ...input({ start: 0, end: 1 }), version: "during" }, 'at ["version"]']
   ])("rejects %s", (_name, value, message) => {
     expect(failure(Input.Input, value)).toContain(message)
   })
 
-  it("reports every invalid range at once", () => {
-    const message = failure(
-      Input.Input,
-      input({
-        _tag: "After",
-        range: { start: 0, end: 99 },
-        before: [
-          { start: 0, end: 3 },
-          { start: 4, end: 40 }
-        ]
-      })
-    )
-    expect(message).toContain('at ["segment"]["range"]')
-    expect(message).toContain('at ["segment"]["before"][1]')
-  })
-
-  it("accepts an empty target only for an empty source, and an empty before list without a before source", () => {
-    expect(
-      failure(Input.Input, input({ _tag: "After", range: { start: 0, end: 0 } }, { after: source("") }))
-    ).toBeUndefined()
-    expect(
-      failure(Input.Input, input({ _tag: "After", range: { start: 0, end: 3 }, before: [] }, { after: both.after }))
-    ).toBeUndefined()
+  it("accepts an empty target only for an empty source", () => {
+    expect(failure(Input.Input, input({ start: 0, end: 0 }, ""))).toBeUndefined()
   })
 
   it("enforces the same rules when constructing directly", () => {
-    expect(() =>
-      Input.Input.cases.After.make({ change: decoded, segment: { _tag: "After", range: { start: 0, end: 99 } } })
-    ).toThrow()
+    expect(() => Input.Input.make({ version: "after", source: decoded.after, range: { start: 0, end: 99 } })).toThrow()
   })
 })

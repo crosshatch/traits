@@ -1,7 +1,6 @@
-import { Array, Console, Effect, Option, pipe } from "effect"
+import { Array, Console, Effect, Glob, Option, pipe } from "effect"
 
 import type { Segmentation } from "../../TraitRun/TraitRun.ts"
-import { matchesGlob } from "../../util/matchesGlob.ts"
 import type { SegmentationRule } from "./SegmentationRule.ts"
 import * as TypeScriptSegmentation from "./segmenters/typescript.ts"
 
@@ -14,7 +13,7 @@ const builtIn: ReadonlyArray<SegmentationRule> = [{ files: "**/*.{ts,tsx,mts,cts
 export const prepare = Effect.fn("Segmentation.prepare")(function* (rules: ReadonlyArray<SegmentationRule>) {
   const ordered = Array.map(Array.appendAll(rules, builtIn), (rule) => ({
     by: rule.by,
-    matches: matchesGlob(rule.files)
+    glob: Glob.make(rule.files, { dot: true })
   }))
   const typescript = yield* TypeScriptSegmentation.load.pipe(
     // Without the parser the run still checks every file, only without dividing these.
@@ -25,7 +24,7 @@ export const prepare = Effect.fn("Segmentation.prepare")(function* (rules: Reado
   )
   const segment: Segmentation = (file, text) => {
     const whole = [{ start: 0, end: text.length }]
-    const rule = Array.findFirst(ordered, ({ matches }) => matches(file))
+    const rule = Array.findFirst(ordered, ({ glob }) => Glob.match(glob, file))
     return Option.isSome(rule) && rule.value.by === "typescript"
       ? pipe(
           typescript,

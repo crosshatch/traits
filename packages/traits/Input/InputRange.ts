@@ -1,4 +1,4 @@
-import { Function, Option, Schema as S, String } from "effect"
+import { Option, Schema as S, String } from "effect"
 
 /** An ordered UTF-16 text range; [0, text.length) selects the whole source, including [0, 0) for empty text. */
 export type InputRange = typeof InputRange.Type
@@ -21,10 +21,7 @@ export const InputRange = S.Struct({
   )
 
 /** Why a range cannot select from the text, or undefined when it can: it needs nonnegative, ordered integer offsets that end within the text and do not split surrogate pairs. */
-export const whyInvalidForText: {
-  (text: string): (range: InputRange) => string | undefined
-  (range: InputRange, text: string): string | undefined
-} = Function.dual(2, (range: InputRange, text: string): string | undefined => {
+export const whyInvalidForText = (range: InputRange, text: string): string | undefined => {
   if (!S.is(InputRange)(range)) {
     return "Expected nonnegative integer offsets with the end at or after the start."
   }
@@ -40,10 +37,14 @@ export const whyInvalidForText: {
     return `The range end ${range.end} splits a surrogate pair.`
   }
   return undefined
-})
+}
 
 /** Whether a range has nonnegative, ordered integer offsets and fits the text without splitting surrogate pairs. */
-export const isValidForText: {
-  (text: string): (range: InputRange) => boolean
-  (range: InputRange, text: string): boolean
-} = Function.dual(2, (range: InputRange, text: string): boolean => whyInvalidForText(range, text) === undefined)
+export const isValidForText = (range: InputRange, text: string): boolean => whyInvalidForText(range, text) === undefined
+
+/** Why a range cannot be an assessment target in the text, or undefined when it can: it must select from the text, and select something unless the text is empty. */
+export const whyInvalidTarget = (range: InputRange, text: string): string | undefined =>
+  whyInvalidForText(range, text) ??
+  (range.start === range.end && text.length > 0
+    ? "The target range is empty, which is only allowed for an empty source."
+    : undefined)

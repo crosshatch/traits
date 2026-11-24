@@ -4,16 +4,12 @@ import { Argument, Command, Flag } from "effect/cli"
 import * as Estimate from "../../Estimate/Estimate.ts"
 import * as LocalDecisionCache from "../../local/LocalDecisionCache.ts"
 import * as LocalEnvFile from "../../local/LocalEnvFile.ts"
-import * as LocalPaths from "../../local/LocalPaths.ts"
-import * as LocalWorkspace from "../../local/LocalWorkspace.ts"
+import * as LocalRun from "../../local/LocalRun.ts"
 import * as ModelConfiguration from "../../local/TraitsConfig/ModelConfiguration.ts"
 import * as TraitRun from "../../TraitRun/TraitRun.ts"
 import { TraitSelectionId } from "../../TraitSelection/TraitSelectionId.ts"
 import { Probability } from "../../util/Probability.ts"
-import { CommandExit, CommandFailed } from "../CommandExit.ts"
-
-/** The workspace found from the current directory. */
-const workspace = LocalWorkspace.layer.pipe(Layer.provideMerge(LocalPaths.layer))
+import { CommandFailed, exitWith } from "../CommandExit.ts"
 
 const noDefaultSelection =
   "No selection was given, and traits/config.json declares no selection with the ID default. Declare one under selections, or name the selection to run."
@@ -71,7 +67,7 @@ export const run = Command.make(
   Effect.fn("run")(
     function* ({ dotenv, dry, json, maxCost, maxTokens, selections, threshold }) {
       // The configuration is read when a run starts, and what the run is handed goes by it, so an edit made since the last run takes effect.
-      const { config, files, segmentation } = yield* LocalWorkspace.prepareRun
+      const { config, files, segmentation } = yield* LocalRun.prepare
       if (dry) {
         const estimate = yield* Estimate.estimate({ files, segmentation, selections, threshold }).pipe(
           // Nothing is asked of the model, so its credentials are not read, and nothing is remembered, so no cache is made.
@@ -102,37 +98,34 @@ export const run = Command.make(
       yield* Console.log(json ? JSON.stringify(encoded, null, 2) : TraitRun.format(encoded))
       const counts = TraitRun.tally(report)
       if (counts.Violated > 0) {
-        return yield* CommandExit.make({ code: 1 })
+        return yield* exitWith(1)
       }
       if (counts.NotAssessed > 0) {
-        return yield* CommandExit.make({ code: 2 })
+        return yield* exitWith(2)
       }
     },
     (effect, { selections }) => {
       // Whatever kept the run from its work is reported with its own message, and the run ends as one that could not do it.
-      const fail = (error: { readonly message: string }) => CommandFailed.make({ reason: error.message })
       return effect.pipe(
-        Effect.provide(workspace),
-        Effect.catchTags({
-          // The provider's key is read from the environment, and its own error only names the variable in passing.
-          ConfigError: (error) =>
-            CommandFailed.make({
-              reason: `Could not read the credentials for the models in traits/config.json from the environment: ${pipe(error.message, String.replaceAll(/\s+/gu, " "))}. Set the variable it names, in the environment or in .env, or name another .env file that sets it with --dotenv, then run again.`
-            }),
-          // A missing default selection was not one the user typed, so the reason says where it was expected and what to do.
-          TraitSelectionNotFoundError: (error) =>
-            Array.isReadonlyArrayNonEmpty(selections)
-              ? fail(error)
-              : CommandFailed.make({ reason: noDefaultSelection }),
-          EnvFileNotFoundError: fail,
-          PlatformError: fail,
-          SchemaError: fail,
-          StorageError: fail,
-          TraitCollectionNotFoundError: fail,
-          TraitNotFoundError: fail,
-          WorkspaceDirectoryError: fail,
-          WorkspaceRootError: fail
-        })
+        Effect.catchIf(
+          (error) => !(error instanceof CommandFailed),
+          (error) => {
+            switch (error._tag) {
+              // The provider's key is read from the environment, and its own error only names the variable in passing.
+              case "ConfigError":
+                return CommandFailed.make({
+                  reason: `Could not read the credentials for the models in traits/config.json from the environment: ${pipe(error.message, String.replaceAll(/\s+/gu, " "))}. Set the variable it names, in the environment or in .env, or name another .env file that sets it with --dotenv, then run again.`
+                })
+              // A missing default selection was not one the user typed, so the reason says where it was expected and what to do.
+              case "TraitSelectionNotFoundError":
+                return CommandFailed.make({
+                  reason: Array.isReadonlyArrayNonEmpty(selections) ? error.message : noDefaultSelection
+                })
+              default:
+                return CommandFailed.make({ reason: error.message })
+            }
+          }
+        )
       )
     }
   )

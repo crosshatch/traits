@@ -5,7 +5,8 @@ import { DecisionModel } from "effect/ai"
 import { Digest } from "effect/crypto"
 import { KeyValueStore, UserDirectories } from "effect/persistence"
 
-import * as LocalWorkspace from "../local/LocalWorkspace.ts"
+import { LocalTraitCollections, LocalTraitSelections, LocalWorkspaceTraitCollection } from "../local/index.ts"
+import * as LocalRun from "../local/LocalRun.ts"
 import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { configText, git, localPaths } from "./_localWorkspace.ts"
@@ -29,6 +30,13 @@ layer(
       const traits = path.join(root, "traits")
       const write = (file: string, text: string) => fs.writeFileString(path.join(root, file), text)
       yield* fs.makeDirectory(traits)
+      const services = yield* Layer.build(
+        Layer.mergeAll(
+          LocalWorkspaceTraitCollection.layer,
+          LocalTraitCollections.layer,
+          LocalTraitSelections.layer
+        ).pipe(Layer.provideMerge(localPaths(traits)))
+      )
       yield* write(
         "traits/config.json",
         configText({ selections: { default: ["first-trait"] }, exclude: ["traits/**"] })
@@ -57,14 +65,13 @@ layer(
           }
         })
       })
-      const workspace = LocalWorkspace.layer.pipe(Layer.provideMerge(localPaths(traits)))
 
       yield* Effect.gen(function* () {
         // The layers are built once here, as a host that stays up between runs would have them, and each run is handed what the configuration says by then.
         const run = Effect.gen(function* () {
-          const { files, segmentation } = yield* LocalWorkspace.prepareRun
+          const { files, segmentation } = yield* LocalRun.prepare
           return yield* TraitRun.run({ files, segmentation, selections: [], threshold: 0.5 })
-        })
+        }).pipe(Effect.provide(services))
 
         const first = yield* run
         expect(Array.map(first.traits, ({ name }) => name)).toEqual(["first-trait"])
@@ -85,7 +92,7 @@ layer(
         expect(Array.map(second.files, ({ file }) => file)).toEqual(["keep.txt", "new.txt"])
         const after = yield* Ref.get(asked)
         expect(Array.sort(after, Order.String)).toEqual(["Later things. new", "Later things. two"])
-      }).pipe(Effect.provideService(DecisionModel.DecisionModel, model), Effect.provide(workspace))
+      }).pipe(Effect.provideService(DecisionModel.DecisionModel, model))
     })
   )
 })

@@ -6,14 +6,23 @@ import { FetchHttpClient } from "effect/http"
 import { UserDirectories } from "effect/persistence"
 
 import { Cli } from "./Cli/Cli.ts"
+import {
+  LocalPaths,
+  LocalTraitCollections,
+  LocalTraitSelections,
+  LocalWorkspaceTraitCollection
+} from "./local/index.ts"
+import * as Executable from "./util/Executable.ts"
 
 Cli.pipe(
+  Effect.provide([LocalWorkspaceTraitCollection.layer, LocalTraitCollections.layer, LocalTraitSelections.layer]),
+  Effect.provide(LocalPaths.layer),
   Effect.provide([
     NodeServices.layer,
     FetchHttpClient.layer,
     Digest.layerWebCrypto,
     UserDirectories.layer,
-    // Logs go to standard error, which leaves standard output to what a command prints, such as a report as JSON.
+    Executable.layer,
     Layer.succeed(Logger.LogToStderr, true)
   ]),
   NodeRuntime.runMain

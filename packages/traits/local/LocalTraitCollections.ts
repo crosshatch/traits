@@ -6,7 +6,7 @@ import { StorageError } from "../StorageError.ts"
 import * as TraitCollections from "../TraitCollection/TraitCollections.ts"
 import { TraitSource } from "../TraitCollection/TraitSource.ts"
 import { TraitSourceId } from "../TraitCollection/TraitSourceId.ts"
-import { writeFile } from "../util/fs/writeFile.ts"
+import * as Fs from "../util/Fs.ts"
 import * as LocalGitTraitSource from "./LocalGitTraitSource.ts"
 import * as LocalJsonFile from "./LocalJsonFile.ts"
 import { LocalPaths } from "./LocalPaths.ts"
@@ -110,7 +110,7 @@ export const layer = Effect.gen(function* () {
         // Each file is replaced in one step, so another process never reads one that is missing or half-written. A file the source left as it was is not written again, which keeps an update quick and the file's line endings as Git checked them out.
         yield* Effect.forEach(
           [...added, ...changed],
-          ({ name, text }) => writeFile(path.join(directory, LocalTraitFile.fileName(name)), text),
+          ({ name, text }) => Fs.write(path.join(directory, LocalTraitFile.fileName(name)), text),
           // A write mostly waits for the disk, so a few at once finish somewhat sooner than one after another.
           { concurrency: 8, discard: true }
         )

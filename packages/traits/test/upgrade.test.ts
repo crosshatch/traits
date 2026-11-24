@@ -1,11 +1,14 @@
 import { NodeServices } from "@effect/platform-node"
 import { expect, layer } from "@effect/vitest"
-import { Array, Effect, FileSystem, Layer, Path, Ref, SemVer } from "effect"
+import { Array, Effect, FileSystem, Layer, Path, Ref } from "effect"
+import { Command } from "effect/cli"
 import { Digest } from "effect/crypto"
 import { HttpClient, HttpClientResponse } from "effect/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { upgradeExecutable } from "../Cli/commands/_upgradeExecutable.ts"
+import { upgrade } from "../Cli/commands/upgrade.ts"
+import { Executable } from "../util/Executable.ts"
+import * as Platform from "../util/platform.ts"
 
 const latestRelease = "https://api.github.com/repos/crosshatch/traits/releases/latest"
 const target = "linux-x64"
@@ -68,9 +71,16 @@ const setup = Effect.fn("setup")(function* (options: {
   return { executable, github, requests: Ref.get(requests) }
 })
 
+/** Runs `traits upgrade` as the standalone executable at the path, installed at version 1.0.0, with the GitHub stub. */
+const run = (executable: string, github: Layer.Layer<HttpClient.HttpClient>) =>
+  Command.runWith(upgrade, { version: "1.0.0", renderErrors: false })([]).pipe(
+    Effect.provide(github),
+    Effect.provideService(Executable, { standalone: true, target, path: executable, version: "1.0.0" })
+  )
+
 layer(Layer.mergeAll(NodeServices.layer, Digest.layerWebCrypto))((it) => {
   // The command only supports macOS and Linux, and these tests build their fixture with tar.
-  const test = it.effect.skipIf(process.platform === "win32")
+  const test = it.effect.skipIf(Platform.isWindows)
 
   test("replaces the executable with GitHub's latest release when it is newer", () =>
     Effect.gen(function* () {
@@ -78,16 +88,12 @@ layer(Layer.mergeAll(NodeServices.layer, Digest.layerWebCrypto))((it) => {
       const path = yield* Path.Path
       const { executable, github, requests } = yield* setup({ tag: "traits@2.0.0" })
 
-      const result = yield* upgradeExecutable({ executable, installed: SemVer.parseUnsafe("1.0.0"), target }).pipe(
-        Effect.provide(github)
-      )
+      yield* run(executable, github)
 
       const content = yield* fs.readFileString(executable)
       const info = yield* fs.stat(executable)
       const siblings = yield* fs.readDirectory(path.dirname(executable))
       const requested = yield* requests
-      expect(result.upgraded).toBe(true)
-      expect(SemVer.format(result.latest)).toBe("2.0.0")
       expect(content).toBe("new")
       expect(info.mode & 0o111).toBe(0o111)
       expect(siblings).toEqual(["traits"])
@@ -99,13 +105,10 @@ layer(Layer.mergeAll(NodeServices.layer, Digest.layerWebCrypto))((it) => {
       const fs = yield* FileSystem.FileSystem
       const { executable, github, requests } = yield* setup({ tag: "traits@1.0.0" })
 
-      const result = yield* upgradeExecutable({ executable, installed: SemVer.parseUnsafe("1.0.0"), target }).pipe(
-        Effect.provide(github)
-      )
+      yield* run(executable, github)
 
       const content = yield* fs.readFileString(executable)
       const requested = yield* requests
-      expect(result.upgraded).toBe(false)
       expect(content).toBe("old")
       expect(requested).toEqual([latestRelease])
     }))
@@ -129,10 +132,7 @@ layer(Layer.mergeAll(NodeServices.layer, Digest.layerWebCrypto))((it) => {
         const path = yield* Path.Path
         const { executable, github } = yield* setup(release)
 
-        const error = yield* upgradeExecutable({ executable, installed: SemVer.parseUnsafe("1.0.0"), target }).pipe(
-          Effect.provide(github),
-          Effect.flip
-        )
+        const error = yield* run(executable, github).pipe(Effect.flip)
 
         const content = yield* fs.readFileString(executable)
         const siblings = yield* fs.readDirectory(path.dirname(executable))

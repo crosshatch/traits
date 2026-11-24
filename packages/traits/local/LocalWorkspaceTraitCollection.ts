@@ -6,8 +6,7 @@ import * as TraitFile from "../Trait/TraitFile.ts"
 import type { TraitName } from "../Trait/TraitName.ts"
 import { TraitNotFoundError } from "../TraitCollection/TraitCollection.ts"
 import { WorkspaceTraitCollection, TraitAlreadyExistsError } from "../TraitCollection/WorkspaceTraitCollection.ts"
-import { createFile } from "../util/fs/createFile.ts"
-import { writeFile } from "../util/fs/writeFile.ts"
+import * as Fs from "../util/Fs.ts"
 import { LocalPaths } from "./LocalPaths.ts"
 import * as LocalTraitCollection from "./LocalTraitCollection.ts"
 import * as LocalTraitFile from "./LocalTraitFile.ts"
@@ -25,7 +24,7 @@ export const layer = Effect.gen(function* () {
   const file = (name: TraitName) => path.join(paths.directory, LocalTraitFile.fileName(name))
 
   const write = (trait: Trait) =>
-    writeFile(file(trait.name), TraitFile.serialize(trait)).pipe(
+    Fs.write(file(trait.name), TraitFile.serialize(trait)).pipe(
       Effect.provide(platform),
       Effect.mapError((cause) =>
         StorageError.make({ location: file(trait.name), reason: { _tag: "Unwritable" }, cause })
@@ -55,10 +54,10 @@ export const layer = Effect.gen(function* () {
       const trait = yield* traits.get(from)
       const renamed = { ...trait, name: to }
       // Creating the file is also the check that the name is free, so another process cannot take it in between.
-      yield* createFile(file(to), TraitFile.serialize(renamed)).pipe(
+      yield* Fs.create(file(to), TraitFile.serialize(renamed)).pipe(
         Effect.provide(platform),
         Effect.catchTags({
-          FileAlreadyExistsError: () => TraitAlreadyExistsError.make({ traitName: to }),
+          AlreadyExistsError: () => TraitAlreadyExistsError.make({ traitName: to }),
           PlatformError: (cause) => StorageError.make({ location: file(to), reason: { _tag: "Unwritable" }, cause })
         })
       )
