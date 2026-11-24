@@ -477,8 +477,6 @@ const output = await Effect.runPromise(
         rssDelta: memoryAfter.rss - memoryBefore.rss,
         heapUsedDelta: memoryAfter.heapUsed - memoryBefore.heapUsed
       },
-      // The head index lives in memory; nothing is persisted to SQLite.
-      databaseBytes: 0,
       results,
       sink
     } satisfies Model.WorkerResult

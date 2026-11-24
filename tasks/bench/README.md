@@ -88,17 +88,17 @@ model-backed checks.
 Startup reports module import, layer construction/hydration, and first full list
 separately. Their sum excludes Node launch, shared benchmark imports, fixture
 copying, configuration/provider loading, package installation, MCP transport,
-and the project ownership lock. Filesystem pages are warm; no OS cache flushing
-is attempted.
+and the worktree write lock. Filesystem pages are warm; no OS cache flushing is
+attempted.
 
-The current read index uses an isolated in-memory SQLite connection; earlier
-recorded benchmarks used a temporary file-backed index. The persistent ownership
-lock remains separate. In-memory workers report zero database-file bytes.
+The current read index uses a per-process in-memory SQLite connection; earlier
+recorded benchmarks used a temporary file-backed index and reported its file
+size, which is no longer measured.
 
 RSS/heap deltas are approximate post-initialization observations without forced
-GC, not precise retained-allocation measurements. SQLite file sizes include
-present journal/WAL/SHM files. Historical results include a filesystem-only head
-control; that diagnostic implementation has since been removed.
+GC, not precise retained-allocation measurements. Historical results include a
+filesystem-only head control; that diagnostic implementation has since been
+removed.
 
 I/O counters count store-side Markdown reads, directory scans, and watch events
 during warmup/measurement. They do not count SQLite's native filesystem I/O.
