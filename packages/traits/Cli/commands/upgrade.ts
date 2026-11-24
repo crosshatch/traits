@@ -3,7 +3,7 @@ import { isSea } from "node:sea"
 import { Array, Console, Effect, SemVer } from "effect"
 import { CliError, Command } from "effect/cli"
 
-import PackageJson from "../package.json" with { type: "json" }
+import PackageJson from "../../package.json" with { type: "json" }
 import { targets, upgradeExecutable } from "./_upgradeExecutable.ts"
 
 export const upgrade = Command.make(

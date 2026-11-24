@@ -5,7 +5,7 @@ import { Digest } from "effect/crypto"
 import { HttpClient, HttpClientResponse } from "effect/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import { upgradeExecutable } from "../Cli/_upgradeExecutable.ts"
+import { upgradeExecutable } from "../Cli/commands/_upgradeExecutable.ts"
 
 const latestRelease = "https://api.github.com/repos/crosshatch/traits/releases/latest"
 const target = "linux-x64"

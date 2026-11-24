@@ -4,7 +4,7 @@ import { Digest } from "effect/crypto"
 import { HttpClient, HttpClientResponse } from "effect/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 
-import PackageJson from "../package.json" with { type: "json" }
+import PackageJson from "../../package.json" with { type: "json" }
 
 const latestRelease = "https://api.github.com/repos/crosshatch/traits/releases/latest"
 

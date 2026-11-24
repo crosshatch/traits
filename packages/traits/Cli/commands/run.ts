@@ -1,15 +1,19 @@
-import { Array, Console, Effect, Layer, Option, pipe, Schema as S } from "effect"
+import { Array, Console, Effect, Layer, Option, pipe, Schema as S, String } from "effect"
 import { Argument, Command, Flag } from "effect/cli"
 
-import * as Estimate from "../Estimate/Estimate.ts"
-import * as LocalDecisionCache from "../local/LocalDecisionCache.ts"
-import * as LocalEnvFile from "../local/LocalEnvFile.ts"
-import * as LocalWorkspace from "../local/LocalWorkspace.ts"
-import * as ModelConfiguration from "../local/TraitsConfig/ModelConfiguration.ts"
-import * as TraitRun from "../TraitRun/TraitRun.ts"
-import { TraitSelectionId } from "../TraitSelection/TraitSelectionId.ts"
-import { Probability } from "../util/Probability.ts"
-import { CommandExit } from "./CommandExit.ts"
+import * as Estimate from "../../Estimate/Estimate.ts"
+import * as LocalDecisionCache from "../../local/LocalDecisionCache.ts"
+import * as LocalEnvFile from "../../local/LocalEnvFile.ts"
+import * as LocalPaths from "../../local/LocalPaths.ts"
+import * as LocalWorkspace from "../../local/LocalWorkspace.ts"
+import * as ModelConfiguration from "../../local/TraitsConfig/ModelConfiguration.ts"
+import * as TraitRun from "../../TraitRun/TraitRun.ts"
+import { TraitSelectionId } from "../../TraitSelection/TraitSelectionId.ts"
+import { Probability } from "../../util/Probability.ts"
+import { CommandExit, CommandFailed } from "../CommandExit.ts"
+
+/** The workspace found from the current directory. */
+const workspace = LocalWorkspace.layer.pipe(Layer.provideMerge(LocalPaths.layer))
 
 const noDefaultSelection =
   "No selection was given, and traits/config.json declares no selection with the ID default. Declare one under selections, or name the selection to run."
@@ -77,8 +81,7 @@ export const run = Command.make(
         return yield* Console.log(json ? JSON.stringify(encoded, null, 2) : Estimate.format(encoded))
       }
       if (Option.isSome(maxTokens) && Option.isSome(maxCost)) {
-        return yield* CommandExit.make({
-          code: 2,
+        return yield* CommandFailed.make({
           reason: "Give --max-tokens or --max-cost, not both: a run keeps to one budget."
         })
       }
@@ -105,13 +108,33 @@ export const run = Command.make(
         return yield* CommandExit.make({ code: 2 })
       }
     },
-    // A missing default selection was not one the user typed, so the reason says where it was expected and what to do.
-    (effect, { selections }) =>
-      Array.isReadonlyArrayNonEmpty(selections)
-        ? effect
-        : Effect.catchTag(effect, "TraitSelectionNotFoundError", () =>
-            CommandExit.make({ code: 2, reason: noDefaultSelection })
-          )
+    (effect, { selections }) => {
+      // Whatever kept the run from its work is reported with its own message, and the run ends as one that could not do it.
+      const fail = (error: { readonly message: string }) => CommandFailed.make({ reason: error.message })
+      return effect.pipe(
+        Effect.provide(workspace),
+        Effect.catchTags({
+          // The provider's key is read from the environment, and its own error only names the variable in passing.
+          ConfigError: (error) =>
+            CommandFailed.make({
+              reason: `Could not read the credentials for the models in traits/config.json from the environment: ${pipe(error.message, String.replaceAll(/\s+/gu, " "))}. Set the variable it names, in the environment or in .env, or name another .env file that sets it with --dotenv, then run again.`
+            }),
+          // A missing default selection was not one the user typed, so the reason says where it was expected and what to do.
+          TraitSelectionNotFoundError: (error) =>
+            Array.isReadonlyArrayNonEmpty(selections)
+              ? fail(error)
+              : CommandFailed.make({ reason: noDefaultSelection }),
+          EnvFileNotFoundError: fail,
+          PlatformError: fail,
+          SchemaError: fail,
+          StorageError: fail,
+          TraitCollectionNotFoundError: fail,
+          TraitNotFoundError: fail,
+          WorkspaceDirectoryError: fail,
+          WorkspaceRootError: fail
+        })
+      )
+    }
   )
 ).pipe(
   Command.withDescription(
