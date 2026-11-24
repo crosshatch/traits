@@ -1,16 +1,17 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
+  "access": "public",
+  "baseBranch": "main",
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "crosshatch/traits",
-      "disableThanks": true
+      "disableThanks": true,
+      "repo": "crosshatch/traits"
     }
   ],
   "commit": false,
   "format": false,
+  "fixed": [],
   "linked": [],
-  "access": "public",
-  "baseBranch": "main",
   "updateInternalDependencies": "patch"
 }

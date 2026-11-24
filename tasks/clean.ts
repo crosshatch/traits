@@ -5,7 +5,13 @@ import { Command, Flag } from "effect/cli"
 const alwaysIgnore = ["**/.git", "**/.worktrees"]
 
 export const clean = Command.make("clean", {
-  ignore: Flag.String("ignore").pipe(Flag.atLeast(0))
+  ignore: Flag.String("ignore").pipe(Flag.atLeast(0)),
+  concurrency: Flag.Int("concurrency").pipe(
+    Flag.withDefault(8),
+    Flag.withDescription(
+      "Packages cleaned at once; the glob can match thousands of package.json files, and each removal walks a directory tree."
+    )
+  )
 }).pipe(
   Command.withHandler(
     Effect.fn("tasks.clean")(function* (params) {
@@ -24,10 +30,11 @@ export const clean = Command.make("clean", {
           yield* Effect.forEach(
             ["dist", "node_modules", "tsconfig.tsbuildinfo"],
             (entry) => fs.remove(path.join(dir, entry), { recursive: true, force: true }),
+            // Three fixed entries per package.
             { concurrency: "unbounded" }
           )
         }),
-        { concurrency: "unbounded" }
+        { concurrency: params.concurrency }
       )
     })
   )

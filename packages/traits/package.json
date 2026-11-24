@@ -1,0 +1,70 @@
+{
+  "name": "traits",
+  "version": "0.5.16",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crosshatch/traits.git",
+    "directory": "packages/traits"
+  },
+  "bin": {
+    "traits": "./dist/main.js"
+  },
+  "files": [
+    "*.ts",
+    "CHANGELOG.md",
+    "Cli/**/*.ts",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/package.json",
+    "docs/**/*.md",
+    "Estimate/**/*.ts",
+    "Input/**/*.ts",
+    "local/**/*.ts",
+    "Trait/**/*.ts",
+    "TraitCollection/**/*.ts",
+    "TraitRun/**/*.ts",
+    "TraitSelection/**/*.ts",
+    "util/**/*.ts",
+    "!dist/bundle/**",
+    "!dist/executable/**",
+    "!dist/test/**",
+    "!dist/vite.config.*",
+    "!vite.config.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./local": "./local/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./local": "./dist/local/index.js"
+    },
+    "access": "public"
+  },
+  "dependencies": {
+    "@effect/ai-cloudflare": "catalog:",
+    "@effect/ai-openai": "catalog:",
+    "@effect/ai-openrouter": "catalog:",
+    "oxc-parser": "catalog:",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/platform-node": "catalog:",
+    "@effect/vitest": "catalog:",
+    "effect": "catalog:"
+  },
+  "peerDependencies": {
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@effect/platform-node": {
+      "optional": true
+    }
+  }
+}

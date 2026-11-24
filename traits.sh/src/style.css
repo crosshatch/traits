@@ -526,13 +526,13 @@ p {
 .anatomy-row[data-field="subject"] {
   --field-color: var(--blue);
 }
-.anatomy-row[data-field="requirement"] {
+.anatomy-row[data-field="assertion"] {
   --field-color: var(--green);
 }
 .anatomy-row[data-field="purpose"] {
   --field-color: var(--coral);
 }
-.anatomy-row[data-field="context"] {
+.anatomy-row[data-field="body"] {
   --field-color: light-dark(#806181, #c5a3c4);
 }
 .anatomy-field-content {
@@ -561,7 +561,7 @@ p {
   color: var(--muted);
   font-size: 0.9em;
 }
-.anatomy-row[data-field="context"] .anatomy-example {
+.anatomy-row[data-field="body"] .anatomy-example {
   margin: 0.85rem 1.5rem 0.75rem 0;
   padding: 0.85rem 1rem;
   border: 1px solid color-mix(in srgb, var(--field-color), transparent 70%);
@@ -603,7 +603,7 @@ p {
     padding-right: 0.75rem;
     font-size: 1rem;
   }
-  .anatomy-row[data-field="context"] .anatomy-example {
+  .anatomy-row[data-field="body"] .anatomy-example {
     margin-right: 0.75rem;
     padding-inline: 0.65rem;
   }
