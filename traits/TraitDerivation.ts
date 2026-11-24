@@ -4,7 +4,7 @@ import { LanguageModel } from "effect/ai"
 import * as Approval from "./_util/Approval.ts"
 import * as Trait from "./Trait.ts"
 import { check, TraitConflict } from "./TraitConflict.ts"
-import { TraitAlreadyExistsError, TraitStore } from "./TraitStore.ts"
+import * as TraitStore from "./TraitStore.ts"
 
 export type TraitDerivation = typeof TraitDerivation.Type
 export const TraitDerivation = S.Union([
@@ -39,22 +39,27 @@ const reviewInstructions = (traits: ReadonlyArray<Trait.Trait>) =>
 
 type PendingAssessment = {
   readonly proposal: string
-  readonly snapshot: string
+  readonly snapshot: TraitStore.ContentHash
   readonly results: ReadonlyArray<TraitConflict>
   readonly message: string
 }
 
-const pendingAssessments = new WeakMap<TraitStore["Service"], Map<Trait.TraitName, PendingAssessment>>()
-const derivationLocks = new WeakMap<TraitStore["Service"], Semaphore.Semaphore>()
-const snapshot = (traits: ReadonlyArray<Trait.Trait>) => pipe(traits, Array.map(Trait.serialize), JSON.stringify)
+const pendingAssessments = new WeakMap<TraitStore.TraitStore["Service"], Map<Trait.TraitName, PendingAssessment>>()
+const derivationLocks = new WeakMap<TraitStore.TraitStore["Service"], Semaphore.Semaphore>()
+
+// Returned whenever traits changed after assessment, including writes by other Traits processes.
+const storeChanged = Approval.Approval.cases.ApprovalRequired.make({
+  message:
+    "The trait store changed during approval. Call derive_trait again without approved to reassess the proposal and obtain fresh approval before writing."
+})
 
 const requestApproval = Effect.fn("TraitDerivation.requestApproval")(function* (options: {
   readonly message: string
   readonly approved?: boolean | undefined
-  readonly snapshot: string
+  readonly snapshot: TraitStore.ContentHash
   readonly approvedMessage?: string | undefined
 }) {
-  const store = yield* TraitStore
+  const store = yield* TraitStore.TraitStore
   const approval = yield* Approval.request({
     message: options.message,
     approved:
@@ -63,29 +68,25 @@ const requestApproval = Effect.fn("TraitDerivation.requestApproval")(function* (
         : options.approved
   })
   if (Approval.Approval.guards.Approved(approval)) {
-    const current = yield* store.ls
-    if (snapshot(current) !== options.snapshot) {
-      return Approval.Approval.cases.ApprovalRequired.make({
-        message:
-          "The trait store changed during approval. Call derive_trait again without approved to reassess the proposal and obtain fresh approval before writing."
-      })
-    }
+    const current = yield* store.snapshot
+    if (current.version !== options.snapshot) return storeChanged
   }
   return approval
 })
 
 export const derive = Effect.fn("TraitDerivation.derive")(function* (params: DeriveParams) {
-  const store = yield* TraitStore
+  const store = yield* TraitStore.TraitStore
   const lock = derivationLocks.get(store) ?? Semaphore.makeUnsafe(1)
   derivationLocks.set(store, lock)
   return yield* deriveLocked(params).pipe(lock.withPermits(1))
 })
 
 const deriveLocked = Effect.fn("TraitDerivation.deriveLocked")(function* (params: DeriveParams) {
-  const store = yield* TraitStore
-  const traits = yield* store.ls
+  const store = yield* TraitStore.TraitStore
+  const snapshot = yield* store.snapshot
+  const traits = Array.map(snapshot.traits, (stored) => stored.trait)
   const proposal = Trait.serialize(params.proposedTrait)
-  const revision = snapshot(traits)
+  const revision = snapshot.version
   const pendingByName = pendingAssessments.get(store) ?? new Map<Trait.TraitName, PendingAssessment>()
   pendingAssessments.set(store, pendingByName)
   const pending = pendingByName.get(params.proposedTrait.name)
@@ -99,10 +100,10 @@ const deriveLocked = Effect.fn("TraitDerivation.deriveLocked")(function* (params
       approved:
         params.approved === true && pending !== undefined && pending.proposal !== proposal ? undefined : params.approved
     },
-    traits,
+    snapshot,
     results,
     pending?.message
-  )
+  ).pipe(Effect.catchTags({ TraitChangedError: () => Effect.succeed(storeChanged) }))
   if (TraitDerivation.guards.ApprovalRequired(result)) {
     pendingByName.set(params.proposedTrait.name, { proposal, snapshot: revision, results, message: result.message })
   } else if (pendingByName.get(params.proposedTrait.name) === pending) {
@@ -113,11 +114,12 @@ const deriveLocked = Effect.fn("TraitDerivation.deriveLocked")(function* (params
 
 const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
   params: DeriveParams,
-  traits: ReadonlyArray<Trait.Trait>,
+  snapshot: TraitStore.TraitSnapshot,
   results: ReadonlyArray<TraitConflict>,
   approvedMessage?: string
 ) {
-  const store = yield* TraitStore
+  const store = yield* TraitStore.TraitStore
+  const traits = Array.map(snapshot.traits, (stored) => stored.trait)
   const { proposedTrait } = params
   const completeProposal = Trait.serialize(proposedTrait)
   const failures = Array.filter(results, TraitConflict.guards.Fail)
@@ -128,7 +130,7 @@ const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
     return yield* reconcile({
       traits: Array.map(failures, (failure) => failure.existing),
       proposal: proposedTrait,
-      snapshot: snapshot(traits),
+      snapshot,
       approved: params.approved,
       approvedMessage
     })
@@ -151,7 +153,7 @@ const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
       name: target.name
     })
     const approval = yield* requestApproval({
-      snapshot: snapshot(traits),
+      snapshot: snapshot.version,
       message: Array.join(
         [
           `Clarify trait ${target.name}?`,
@@ -166,33 +168,40 @@ const deriveAssessed = Effect.fn("TraitDerivation.deriveAssessed")(function* (
       approvedMessage
     })
     if (!Approval.Approval.guards.Approved(approval)) return approval
-    yield* store.update(trait)
+    yield* store.commit([
+      TraitStore.TraitChange.cases.Put.make({ trait, expected: TraitStore.expectation(snapshot, trait.name) })
+    ])
     return TraitDerivation.cases.Updated.make({ trait, instructions: reviewInstructions([trait]) })
   }
   if (Array.some(traits, (trait) => trait.name === proposedTrait.name)) {
-    return yield* TraitAlreadyExistsError.make({ traitName: proposedTrait.name })
+    return yield* TraitStore.TraitAlreadyExistsError.make({ traitName: proposedTrait.name })
   }
   const approval = yield* requestApproval({
-    snapshot: snapshot(traits),
+    snapshot: snapshot.version,
     message: `Save trait ${proposedTrait.name}?\n\n${Trait.serialize(proposedTrait)}`,
     approved: params.approved,
     approvedMessage
   })
   if (!Approval.Approval.guards.Approved(approval)) return approval
-  const trait = yield* store.add(proposedTrait)
-  return TraitDerivation.cases.Created.make({ trait, instructions: reviewInstructions([trait]) })
+  yield* store.commit([
+    TraitStore.TraitChange.cases.Put.make({
+      trait: proposedTrait,
+      expected: TraitStore.expectation(snapshot, proposedTrait.name)
+    })
+  ])
+  return TraitDerivation.cases.Created.make({ trait: proposedTrait, instructions: reviewInstructions([proposedTrait]) })
 })
 
 const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
   readonly traits: ReadonlyArray<Trait.Trait>
   readonly proposal: Trait.Trait
-  readonly snapshot: string
+  readonly snapshot: TraitStore.TraitSnapshot
   readonly approved?: boolean | undefined
   readonly approvedMessage?: string | undefined
 }) {
-  const store = yield* TraitStore
+  const store = yield* TraitStore.TraitStore
   const approval = yield* requestApproval({
-    snapshot: options.snapshot,
+    snapshot: options.snapshot.version,
     message: Array.join(
       [
         "Reconcile these stored traits with conflicts or incomplete coverage?",
@@ -227,16 +236,15 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
     }).pipe(S.fromJsonString, S.encodeEffect),
     Effect.orDie
   )
-  const stored = yield* store.ls
   const selectedNames = pipe(
     options.traits,
     Array.map((trait) => trait.name),
     (names) => new Set(names)
   )
   const reservedNames = pipe(
-    stored,
-    Array.filter((trait) => !selectedNames.has(trait.name)),
-    Array.map((trait) => trait.name)
+    options.snapshot.traits,
+    Array.map((stored) => stored.trait.name),
+    Array.filter((name) => !selectedNames.has(name))
   )
   const response = yield* LanguageModel.generateObject({
     prompt: [
@@ -271,28 +279,23 @@ const reconcile = Effect.fn("TraitDerivation.reconcile")(function* (options: {
   const replacementNames = new Set<Trait.TraitName>()
   for (const draft of response.value.traits) {
     if (replacementNames.has(draft.name) || Array.contains(reservedNames, draft.name)) {
-      return yield* TraitAlreadyExistsError.make({ traitName: draft.name })
+      return yield* TraitStore.TraitAlreadyExistsError.make({ traitName: draft.name })
     }
     replacementNames.add(draft.name)
   }
-  const current = yield* store.ls
-  if (snapshot(current) !== options.snapshot) {
-    return Approval.Approval.cases.ApprovalRequired.make({
-      message:
-        "The trait store changed during reconciliation. Call derive_trait again without approved to reassess and obtain fresh approval before writing."
-    })
-  }
-  const replacements = yield* Effect.forEach(
-    response.value.traits,
-    Effect.fn("TraitDerivation.saveReplacement")(function* (draft) {
-      const trait = Trait.Trait.make(draft)
-      if (selectedNames.has(trait.name)) {
-        yield* store.update(trait)
-        return trait
-      }
-      return yield* store.add(trait)
-    })
-  )
-  yield* store.rm(Array.filter(Array.fromIterable(selectedNames), (name) => !replacementNames.has(name)))
+  const current = yield* store.snapshot
+  if (current.version !== options.snapshot.version) return storeChanged
+  const replacements = Array.map(response.value.traits, (draft) => Trait.Trait.make(draft))
+  // One commit checks every target under the write lock; replacements are installed before removals.
+  yield* store.commit([
+    ...Array.map(replacements, (trait) =>
+      TraitStore.TraitChange.cases.Put.make({ trait, expected: TraitStore.expectation(options.snapshot, trait.name) })
+    ),
+    ...pipe(
+      options.snapshot.traits,
+      Array.filter(({ trait }) => selectedNames.has(trait.name) && !replacementNames.has(trait.name)),
+      Array.map(({ trait, version }) => TraitStore.TraitChange.cases.Remove.make({ traitName: trait.name, version }))
+    )
+  ])
   return TraitDerivation.cases.Resolved.make({ traits: replacements, instructions: reviewInstructions(replacements) })
 })

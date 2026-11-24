@@ -14,11 +14,12 @@ import { T } from "../tables/index.ts"
 import * as ConfigurationError from "../toolkit/ConfigurationError.ts"
 import { toolkit } from "../toolkit/toolkit.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
-import * as TraitProjectLock from "../TraitProjectLock.ts"
+import * as TraitIndex from "../TraitIndex.ts"
 import * as TraitsConfig from "../TraitsConfig.ts"
 import * as TraitsConfigProvider from "../TraitsConfigProvider.ts"
 import * as TraitsHttpClient from "../TraitsHttpClient.ts"
 import * as TraitStore from "../TraitStore.ts"
+import * as TraitWriteLock from "../TraitWriteLock.ts"
 
 const resource = { serviceName: "traits", serviceVersion: PackageJson.version }
 
@@ -28,6 +29,8 @@ const server = McpServer.layerStdio({
   protocols: [McpProtocol.v2025_11_25],
   registrations: toolkit.pipe(
     Layer.provide(TraitStore.layer),
+    // The index is private to this process; trait writes lock the shared worktree database.
+    Layer.provide([TraitIndex.layer, TraitWriteLock.layer]),
     Layer.provide(TraitsConfig.layer),
     Layer.provide(TraitsConfigProvider.layer),
     Layer.catchCause(ConfigurationError.layer)
@@ -48,7 +51,6 @@ const server = McpServer.layerStdio({
   | Markdown synchronization is automatic; no manual refresh or server restart is needed after repairs.
   `)
 }).pipe(
-  Layer.provide(Layer.effectDiscard(TraitProjectLock.acquire)),
   Layer.provide(ProjectPaths.layer),
   Layer.launch,
   Effect.withSpan("traits.server"),

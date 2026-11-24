@@ -21,6 +21,7 @@ import {
   identity
 } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
+import { Digest } from "effect/crypto"
 import { Reactivity } from "effect/reactivity"
 import { Bench } from "tinybench"
 import type * as TraitTypes from "traits/Trait"
@@ -28,8 +29,15 @@ import type { TraitStore } from "traits/TraitStore"
 
 import * as Model from "./model.ts"
 
-type StoreApi = Pick<TraitStore["Service"], "ls" | "get" | "add" | "update" | "rm"> & {
-  readonly refresh?: TraitStore["Service"]["refresh"] | undefined
+// Main exposes add/update/rm directly; head writes through compare-and-swap commits.
+type StoreError = { readonly _tag: string }
+interface StoreApi {
+  readonly ls: Effect.Effect<ReadonlyArray<TraitTypes.Trait>, StoreError>
+  readonly get: (name: TraitTypes.TraitName) => Effect.Effect<TraitTypes.Trait, StoreError>
+  readonly add: (trait: TraitTypes.Trait) => Effect.Effect<unknown, StoreError>
+  readonly update: (trait: TraitTypes.Trait) => Effect.Effect<void, StoreError>
+  readonly rm: (names: ReadonlyArray<TraitTypes.TraitName>) => Effect.Effect<void, StoreError>
+  readonly refresh?: Effect.Effect<void, StoreError> | undefined
 }
 interface MainStoreModule {
   readonly TraitStore: Context.Key<TraitStore, StoreApi>
@@ -84,26 +92,55 @@ const output = await Effect.runPromise(
     })
     const memoryBefore = process.memoryUsage()
     const importStart = performance.now()
-    let storeTag: Context.Key<TraitStore, StoreApi>
+    let loadStore: Effect.Effect<StoreApi, never, TraitStore>
     let layer: Layer.Layer<TraitStore, never, NodeServices.NodeServices | Reactivity.Reactivity>
-    let Database: typeof import("../../traits/TraitDatabase.ts") | undefined
     if (options.variant === "main-fs") {
       const Store = yield* Effect.promise(() => importModule<MainStoreModule>("traits/TraitStore.ts"))
-      storeTag = Store.TraitStore
+      loadStore = Store.TraitStore
       layer = Store.layerFileSystem(directory).pipe(Layer.orDie)
     } else {
       const Store = yield* Effect.promise(() =>
         importModule<typeof import("traits/TraitStore")>("traits/TraitStore.ts")
       )
-      storeTag = Store.TraitStore
+      // Writes are based on the store's current snapshot, as derive_trait's are.
+      loadStore = Effect.map(Store.TraitStore, (store) => ({
+        ls: store.ls,
+        get: store.get,
+        refresh: store.refresh,
+        add: (trait) =>
+          store.commit([
+            Store.TraitChange.cases.Put.make({ trait, expected: Store.TraitExpectation.cases.Absent.make({}) })
+          ]),
+        update: (trait) =>
+          Effect.flatMap(store.snapshot, (snapshot) =>
+            store.commit([
+              Store.TraitChange.cases.Put.make({ trait, expected: Store.expectation(snapshot, trait.name) })
+            ])
+          ),
+        rm: (names) =>
+          Effect.flatMap(store.snapshot, (snapshot) =>
+            store.commit(
+              pipe(
+                snapshot.traits,
+                Array.filter(({ trait }) => names.includes(trait.name)),
+                Array.map(({ trait, version }) =>
+                  Store.TraitChange.cases.Remove.make({ traitName: trait.name, version })
+                )
+              )
+            )
+          )
+      }))
       const Paths = yield* Effect.promise(() =>
         importModule<typeof import("traits/ProjectPaths")>("traits/ProjectPaths.ts")
       )
       const ContextModule = yield* Effect.promise(() =>
         importModule<typeof import("traits/TraitsContext")>("traits/TraitsContext.ts")
       )
-      Database = yield* Effect.promise(() =>
-        importModule<typeof import("../../traits/TraitDatabase.ts")>("traits/TraitDatabase.ts")
+      const Index = yield* Effect.promise(() =>
+        importModule<typeof import("../../traits/TraitIndex.ts")>("traits/TraitIndex.ts")
+      )
+      const WriteLock = yield* Effect.promise(() =>
+        importModule<typeof import("../../traits/TraitWriteLock.ts")>("traits/TraitWriteLock.ts")
       )
       layer = Store.layer.pipe(
         Layer.provide(
@@ -139,7 +176,7 @@ const output = await Effect.runPromise(
             })
           )
         ),
-        Layer.provideMerge(Database.layer),
+        Layer.provide([Index.layer, WriteLock.layerMemory, Digest.layerWebCrypto]),
         Layer.provide(Layer.succeed(Paths.ProjectPaths, { projectRoot: directory, traitsDirectory: directory })),
         Layer.orDie
       )
@@ -156,7 +193,7 @@ const output = await Effect.runPromise(
       scope
     )
     const run = Effect.runPromiseWith(context)
-    const store = yield* Effect.promise(() => run(storeTag))
+    const store = yield* Effect.promise(() => run(loadStore))
     const buildMs = performance.now() - buildStart
     const firstStart = performance.now()
     const first = yield* Effect.promise(() => run(store.ls))
@@ -425,21 +462,6 @@ const output = await Effect.runPromise(
       )
       results.push(externalBurst)
     }
-    let databaseBytes = 0
-    if (Database !== undefined) {
-      // The runtime context retains the concrete database through provideMerge; only the public store is used in timings.
-      const database = Context.getUnsafe(context, Database.TraitDatabase)
-      const config = database.$client.config
-      assert.ok("url" in config)
-      if (config.url.toString() !== "file::memory:") {
-        const file = yield* path.fromFileUrl(new URL(config.url))
-        for (const suffix of ["", "-wal", "-shm", "-journal"])
-          if (yield* fs.exists(file + suffix)) {
-            const stat = yield* fs.stat(file + suffix)
-            databaseBytes += Number(stat.size)
-          }
-      }
-    }
     return {
       variant: options.variant,
       round: options.round,
@@ -452,7 +474,8 @@ const output = await Effect.runPromise(
         rssDelta: memoryAfter.rss - memoryBefore.rss,
         heapUsedDelta: memoryAfter.heapUsed - memoryBefore.heapUsed
       },
-      databaseBytes,
+      // The head index lives in memory; nothing is persisted to SQLite.
+      databaseBytes: 0,
       results,
       sink
     } satisfies Model.WorkerResult

@@ -9,6 +9,7 @@ import {
   FileSystem,
   Layer,
   Path,
+  pipe,
   PlatformError,
   Queue,
   Result,
@@ -18,14 +19,19 @@ import {
   Stream
 } from "effect"
 import { DecisionModel, LanguageModel } from "effect/ai"
+import { Digest } from "effect/crypto"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Reactivity } from "effect/reactivity"
 
 import { ProjectPaths } from "../ProjectPaths.ts"
 import { T } from "../tables/index.ts"
+import { T as IndexT } from "../tables/traitIndex/index.ts"
 import * as Trait from "../Trait.ts"
 import * as TraitDatabase from "../TraitDatabase.ts"
+import * as TraitIndex from "../TraitIndex.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import * as TraitStore from "../TraitStore.ts"
+import * as TraitWriteLock from "../TraitWriteLock.ts"
 import { databaseDirectory } from "./fixtures/databaseDirectory.ts"
 
 const watchReady = Stream.make({ _tag: "Create", path: ".traits-watch-ready" } satisfies FileSystem.WatchEvent)
@@ -60,8 +66,13 @@ const layerStoreLibsql = (dir: string, watchChanges = false, fileReadConcurrency
         })
       )
     ),
-    Layer.provideMerge(databaseFile === undefined ? TraitDatabase.layer : TraitDatabase.layerFile(databaseFile)),
-    Layer.provide(Reactivity.layer),
+    Layer.provideMerge(TraitIndex.layer),
+    Layer.provide(
+      databaseFile === undefined
+        ? TraitWriteLock.layerMemory
+        : TraitWriteLock.layer.pipe(Layer.provide(TraitDatabase.layerFile(databaseFile)))
+    ),
+    Layer.provide([Digest.layerWebCrypto, Reactivity.layer]),
     Layer.provide(Layer.succeed(ProjectPaths, { projectRoot: dir, traitsDirectory: dir })),
     Layer.provide(
       Layer.effect(
@@ -84,8 +95,34 @@ const awaitTraits = Effect.fn("test.awaitTraits")(function* (matches: (traits: R
   )
 })
 
+// Single-trait writes based on the store's current snapshot, as derive_trait's are.
+const writer = (store: TraitStore.TraitStore["Service"]) => ({
+  add: (trait: Trait.Trait) =>
+    store.commit([
+      TraitStore.TraitChange.cases.Put.make({ trait, expected: TraitStore.TraitExpectation.cases.Absent.make({}) })
+    ]),
+  update: (trait: Trait.Trait) =>
+    Effect.flatMap(store.snapshot, (snapshot) =>
+      store.commit([
+        TraitStore.TraitChange.cases.Put.make({ trait, expected: TraitStore.expectation(snapshot, trait.name) })
+      ])
+    ),
+  rm: (names: ReadonlyArray<Trait.TraitName>) =>
+    Effect.flatMap(store.snapshot, (snapshot) =>
+      store.commit(
+        pipe(
+          snapshot.traits,
+          Array.filter(({ trait }) => names.includes(trait.name)),
+          Array.map(({ trait, version }) =>
+            TraitStore.TraitChange.cases.Remove.make({ traitName: trait.name, version })
+          )
+        )
+      )
+    )
+})
+
 it.effect(
-  "shares persistent storage with telemetry and preserves exports across index rebuilds",
+  "keeps the trait index out of the shared worktree database and preserves its telemetry",
   Effect.fnUntraced(
     function* () {
       const fs = yield* FileSystem.FileSystem
@@ -102,8 +139,8 @@ it.effect(
         yield* db
           .insert(T.exports)
           .values({ runId: "existing-run", signal: "logs", contentType: "application/json", receivedAt: 2, payload })
-        // Simulate the earlier telemetry-only database, which had no trait table.
-        yield* db.run(sql`DROP TABLE traits`)
+        // Earlier versions shared their trait index through this database.
+        yield* db.run(sql`CREATE TABLE traits (name text PRIMARY KEY, requirement text NOT NULL)`)
       }).pipe(Effect.provide(TraitDatabase.layerFile(databaseFile)))
       const trait = Trait.Trait.make({
         name: Trait.TraitName.make("shared-storage"),
@@ -115,28 +152,87 @@ it.effect(
       yield* fs.writeFileString(path.join(directory, "shared-storage.md"), Trait.serialize(trait))
       yield* Effect.gen(function* () {
         const store = yield* TraitStore.TraitStore
-        const db = yield* TraitDatabase.TraitDatabase
         const indexed = yield* store.ls
         expect(indexed).toEqual([trait])
         const updated = Trait.Trait.make({ ...trait, requirement: "Updated requirement." })
-        yield* store.update(updated)
+        yield* writer(store).update(updated)
         yield* store.refresh
-        const exports = yield* db.select().from(T.exports)
-        expect(exports).toHaveLength(1)
-        expect(Buffer.from(exports[0]!.payload)).toEqual(payload)
+        const listed = yield* store.ls
+        expect(listed).toEqual([updated])
       }).pipe(Effect.provide(layerStoreLibsql(directory, false, 16, databaseFile)))
       yield* Effect.gen(function* () {
         const db = yield* TraitDatabase.TraitDatabase
-        const indexed = yield* db.select().from(T.traits)
+        const tables = yield* db.all<{ readonly name: string }>(
+          sql`SELECT name FROM sqlite_master WHERE type = 'table'`
+        )
+        expect(Array.map(tables, (table) => table.name)).not.toContain("traits")
         const runs = yield* db.select().from(T.runs)
         const exports = yield* db.select().from(T.exports)
-        expect(indexed).toMatchObject([{ name: trait.name, requirement: "Updated requirement." }])
         expect(runs).toMatchObject([{ id: "existing-run" }])
         expect(exports).toHaveLength(1)
+        expect(Buffer.from(exports[0]!.payload)).toEqual(payload)
       }).pipe(Effect.provide(TraitDatabase.layerFile(databaseFile)))
     },
     Effect.provide([NodeServices.layer, Reactivity.layer])
   )
+)
+
+it.effect(
+  "waits for another process's write lock and rejects a write based on the trait it changed",
+  Effect.fnUntraced(
+    function* () {
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+      const root = yield* databaseDirectory("traits-write-lock-")
+      const directory = path.join(root, "traits")
+      const databaseFile = path.join(root, "traits.sqlite")
+      const original = Trait.Trait.make({
+        name: Trait.TraitName.make("contended"),
+        subject: "Concurrent writes.",
+        requirement: "Original.",
+        purpose: "Never lose another agent's write."
+      })
+      const concurrent = Trait.Trait.make({ ...original, requirement: "Written by another process." })
+      const file = path.join(directory, `${original.name}.md`)
+      yield* fs.makeDirectory(directory, { recursive: true })
+      yield* fs.writeFileString(file, Trait.serialize(original))
+      yield* Effect.gen(function* () {
+        const store = yield* TraitStore.TraitStore
+        const snapshot = yield* store.snapshot
+        const fixture = yield* path.fromFileUrl(new URL("./fixtures/holdWriteLock.ts", import.meta.url))
+        const child = yield* spawner.spawn(
+          ChildProcess.make(process.execPath, [fixture, databaseFile, file, Trait.serialize(concurrent)], {
+            stderr: "inherit"
+          })
+        )
+        const ready = yield* child.stdout.pipe(
+          Stream.decodeText(),
+          Stream.splitLines,
+          Stream.take(1),
+          Stream.runCollect
+        )
+        expect(ready).toEqual(["locked"])
+        // Without the lock this write would land first and then be overwritten; without busy_timeout it would fail with SQLITE_BUSY.
+        const result = yield* store
+          .commit([
+            TraitStore.TraitChange.cases.Put.make({
+              trait: Trait.Trait.make({ ...original, requirement: "Written here." }),
+              expected: TraitStore.expectation(snapshot, original.name)
+            })
+          ])
+          .pipe(Effect.flip)
+        expect(result).toBeInstanceOf(TraitStore.TraitChangedError)
+        expect(result).toMatchObject({ traitNames: [original.name] })
+        const code = yield* child.exitCode
+        expect(code).toBe(0)
+        const text = yield* fs.readFileString(file)
+        expect(text).toBe(Trait.serialize(concurrent))
+      }).pipe(Effect.provide(layerStoreLibsql(directory, false, 16, databaseFile)))
+    },
+    Effect.provide([NodeServices.layer, Reactivity.layer])
+  ),
+  { timeout: 20000 }
 )
 
 it.live(
@@ -256,7 +352,12 @@ it.effect(
       ]) {
         yield* fs.writeFileString(file, fixture.text)
         yield* store.refresh.pipe(Effect.result)
-        for (const operation of [store.ls, store.get(trait.name), store.update(trait), store.rm([trait.name])]) {
+        for (const operation of [
+          store.ls,
+          store.get(trait.name),
+          writer(store).update(trait),
+          writer(store).rm([trait.name])
+        ]) {
           const result = yield* Effect.result<unknown, Effect.Error<typeof operation>, never>(operation)
           expect(Result.isFailure(result)).toBe(true)
           if (Result.isFailure(result)) {
@@ -305,12 +406,11 @@ it.effect(
     })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      const added = yield* store.add(initial)
-      expect(added).toEqual(initial)
+      yield* writer(store).add(initial)
       const loaded = yield* store.get(initial.name)
       expect(loaded).toEqual(initial)
       const updated = Trait.Trait.make({ ...initial, requirement: "Replacement", context: "Updated context.\n" })
-      yield* store.update(updated)
+      yield* writer(store).update(updated)
       const reloaded = yield* store.get(initial.name)
       expect(reloaded).toEqual(updated)
       const listed = yield* store.ls
@@ -321,20 +421,30 @@ it.effect(
       expect(text).not.toContain("id:")
       const files = yield* fs.readDirectory(dir)
       expect(files).toEqual([`${initial.name}.md`])
-      const collision = yield* store.add(initial).pipe(Effect.result)
+      const collision = yield* writer(store).add(initial).pipe(Effect.result)
       expect(Result.isFailure(collision)).toBe(true)
       if (Result.isFailure(collision)) {
-        expect(collision.failure).toBeInstanceOf(TraitStore.TraitAlreadyExistsError)
-        expect(collision.failure).toMatchObject({ name: "TraitAlreadyExistsError", traitName: initial.name })
+        expect(collision.failure).toBeInstanceOf(TraitStore.TraitChangedError)
+        expect(collision.failure).toMatchObject({ name: "TraitChangedError", traitNames: [initial.name] })
       }
       const afterCollision = yield* store.get(initial.name)
       expect(afterCollision).toEqual(updated)
       const renamed = Trait.Trait.make({ ...updated, name: Trait.TraitName.make("renamed-trait") })
-      const missingUpdate = yield* store.update(renamed).pipe(Effect.result)
-      expect(Result.isFailure(missingUpdate)).toBe(true)
-      if (Result.isFailure(missingUpdate)) expect(missingUpdate.failure).toBeInstanceOf(TraitStore.TraitNotFoundError)
-      yield* store.add(renamed)
-      yield* store.rm([initial.name])
+      // An update based on a version the file no longer has, here because it was never created, writes nothing.
+      const { version } = yield* store.snapshot
+      const staleUpdate = yield* store
+        .commit([
+          TraitStore.TraitChange.cases.Put.make({
+            trait: renamed,
+            expected: TraitStore.TraitExpectation.cases.Present.make({ version })
+          })
+        ])
+        .pipe(Effect.flip)
+      expect(staleUpdate).toMatchObject({ _tag: "TraitChangedError", traitNames: [renamed.name] })
+      const staleFile = yield* fs.exists(path.join(dir, `${renamed.name}.md`))
+      expect(staleFile).toBe(false)
+      yield* writer(store).add(renamed)
+      yield* writer(store).rm([initial.name])
       const afterRename = yield* store.ls
       expect(afterRename).toEqual([renamed])
       const withoutOptionalFields = Trait.Trait.make({
@@ -343,7 +453,7 @@ it.effect(
         requirement: renamed.requirement,
         purpose: renamed.purpose
       })
-      yield* store.update(withoutOptionalFields)
+      yield* writer(store).update(withoutOptionalFields)
       const cleared = yield* store.get(renamed.name)
       expect(cleared).toEqual(withoutOptionalFields)
       const missing = yield* store.get(initial.name).pipe(Effect.result)
@@ -354,7 +464,7 @@ it.effect(
           name: "TraitNotFoundError",
           traitName: initial.name
         })
-      yield* store.rm([renamed.name])
+      yield* writer(store).rm([renamed.name])
       const remaining = yield* store.ls
       expect(remaining).toEqual([])
     }).pipe(Effect.provide(layerStoreLibsql(dir)))
@@ -380,8 +490,8 @@ it.effect(
       const store = yield* TraitStore.TraitStore
       for (const operation of [
         store.get(wrongName),
-        store.update(Trait.Trait.make({ ...actual, name: wrongName })),
-        store.rm([wrongName]),
+        writer(store).update(Trait.Trait.make({ ...actual, name: wrongName })),
+        writer(store).rm([wrongName]),
         store.ls
       ]) {
         const result = yield* Effect.result<unknown, Effect.Error<typeof operation>, never>(operation)
@@ -397,7 +507,7 @@ it.effect(
       expect(text).toBe(Trait.serialize(actual))
       yield* fs.remove(file)
       yield* store.refresh
-      yield* store.add(actual)
+      yield* writer(store).add(actual)
       const loaded = yield* store.get(actual.name)
       expect(loaded).toEqual(actual)
     }).pipe(Effect.provide(layerStoreLibsql(dir)))
@@ -423,7 +533,7 @@ it.live(
     })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      const db = yield* TraitDatabase.TraitDatabase
+      const db = yield* TraitIndex.TraitIndex
       const original = Trait.Trait.make({
         name: Trait.TraitName.make("watched-trait"),
         subject: "Watched files.",
@@ -448,7 +558,7 @@ it.live(
         Effect.retry({ schedule: Schedule.spaced("10 millis"), times: 300 })
       )
       expect(invalid.failure).toBeInstanceOf(TraitStore.TraitParseError)
-      const retained = yield* db.select().from(T.traits)
+      const retained = yield* db.select().from(IndexT.traits)
       expect(retained).toMatchObject([{ requirement: edited.requirement }])
 
       yield* fs.writeFileString(temporary, Trait.serialize(original))
@@ -693,11 +803,11 @@ it.live(
     })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      const db = yield* TraitDatabase.TraitDatabase
+      const db = yield* TraitIndex.TraitIndex
       expect(scans).toBe(1)
       expect(otherReads).toBe(1)
       const updated = Trait.Trait.make({ ...original, requirement: "Own write." })
-      yield* store.update(updated)
+      yield* writer(store).update(updated)
       yield* db.run(
         sql`CREATE TRIGGER reject_redundant_update BEFORE UPDATE ON traits BEGIN SELECT RAISE(ABORT, 'redundant SQL'); END`
       )
@@ -731,7 +841,7 @@ it.live(
       yield* notify(otherFile)
       const invalid = yield* store.ls.pipe(Effect.result)
       expect(Result.isFailure(invalid)).toBe(true)
-      const rows = yield* db.select().from(T.traits)
+      const rows = yield* db.select().from(IndexT.traits)
       expect(rows).toContainEqual(expect.objectContaining({ name: original.name, requirement: secondEdit.requirement }))
       yield* fs.writeFileString(otherFile, Trait.serialize(other))
       yield* notify(otherFile)
@@ -753,7 +863,7 @@ it.live(
       yield* notify(otherFile)
       const failedBatch = yield* store.ls.pipe(Effect.result)
       expect(Result.isFailure(failedBatch)).toBe(true)
-      const rolledBack = yield* db.select().from(T.traits)
+      const rolledBack = yield* db.select().from(IndexT.traits)
       expect(rolledBack).toContainEqual(
         expect.objectContaining({ name: original.name, requirement: original.requirement })
       )
@@ -795,8 +905,8 @@ it.effect(
     })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      const db = yield* TraitDatabase.TraitDatabase
-      const startup = yield* db.select().from(T.traits)
+      const db = yield* TraitIndex.TraitIndex
+      const startup = yield* db.select().from(IndexT.traits)
       expect(startup).toMatchObject([{ name: original.name, requirement: original.requirement }])
       const initial = yield* store.ls
       expect(initial).toEqual([original])
@@ -821,7 +931,7 @@ it.effect(
       const invalid = yield* store.refresh.pipe(Effect.result)
       expect(Result.isFailure(invalid)).toBe(true)
       if (Result.isFailure(invalid)) expect(invalid.failure).toBeInstanceOf(TraitStore.TraitParseError)
-      const unchangedRows = yield* db.select().from(T.traits)
+      const unchangedRows = yield* db.select().from(IndexT.traits)
       expect(unchangedRows).toMatchObject([{ requirement: edited.requirement }])
       const blocked = yield* store.ls.pipe(Effect.result)
       expect(Result.isFailure(blocked)).toBe(true)
@@ -849,7 +959,7 @@ it.effect(
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-write-through-" })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      const db = yield* TraitDatabase.TraitDatabase
+      const db = yield* TraitIndex.TraitIndex
       const original = Trait.Trait.make({
         name: Trait.TraitName.make("write-through"),
         subject: "Stored traits.",
@@ -858,24 +968,24 @@ it.effect(
         context: "Original body.\n"
       })
       const additions = yield* Effect.all(
-        [store.add(original).pipe(Effect.result), store.add(original).pipe(Effect.result)],
+        [writer(store).add(original).pipe(Effect.result), writer(store).add(original).pipe(Effect.result)],
         { concurrency: "unbounded" }
       )
       expect(Array.filter(additions, Result.isSuccess)).toHaveLength(1)
-      const inserted = yield* db.select().from(T.traits)
+      const inserted = yield* db.select().from(IndexT.traits)
       expect(inserted).toMatchObject([{ name: original.name, context: original.context }])
 
       const updated = Trait.Trait.make({ ...original, requirement: "Updated requirement.", context: undefined })
-      yield* store.update(updated)
-      const replaced = yield* db.select().from(T.traits)
+      yield* writer(store).update(updated)
+      const replaced = yield* db.select().from(IndexT.traits)
       expect(replaced).toMatchObject([{ requirement: updated.requirement, context: null }])
 
       yield* db.run(
         sql`CREATE TRIGGER reject_trait_update BEFORE UPDATE ON traits BEGIN SELECT RAISE(ABORT, 'injected write failure'); END`
       )
-      const failed = yield* store.update(original).pipe(Effect.result)
+      const failed = yield* writer(store).update(original).pipe(Effect.result)
       expect(Result.isFailure(failed)).toBe(true)
-      const afterFailure = yield* db.select().from(T.traits)
+      const afterFailure = yield* db.select().from(IndexT.traits)
       expect(afterFailure).toMatchObject([{ requirement: updated.requirement }])
       const autoRecovered = yield* store.get(original.name)
       expect(autoRecovered).toEqual(original)
@@ -884,8 +994,8 @@ it.effect(
       yield* db.run(sql`DROP TRIGGER reject_trait_update`)
       const recovered = yield* store.get(original.name)
       expect(recovered).toEqual(original)
-      yield* store.rm([original.name])
-      const removed = yield* db.select().from(T.traits)
+      yield* writer(store).rm([original.name])
+      const removed = yield* db.select().from(IndexT.traits)
       expect(removed).toEqual([])
       const files = yield* fs.readDirectory(dir)
       expect(files).toEqual([])
@@ -902,26 +1012,26 @@ it.effect(
       const dir = yield* fs.makeTempDirectoryScoped({ prefix: "traits-failed-write-" })
       yield* Effect.gen(function* () {
         const store = yield* TraitStore.TraitStore
-        const db = yield* TraitDatabase.TraitDatabase
+        const db = yield* TraitIndex.TraitIndex
         const trait = Trait.Trait.make({
           name: Trait.TraitName.make("failed-write"),
           subject: "Trait persistence.",
           requirement: "Keep successful reads synchronized.",
           purpose: "Require explicit recovery from failed writes."
         })
-        if (operation === "DELETE") yield* store.add(trait)
-        const before = yield* db.select().from(T.traits)
+        if (operation === "DELETE") yield* writer(store).add(trait)
+        const before = yield* db.select().from(IndexT.traits)
         yield* db.run(
           sql.raw(
             `CREATE TRIGGER reject_write BEFORE ${operation} ON traits BEGIN SELECT RAISE(ABORT, 'injected failure'); END`
           )
         )
-        const write = operation === "INSERT" ? store.add(trait) : store.rm([trait.name])
+        const write = operation === "INSERT" ? writer(store).add(trait) : writer(store).rm([trait.name])
         const failed = yield* Effect.result<unknown, Effect.Error<typeof write>, never>(write)
         expect(Result.isFailure(failed)).toBe(true)
         const blocked = yield* store.ls.pipe(Effect.result)
         expect(Result.isFailure(blocked)).toBe(true)
-        const retained = yield* db.select().from(T.traits)
+        const retained = yield* db.select().from(IndexT.traits)
         expect(retained).toEqual(before)
         yield* db.run(sql`DROP TRIGGER reject_write`)
         const recovered = yield* store.ls
@@ -958,14 +1068,14 @@ it.effect(
     })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      const db = yield* TraitDatabase.TraitDatabase
+      const db = yield* TraitIndex.TraitIndex
       const updated = Trait.Trait.make({ ...original, requirement: "Replacement." })
-      const writer = yield* store.update(updated).pipe(Effect.forkScoped)
+      const writing = yield* writer(store).update(updated).pipe(Effect.forkScoped)
       yield* Deferred.await(published)
-      const interruption = yield* Fiber.interrupt(writer).pipe(Effect.forkScoped)
+      const interruption = yield* Fiber.interrupt(writing).pipe(Effect.forkScoped)
       yield* Deferred.succeed(resume, undefined)
       yield* Fiber.join(interruption)
-      const rows = yield* db.select().from(T.traits)
+      const rows = yield* db.select().from(IndexT.traits)
       expect(rows).toMatchObject([{ name: original.name, requirement: updated.requirement }])
       const content = yield* fs.readFileString(path.join(dir, `${original.name}.md`))
       expect(content).toBe(Trait.serialize(updated))
@@ -998,7 +1108,7 @@ it.effect(
     })
     yield* Effect.gen(function* () {
       const store = yield* TraitStore.TraitStore
-      const result = yield* store
+      const result = yield* writer(store)
         .update(Trait.Trait.make({ ...original, requirement: "Replacement." }))
         .pipe(Effect.result)
       expect(Result.isFailure(result)).toBe(true)

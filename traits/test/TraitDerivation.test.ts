@@ -65,30 +65,54 @@ const harness = Effect.fn("test.harness")(function* (options: {
     streamText: () => Stream.empty,
     codecTransformer: OpenAiStructuredOutput.toCodecOpenAI
   })
+  // Serialized Markdown stands in for its content hash: equal text means an equal version.
+  const versionOf = (trait: Trait.Trait) => TraitStore.ContentHash.make(Trait.serialize(trait))
+  const sameExpectation = S.toEquivalence(TraitStore.TraitExpectation)
+  const control = { conflictOnCommit: false }
   const store = TraitStore.TraitStore.of({
     refresh: Effect.void,
     ls: Effect.sync(() => [...stored.values()]),
-    add: (trait) =>
-      Effect.suspend(() => {
-        if (stored.has(trait.name)) return TraitStore.TraitAlreadyExistsError.make({ traitName: trait.name })
-        mutations.push("add")
-        stored.set(trait.name, trait)
-        return Effect.succeed(trait)
-      }),
-    update: (trait) =>
-      Effect.sync(() => {
-        mutations.push("update")
-        stored.set(trait.name, trait)
-      }),
+    snapshot: Effect.sync(() => {
+      const traits = Array.map([...stored.values()], (trait) => ({ trait, version: versionOf(trait) }))
+      return { traits, version: TraitStore.ContentHash.make(JSON.stringify(traits)) }
+    }),
     get: (name) =>
       Effect.suspend(() => {
         const trait = stored.get(name)
         return trait === undefined ? TraitStore.TraitNotFoundError.make({ traitName: name }) : Effect.succeed(trait)
       }),
-    rm: (names) =>
-      Effect.sync(() => {
-        mutations.push("rm")
-        for (const name of names) stored.delete(name)
+    commit: (changes) =>
+      Effect.suspend(() => {
+        const current = (traitName: Trait.TraitName) => {
+          const trait = stored.get(traitName)
+          return trait === undefined
+            ? TraitStore.TraitExpectation.cases.Absent.make({})
+            : TraitStore.TraitExpectation.cases.Present.make({ version: versionOf(trait) })
+        }
+        const conflicts = Array.filter(changes, (change) =>
+          TraitStore.TraitChange.guards.Put(change)
+            ? !sameExpectation(change.expected, current(change.trait.name))
+            : !sameExpectation(
+                TraitStore.TraitExpectation.cases.Present.make({ version: change.version }),
+                current(change.traitName)
+              )
+        )
+        if (control.conflictOnCommit || conflicts.length > 0)
+          return TraitStore.TraitChangedError.make({
+            traitNames: Array.map(changes, (change) =>
+              TraitStore.TraitChange.guards.Put(change) ? change.trait.name : change.traitName
+            )
+          })
+        for (const change of changes) {
+          if (TraitStore.TraitChange.guards.Remove(change)) {
+            mutations.push("rm")
+            stored.delete(change.traitName)
+          } else {
+            mutations.push(TraitStore.TraitExpectation.guards.Absent(change.expected) ? "add" : "update")
+            stored.set(change.trait.name, change.trait)
+          }
+        }
+        return Effect.void
       })
   })
   const semaphore = yield* Semaphore.make(4)
@@ -111,7 +135,7 @@ const harness = Effect.fn("test.harness")(function* (options: {
       }
     })
   )
-  return { stored, mutations, requests, comparisons, layer }
+  return { stored, mutations, requests, comparisons, control, layer }
 })
 
 it.effect(
@@ -332,7 +356,7 @@ it.effect(
     expect(result).toMatchObject({
       instructions: expect.stringContaining("files changed or directly involved in the current task")
     })
-    expect(test.mutations).toEqual(["update", "rm"])
+    expect(test.mutations).toEqual(["update"])
     expect(test.stored.get(name)).toEqual(proposedTrait)
     expect(
       pipe(
@@ -411,5 +435,25 @@ it.effect(
     expect(result._tag).toBe("Resolved")
     expect(test.mutations).toEqual(["add", "rm"])
     expect([...test.stored.keys()]).toEqual([replacementName])
+  })
+)
+
+it.effect(
+  "requires fresh consent when another process changes a target after approval",
+  Effect.fn("test.TraitDerivation.concurrentWrite")(function* () {
+    const test = yield* harness({ relationships: { [name]: "clarification" } })
+    const pending = yield* derive({ proposedTrait }).pipe(Effect.provide(test.layer))
+    expect(pending._tag).toBe("ApprovalRequired")
+    // The store's index has not yet observed the other process's write, so only the commit detects it.
+    test.control.conflictOnCommit = true
+    const conflicted = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
+    expect(conflicted).toMatchObject({ _tag: "ApprovalRequired", message: expect.stringContaining("changed") })
+    expect(test.mutations).toEqual([])
+    test.control.conflictOnCommit = false
+    const reapproval = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
+    expect(reapproval).toMatchObject({ _tag: "ApprovalRequired", message: expect.stringContaining("Clarify trait") })
+    const saved = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
+    expect(saved._tag).toBe("Updated")
+    expect(test.mutations).toEqual(["update"])
   })
 )
