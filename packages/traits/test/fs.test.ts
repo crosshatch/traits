@@ -20,13 +20,13 @@ const entries = (directory: string) =>
 
 /** The file system with some of its operations replaced. */
 const overriding = (
-  operations: (fs: FileSystem.FileSystem) => Effect.Effect<Partial<FileSystem.FileSystem>>
+  operations: Effect.Effect<Partial<FileSystem.FileSystem>, never, FileSystem.FileSystem>
 ): Layer.Layer<FileSystem.FileSystem, never, FileSystem.FileSystem> =>
   Layer.effect(
     FileSystem.FileSystem,
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem
-      const replaced = yield* operations(fs)
+      const replaced = yield* operations
       return { ...fs, ...replaced }
     })
   )
@@ -34,7 +34,8 @@ const overriding = (
 /** A file system whose first few moves fail for this reason, as when another process has the target open. */
 const failingMoves = (failures: number, reason: PlatformError.SystemErrorTag) =>
   overriding(
-    Effect.fnUntraced(function* (fs) {
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
       const remaining = yield* Ref.make(failures)
       return {
         rename: (from, to) =>
@@ -50,7 +51,7 @@ const failingMoves = (failures: number, reason: PlatformError.SystemErrorTag) =>
   )
 
 /** A file system that cannot link one file to another, such as exFAT. */
-const withoutLinks = overriding(() =>
+const withoutLinks = overriding(
   Effect.succeed({
     link: () => Effect.fail(PlatformError.systemError({ _tag: "Unknown", module: "FileSystem", method: "link" }))
   })
