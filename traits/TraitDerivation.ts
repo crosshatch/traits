@@ -1,4 +1,4 @@
-import { Array, Effect, pipe, Result, Schema as S, Semaphore, String } from "effect"
+import { Array, Deferred, Effect, Latch, pipe, Result, Schema as S, Semaphore, String } from "effect"
 import { LanguageModel } from "effect/ai"
 
 import * as Approval from "./_util/Approval.ts"
@@ -18,6 +18,15 @@ export const TraitDerivation = S.Union([
   Approval.Approval.cases.RevisionRequired,
   Approval.Approval.cases.Declined
 ]).pipe(S.toTaggedUnion("_tag"))
+
+export class TraitDerivationBusyError extends S.TaggedError<TraitDerivationBusyError>()(
+  "TraitDerivationBusyError",
+  {}
+) {
+  override get message() {
+    return "Another derive_trait call is awaiting user approval. Wait for that approval to finish, then call derive_trait again."
+  }
+}
 
 export interface DeriveParams {
   readonly proposedTrait: Trait.Trait
@@ -45,7 +54,21 @@ type PendingAssessment = {
 }
 
 const pendingAssessments = new WeakMap<TraitStore.TraitStore["Service"], Map<Trait.TraitName, PendingAssessment>>()
-const derivationLocks = new WeakMap<TraitStore.TraitStore["Service"], Semaphore.Semaphore>()
+type DerivationLock = {
+  readonly permit: Semaphore.Semaphore
+  readonly awaitingApproval: Latch.Latch
+}
+
+const derivationLocks = new WeakMap<TraitStore.TraitStore["Service"], DerivationLock>()
+
+const derivationLock = (store: TraitStore.TraitStore["Service"]) => {
+  const lock = derivationLocks.get(store) ?? {
+    permit: Semaphore.makeUnsafe(1),
+    awaitingApproval: Latch.makeUnsafe(false)
+  }
+  derivationLocks.set(store, lock)
+  return lock
+}
 
 // Returned whenever traits changed after assessment, including writes by other Traits processes.
 const storeChanged = Approval.Approval.cases.ApprovalRequired.make({
@@ -60,12 +83,19 @@ const requestApproval = Effect.fn("TraitDerivation.requestApproval")(function* (
   readonly approvedMessage?: string | undefined
 }) {
   const store = yield* TraitStore.TraitStore
+  const { awaitingApproval } = derivationLock(store)
   const approval = yield* Approval.request({
     message: options.message,
     approved:
       options.approvedMessage !== undefined && options.approvedMessage !== options.message
         ? undefined
-        : options.approved
+        : options.approved,
+    whilePrompting: (prompt) =>
+      Effect.acquireUseRelease(
+        awaitingApproval.open,
+        () => prompt,
+        () => awaitingApproval.close
+      )
   })
   if (Approval.Approval.guards.Approved(approval)) {
     const current = yield* store.snapshot
@@ -75,10 +105,18 @@ const requestApproval = Effect.fn("TraitDerivation.requestApproval")(function* (
 })
 
 export const derive = Effect.fn("TraitDerivation.derive")(function* (params: DeriveParams) {
-  const store = yield* TraitStore.TraitStore
-  const lock = derivationLocks.get(store) ?? Semaphore.makeUnsafe(1)
-  derivationLocks.set(store, lock)
-  return yield* deriveLocked(params).pipe(lock.withPermits(1))
+  const lock = yield* Effect.map(TraitStore.TraitStore, derivationLock)
+  const acquired = yield* Deferred.make<void>()
+  // Queued callers fail rather than wait on a prompt the user may never answer.
+  const busy = lock.awaitingApproval.await.pipe(
+    Effect.andThen(Deferred.isDone(acquired)),
+    Effect.flatMap((holder) => (holder ? Effect.never : TraitDerivationBusyError.make({})))
+  )
+  return yield* Deferred.succeed(acquired, undefined).pipe(
+    Effect.andThen(deriveLocked(params)),
+    lock.permit.withPermits(1),
+    Effect.raceFirst(busy)
+  )
 })
 
 const deriveLocked = Effect.fn("TraitDerivation.deriveLocked")(function* (params: DeriveParams) {

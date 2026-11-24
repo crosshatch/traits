@@ -1,9 +1,22 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, Layer, pipe, Predicate, Record, Schema as S, Semaphore, Stream, String } from "effect"
-import { DecisionModel, LanguageModel, OpenAiStructuredOutput } from "effect/ai"
+import {
+  Array,
+  Deferred,
+  Effect,
+  Fiber,
+  Layer,
+  pipe,
+  Predicate,
+  Record,
+  Schema as S,
+  Semaphore,
+  Stream,
+  String
+} from "effect"
+import { DecisionModel, LanguageModel, McpSchema, OpenAiStructuredOutput } from "effect/ai"
 
 import * as Trait from "../Trait.ts"
-import { derive } from "../TraitDerivation.ts"
+import { derive, TraitDerivationBusyError } from "../TraitDerivation.ts"
 import { TraitsContext } from "../TraitsContext.ts"
 import * as TraitStore from "../TraitStore.ts"
 
@@ -455,5 +468,43 @@ it.effect(
     const saved = yield* derive({ proposedTrait, approved: true }).pipe(Effect.provide(test.layer))
     expect(saved._tag).toBe("Updated")
     expect(test.mutations).toEqual(["update"])
+  })
+)
+
+it.live(
+  "fails other derivations fast while one awaits interactive approval",
+  Effect.fn("test.TraitDerivation.busy")(function* () {
+    const first = Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("first-pending") })
+    const second = Trait.Trait.make({ ...proposedTrait, name: Trait.TraitName.make("second-pending") })
+    const test = yield* harness({ relationships: { [name]: "distinct", [first.name]: "distinct" } })
+    const prompted = yield* Deferred.make<void>()
+    const client = McpSchema.McpServerClient.of({
+      clientId: 1,
+      protocolVersion: "2025-11-25",
+      clientCapabilities: { elicitation: { form: {} } },
+      clientInfo: { name: "test", version: "1" },
+      initializePayload: {
+        protocolVersion: "2025-11-25",
+        capabilities: { elicitation: { form: {} } },
+        clientInfo: { name: "test", version: "1" }
+      },
+      getClient: Effect.succeed({
+        listRoots: () => Effect.die("unused"),
+        createMessage: () => Effect.die("unused"),
+        elicit: () => Deferred.succeed(prompted, undefined).pipe(Effect.andThen(Effect.never))
+      })
+    })
+    const layer = Layer.merge(test.layer, Layer.succeed(McpSchema.McpServerClient, client))
+    const pending = yield* derive({ proposedTrait: first }).pipe(Effect.provide(layer), Effect.forkChild)
+    yield* Deferred.await(prompted)
+    const error = yield* derive({ proposedTrait: second }).pipe(
+      Effect.provide(layer),
+      Effect.timeout("1 second"),
+      Effect.flip
+    )
+    expect(error).toBeInstanceOf(TraitDerivationBusyError)
+    yield* Fiber.interrupt(pending)
+    const retried = yield* derive({ proposedTrait: second }).pipe(Effect.provide(test.layer))
+    expect(retried._tag).toBe("ApprovalRequired")
   })
 )

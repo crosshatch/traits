@@ -1,4 +1,4 @@
-import { Effect, Option, Schema as S, String } from "effect"
+import { Effect, identity, Option, Schema as S, String } from "effect"
 import { McpSchema, McpServer } from "effect/ai"
 
 export type Approval = typeof Approval.Type
@@ -12,6 +12,7 @@ export const Approval = S.TaggedUnion({
 export const request = Effect.fn("Approval.request")(function* (options: {
   readonly message: string
   readonly approved?: boolean | undefined
+  readonly whilePrompting?: <A, E, R>(prompt: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
 }) {
   const client = yield* Effect.serviceOption(McpSchema.McpServerClient).pipe(Effect.map(Option.getOrUndefined))
   const supportsForm =
@@ -42,7 +43,8 @@ export const request = Effect.fn("Approval.request")(function* (options: {
     Effect.provideService(McpSchema.McpServerClient, client),
     Effect.catchTags({
       ElicitationDeclined: (error) => (error.cause === undefined ? Effect.undefined : error)
-    })
+    }),
+    options.whilePrompting ?? identity
   )
   if (response === undefined || response.decision === "skip") return Approval.cases.Declined.make({})
   if (response.decision === "revise" || (response.feedback !== undefined && String.trim(response.feedback) !== "")) {
