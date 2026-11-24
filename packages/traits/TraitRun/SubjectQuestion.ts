@@ -1,11 +1,13 @@
-import { Effect, Record, Schema as S, String } from "effect"
+import { Effect, flow, Record, Schema as S, String } from "effect"
 import { Decision, DecisionModel } from "effect/ai"
 
 import type { TraitSubject } from "../Trait/TraitSubject.ts"
+import * as DecisionKey from "./DecisionKey.ts"
 import { Evidence } from "./Evidence.ts"
+import * as QuestionId from "./QuestionId.ts"
 
-/** What every subject question shares: the task, and what an answer either way means. An answer is only worth remembering while these stay as they are. */
-export const prompt = {
+/** What every subject question shares: the task, and what an answer either way means. */
+const prompt = {
   task: String.trim(
     String.stripMargin(`
   |For each question, determine whether evidence.target is or contains an instance of the question's subject.
@@ -27,6 +29,18 @@ export const prompt = {
   criteria: { true: "Is or contains one.", false: "Contains none." }
 }
 
+/** What a request hands the model with its questions. The task is the same for every subject, so it is sent once with the evidence rather than with each question. */
+const state = (evidence: Evidence) => ({ task: prompt.task, evidence })
+
+/** One subject's question, as it is put to the model. */
+const question = (subject: TraitSubject) => ({ instructions: { subject }, criteria: prompt.criteria })
+
+/** What the answers to subject questions about a piece of evidence are remembered under. It is made from what a request hands the model with its questions, so a change to the task or to the evidence asks again. */
+export const keyOf = flow(state, DecisionKey.fromState)
+
+/** What a subject's question goes by among those remembered about the same evidence. It is made from the question as it is put to the model, so a change to it asks again, and traits with the same subject share one question. */
+export const idOf = flow(question, QuestionId.fromQuestion)
+
 /** Estimates how likely each of several subjects, by ID, matches one shared piece of evidence, in one provider request, independently of trait evaluation. An unanswered subject does not discard its answered siblings. */
 export const match = Effect.fn("SubjectQuestion.match")(function* (options: {
   readonly subjects: Readonly<Record<string, TraitSubject>>
@@ -34,15 +48,9 @@ export const match = Effect.fn("SubjectQuestion.match")(function* (options: {
 }) {
   return yield* DecisionModel.decideSettled(
     Decision.make({
-      // The task is the same for every subject, so it is sent once with the evidence rather than with each question.
       input: S.Struct({ task: S.String, evidence: Evidence }),
-      decisions: Record.map(options.subjects, (subject) =>
-        Decision.probability({
-          instructions: { subject },
-          criteria: prompt.criteria
-        })
-      )
+      decisions: Record.map(options.subjects, flow(question, Decision.probability))
     }),
-    { input: { task: prompt.task, evidence: options.evidence } }
+    { input: state(options.evidence) }
   )
 })

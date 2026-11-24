@@ -1,7 +1,13 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Array, Effect, pipe, Schema as S, String } from "effect"
+import { Array, Effect, Order, pipe, Record, Ref, Schema as S, String } from "effect"
+import { DecisionModel } from "effect/ai"
+import { TestConsole } from "effect/testing"
 
+import { StorageError } from "../StorageError.ts"
 import { TraitSourceId } from "../TraitCollection/TraitSourceId.ts"
+import * as DecisionCache from "../TraitRun/DecisionCache.ts"
+import * as DecisionKey from "../TraitRun/DecisionKey.ts"
+import * as QuestionId from "../TraitRun/QuestionId.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitSelectionId, TraitSelectionNotFoundError } from "../TraitSelection/TraitSelections.ts"
 import { answer, braces, name, readme, trait, workspace } from "./_memoryWorkspace.ts"
@@ -490,6 +496,125 @@ describe("run", () => {
       expect(recovered.usage.remembered).toBe(0)
       const made = yield* requests
       expect(made).toHaveLength(3)
+    })
+  )
+
+  it.effect("asks about segments that hold the same text once, and gives each of them the checks", () =>
+    Effect.gen(function* () {
+      const { layer, project, requests } = yield* workspace({
+        files: { "a.ts": "if (x) y() // BAD\n\nif (x) y() // BAD\n" },
+        own: [braces],
+        answer
+      })
+      const segmentation = Effect.succeed(() => [
+        { start: 0, end: 17 },
+        { start: 19, end: 36 }
+      ])
+      const run = TraitRun.run({ files: project, segmentation, selections: [], threshold: 0.5 }).pipe(
+        Effect.provide(layer)
+      )
+      const report = yield* run
+      expect(report.files[0]?.checks).toEqual(
+        Array.map([1, 3], (line) => ({
+          trait: name("always-brace"),
+          lines: { start: line, end: line },
+          applies: { _tag: "Answered", probability: 0.9 },
+          holds: { _tag: "Answered", probability: 0.2 },
+          verdict: "Violated"
+        }))
+      )
+      // The subject and the assertion are each asked about once, and neither answer is one remembered from before.
+      expect(report.usage).toEqual({ requests: 2, inputTokens: 20, outputTokens: 2, remembered: 0 })
+      const made = yield* requests
+      expect(made).toHaveLength(2)
+      const again = yield* run
+      expect(again.usage).toMatchObject({ requests: 0, remembered: 2 })
+    })
+  )
+
+  it.effect("remembers each answer by what the model was handed: its state, and the question itself", () =>
+    Effect.gen(function* () {
+      const { layer, project } = yield* workspace({
+        files: { "a.ts": "if (x) { y() }" },
+        own: [braces, readme, trait({ name: "no-secrets", assertion: "The file holds no secrets." })],
+        answer
+      })
+      const handed = yield* Ref.make<ReadonlyArray<DecisionModel.ProviderOptions>>([])
+      const model = yield* DecisionModel.make({
+        decide: Effect.fnUntraced(function* (request) {
+          yield* Ref.update(handed, Array.append(request))
+          return {
+            answers: Record.map(request.decisions, () => ({ _tag: "Probability" as const, probability: 0.9 })),
+            usage: { inputTokens: 1, outputTokens: 0 }
+          }
+        })
+      })
+      yield* Effect.gen(function* () {
+        yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+          Effect.provideService(DecisionModel.DecisionModel, model)
+        )
+        const { recall } = yield* DecisionCache.DecisionCache
+        const requests = yield* Ref.get(handed)
+        // Two subjects, and then the assertions of all three traits, since every subject is found.
+        expect(Array.map(requests, (request) => Record.size(request.decisions))).toEqual([2, 3])
+        yield* Effect.forEach(
+          requests,
+          Effect.fnUntraced(function* (request) {
+            const key = yield* DecisionKey.fromState(request.state)
+            const remembered = yield* recall(key)
+            const ids = yield* Effect.forEach(
+              Record.values(request.decisions),
+              // Only the decision is passed on, since decoding takes options where the traversal gives an index.
+              (decision) =>
+                pipe(
+                  decision,
+                  S.decodeUnknownEffect(S.Struct({ instructions: S.Json, criteria: S.Json })),
+                  Effect.flatMap(QuestionId.fromQuestion)
+                ),
+              { concurrency: 1 }
+            )
+            expect(Array.sort(Record.keys(remembered), Order.String)).toEqual(Array.sort(ids, Order.String))
+          }),
+          { concurrency: 1 }
+        )
+      }).pipe(Effect.provide(layer))
+    })
+  )
+
+  it.effect("carries on, and says so, when what is remembered cannot be read or added to", () =>
+    Effect.gen(function* () {
+      const { layer, project } = yield* workspace({ files: { "a.ts": "if (x) { y() }" }, own: [braces], answer })
+      const report = yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+        Effect.provideService(DecisionCache.DecisionCache, {
+          recall: (key) => StorageError.make({ location: key, reason: { _tag: "Unreadable" } }),
+          remember: (key) => StorageError.make({ location: key, reason: { _tag: "Unwritable" } })
+        }),
+        Effect.provide(layer)
+      )
+      expect(TraitRun.tally(report)).toEqual({ NotApplicable: 0, Holds: 1, Violated: 0, NotAssessed: 0 })
+      expect(report.usage).toMatchObject({ requests: 2, remembered: 0 })
+      const logged = yield* TestConsole.logLines
+      expect(logged).toContain("What the model answered before could not be read, so it is asked again.")
+      expect(logged).toContain("What the model answered could not be kept, so it is asked again next time.")
+    })
+  )
+
+  it.effect("looks nothing up when no trait applies to what is checked", () =>
+    Effect.gen(function* () {
+      const { layer, project } = yield* workspace({ files: { "README.md": "# Title" }, own: [braces], answer })
+      const recalled = yield* Ref.make<ReadonlyArray<string>>([])
+      yield* Effect.gen(function* () {
+        const { recall, remember } = yield* DecisionCache.DecisionCache
+        yield* TraitRun.run({ files: project, selections: [], threshold: 0.5 }).pipe(
+          Effect.provideService(DecisionCache.DecisionCache, {
+            recall: (key) => Effect.andThen(Ref.update(recalled, Array.append<string>(key)), recall(key)),
+            remember
+          })
+        )
+      }).pipe(Effect.provide(layer))
+      // The subject is asked about, and its not being found leaves no assertion to ask about.
+      const keys = yield* Ref.get(recalled)
+      expect(keys).toHaveLength(1)
     })
   )
 

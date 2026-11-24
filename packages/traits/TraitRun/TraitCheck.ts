@@ -7,12 +7,12 @@ import { matchesFile } from "../Trait/TraitMatch.ts"
 import type { TraitSubject } from "../Trait/TraitSubject.ts"
 import type { ResolvedTrait } from "../TraitSelection/ResolvedTrait.ts"
 import { TraitReference } from "../TraitSelection/TraitReference.ts"
-import { hash } from "../util/hash.ts"
 import { Probability } from "../util/Probability.ts"
 import { ask } from "./Asking.ts"
 import * as AssertionQuestion from "./AssertionQuestion.ts"
 import * as Evidence from "./Evidence.ts"
 import { Outcome } from "./Outcome.ts"
+import type { QuestionId } from "./QuestionId.ts"
 import * as SubjectQuestion from "./SubjectQuestion.ts"
 import { addUsage, noUsage } from "./Usage.ts"
 
@@ -55,16 +55,22 @@ export const TraitCheck = S.Struct({
 const isAtLeast = (outcome: Outcome, threshold: number) =>
   outcome._tag === "Answered" && outcome.probability >= threshold
 
+/** A question, with the ID it goes by among those remembered about the same evidence. */
+interface Identified<Q> {
+  readonly id: QuestionId
+  readonly question: Q
+}
+
 /** A trait that has an assertion to check, with where it stands among the traits being run. */
 interface Candidate {
   readonly position: number
   readonly reference: TraitReference
-  readonly subject: TraitSubject | undefined
   /** Whether the trait can apply to the file at this path, relative to the workspace root. */
   readonly matchesFile: (path: string) => boolean
-  /** What sets the trait's subject question apart, and its assertion question, among those remembered about the same text. */
-  readonly ids: { readonly subject: string; readonly assertion: string }
-  readonly assertion: AssertionQuestion.TraitAssertionWithContext
+  /** Whether what is checked is or contains the trait's subject; none for a trait with no subject, which applies to everything. */
+  readonly subject: Identified<TraitSubject> | undefined
+  /** Whether the trait's assertion holds for what is checked. */
+  readonly assertion: Identified<AssertionQuestion.TraitAssertionWithContext>
 }
 
 /** A candidate with whether what was checked matched its subject; a candidate with no subject has nothing to match and applies to everything. */
@@ -72,10 +78,9 @@ interface Matched extends Candidate {
   readonly applies: Outcome | undefined
 }
 
-/** A check with what orders it in a file's report: its trait's position, then where its segment starts. */
-interface Placed {
+/** A check with where its trait stands among the traits being run, which a report lists its checks by. */
+interface Positioned {
   readonly position: number
-  readonly start: number
   readonly check: TraitCheck
 }
 
@@ -84,21 +89,26 @@ export const candidatesOf = Effect.fnUntraced(function* (traits: ReadonlyArray<R
   const candidates = yield* Effect.forEach(
     traits,
     Effect.fnUntraced(function* ({ reference, trait }, position) {
+      const { subject } = trait
       if (trait.assertion === undefined) {
         return []
       }
       const assertion = { assertion: trait.assertion, ...(trait.body === undefined ? {} : { body: trait.body }) }
-      const ids = yield* Effect.all(
-        { subject: hash(trait.subject ?? ""), assertion: hash(assertion) },
+      const questions = yield* Effect.all(
+        {
+          subject:
+            subject === undefined
+              ? Effect.undefined
+              : Effect.map(SubjectQuestion.idOf(subject), (id) => ({ id, question: subject })),
+          assertion: Effect.map(AssertionQuestion.idOf(assertion), (id) => ({ id, question: assertion }))
+        },
         { concurrency: 1 }
       )
       const candidate: Candidate = {
         position,
         reference,
-        subject: trait.subject,
         matchesFile: trait.match === undefined ? () => true : matchesFile(trait.match),
-        ids,
-        assertion
+        ...questions
       }
       return [candidate]
     }),
@@ -114,8 +124,8 @@ const match = Effect.fnUntraced(function* (candidates: ReadonlyArray<Candidate>,
   )
   // Traits with the same subject share its question, which is asked once.
   const { outcome, usage } = yield* ask({
-    questions: Record.fromEntries(Array.map(withSubject, ({ candidate, subject }) => [candidate.ids.subject, subject])),
-    shared: [SubjectQuestion.prompt, evidence],
+    questions: Record.fromEntries(Array.map(withSubject, ({ subject }) => [subject.id, subject.question])),
+    key: SubjectQuestion.keyOf(evidence),
     request: (subjects) => SubjectQuestion.match({ subjects, evidence })
   })
   const matched: ReadonlyArray<Matched> = [
@@ -124,7 +134,7 @@ const match = Effect.fnUntraced(function* (candidates: ReadonlyArray<Candidate>,
       Array.filter(({ subject }) => subject === undefined),
       Array.map((candidate) => ({ ...candidate, applies: undefined }))
     ),
-    ...Array.map(withSubject, ({ candidate }) => ({ ...candidate, applies: outcome(candidate.ids.subject) }))
+    ...Array.map(withSubject, ({ candidate, subject }) => ({ ...candidate, applies: outcome(subject.id) }))
   ]
   return { matched, usage }
 })
@@ -136,27 +146,22 @@ const applies = (threshold: number) => (candidate: Matched) =>
 const assert = Effect.fnUntraced(function* (options: {
   readonly applicable: ReadonlyArray<Matched>
   readonly evidence: Evidence.Evidence
-  /** Where what is checked starts in its file. */
-  readonly start: number
   readonly threshold: number
-  readonly lines: TraitCheck["lines"]
 }) {
-  const { evidence, lines, start, threshold } = options
+  const { evidence, threshold } = options
   const { outcome, usage } = yield* ask({
     questions: Record.fromEntries(
-      Array.map(options.applicable, (candidate) => [candidate.ids.assertion, candidate.assertion])
+      Array.map(options.applicable, (candidate) => [candidate.assertion.id, candidate.assertion.question])
     ),
-    shared: [AssertionQuestion.prompt, evidence],
+    key: AssertionQuestion.keyOf(evidence),
     request: (assertions) => AssertionQuestion.assert({ assertions, evidence })
   })
-  const checks = Array.map(options.applicable, (candidate): Placed => {
-    const holds = outcome(candidate.ids.assertion)
+  const checks = Array.map(options.applicable, (candidate): Positioned => {
+    const holds = outcome(candidate.assertion.id)
     return {
       position: candidate.position,
-      start,
       check: TraitCheck.make({
         trait: candidate.reference,
-        ...(lines === undefined ? {} : { lines }),
         ...(candidate.applies === undefined ? {} : { applies: candidate.applies }),
         holds,
         verdict: holds._tag === "Unanswered" ? "NotAssessed" : isAtLeast(holds, threshold) ? "Holds" : "Violated"
@@ -169,21 +174,16 @@ const assert = Effect.fnUntraced(function* (options: {
 /** The checks of candidates that what was checked was not found to match: not applicable, or not assessed when the model did not say. */
 const unmatched = (options: {
   readonly matched: ReadonlyArray<Matched>
-  /** Where what was checked starts in its file. */
-  readonly start: number
   readonly threshold: number
-  readonly lines: TraitCheck["lines"]
-}): ReadonlyArray<Placed> =>
+}): ReadonlyArray<Positioned> =>
   Array.flatMap(options.matched, (candidate) =>
     candidate.applies === undefined || isAtLeast(candidate.applies, options.threshold)
       ? []
       : [
           {
             position: candidate.position,
-            start: options.start,
             check: TraitCheck.make({
               trait: candidate.reference,
-              ...(options.lines === undefined ? {} : { lines: options.lines }),
               applies: candidate.applies,
               verdict: candidate.applies._tag === "Unanswered" ? "NotAssessed" : "NotApplicable"
             })
@@ -191,39 +191,34 @@ const unmatched = (options: {
         ]
   )
 
-/** Checks one input against candidates: which of their subjects it matches, then whether the assertions of those hold for it. */
+/** Checks one input against candidates: which of their subjects it matches, then whether the assertions of those hold for it. The checks say nothing of where in its file the input is, which is for whoever knows that to add. */
 const check = Effect.fnUntraced(function* (options: {
   readonly candidates: ReadonlyArray<Candidate>
   readonly input: Input.Input
   readonly root: URL
   readonly threshold: number
-  readonly lines: TraitCheck["lines"]
 }) {
-  const { input, lines, threshold } = options
-  const { start } = input.segment.range
+  const { threshold } = options
   // Both questions are about the same evidence, and what they are answered is remembered by it.
-  const evidence = Evidence.fromInput(input, options.root)
+  const evidence = Evidence.fromInput(options.input, options.root)
   const matches = yield* match(options.candidates, evidence)
   const assessed = yield* assert({
     applicable: Array.filter(matches.matched, applies(threshold)),
     evidence,
-    start,
-    threshold,
-    lines
+    threshold
   })
   return {
-    checks: [...assessed.checks, ...unmatched({ matched: matches.matched, start, threshold, lines })],
+    checks: [...assessed.checks, ...unmatched({ matched: matches.matched, threshold })],
     usage: addUsage(matches.usage, assessed.usage)
   }
 })
 
-/** The checks in the order a file's report lists them: by trait, and then by where each segment starts. */
-const inOrder = (checks: ReadonlyArray<Placed>): ReadonlyArray<TraitCheck> =>
+/** The checks in the order of their traits, which is the order a report lists them in. */
+const inOrder = (checks: ReadonlyArray<Positioned>): ReadonlyArray<TraitCheck> =>
   pipe(
     checks,
-    Array.sortWith(({ start }) => start, Order.Number),
     Array.sortWith(({ position }) => position, Order.Number),
-    Array.map((placed) => placed.check)
+    Array.map((positioned) => positioned.check)
   )
 
 /** Checks one input against traits: first which traits' subjects it matches, then whether the assertions of those traits hold for it. A trait with no subject applies to every input, and a trait with no assertion has nothing to check and is left out. */
@@ -237,20 +232,14 @@ export const checkInput = Effect.fn("TraitRun.checkInput")(function* (options: {
 }) {
   const threshold = yield* S.decodeEffect(Probability)(options.threshold)
   const candidates = yield* candidatesOf(options.traits)
-  const { checks, usage } = yield* check({
-    candidates,
-    input: options.input,
-    root: options.root,
-    threshold,
-    lines: undefined
-  })
+  const { checks, usage } = yield* check({ candidates, input: options.input, root: options.root, threshold })
   return { checks: inOrder(checks), usage }
 })
 
 // A few of a file's segments at a time, as a run takes a few files at a time, keeps the provider's rate limits in reach.
 const segmentsAtOnce = 4
 
-/** Checks a file against candidates. A candidate whose match patterns leave the file out is left out without asking the model anything. The rest are checked against each segment on its own: whether it matches the trait's subject, and then whether the trait's assertion holds for it, so each check names the lines it covers. A file with one segment is checked as that one, and its checks name no lines. */
+/** Checks a file against candidates. A candidate whose match patterns leave the file out is left out without asking the model anything. The rest are checked against each segment on its own: whether it matches the trait's subject, and then whether the trait's assertion holds for it, so each check names the lines it covers. Segments that hold the same text are the same evidence, so the model is asked about one of them for them all. A file with one segment is checked as that one, and its checks name no lines. */
 export const checkFile = Effect.fnUntraced(function* (options: {
   readonly candidates: ReadonlyArray<Candidate>
   /** The file's path, relative to the workspace root, which the traits' match patterns are tried against. */
@@ -273,24 +262,44 @@ export const checkFile = Effect.fnUntraced(function* (options: {
   const usable = Array.every(options.segments, (range) => range.end > range.start && isValidForText(range, source.text))
   const divided = usable && options.segments.length > 1
   const lineOf = (offset: number) => pipe(source.text, String.slice(0, offset), String.split("\n")).length
-  const checked = yield* Effect.forEach(
+  // Segments that hold the same text are the same evidence, so they are checked as one.
+  const alike = pipe(
     divided ? options.segments : [{ start: 0, end: source.text.length }],
-    Effect.fnUntraced(function* (range) {
+    Array.groupBy((range) => pipe(source.text, String.slice(range.start, range.end))),
+    Record.values
+  )
+  const checked = yield* Effect.forEach(
+    alike,
+    Effect.fnUntraced(function* (ranges) {
       // The whole text is always a valid selection of itself, and so is each range once it has been checked against the text.
-      const input = yield* Effect.orDie(Input.fromSegment({ after: source }, { _tag: "After", range }))
-      return yield* check({
-        candidates,
-        input,
-        root,
-        threshold,
-        // A file checked as one segment has no lines to tell its checks apart by.
-        lines: divided ? { start: lineOf(range.start), end: lineOf(range.end - 1) } : undefined
-      })
+      const input = yield* Effect.orDie(
+        Input.fromSegment({ after: source }, { _tag: "After", range: Array.headNonEmpty(ranges) })
+      )
+      const { checks, usage } = yield* check({ candidates, input, root, threshold })
+      return {
+        // Every one of the segments has the checks, each naming the lines it covers itself.
+        checks: Array.flatMap(ranges, (range) => {
+          // A file checked as one segment has no lines to tell its checks apart by.
+          const lines = divided ? { start: lineOf(range.start), end: lineOf(range.end - 1) } : undefined
+          return Array.map(checks, (positioned) => ({
+            ...positioned,
+            start: range.start,
+            check: lines === undefined ? positioned.check : { ...positioned.check, lines }
+          }))
+        }),
+        usage
+      }
     }),
     { concurrency: segmentsAtOnce }
   )
   return {
-    checks: inOrder(Array.flatMap(checked, ({ checks }) => checks)),
+    checks: pipe(
+      checked,
+      Array.flatMap(({ checks }) => checks),
+      // A file's report lists its checks by trait, and under each trait by where the segments start, which ordering by trait keeps.
+      Array.sortWith(({ start }) => start, Order.Number),
+      inOrder
+    ),
     usage: Array.reduce(checked, noUsage, (total, { usage }) => addUsage(total, usage))
   }
 })

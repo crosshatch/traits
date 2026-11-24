@@ -1,6 +1,8 @@
 export * as DecisionCache from "./TraitRun/DecisionCache.ts"
+export * as DecisionKey from "./TraitRun/DecisionKey.ts"
 export * as Estimate from "./Estimate/Estimate.ts"
 export * as Input from "./Input/Input.ts"
+export * as QuestionId from "./TraitRun/QuestionId.ts"
 export * as ResolvedTrait from "./TraitSelection/ResolvedTrait.ts"
 export * as StorageError from "./StorageError.ts"
 export * as Trait from "./Trait/Trait.ts"

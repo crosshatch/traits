@@ -2,7 +2,7 @@ import { Array, Effect, Schema as S, Struct } from "effect"
 import { DecisionModel } from "effect/ai"
 
 import type { StorageError } from "../StorageError.ts"
-import { DecisionCache } from "../TraitRun/DecisionCache.ts"
+import * as DecisionCache from "../TraitRun/DecisionCache.ts"
 import * as PlanningModel from "../TraitRun/PlanningModel.ts"
 import * as TraitRun from "../TraitRun/TraitRun.ts"
 import { TraitReference } from "../TraitSelection/TraitReference.ts"
@@ -50,9 +50,8 @@ export const estimate = Effect.fn("Estimate.estimate")(function* <R = never>(opt
   const { files, selections, threshold } = options
   // Got ready once, so that both walks through the run divide the files the same way.
   const segment = options.segmentation === undefined ? undefined : yield* options.segmentation
-  const { recall } = yield* DecisionCache
   // The run reads what is remembered and is kept from adding to it, since the answers it is given here are made up.
-  const remembered = DecisionCache.of({ recall, remember: () => Effect.void })
+  const remembered = yield* DecisionCache.DecisionCache.useSync(DecisionCache.readOnly)
   // What follows a question depends on its answer, so the run is walked through twice: once with no trait applying, and once with every trait applying.
   const walk = Effect.fnUntraced(function* (probability: number) {
     const model = yield* PlanningModel.make(probability)
@@ -61,7 +60,10 @@ export const estimate = Effect.fn("Estimate.estimate")(function* <R = never>(opt
       selections,
       threshold,
       ...(segment === undefined ? {} : { segmentation: Effect.succeed(segment) })
-    }).pipe(Effect.provideService(DecisionModel.DecisionModel, model), Effect.provideService(DecisionCache, remembered))
+    }).pipe(
+      Effect.provideService(DecisionModel.DecisionModel, model),
+      Effect.provideService(DecisionCache.DecisionCache, remembered)
+    )
   })
   const least = yield* walk(0)
   const most = yield* walk(1)
