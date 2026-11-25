@@ -50,10 +50,10 @@ const question = (asserted: TraitAssertionWithContext) => ({
 })
 
 /** What the answers to assertion questions about a piece of evidence are remembered under. It is made from what a request hands the model with its questions, so a change to the task or to the evidence asks again. What a trait's prelude found is left out of the evidence it is made from: it is gathered anew each time it is asked for, and would never be found the same twice, so the prelude is part of the question's ID instead. */
-export const keyOf = flow(state, DecisionKey.fromState)
+export const keyOf = flow(state, DecisionKey.fromJson)
 
 /** What an assertion's question goes by among those remembered about the same evidence. It is made from the question as it is put to the model, and from its trait's prelude when it has one, so a change to the assertion, to its supporting context, or to the prelude asks again, and a change to its trait's name does not. */
-export const idOf = ({ prelude, ...asserted }: TraitAssertionWithContext & { readonly prelude?: TraitPrelude }) =>
+export const idOf = ({ prelude, ...asserted }: TraitAssertionWithContext & { readonly prelude?: typeof TraitPrelude.Type }) =>
   QuestionId.fromQuestion(prelude === undefined ? question(asserted) : { ...question(asserted), prelude })
 
 /** Estimates how likely each of several assertions, by ID, holds true for one shared piece of evidence, in one provider request. Each assertion is read with its trait's supporting context, when it has any. An unanswered assertion does not discard its answered siblings. */

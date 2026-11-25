@@ -13,5 +13,5 @@ export const DecisionKey = S.String.pipe(S.brand("traits/DecisionKey")).annotate
 const version = 1
 
 /** The key for the state a request hands the model with its questions. A change to any of it makes another key, which has nothing remembered under it. */
-export const fromState = (state: S.Json) =>
+export const fromJson = (state: S.Json) =>
   hash({ version, state }).pipe(Effect.map((digest) => DecisionKey.make(digest)))

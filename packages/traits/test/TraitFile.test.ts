@@ -1,14 +1,11 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, pipe, String } from "effect"
+import { Effect, pipe, String } from "effect"
 
 import * as TraitFile from "../Trait/TraitFile.ts"
 
-/** The text of a trait file whose prelude nests this many subagents, each the only step of the one before. */
-const deepFile = (subagents: number) =>
-  `---\nname: a-trait\npurpose: Why.\nprelude: [${pipe(
-    Array.makeBy(subagents, (level) => `{level-${level}: [`),
-    Array.join("")
-  )}A step.${pipe("]}", String.repeat(subagents))}]\n---\n`
+/** The text of a trait file whose prelude nests lists this many levels deep around its one step. */
+const deepFile = (depth: number) =>
+  `---\nname: a-trait\npurpose: Why.\nprelude: ${pipe("[", String.repeat(depth))}"A step."${pipe("]", String.repeat(depth))}\n---\n`
 
 it.effect("reads the frontmatter as the trait and what follows it as the body, and writes both back as they were", () =>
   Effect.gen(function* () {
@@ -49,17 +46,10 @@ it.effect.each([
   })
 )
 
-it.effect("reads a file whose frontmatter is nested many levels deep", () =>
-  Effect.gen(function* () {
-    const trait = yield* TraitFile.parse(deepFile(20))
-    expect(trait.prelude).toBeDefined()
-  })
-)
-
 // Without a limit, validating nesting this deep exhausts the stack, which would stop the process rather than report the file.
-it.effect.each([40, 700, 5_000])("reports a file nested %i levels deep, rather than crashing on it", (subagents) =>
+it.effect.each([20, 40, 700, 5_000])("reports a file nested %i levels deep, rather than crashing on it", (depth) =>
   Effect.gen(function* () {
-    const error = yield* Effect.flip(TraitFile.parse(deepFile(subagents)))
+    const error = yield* Effect.flip(TraitFile.parse(deepFile(depth)))
     expect(error._tag).toBe("TraitFileParseError")
   })
 )

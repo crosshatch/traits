@@ -12,48 +12,26 @@ const failure = (value: unknown): string | undefined =>
     onFailure: (error) => error.message
   })
 
-const nested = [
-  "Fetch the base branch.",
-  {
-    "package-metadata": ["Read package.json."],
-    "changed-files": ["List the changed files.", "Read each one.", { owners: ["Find who owns each file."] }]
-  },
-  "Summarise what changed."
-]
+const steps = ["Fetch the base branch.", "Read package.json.", "Summarise what changed."]
 
 /** The text of a trait file whose frontmatter holds this prelude, written on one line. */
 const fileWith = (prelude: string) => `---\nname: a-trait\npurpose: Why.\nprelude: ${prelude}\n---\n`
 
 describe("TraitPrelude", () => {
-  it("accepts steps in order, subagents by label, and each nested in the other", () => {
+  it("accepts a single step, and steps in order", () => {
+    expect(failure("A step.")).toBeUndefined()
     expect(failure(["A step.", "Another."])).toBeUndefined()
-    expect(failure({ uses: ["A step."], "public-api": ["A step.", "Another."] })).toBeUndefined()
-    expect(failure(nested)).toBeUndefined()
   })
 
   it.each([
-    ["a single instruction", "A step.", "Expected TraitPreludeSteps | TraitPreludeSubagents"],
     ["no steps", [], "Missing key"],
-    ["no subagents", {}, "Expected a value with at least 1 entry"],
-    ["a subagent with no steps", { uses: [] }, 'at ["uses"][0]'],
-    ["a subagent whose steps are not a list", { uses: "A step." }, 'at ["uses"]'],
-    ["a sentence that an unquoted colon turned into a subagent", [{ note: "skip deleted files." }], 'at [0]["note"]'],
-    ["steps directly inside steps", ["A step.", ["Another."]], "at [1]"],
-    ["subagents directly inside subagents", { uses: { inner: ["A step."] } }, 'at ["uses"]'],
     ["a blank step", ["  "], "Expected text with at least one character that is not whitespace."],
+    ["a blank single step", "  ", "Expected text with at least one character that is not whitespace."],
     ["a step that is not text", [1], "at [0]"],
     ["a step that is too long", [pipe("a", String.repeat(301))], "at [0]"],
-    ["a label that is not kebab-case", { Not_Kebab: ["A step."], uses: ["Another."] }, 'at ["Not_Kebab"]'],
-    [
-      "a label used again deeper in the same subagent",
-      ["A step.", { uses: ["Another.", { uses: ["A third."] }] }],
-      "The label uses is used for more than one subagent."
-    ],
-    [
-      "a label used by two subagents in different places",
-      { one: [{ shared: ["A step."] }], two: [{ shared: ["Another."] }] },
-      "The label shared is used for more than one subagent."
-    ]
+    ["steps directly inside steps", ["A step.", ["Another."]], "at [1]"],
+    ["subagents", { uses: ["A step."] }, "Expected"],
+    ["a sentence that an unquoted colon turned into a map", [{ note: "skip deleted files." }], "at [0]"]
   ])("rejects %s", (_name, prelude, message) => {
     expect(failure(prelude)).toContain(message)
   })
@@ -66,7 +44,7 @@ describe("a trait file's prelude", () => {
         name: "a-trait",
         subject: "Notes.",
         purpose: "Why.",
-        prelude: nested,
+        prelude: steps,
         body: "An example."
       })
       const text = TraitFile.serialize(trait)
@@ -79,13 +57,7 @@ describe("a trait file's prelude", () => {
           |purpose: Why.
           |prelude:
           |  - Fetch the base branch.
-          |  - package-metadata:
-          |      - Read package.json.
-          |    changed-files:
-          |      - List the changed files.
-          |      - Read each one.
-          |      - owners:
-          |          - Find who owns each file.
+          |  - Read package.json.
           |  - Summarise what changed.
           |---
           |
@@ -112,7 +84,7 @@ describe("a trait file's prelude", () => {
       const trait = yield* S.decodeEffect(Trait)({
         name: "a-trait",
         purpose: "Why.",
-        prelude: { first: [step, { second: [step] }], third: [step] }
+        prelude: [step, step]
       })
       const read = yield* TraitFile.parse(TraitFile.serialize(trait))
       expect(read).toEqual(trait)

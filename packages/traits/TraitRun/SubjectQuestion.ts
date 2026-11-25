@@ -34,7 +34,7 @@ const state = (evidence: Evidence) => ({ task: prompt.task, evidence })
 const question = (subject: TraitSubject) => ({ instructions: { subject }, criteria: prompt.criteria })
 
 /** What the answers to subject questions about a piece of evidence are remembered under. It is made from what a request hands the model with its questions, so a change to the task or to the evidence asks again. */
-export const keyOf = flow(state, DecisionKey.fromState)
+export const keyOf = flow(state, DecisionKey.fromJson)
 
 /** What a subject's question goes by among those remembered about the same evidence. It is made from the question as it is put to the model, so a change to it asks again, and traits with the same subject share one question. */
 export const idOf = flow(question, QuestionId.fromQuestion)

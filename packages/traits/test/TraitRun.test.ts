@@ -558,7 +558,7 @@ describe("run", () => {
         yield* Effect.forEach(
           requests,
           Effect.fnUntraced(function* (request) {
-            const key = yield* DecisionKey.fromState(request.state)
+            const key = yield* DecisionKey.fromJson(request.state)
             const remembered = yield* recall(key)
             const ids = yield* Effect.forEach(
               Record.values(request.decisions),

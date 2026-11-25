@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest"
-import { Array, Effect, pipe, Record, Ref, Schema as S, String } from "effect"
+import { Array, Effect, pipe, Ref, Schema as S, String } from "effect"
 
 import * as Input from "../Input/Input.ts"
 import { TraitPrelude } from "../Trait/TraitPrelude.ts"
@@ -17,9 +17,7 @@ const recordingAgent = Effect.gen(function* () {
   const agent: Prelude.PreludeAgentService = {
     carryOut: (task) =>
       Ref.update(tasks, Array.append(task)).pipe(
-        Effect.as({
-          found: `did ${Array.join(task.steps, "; ")} after ${Array.join(Record.keys(task.found), ",") || "nothing"}`
-        })
+        Effect.as({ found: `did ${Array.join(task.steps, "; ")}` })
       )
   }
   return { agent, tasks: Ref.get(tasks) }
@@ -27,28 +25,15 @@ const recordingAgent = Effect.gen(function* () {
 
 const unused = trait({ name: "unused-exports", subject: "TypeScript modules.", assertion: "Every export is used." })
 
-it.effect("carries out steps in order, each run of them as one task, and subagents under their labels", () =>
+it.effect("carries out steps in order, all as one task", () =>
   Effect.gen(function* () {
-    const prelude = yield* preludeOf([
-      "find the exports",
-      "list them",
-      { callers: ["search for callers"], tests: ["search the tests", { fixtures: ["read the fixtures"] }] },
-      "summarize"
-    ])
+    const prelude = yield* preludeOf(["find the exports", "list them", "summarize"])
     const { agent, tasks } = yield* recordingAgent
     const findings = yield* Prelude.carryOut({ trait: unused, prelude, file: "src/a.ts" }).pipe(
       Effect.provideService(Prelude.PreludeAgent, agent)
     )
-    expect(findings.found).toEqual([
-      "did find the exports; list them after nothing",
-      "did summarize after steps-1,callers,tests,fixtures"
-    ])
-    expect(findings.subagents).toEqual({
-      callers: "did search for callers after steps-1",
-      tests: "did search the tests after steps-1",
-      fixtures: "did read the fixtures after steps-1,steps-2"
-    })
-    expect((yield* tasks).length).toBe(5)
+    expect(findings.found).toBe("did find the exports; list them; summarize")
+    expect((yield* tasks).length).toBe(1)
   })
 )
 
@@ -94,7 +79,7 @@ it.effect(
       expect(Array.filter(asked, ({ prelude }) => prelude !== undefined)).toMatchObject([
         {
           assertion: "Every export is used.",
-          prelude: JSON.stringify({ found: ["src/a.ts: a has no callers"], subagents: {} })
+          prelude: JSON.stringify({ found: "src/a.ts: a has no callers" })
         }
       ])
     })

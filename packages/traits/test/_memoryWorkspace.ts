@@ -31,7 +31,7 @@ export const trait = (fields: {
   readonly match?: string | Array.NonEmptyReadonlyArray<string>
   readonly assertion?: string
   readonly body?: string
-  readonly prelude?: TraitPrelude
+  readonly prelude?: typeof TraitPrelude.Type
 }): Trait => ({
   name: TraitName.make(fields.name),
   purpose: TraitPurpose.make("Why it matters."),
